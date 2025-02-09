@@ -22,6 +22,9 @@ import java.util.*
 import android.provider.Settings
 import android.content.SharedPreferences
 import android.net.Uri
+import android.widget.EditText
+import android.text.Editable
+import android.text.TextWatcher
 
 class MainActivity : ComponentActivity() {
 
@@ -34,6 +37,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var adapter: AppAdapter
     private lateinit var timeTextView: TextView
     private lateinit var dateTextView: TextView
+    private lateinit var searchBox: EditText
+    private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
     private val handler = Handler()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +51,7 @@ class MainActivity : ComponentActivity() {
             checkAndAskSetAsDefault()
         }
 
+        searchBox = findViewById(R.id.search_box)
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -54,9 +60,38 @@ class MainActivity : ComponentActivity() {
         updateTime()
         updateDate()
 
+        timeTextView.setOnClickListener {
+            launchApp("com.google.android.deskclock", "Google Clock")
+        }
+
+        dateTextView.setOnClickListener {
+            launchApp("com.google.android.calendar", "Google Calendar")
+        }
+
         loadApps()
         adapter = AppAdapter(this, appList)
         recyclerView.adapter = adapter
+
+        searchBox.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                filterApps(s.toString())
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+    }
+
+    private fun launchApp(packageName: String, appName: String) {
+        try {
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "$appName app is not installed.", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error opening $appName app.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private val packageRemoveReceiver = object : BroadcastReceiver() {
@@ -100,11 +135,38 @@ class MainActivity : ComponentActivity() {
         handler.postDelayed({ updateTime() }, 1000)
     }
 
+    private fun filterApps(query: String) {
+        val filteredList = fullAppList.filter {
+            it.loadLabel(packageManager).toString().contains(query, ignoreCase = true)
+        }.toMutableList()
+
+        appList.clear()
+        appList.addAll(filteredList)
+
+        // If no installed apps match, add a "Search on Play Store" option
+        if (filteredList.isEmpty() && query.isNotBlank()) {
+            appList.add(createPlayStoreSearchOption(query))
+        }
+
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun createPlayStoreSearchOption(query: String): ResolveInfo {
+        val resolveInfo = ResolveInfo().apply {
+            activityInfo = android.content.pm.ActivityInfo().apply {
+                packageName = "play_store_search"
+                name = query
+            }
+        }
+        return resolveInfo
+    }
+
     private fun loadApps() {
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
         appList = packageManager.queryIntentActivities(intent, 0).toMutableList()
+        fullAppList = appList.toMutableList()
 
         if (appList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
@@ -173,23 +235,31 @@ class AppAdapter(private val activity: MainActivity, var appList: MutableList<Re
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
 
-        holder.appIcon.setImageDrawable(appInfo.loadIcon(activity.packageManager))
-        holder.appName.text = appInfo.loadLabel(activity.packageManager)
+        if (packageName == "play_store_search") {
+            holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
+            holder.appName.text = appInfo.activityInfo.name
 
-        // Launch app on regular click
-        holder.itemView.setOnClickListener {
-            val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
-            if (intent != null) {
+            holder.itemView.setOnClickListener {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=${Uri.encode(appInfo.activityInfo.name)}"))
                 activity.startActivity(intent)
-            } else {
-                Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
             }
-        }
+        } else {
+            holder.appIcon.setImageDrawable(appInfo.loadIcon(activity.packageManager))
+            holder.appName.text = appInfo.loadLabel(activity.packageManager)
 
-        // Show uninstall prompt on long click
-        holder.itemView.setOnLongClickListener {
-            showUninstallDialog(packageName)
-            true
+            holder.itemView.setOnClickListener {
+                val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
+                if (intent != null) {
+                    activity.startActivity(intent)
+                } else {
+                    Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            holder.itemView.setOnLongClickListener {
+                showUninstallDialog(packageName)
+                true
+            }
         }
     }
 

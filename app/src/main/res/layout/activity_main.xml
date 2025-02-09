@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@color/background"> <!-- Matte black background -->
+    android:background="@color/background">
 
     <TextView
         android:id="@+id/time_widget"
@@ -27,6 +27,20 @@
         android:gravity="center"
         android:fontFamily="sans-serif-light"
         android:layout_marginBottom="24dp"/>
+
+    <EditText
+        android:id="@+id/search_box"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/search_text"
+        android:textColor="@color/text"
+        android:textColorHint="@color/text_secondary"
+        android:padding="12dp"
+        android:background="@drawable/search_box_bg"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:drawablePadding="8dp"
+        android:textSize="16sp"
+        android:layout_marginBottom="12dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/app_list"
