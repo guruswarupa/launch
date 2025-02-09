@@ -69,14 +69,17 @@ class MainActivity : ComponentActivity() {
         }
 
         loadApps()
-        adapter = AppAdapter(this, appList)
+        adapter = AppAdapter(this, appList, searchBox)
+
         recyclerView.adapter = adapter
 
         searchBox.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 filterApps(s.toString())
             }
+
             override fun afterTextChanged(s: Editable?) {}
         })
     }
@@ -135,17 +138,25 @@ class MainActivity : ComponentActivity() {
         handler.postDelayed({ updateTime() }, 1000)
     }
 
+    // Inside MainActivity
     private fun filterApps(query: String) {
-        val filteredList = fullAppList.filter {
-            it.loadLabel(packageManager).toString().contains(query, ignoreCase = true)
-        }.toMutableList()
+        if (query.isNotEmpty()) {
+            // Filter the apps based on the query
+            val filteredList = fullAppList.filter {
+                it.loadLabel(packageManager).toString().contains(query, ignoreCase = true)
+            }.toMutableList()
 
-        appList.clear()
-        appList.addAll(filteredList)
+            appList.clear()
+            appList.addAll(filteredList)
 
-        // If no installed apps match, add a "Search on Play Store" option
-        if (filteredList.isEmpty() && query.isNotBlank()) {
+            if (filteredList.isEmpty() && query.isNotBlank()) {
             appList.add(createPlayStoreSearchOption(query))
+        }
+
+        } else {
+            // When search is cleared, reset and sort alphabetically
+            appList.clear()
+            appList.addAll(fullAppList.sortedBy { it.loadLabel(packageManager).toString().lowercase() })
         }
 
         adapter.notifyDataSetChanged()
@@ -172,7 +183,11 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
         } else {
             appList = appList.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                .sortedBy { it.loadLabel(packageManager).toString() }.toMutableList()
+                .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+                .toMutableList()
+
+            adapter = AppAdapter(this, appList, searchBox)
+            recyclerView.adapter = adapter
         }
     }
 
@@ -217,9 +232,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-class AppAdapter(private val activity: MainActivity, var appList: MutableList<ResolveInfo>) :
+class AppAdapter(private val activity: MainActivity, var appList: MutableList<ResolveInfo>,private val searchBox: EditText) :
     RecyclerView.Adapter<AppAdapter.ViewHolder>() {
-
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView = view.findViewById(R.id.app_name)
@@ -242,6 +256,7 @@ class AppAdapter(private val activity: MainActivity, var appList: MutableList<Re
             holder.itemView.setOnClickListener {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=${Uri.encode(appInfo.activityInfo.name)}"))
                 activity.startActivity(intent)
+                searchBox.text.clear()
             }
         } else {
             holder.appIcon.setImageDrawable(appInfo.loadIcon(activity.packageManager))
@@ -251,6 +266,7 @@ class AppAdapter(private val activity: MainActivity, var appList: MutableList<Re
                 val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                 if (intent != null) {
                     activity.startActivity(intent)
+                    searchBox.text.clear()
                 } else {
                     Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
                 }
