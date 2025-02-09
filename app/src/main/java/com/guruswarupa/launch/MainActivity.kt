@@ -25,12 +25,14 @@ import android.net.Uri
 import android.widget.EditText
 import android.text.Editable
 import android.text.TextWatcher
+import android.widget.LinearLayout
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var sharedPreferences: SharedPreferences
     private val PREFS_NAME = "com.guruswarupa.launch.PREFS"
     private val FIRSTTIMEKEY = "isFirstTime"
+    private val DOCK_APPS_KEY = "dock_apps"
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var appList: MutableList<ResolveInfo>
@@ -38,8 +40,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var timeTextView: TextView
     private lateinit var dateTextView: TextView
     private lateinit var searchBox: EditText
+    private lateinit var appDock: LinearLayout
+    private lateinit var addIcon: ImageView
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
     private val handler = Handler()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,8 +62,22 @@ class MainActivity : ComponentActivity() {
 
         timeTextView = findViewById(R.id.time_widget)
         dateTextView = findViewById(R.id.date_widget)
+        appDock = findViewById(R.id.app_dock)
+
         updateTime()
         updateDate()
+
+        addIcon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_add) // Make sure you have an add icon in your drawable
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            setPadding(16, 0, 16, 0)
+            setOnClickListener {
+                    openAppPicker()
+            }
+        }
+
+
+        appDock.addView(addIcon)
 
         timeTextView.setOnClickListener {
             launchApp("com.google.android.deskclock", "Google Clock")
@@ -69,6 +88,7 @@ class MainActivity : ComponentActivity() {
         }
 
         loadApps()
+
         adapter = AppAdapter(this, appList, searchBox)
 
         recyclerView.adapter = adapter
@@ -82,6 +102,150 @@ class MainActivity : ComponentActivity() {
 
             override fun afterTextChanged(s: Editable?) {}
         })
+
+        loadDockApps()
+    }
+
+    private fun openAppPicker() {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+
+        val apps = packageManager.queryIntentActivities(intent, 0)
+        val sortedApps = apps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+
+        val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
+        val appPackageNames = sortedApps.map { it.activityInfo.packageName }
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Choose an app to add to the dock")
+        builder.setItems(appNames.toTypedArray()) { _, which ->
+            val selectedPackage = appPackageNames[which]
+            addAppToDock(selectedPackage)
+        }
+
+        builder.show()
+    }
+
+    private fun addAppToDock(packageName: String) {
+        // Get the ApplicationInfo for the package
+        val appInfo = packageManager.getApplicationInfo(packageName, 0)
+
+        // Get the app's icon and name
+        val appIcon = packageManager.getApplicationIcon(appInfo)
+        val appName = packageManager.getApplicationLabel(appInfo).toString()
+
+        // Add to dock (LinearLayout for the dock)
+        val appIconView = ImageView(this).apply {
+            setImageDrawable(appIcon)
+
+            // Set LayoutParams with margin between icons
+            val params = LinearLayout.LayoutParams(120, 120).apply {
+                setMargins(16, 0, 16, 0) // Set horizontal margin (16dp on left and right)
+            }
+            layoutParams = params
+
+            setOnClickListener {
+                val intent = packageManager.getLaunchIntentForPackage(packageName)
+                if (intent != null) {
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this@MainActivity, "Cannot launch app", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            // Long press to remove app from dock
+            setOnLongClickListener {
+                showRemoveDockAppDialog(packageName)
+                true
+            }
+        }
+
+        // Add the app icon to the left side (beginning) of the dock
+        appDock.addView(appIconView, 0)  // Adding it at the start
+
+        // Save this app's package name to SharedPreferences
+        saveAppToDock(packageName)
+
+        // Add the "+" icon to the right (end)
+        if (appDock.childCount == 0) {
+            addIcon = ImageView(this).apply {
+                setImageResource(R.drawable.ic_add) // Make sure you have an add icon in your drawable
+                layoutParams = LinearLayout.LayoutParams(120, 120).apply {
+                    setMargins(16, 0, 16, 0) // Add margins as needed
+                }
+                setOnClickListener {
+                    openAppPicker()
+                }
+            }
+            appDock.addView(addIcon)  // Add "+" icon to the end
+        }
+    }
+
+    private fun showRemoveDockAppDialog(packageName: String) {
+        val dialog = AlertDialog.Builder(this)
+            .setMessage("Do you want to remove this app from the dock?")
+            .setCancelable(false)
+            .setPositiveButton("Yes") { _, _ ->
+                // Remove the app's package name from SharedPreferences
+                removeAppFromDock(packageName)
+
+                // Refresh the dock to update the UI
+                refreshDock()
+            }
+            .setNegativeButton("No", null)
+            .create()
+
+        dialog.show()
+    }
+
+    private fun removeAppFromDock(packageName: String) {
+        val dockApps = sharedPreferences.getStringSet(DOCK_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
+        if (dockApps.contains(packageName)) {
+            dockApps.remove(packageName) // Remove app from set
+            sharedPreferences.edit().putStringSet(DOCK_APPS_KEY, dockApps).apply() // Update SharedPreferences
+        }
+    }
+
+    private fun refreshDock() {
+        appDock.removeAllViews()
+        loadDockApps()
+        ensureAddIcon()
+    }
+
+    private fun ensureAddIcon() {
+        if (appDock.childCount == 0 || (appDock.getChildAt(appDock.childCount - 1) as? ImageView)?.drawable != resources.getDrawable(R.drawable.ic_add)) {
+            addIcon = ImageView(this).apply {
+                setImageResource(R.drawable.ic_add) // Ensure you have an add icon in your drawable
+                layoutParams = LinearLayout.LayoutParams(120, 120).apply {
+                    setMargins(16, 0, 16, 0) // Add margins as needed
+                }
+                setOnClickListener {
+                    openAppPicker()
+                }
+            }
+            appDock.addView(addIcon)
+        }
+    }
+
+    private fun saveAppToDock(packageName: String) {
+        val dockApps = sharedPreferences.getStringSet(DOCK_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
+
+        // Add the new app's package name
+        dockApps.add(packageName)
+
+        // Save the updated set of package names back to SharedPreferences
+        sharedPreferences.edit().putStringSet(DOCK_APPS_KEY, dockApps).apply()
+    }
+
+    private fun loadDockApps() {
+        // Load the saved dock apps from SharedPreferences
+        val dockApps = sharedPreferences.getStringSet(DOCK_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
+
+        // Add the saved apps to the dock
+        for (packageName in dockApps) {
+            addAppToDock(packageName)
+        }
     }
 
     private fun launchApp(packageName: String, appName: String) {

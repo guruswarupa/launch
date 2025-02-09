@@ -40,7 +40,24 @@
         android:drawableStart="@android:drawable/ic_menu_search"
         android:drawablePadding="8dp"
         android:textSize="16sp"
-        android:layout_marginBottom="12dp"/>
+        android:layout_marginBottom="16dp"/>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:id="@+id/app_dock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingEnd="16dp" />
+    </HorizontalScrollView>
+
+
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/app_list"
