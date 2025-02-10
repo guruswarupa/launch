@@ -19,3 +19,19 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep all app classes
+-keep class com.guruswarupa.launch.** { *; }
+
+# Keep Jetpack Compose classes
+-keep class androidx.compose.** { *; }
+
+# Keep Parcelable implementations
+-keep class * implements android.os.Parcelable { *; }
+
+# Keep Activity, ViewModel, and AppCompat classes
+-keep class * extends android.app.Activity { *; }
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+
+# Keep R class (prevents missing resources)
+-keep class **.R$* { *; }
