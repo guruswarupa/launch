@@ -103,6 +103,18 @@ class MainActivity : ComponentActivity() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
+        searchBox.setOnLongClickListener {
+            // Create an Intent to open a new tab in the default browser
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Ensures the browser opens in a new task
+            try {
+                startActivity(intent)  // Launch the default browser
+            } catch (e: Exception) {
+                Toast.makeText(this, "No browser found!", Toast.LENGTH_SHORT).show()
+            }
+            true  // Consume the long press event
+        }
+
         loadDockApps()
     }
 
@@ -313,10 +325,11 @@ class MainActivity : ComponentActivity() {
             appList.clear()
             appList.addAll(filteredList)
 
-            if (filteredList.isEmpty() && query.isNotBlank()) {
-            appList.add(createPlayStoreSearchOption(query))
-        }
-
+            if (filteredList.isEmpty()) {
+                // Show two options if no results found
+                appList.add(createPlayStoreSearchOption(query))
+                appList.add(createBrowserSearchOption(query))
+            }
         } else {
             // When search is cleared, reset and sort alphabetically
             appList.clear()
@@ -330,6 +343,16 @@ class MainActivity : ComponentActivity() {
         val resolveInfo = ResolveInfo().apply {
             activityInfo = android.content.pm.ActivityInfo().apply {
                 packageName = "play_store_search"
+                name = query
+            }
+        }
+        return resolveInfo
+    }
+
+    private fun createBrowserSearchOption(query: String): ResolveInfo {
+        val resolveInfo = ResolveInfo().apply {
+            activityInfo = android.content.pm.ActivityInfo().apply {
+                packageName = "browser_search"
                 name = query
             }
         }
@@ -414,15 +437,29 @@ class AppAdapter(private val activity: MainActivity, var appList: MutableList<Re
         val packageName = appInfo.activityInfo.packageName
 
         if (packageName == "play_store_search") {
+            // Set the Play Store search option
             holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
-            holder.appName.text = appInfo.activityInfo.name
+            val query = appInfo.activityInfo.name
+            holder.appName.text = "Search $query on Play Store"  // Set dynamic text
 
             holder.itemView.setOnClickListener {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=${Uri.encode(appInfo.activityInfo.name)}"))
+                val encodedQuery = Uri.encode(query)  // Encode the app name for URL
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=$encodedQuery"))
                 activity.startActivity(intent)
-                searchBox.text.clear()
+                searchBox.text.clear()  // Clear the search box after the search is triggered
+            }
+        } else if (packageName == "browser_search") {
+            holder.appIcon.setImageResource(R.drawable.ic_browser)
+            val query = appInfo.activityInfo.name
+            holder.appName.text = "Search $query in Browser"
+
+            holder.itemView.setOnClickListener {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=$query"))
+                activity.startActivity(intent)
+                searchBox.text.clear()  // Clear the search box after the search is triggered
             }
         } else {
+            // For installed apps, load their icon and name
             holder.appIcon.setImageDrawable(appInfo.loadIcon(activity.packageManager))
             holder.appName.text = appInfo.loadLabel(activity.packageManager)
 
