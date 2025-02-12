@@ -18,6 +18,11 @@ import android.content.SharedPreferences
 import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.recyclerview.widget.GridLayoutManager
+import android.Manifest
+import android.content.pm.PackageManager
+import android.provider.ContactsContract
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
 
@@ -37,6 +42,12 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var appSearchManager: AppSearchManager
     private lateinit var appDockManager: AppDockManager
+    private var contactsList: List<String> = emptyList()
+
+    companion object {
+        private const val CONTACTS_PERMISSION_REQUEST = 100
+        private const val REQUEST_CODE_CALL_PHONE = 200
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +56,22 @@ class MainActivity : ComponentActivity() {
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         if (isFirstTime(this, PREFS_NAME, FIRSTTIMEKEY)) {
+            // Step 1: Set default
             checkAndAskSetAsDefault(this, packageName)
+
+            // Step 2: Ask for view preference (list or grid)
+            askForViewPreference(this)
+
+            // Step 3: Request contacts permission
+            requestContactsPermission()
+        }
+
+        // Proceed once contacts permission has been granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+            loadContacts()
+
+            // Step 4: Request call permission
+            requestCallPermission()
         }
 
         val viewPreference = sharedPreferences.getString("view_preference", "list")
@@ -68,7 +94,7 @@ class MainActivity : ComponentActivity() {
         updateTime()
         updateDate()
 
-        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager) // Initialize AppDockManager
+        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
 
         timeTextView.setOnClickListener {
             launchApp("com.google.android.deskclock", "Google Clock")
@@ -78,10 +104,9 @@ class MainActivity : ComponentActivity() {
             launchApp("com.google.android.calendar", "Google Calendar")
         }
 
-        loadApps(isGridMode) // Pass the view mode to loadApps
+        loadApps()
 
         adapter = AppAdapter(this, appList, searchBox, isGridMode)
-
         recyclerView.adapter = adapter
 
         appSearchManager = AppSearchManager(
@@ -90,10 +115,11 @@ class MainActivity : ComponentActivity() {
             fullAppList = fullAppList,
             adapter = adapter,
             recyclerView = recyclerView,
-            searchBox = searchBox
+            searchBox = searchBox,
+            contactsList = contactsList
         )
 
-        appDockManager.loadDockApps() // Load dock apps
+        appDockManager.loadDockApps()
     }
 
     private fun launchApp(packageName: String, appName: String) {
@@ -150,7 +176,10 @@ class MainActivity : ComponentActivity() {
         handler.postDelayed({ updateTime() }, 1000)
     }
 
-    fun loadApps(isGridMode: Boolean = false) {
+    fun loadApps() {
+        val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
+        val isGridMode = viewPreference == "grid"
+
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
@@ -164,15 +193,78 @@ class MainActivity : ComponentActivity() {
                 .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
                 .toMutableList()
 
-            // Set the layout manager based on the view mode
+            // Preserve the selected layout mode
             recyclerView.layoutManager = if (isGridMode) {
                 GridLayoutManager(this, 4)
             } else {
                 LinearLayoutManager(this)
             }
 
-            adapter = AppAdapter(this, appList, searchBox, isGridMode)
+            adapter = AppAdapter(this, appList, searchBox, isGridMode) // pass isGridMode
             recyclerView.adapter = adapter
         }
+    }
+
+    private fun requestContactsPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.READ_CONTACTS),
+                CONTACTS_PERMISSION_REQUEST
+            )
+        } else {
+            contactsList = loadContacts()
+        }
+    }
+
+    private fun requestCallPermission(){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                arrayOf(Manifest.permission.CALL_PHONE), 1)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            CONTACTS_PERMISSION_REQUEST -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, load contacts
+                    contactsList = loadContacts()
+                } else {
+                    // Permission denied for contacts
+                    Toast.makeText(this, "Permission denied to read contacts", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            REQUEST_CODE_CALL_PHONE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, proceed with the phone call
+                } else {
+                    // Permission denied for call
+                    Toast.makeText(this, "Permission denied to make calls", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun loadContacts(): List<String> {
+        val contacts = mutableListOf<String>()
+        val cursor = contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
+            null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+        )
+
+        cursor?.use {
+            while (it.moveToNext()) {
+                contacts.add(it.getString(0))
+            }
+        }
+        return contacts
     }
 }
