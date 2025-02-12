@@ -37,13 +37,13 @@ fun askForViewPreference(context: Context) {
         .setPositiveButton("Grid") { _, _ ->
             sharedPreferences.edit().putString("view_preference", "grid").apply()
             if (context is MainActivity) {
-                context.loadApps(true) // Reload apps in grid mode
+                context.loadApps() // Reload apps in grid mode
             }
         }
         .setNegativeButton("List") { _, _ ->
             sharedPreferences.edit().putString("view_preference", "list").apply()
             if (context is MainActivity) {
-                context.loadApps(false) // Reload apps in list mode
+                context.loadApps() // Reload apps in list mode
             }
         }
     val alert = dialogBuilder.create()

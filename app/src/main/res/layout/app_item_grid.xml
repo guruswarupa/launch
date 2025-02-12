@@ -1,17 +1,32 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
+    android:orientation="vertical"
     android:background="?android:attr/selectableItemBackground"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:gravity="center_horizontal">
 
+    <!-- Icon ImageView -->
     <ImageView
         android:id="@+id/app_icon"
         android:layout_width="64dp"
         android:layout_height="64dp"
         android:scaleType="centerCrop"
         android:background="@drawable/circular_background"
-        android:padding="8dp"/>
-</FrameLayout>
+        android:padding="8dp" />
+
+    <!-- App Name TextView -->
+    <TextView
+        android:id="@+id/app_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="@android:color/white"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:maxWidth="90dp" /> <!-- Approximate width for 14 chars (depending on the font) -->
+</LinearLayout>
