@@ -23,6 +23,11 @@ import android.content.pm.PackageManager
 import android.provider.ContactsContract
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import android.app.WallpaperManager
+import android.graphics.Bitmap
+import android.os.Build
+import android.widget.ImageView
+import android.graphics.drawable.BitmapDrawable
 
 class MainActivity : ComponentActivity() {
 
@@ -40,6 +45,7 @@ class MainActivity : ComponentActivity() {
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
     private val handler = Handler()
 
+    private lateinit var wallpaperBackground: ImageView
     private lateinit var appSearchManager: AppSearchManager
     private lateinit var appDockManager: AppDockManager
     private var contactsList: List<String> = emptyList()
@@ -47,6 +53,8 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
         private const val REQUEST_CODE_CALL_PHONE = 200
+        private val SMS_PERMISSION_REQUEST = 300
+
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,23 +64,15 @@ class MainActivity : ComponentActivity() {
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         if (isFirstTime(this, PREFS_NAME, FIRSTTIMEKEY)) {
-            // Step 1: Set default
             checkAndAskSetAsDefault(this, packageName)
-
-            // Step 2: Ask for view preference (list or grid)
-            askForViewPreference(this)
-
-            // Step 3: Request contacts permission
-            requestContactsPermission()
         }
 
-        // Proceed once contacts permission has been granted
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            loadContacts()
+        wallpaperBackground = findViewById(R.id.wallpaper_background)
+        setWallpaperBackground()
 
-            // Step 4: Request call permission
-            requestCallPermission()
-        }
+        requestCallPermission()
+        requestContactsPermission()
+        requestSmsPermission()
 
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
@@ -120,6 +120,27 @@ class MainActivity : ComponentActivity() {
         )
 
         appDockManager.loadDockApps()
+    }
+
+    private fun setWallpaperBackground() {
+        val wallpaperManager = WallpaperManager.getInstance(this)
+        try {
+            val wallpaperDrawable = wallpaperManager.drawable
+            // Convert the drawable to a bitmap
+            if (wallpaperDrawable is BitmapDrawable) {
+                val wallpaperBitmap = wallpaperDrawable.bitmap
+                wallpaperBackground.setImageBitmap(wallpaperBitmap)
+            } else {
+                // Handle other drawable types (e.g., color or custom wallpaper)
+                // Optionally, set a default or fallback image here
+                wallpaperBackground.setImageDrawable(wallpaperDrawable)
+            }
+        } catch (e: Exception) {
+            // Handle error if wallpaper is not accessible
+            e.printStackTrace()
+            // Optionally set a default image
+            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+        }
     }
 
     private fun launchApp(packageName: String, appName: String) {
@@ -227,6 +248,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Request SMS permission
+    private fun requestSmsPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.SEND_SMS),
+                SMS_PERMISSION_REQUEST
+            )
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
@@ -237,7 +271,8 @@ class MainActivity : ComponentActivity() {
                     contactsList = loadContacts()
                 } else {
                     // Permission denied for contacts
-                    Toast.makeText(this, "Permission denied to read contacts", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Permission denied to read contacts", Toast.LENGTH_SHORT)
+                        .show()
                 }
             }
 
@@ -246,7 +281,17 @@ class MainActivity : ComponentActivity() {
                     // Permission granted, proceed with the phone call
                 } else {
                     // Permission denied for call
-                    Toast.makeText(this, "Permission denied to make calls", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Permission denied to make calls", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+
+            SMS_PERMISSION_REQUEST -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, proceed with SMS functionality
+                } else {
+                    // Permission denied for SMS
+                    Toast.makeText(this, "Permission denied to send SMS", Toast.LENGTH_SHORT).show()
                 }
             }
         }

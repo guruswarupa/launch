@@ -1,69 +1,95 @@
-<!-- Main layout with matte black theme -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
     android:background="@color/background">
 
-    <TextView
-        android:id="@+id/time_widget"
+    <!-- FrameLayout to stack the wallpaper behind other elements -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="32sp"
-        android:textColor="@color/text"
-        android:gravity="center"
-        android:fontFamily="sans-serif-light"
-        android:letterSpacing="0.05"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp"/>
+        android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/date_widget"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="24sp"
-        android:textColor="@color/text_secondary"
-        android:gravity="center"
-        android:fontFamily="sans-serif-light"
-        android:layout_marginBottom="24dp"/>
+        <!-- Wallpaper ImageView (set as background) -->
+        <ImageView
+            android:id="@+id/wallpaper_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:layout_gravity="center"/>
 
-    <EditText
-        android:id="@+id/search_box"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/search_text"
-        android:textColor="@color/text"
-        android:textColorHint="@color/text_secondary"
-        android:padding="12dp"
-        android:background="@drawable/search_box_bg"
-        android:drawableStart="@android:drawable/ic_menu_search"
-        android:drawablePadding="8dp"
-        android:textSize="16sp"
-        android:layout_marginBottom="16dp"
-        android:singleLine="true"
-        android:imeOptions="actionSearch"/>
-
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none"
-        android:padding="8dp">
-
+        <!-- All other UI elements will be stacked on top of the wallpaper -->
         <LinearLayout
-            android:id="@+id/app_dock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:paddingEnd="16dp"
-            android:layout_marginBottom="20px"/>
-    </HorizontalScrollView>
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:gravity="top">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/app_list"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
+            <!-- Time widget -->
+            <TextView
+                android:id="@+id/time_widget"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="32sp"
+                android:textColor="@color/text"
+                android:gravity="center"
+                android:fontFamily="sans-serif-light"
+                android:letterSpacing="0.05"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Date widget -->
+            <TextView
+                android:id="@+id/date_widget"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="24sp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:fontFamily="sans-serif-light"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Search Box -->
+            <EditText
+                android:id="@+id/search_box"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/search_text"
+                android:textColor="@color/text"
+                android:textColorHint="@color/text_secondary"
+                android:padding="12dp"
+                android:background="@drawable/search_box_transparent_bg"
+                android:drawableStart="@android:drawable/ic_menu_search"
+                android:drawablePadding="8dp"
+                android:textSize="16sp"
+                android:layout_marginBottom="16dp"
+                android:singleLine="true"
+                android:imeOptions="actionSearch"/>
+
+            <!-- App Dock -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:padding="8dp">
+
+                <LinearLayout
+                    android:id="@+id/app_dock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:paddingEnd="16dp"
+                    android:layout_marginBottom="20px"/>
+            </HorizontalScrollView>
+
+            <!-- App List -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/app_list"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+        </LinearLayout>
+    </FrameLayout>
 </LinearLayout>
