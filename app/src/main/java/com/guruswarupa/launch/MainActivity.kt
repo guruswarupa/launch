@@ -56,23 +56,11 @@ class MainActivity : ComponentActivity() {
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         if (isFirstTime(this, PREFS_NAME, FIRSTTIMEKEY)) {
-            // Step 1: Set default
             checkAndAskSetAsDefault(this, packageName)
-
-            // Step 2: Ask for view preference (list or grid)
-            askForViewPreference(this)
-
-            // Step 3: Request contacts permission
-            requestContactsPermission()
         }
 
-        // Proceed once contacts permission has been granted
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            loadContacts()
-
-            // Step 4: Request call permission
-            requestCallPermission()
-        }
+        requestCallPermission()
+        requestContactsPermission()
 
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
