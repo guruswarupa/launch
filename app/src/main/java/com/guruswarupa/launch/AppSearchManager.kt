@@ -52,20 +52,33 @@ class AppSearchManager(
                 it.loadLabel(packageManager).toString().contains(query, ignoreCase = true)
             })
 
-            // Filter contacts
-            val filteredContacts = contactsList.filter {
+            // Group contacts by name
+            val groupedContacts = contactsList.filter {
                 it.contains(query, ignoreCase = true)
+            }.groupBy { it }
+
+            // Create contact options
+            groupedContacts.forEach { (contactName, contactList) ->
+                // Create WhatsApp contacts for each contact in the group
+                val filteredWhatsAppContacts = contactList.map { createWhatsAppContactOption(it) }
+
+                // Add WhatsApp contacts first
+                newFilteredList.addAll(filteredWhatsAppContacts)
+
+                // Add SMS and phone options for each contact
+                contactList.forEach { contact ->
+                    newFilteredList.add(createContactOption(contact))
+                    newFilteredList.add(createSmsOption(contact))
+                }
             }
 
-            filteredContacts.forEach { contact ->
-                newFilteredList.add(createContactOption(contact))
-            }
-
+            // Fallback if no results found
             if (newFilteredList.isEmpty()) {
                 newFilteredList.add(createPlayStoreSearchOption(query))
                 newFilteredList.add(createBrowserSearchOption(query))
             }
         } else {
+            // If query is empty, show all apps sorted
             newFilteredList.addAll(fullAppList.sortedBy { it.loadLabel(packageManager).toString().lowercase() })
         }
 
@@ -73,6 +86,15 @@ class AppSearchManager(
         appList.clear()
         appList.addAll(newFilteredList)
         adapter.notifyDataSetChanged() // Ensure UI updates
+    }
+
+    private fun createWhatsAppContactOption(contact: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "whatsapp_contact"
+                name = contact  // Display contact name
+            }
+        }
     }
 
     private fun createPlayStoreSearchOption(query: String): ResolveInfo {
@@ -89,6 +111,15 @@ class AppSearchManager(
             activityInfo = ActivityInfo().apply {
                 packageName = "browser_search"
                 name = "Search \"$query\" in Browser"
+            }
+        }
+    }
+
+    private fun createSmsOption(contact: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "sms_contact"
+                name = contact
             }
         }
     }

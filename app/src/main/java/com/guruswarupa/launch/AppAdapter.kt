@@ -55,6 +55,23 @@ class AppAdapter(
                     searchBox.text.clear()
                 }
             }
+            "whatsapp_contact" -> {
+                holder.appIcon.setImageResource(R.drawable.ic_whatsapp) // WhatsApp icon
+                holder.appName?.text = appInfo.activityInfo.name
+                holder.itemView.setOnClickListener {
+                    openWhatsAppChat(appInfo.activityInfo.name)
+                    searchBox.text.clear()
+                }
+            }
+            "sms_contact" -> {
+                // Display SMS option
+                holder.appIcon.setImageResource(R.drawable.ic_message)
+                holder.appName?.text = appInfo.activityInfo.name
+                holder.itemView.setOnClickListener {
+                    openSMSChat(appInfo.activityInfo.name)
+                    searchBox.text.clear()
+                }
+            }
             "play_store_search" -> {
                 // Display Play Store search option
                 holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
@@ -156,6 +173,57 @@ class AppAdapter(
 
         return phoneNumber ?: "Not found"
     }
+
+    private fun openWhatsAppChat(contactName: String) {
+        val contentResolver: ContentResolver = activity.contentResolver
+        val cursor = contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
+            arrayOf(contactName),
+            null
+        )
+
+        cursor?.use {
+            if (it.moveToFirst()) {
+                var phoneNumber = it.getString(0).replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+
+                // Ensure it has a country code (modify +91 to your country code if needed)
+                if (!phoneNumber.startsWith("+")) {
+                    phoneNumber = "+91$phoneNumber"  // Change +91 to your country code
+                }
+
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW)
+                    intent.data = Uri.parse("https://wa.me/${Uri.encode(phoneNumber)}")
+                    intent.setPackage("com.whatsapp")
+                    activity.startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(activity, "WhatsApp not installed.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun openSMSChat(contactName: String) {
+        val phoneNumber = getPhoneNumberForContact(contactName)
+
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("smsto:$phoneNumber") // Ensures only SMS apps respond
+            putExtra("sms_body", "") // Optional: You can pre-fill the message here
+        }
+
+        try {
+            if (intent.resolveActivity(activity.packageManager) != null) {
+                activity.startActivity(intent)
+            } else {
+                Toast.makeText(activity, "No SMS app installed!", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(activity, "Failed to open messaging app.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     companion object {
         private const val VIEW_TYPE_LIST = 0
