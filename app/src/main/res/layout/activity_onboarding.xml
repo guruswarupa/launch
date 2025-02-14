@@ -75,6 +75,17 @@
             android:padding="12dp"
             android:layout_marginBottom="12dp"/>
 
+        <Button
+            android:id="@+id/set_display_style"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Set Display Style"
+            android:textAllCaps="false"
+            android:background="@drawable/button_background"
+            android:textColor="@android:color/white"
+            android:padding="12dp"
+            android:layout_marginBottom="12dp"/>
+
         <!-- Continue Button -->
         <Button
             android:id="@+id/continue_button"

@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.Manifest
+import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -34,7 +35,6 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var sharedPreferences: SharedPreferences
     private val PREFS_NAME = "com.guruswarupa.launch.PREFS"
-    private val FIRSTTIMEKEY = "isFirstTime"
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var appList: MutableList<ResolveInfo>

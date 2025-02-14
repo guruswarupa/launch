@@ -11,6 +11,8 @@ import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.Manifest
+import android.app.AlertDialog
+import android.content.Context
 import android.content.pm.PackageManager
 import android.widget.Toast
 
@@ -29,7 +31,7 @@ class OnboardingActivity : ComponentActivity() {
         val permissionButton: Button = findViewById(R.id.permission_button)
         val continueButton: Button = findViewById(R.id.continue_button)
         val setDefaultLauncherButton: Button = findViewById(R.id.set_default_launcher_button)
-
+        val setDisplayStyle: Button = findViewById(R.id.set_display_style)
         permissionButton.setOnClickListener {
             requestAllPermissions()
             requestReadExternalStoragePermission()
@@ -42,6 +44,10 @@ class OnboardingActivity : ComponentActivity() {
 
         setDefaultLauncherButton.setOnClickListener {
             setAsDefaultLauncher()
+        }
+
+        setDisplayStyle.setOnClickListener {
+            askForViewPreference(this)
         }
     }
 
@@ -62,6 +68,28 @@ class OnboardingActivity : ComponentActivity() {
         } else {
             Toast.makeText(this, "All permissions granted!", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun askForViewPreference(context: Context) {
+        val sharedPreferences = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+
+        val dialogBuilder = AlertDialog.Builder(context)
+        dialogBuilder.setTitle("Choose App Display Style")
+            .setMessage("Do you want to display apps in a Grid or List?")
+            .setPositiveButton("Grid") { _, _ ->
+                sharedPreferences.edit().putString("view_preference", "grid").apply()
+                if (context is MainActivity) {
+                    context.loadApps() // Reload apps in grid mode
+                }
+            }
+            .setNegativeButton("List") { _, _ ->
+                sharedPreferences.edit().putString("view_preference", "list").apply()
+                if (context is MainActivity) {
+                    context.loadApps() // Reload apps in list mode
+                }
+            }
+        val alert = dialogBuilder.create()
+        alert.show()
     }
 
     private fun requestReadExternalStoragePermission() {
