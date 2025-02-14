@@ -9,7 +9,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.graphics.BitmapFactory
+import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Handler
@@ -47,6 +47,8 @@ class MainActivity : ComponentActivity() {
     private val handler = Handler()
 
     private lateinit var wallpaperBackground: ImageView
+    private var currentWallpaperBitmap: Bitmap? = null
+
     private lateinit var appSearchManager: AppSearchManager
     private lateinit var appDockManager: AppDockManager
     private var contactsList: List<String> = emptyList()
@@ -57,7 +59,6 @@ class MainActivity : ComponentActivity() {
         private const val CONTACTS_PERMISSION_REQUEST = 100
         private const val REQUEST_CODE_CALL_PHONE = 200
         private val SMS_PERMISSION_REQUEST = 300
-        private const val READ_EXTERNAL_STORAGE_REQUEST_CODE = 123
         private const val WALLPAPER_REQUEST_CODE = 456
     }
 
@@ -90,7 +91,6 @@ class MainActivity : ComponentActivity() {
         }
 
         wallpaperBackground = findViewById(R.id.wallpaper_background)
-        requestReadExternalStoragePermission()
 
         requestCallPermission()
         requestContactsPermission()
@@ -136,43 +136,43 @@ class MainActivity : ComponentActivity() {
 
         appDockManager.loadDockApps()
         setWallpaperBackground()
+
     }
 
     private fun setWallpaperBackground() {
         val wallpaperManager = WallpaperManager.getInstance(this)
         try {
-            val wallpaperDrawable = wallpaperManager.getDrawable()
-
-            if (wallpaperDrawable != null) {
-                when (wallpaperDrawable) {
-                    is BitmapDrawable -> {
-                        wallpaperBackground.setImageBitmap(wallpaperDrawable.bitmap)
-                    }
-                    else -> {
-                        wallpaperBackground.setImageDrawable(wallpaperDrawable) // Set the drawable directly
-                    }
-                }
+            val bitmap = wallpaperManager.drawable.let {
+                if (it is BitmapDrawable) it.bitmap else null
+            }
+            if (bitmap != null) {
+                wallpaperBackground.setImageBitmap(bitmap)
             } else {
                 wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
             }
-
         } catch (e: Exception) {
             e.printStackTrace()
             wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        currentWallpaperBitmap?.recycle()
+        currentWallpaperBitmap = null
+    }
+
+    private val wallpaperChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_WALLPAPER_CHANGED) {
+                setWallpaperBackground()
+            }
+        }
+    }
+
     private fun chooseWallpaper() {
         val intent = Intent(Intent.ACTION_SET_WALLPAPER)
         startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
-    }
-
-    private fun requestReadExternalStoragePermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), READ_EXTERNAL_STORAGE_REQUEST_CODE)
-        } else {
-            setWallpaperBackground() // Call your function here if permission is already granted
-        }
     }
 
     private fun launchApp(packageName: String, appName: String) {
@@ -207,11 +207,13 @@ class MainActivity : ComponentActivity() {
             addDataScheme("package")
         }
         registerReceiver(packageRemoveReceiver, filter)
+        registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
     }
 
     override fun onPause() {
         super.onPause()
         unregisterReceiver(packageRemoveReceiver)
+        unregisterReceiver(wallpaperChangeReceiver)
     }
 
     private fun updateTime() {
@@ -332,14 +334,6 @@ class MainActivity : ComponentActivity() {
                 } else {
                     // Permission denied for SMS
                     Toast.makeText(this, "Permission denied to send SMS", Toast.LENGTH_SHORT).show()
-                }
-            }
-            READ_EXTERNAL_STORAGE_REQUEST_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    setWallpaperBackground() // Call your function here when permission is granted
-                } else {
-                    // Handle permission denial
-                    Toast.makeText(this, "Permission denied to read external storage", Toast.LENGTH_SHORT).show()
                 }
             }
         }

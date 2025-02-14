@@ -30,14 +30,9 @@ class OnboardingActivity : ComponentActivity() {
         val continueButton: Button = findViewById(R.id.continue_button)
         val setDefaultLauncherButton: Button = findViewById(R.id.set_default_launcher_button)
 
-        val featureText: TextView = findViewById(R.id.feature_text)
-        val featureArrow: ImageView = findViewById(R.id.feature_arrow)
-
-        featureText.text = "Access your apps and contacts easily!"
-        featureArrow.setImageResource(R.drawable.arrow_icon)
-
         permissionButton.setOnClickListener {
             requestAllPermissions()
+            requestReadExternalStoragePermission()
         }
 
         continueButton.setOnClickListener {
@@ -45,7 +40,6 @@ class OnboardingActivity : ComponentActivity() {
             restartApp()
         }
 
-        // Set Default Home Launcher Button click listener
         setDefaultLauncherButton.setOnClickListener {
             setAsDefaultLauncher()
         }
@@ -55,7 +49,8 @@ class OnboardingActivity : ComponentActivity() {
         val permissions = arrayOf(
             Manifest.permission.READ_CONTACTS,
             Manifest.permission.SEND_SMS,
-            Manifest.permission.CALL_PHONE
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.READ_MEDIA_IMAGES
         )
 
         val permissionsToRequest = permissions.filter {
@@ -69,10 +64,25 @@ class OnboardingActivity : ComponentActivity() {
         }
     }
 
+    private fun requestReadExternalStoragePermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Please enable file access manually in settings.", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
+            }
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == 100) {
+        if (requestCode == 100 || requestCode == 101) {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show()
             } else {
@@ -88,7 +98,6 @@ class OnboardingActivity : ComponentActivity() {
         finish()
     }
 
-    // New method to set the app as the default home launcher
     private fun setAsDefaultLauncher() {
         val intent = Intent(Settings.ACTION_HOME_SETTINGS)
         startActivity(intent)
