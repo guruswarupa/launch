@@ -67,11 +67,15 @@ class MainActivity : ComponentActivity() {
         setContentView(R.layout.activity_main)
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
 
-        if (sharedPreferences.getBoolean(FIRSTTIMEKEY, true)) {
+        if (isFirstRun) {
+            sharedPreferences.edit().putBoolean("isFirstRun", false).apply()
+
             startActivity(Intent(this, OnboardingActivity::class.java))
             finish()
-            return
+        } else {
+            setContentView(R.layout.activity_main)
         }
 
         val viewPreference = sharedPreferences.getString("view_preference", "list")
@@ -312,9 +316,6 @@ class MainActivity : ComponentActivity() {
                     // Permission granted, load contacts
                     contactsList = loadContacts()
                 } else {
-                    // Permission denied for contacts
-                    Toast.makeText(this, "Permission denied to read contacts", Toast.LENGTH_SHORT)
-                        .show()
                 }
             }
 
@@ -322,9 +323,6 @@ class MainActivity : ComponentActivity() {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission granted, proceed with the phone call
                 } else {
-                    // Permission denied for call
-                    Toast.makeText(this, "Permission denied to make calls", Toast.LENGTH_SHORT)
-                        .show()
                 }
             }
 
@@ -332,8 +330,6 @@ class MainActivity : ComponentActivity() {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission granted, proceed with SMS functionality
                 } else {
-                    // Permission denied for SMS
-                    Toast.makeText(this, "Permission denied to send SMS", Toast.LENGTH_SHORT).show()
                 }
             }
         }
