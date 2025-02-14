@@ -33,6 +33,10 @@
         android:theme="@style/Theme.Launch"
         tools:targetApi="31">
 
+        <activity android:name=".OnboardingActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Launch"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

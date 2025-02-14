@@ -63,8 +63,10 @@ class MainActivity : ComponentActivity() {
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
-        if (isFirstTime(this, PREFS_NAME, FIRSTTIMEKEY)) {
-            checkAndAskSetAsDefault(this, packageName)
+        if (sharedPreferences.getBoolean(FIRSTTIMEKEY, true)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
         }
 
         wallpaperBackground = findViewById(R.id.wallpaper_background)
