@@ -12,34 +12,44 @@
         android:src="@drawable/wallpaper_background"
         android:contentDescription="Background"/>
 
+    <!-- Semi-transparent overlay for better text visibility -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"/> <!-- Black overlay with transparency -->
+
     <!-- Content Container -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="24dp"
         android:orientation="vertical"
-        android:gravity="center"> <!-- Subtle overlay for readability -->
+        android:gravity="center"
+        android:background="@android:color/transparent">
 
         <!-- Welcome Text -->
         <TextView
             android:id="@+id/feature_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Welcome to Your Launcher!"
-            android:textSize="20sp"
+            android:text="Welcome to Launch!"
+            android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="@color/white"
+            android:textColor="@android:color/white"
             android:gravity="center"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Animated Arrow -->
-        <ImageView
-            android:id="@+id/feature_arrow"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:src="@drawable/arrow_icon"
-            android:contentDescription="Arrow Icon"
-            android:layout_marginBottom="24dp"/>
+        <!-- Permission Disclaimer -->
+        <TextView
+            android:id="@+id/permission_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="This app requires permissions for core functionality. No data is collected or stored."
+            android:textSize="14sp"
+            android:textColor="@android:color/white"
+            android:gravity="center"
+            android:padding="8dp"
+            android:layout_marginBottom="16dp"/>
 
         <!-- Grant Permissions Button -->
         <Button
@@ -49,10 +59,11 @@
             android:text="Grant Permissions"
             android:textAllCaps="false"
             android:background="@drawable/button_background"
-            android:textColor="@color/white"
+            android:textColor="@android:color/white"
             android:padding="12dp"
             android:layout_marginBottom="12dp"/>
 
+        <!-- Set as Default Launcher Button -->
         <Button
             android:id="@+id/set_default_launcher_button"
             android:layout_width="match_parent"
@@ -60,7 +71,7 @@
             android:text="Set as Default Home Launcher"
             android:textAllCaps="false"
             android:background="@drawable/button_background"
-            android:textColor="@color/white"
+            android:textColor="@android:color/white"
             android:padding="12dp"
             android:layout_marginBottom="12dp"/>
 
@@ -72,7 +83,18 @@
             android:text="Continue"
             android:textAllCaps="false"
             android:background="@drawable/button_background"
-            android:textColor="@color/white"
+            android:textColor="@android:color/white"
             android:padding="12dp"/>
+
+        <!-- Developer Credit -->
+        <TextView
+            android:id="@+id/developer_credit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Developed by Guru Swarupa"
+            android:textSize="12sp"
+            android:textColor="@android:color/white"
+            android:gravity="center"
+            android:layout_marginTop="16dp"/>
     </LinearLayout>
 </FrameLayout>
