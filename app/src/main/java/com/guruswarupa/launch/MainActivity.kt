@@ -1,33 +1,34 @@
 package com.guruswarupa.launch
 
+import android.Manifest
+import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.os.Handler
+import android.provider.ContactsContract
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
-import java.util.*
-import android.content.SharedPreferences
-import android.widget.EditText
-import android.widget.LinearLayout
-import androidx.recyclerview.widget.GridLayoutManager
-import android.Manifest
-import android.content.pm.PackageManager
-import android.provider.ContactsContract
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import android.app.WallpaperManager
-import android.graphics.Bitmap
-import android.os.Build
-import android.widget.ImageView
-import android.graphics.drawable.BitmapDrawable
+import java.util.Date
+import java.util.Locale
+
 
 class MainActivity : ComponentActivity() {
 
@@ -49,12 +50,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var appSearchManager: AppSearchManager
     private lateinit var appDockManager: AppDockManager
     private var contactsList: List<String> = emptyList()
+    private var lastSearchTapTime = 0L
+    private val DOUBLE_TAP_THRESHOLD = 300
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
         private const val REQUEST_CODE_CALL_PHONE = 200
         private val SMS_PERMISSION_REQUEST = 300
-
+        private const val READ_EXTERNAL_STORAGE_REQUEST_CODE = 123
+        private const val WALLPAPER_REQUEST_CODE = 456
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,19 +73,28 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        wallpaperBackground = findViewById(R.id.wallpaper_background)
-        setWallpaperBackground()
-
-        requestCallPermission()
-        requestContactsPermission()
-        requestSmsPermission()
-
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
 
         searchBox = findViewById(R.id.search_box)
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
+
+        searchBox.setOnClickListener {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastSearchTapTime < DOUBLE_TAP_THRESHOLD) {
+                // Double tap detected
+                chooseWallpaper()
+            }
+            lastSearchTapTime = currentTime
+        }
+
+        wallpaperBackground = findViewById(R.id.wallpaper_background)
+        requestReadExternalStoragePermission()
+
+        requestCallPermission()
+        requestContactsPermission()
+        requestSmsPermission()
 
         if (isGridMode) {
             recyclerView.layoutManager = GridLayoutManager(this, 4)
@@ -122,26 +135,43 @@ class MainActivity : ComponentActivity() {
         )
 
         appDockManager.loadDockApps()
+        setWallpaperBackground()
     }
 
     private fun setWallpaperBackground() {
         val wallpaperManager = WallpaperManager.getInstance(this)
         try {
-            val wallpaperDrawable = wallpaperManager.drawable
-            // Convert the drawable to a bitmap
-            if (wallpaperDrawable is BitmapDrawable) {
-                val wallpaperBitmap = wallpaperDrawable.bitmap
-                wallpaperBackground.setImageBitmap(wallpaperBitmap)
+            val wallpaperDrawable = wallpaperManager.getDrawable()
+
+            if (wallpaperDrawable != null) {
+                when (wallpaperDrawable) {
+                    is BitmapDrawable -> {
+                        wallpaperBackground.setImageBitmap(wallpaperDrawable.bitmap)
+                    }
+                    else -> {
+                        wallpaperBackground.setImageDrawable(wallpaperDrawable) // Set the drawable directly
+                    }
+                }
             } else {
-                // Handle other drawable types (e.g., color or custom wallpaper)
-                // Optionally, set a default or fallback image here
-                wallpaperBackground.setImageDrawable(wallpaperDrawable)
+                wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
             }
+
         } catch (e: Exception) {
-            // Handle error if wallpaper is not accessible
             e.printStackTrace()
-            // Optionally set a default image
             wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+        }
+    }
+
+    private fun chooseWallpaper() {
+        val intent = Intent(Intent.ACTION_SET_WALLPAPER)
+        startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
+    }
+
+    private fun requestReadExternalStoragePermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), READ_EXTERNAL_STORAGE_REQUEST_CODE)
+        } else {
+            setWallpaperBackground() // Call your function here if permission is already granted
         }
     }
 
@@ -200,7 +230,8 @@ class MainActivity : ComponentActivity() {
     }
 
     fun loadApps() {
-        val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
+        val viewPreference =
+            sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
@@ -242,11 +273,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun requestCallPermission(){
+    private fun requestCallPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                arrayOf(Manifest.permission.CALL_PHONE), 1)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CALL_PHONE), 1
+            )
         }
     }
 
@@ -263,7 +297,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         when (requestCode) {
@@ -294,6 +332,14 @@ class MainActivity : ComponentActivity() {
                 } else {
                     // Permission denied for SMS
                     Toast.makeText(this, "Permission denied to send SMS", Toast.LENGTH_SHORT).show()
+                }
+            }
+            READ_EXTERNAL_STORAGE_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    setWallpaperBackground() // Call your function here when permission is granted
+                } else {
+                    // Handle permission denial
+                    Toast.makeText(this, "Permission denied to read external storage", Toast.LENGTH_SHORT).show()
                 }
             }
         }
