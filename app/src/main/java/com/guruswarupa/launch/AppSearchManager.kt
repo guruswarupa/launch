@@ -101,7 +101,8 @@ class AppSearchManager(
         return ResolveInfo().apply {
             activityInfo = ActivityInfo().apply {
                 packageName = "play_store_search"
-                name = "Search Play Store for \"$query\""
+                name = "Search Play Store for \"$query\""  // Display text
+                processName = query // Store the raw query separately
             }
         }
     }
@@ -110,7 +111,8 @@ class AppSearchManager(
         return ResolveInfo().apply {
             activityInfo = ActivityInfo().apply {
                 packageName = "browser_search"
-                name = "Search \"$query\" in Browser"
+                name = "Search \"$query\" in Browser"  // Display text
+                processName = query // Store the raw query separately
             }
         }
     }

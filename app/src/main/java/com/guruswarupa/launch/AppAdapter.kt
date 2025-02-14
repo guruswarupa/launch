@@ -77,7 +77,7 @@ class AppAdapter(
                 holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} on Play Store"
                 holder.itemView.setOnClickListener {
-                    val encodedQuery = Uri.encode(appInfo.activityInfo.name)
+                    val encodedQuery = Uri.encode(appInfo.activityInfo.processName)
                     activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=$encodedQuery")))
                     searchBox.text.clear()
                 }
@@ -87,7 +87,7 @@ class AppAdapter(
                 holder.appIcon.setImageResource(R.drawable.ic_browser)
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} in Browser"
                 holder.itemView.setOnClickListener {
-                    activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${appInfo.activityInfo.name}")))
+                    activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${appInfo.activityInfo.processName}")))
                     searchBox.text.clear()
                 }
             }
