@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="squircle_size">56dp</dimen>
+    <dimen name="squircle_corner_radius">16dp</dimen>
+    <dimen name="group_icon_size">24dp</dimen>
+    <dimen name="group_popup_padding">8dp</dimen>
+</resources>
