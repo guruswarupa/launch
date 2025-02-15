@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
@@ -253,9 +254,13 @@ class MainActivity : ComponentActivity() {
                 .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
                 .toMutableList()
 
-            // Preserve the selected layout mode
+            val displayMetrics = Resources.getSystem().displayMetrics
+            val screenWidth = displayMetrics.widthPixels
+            val columnWidth = 160 // Adjust this value based on your preference
+            val spanCount = screenWidth / columnWidth
+
             recyclerView.layoutManager = if (isGridMode) {
-                GridLayoutManager(this, 4)
+                GridLayoutManager(this, maxOf(2, spanCount)) // Ensuring at least 2 columns
             } else {
                 LinearLayoutManager(this)
             }
