@@ -11,4 +11,22 @@
     <color name="colorButtonText">#FFFFFF</color>
     <color name="button_primary">#81A1C1</color>
     <color name="white">#ffffff</color>
+    <color name="squircle_stroke">#8e8e8e</color>
+    <color name="group_overlay">#80000000</color>
+    <color name="nord0">#2E3440</color> <!-- Background, Lightest -->
+    <color name="nord1">#3B4252</color> <!-- Dark blue-gray -->
+    <color name="nord2">#434C5E</color> <!-- Blue-gray -->
+    <color name="nord3">#4C566A</color> <!-- Slate gray -->
+    <color name="nord4">#D8DEE9</color> <!-- Light grayish blue -->
+    <color name="nord5">#E5E9F0</color> <!-- Lightest gray -->
+    <color name="nord6">#ECEFF4</color> <!-- Off-white -->
+    <color name="nord7">#8FBCBB</color> <!-- Pale cyan -->
+    <color name="nord8">#88C0D0</color> <!-- Light blue -->
+    <color name="nord9">#81A1C1</color> <!-- Blue -->
+    <color name="nord10">#5E81AC</color> <!-- Medium blue -->
+    <color name="nord11">#BF616A</color> <!-- Red -->
+    <color name="nord12">#D08770</color> <!-- Orange -->
+    <color name="nord13">#EBCB8B</color> <!-- Yellow -->
+    <color name="nord14">#A3BE8C</color> <!-- Green -->
+    <color name="nord15">#B48EAD</color> <!-- Purple -->
 </resources>
