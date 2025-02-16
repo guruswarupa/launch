@@ -1,7 +1,6 @@
 package com.guruswarupa.launch
 
 import android.Manifest
-import android.app.AlertDialog
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
