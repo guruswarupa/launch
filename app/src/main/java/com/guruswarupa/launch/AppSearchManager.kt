@@ -1,6 +1,5 @@
 package com.guruswarupa.launch
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -101,8 +100,7 @@ class AppSearchManager(
         return ResolveInfo().apply {
             activityInfo = ActivityInfo().apply {
                 packageName = "play_store_search"
-                name = "Search Play Store for \"$query\""  // Display text
-                processName = query // Store the raw query separately
+                name = query
             }
         }
     }
@@ -111,8 +109,8 @@ class AppSearchManager(
         return ResolveInfo().apply {
             activityInfo = ActivityInfo().apply {
                 packageName = "browser_search"
-                name = "Search \"$query\" in Browser"  // Display text
-                processName = query // Store the raw query separately
+                name = query
+
             }
         }
     }
