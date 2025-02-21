@@ -5,12 +5,11 @@
     android:orientation="vertical"
     android:background="@color/background">
 
-    <!-- FrameLayout to stack the wallpaper behind other elements -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- Wallpaper ImageView (set as background) -->
+        <!-- Wallpaper Background -->
         <ImageView
             android:id="@+id/wallpaper_background"
             android:layout_width="match_parent"
@@ -18,78 +17,84 @@
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
 
-        <!-- All other UI elements will be stacked on top of the wallpaper -->
-        <LinearLayout
+        <!-- Scrollable Content -->
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:gravity="top">
+            android:fillViewport="true">
 
-            <!-- Time widget -->
-            <TextView
-                android:id="@+id/time_widget"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="32sp"
-                android:textColor="@color/text"
-                android:gravity="center"
-                android:fontFamily="sans-serif-light"
-                android:letterSpacing="0.05"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp"/>
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:gravity="top">
 
-            <!-- Date widget -->
-            <TextView
-                android:id="@+id/date_widget"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="24sp"
-                android:textColor="@color/text_secondary"
-                android:gravity="center"
-                android:fontFamily="sans-serif-light"
-                android:layout_marginBottom="24dp"/>
-
-            <!-- Search Box -->
-            <EditText
-                android:id="@+id/search_box"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/search_text"
-                android:textColor="@color/text"
-                android:textColorHint="@color/text_secondary"
-                android:padding="12dp"
-                android:background="@drawable/search_box_transparent_bg"
-                android:drawableStart="@android:drawable/ic_menu_search"
-                android:drawablePadding="8dp"
-                android:textSize="16sp"
-                android:layout_marginBottom="16dp"
-                android:singleLine="true"
-                android:imeOptions="actionSearch"/>
-
-            <!-- App Dock -->
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:padding="8dp">
-
-                <LinearLayout
-                    android:id="@+id/app_dock"
-                    android:layout_width="wrap_content"
+                <!-- Time Widget -->
+                <TextView
+                    android:id="@+id/time_widget"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:textSize="32sp"
+                    android:textColor="@color/text"
                     android:gravity="center"
-                    android:paddingEnd="16dp"
-                    android:layout_marginBottom="20px"/>
-            </HorizontalScrollView>
+                    android:fontFamily="sans-serif-light"
+                    android:letterSpacing="0.05"
+                    android:layout_marginTop="24dp"
+                    android:layout_marginBottom="8dp"/>
 
-            <!-- App List -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/app_list"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"/>
-        </LinearLayout>
+                <!-- Date Widget -->
+                <TextView
+                    android:id="@+id/date_widget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="24sp"
+                    android:textColor="@color/text_secondary"
+                    android:gravity="center"
+                    android:fontFamily="sans-serif-light"
+                    android:layout_marginBottom="24dp"/>
+
+                <!-- Search Box -->
+                <EditText
+                    android:id="@+id/search_box"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/search_text"
+                    android:textColor="@color/text"
+                    android:textColorHint="@color/text_secondary"
+                    android:padding="12dp"
+                    android:background="@drawable/search_box_transparent_bg"
+                    android:drawableStart="@android:drawable/ic_menu_search"
+                    android:drawablePadding="8dp"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="16dp"
+                    android:singleLine="true"
+                    android:imeOptions="actionSearch"/>
+
+                <!-- App Dock -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:padding="8dp">
+
+                    <LinearLayout
+                        android:id="@+id/app_dock"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:paddingEnd="16dp"
+                        android:layout_marginBottom="20px"/>
+                </HorizontalScrollView>
+
+                <!-- App List (RecyclerView) -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/app_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"/>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
     </FrameLayout>
 </LinearLayout>
