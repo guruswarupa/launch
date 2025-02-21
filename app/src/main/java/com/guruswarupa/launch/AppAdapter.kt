@@ -82,6 +82,41 @@ class AppAdapter(
                     searchBox.text.clear()
                 }
             }
+            "maps_search" -> {
+                // Set the Google Maps icon
+                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
+                holder.appName?.text = "Search ${appInfo.activityInfo.name} in Google Maps"
+                holder.itemView.setOnClickListener {
+                    // Create an Intent to open Google Maps
+                    val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(appInfo.activityInfo.name)}")
+                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                    mapIntent.setPackage("com.google.android.apps.maps")
+                    try {
+                        activity.startActivity(mapIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(activity, "Google Maps not installed.", Toast.LENGTH_SHORT).show()
+                    }
+                    searchBox.text.clear()
+                }
+            }
+            "yt_search" -> {
+                // Set the YouTube icon
+                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
+                holder.appName?.text = "Search ${appInfo.activityInfo.name} on YouTube"
+                holder.itemView.setOnClickListener {
+                    // Create an Intent to open YouTube search
+                    val ytIntentUri = Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(appInfo.activityInfo.name)}")
+                    val ytIntent = Intent(Intent.ACTION_VIEW, ytIntentUri)
+                    ytIntent.setPackage("com.google.android.youtube") // Open in YouTube app if installed
+                    try {
+                        activity.startActivity(ytIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(activity, "YouTube app not installed. Opening in browser.", Toast.LENGTH_SHORT).show()
+                        activity.startActivity(Intent(Intent.ACTION_VIEW, ytIntentUri)) // Open in browser as fallback
+                    }
+                    searchBox.text.clear()
+                }
+            }
             "browser_search" -> {
                 // Display browser search option
                 holder.appIcon.setImageResource(R.drawable.ic_browser)
