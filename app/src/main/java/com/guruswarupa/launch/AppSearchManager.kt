@@ -74,6 +74,8 @@ class AppSearchManager(
             // Fallback if no results found
             if (newFilteredList.isEmpty()) {
                 newFilteredList.add(createPlayStoreSearchOption(query))
+                newFilteredList.add(createGoogleMapsSearchOption(query))
+                newFilteredList.add(createYoutubeSearchOption(query))
                 newFilteredList.add(createBrowserSearchOption(query))
             }
         } else {
@@ -92,6 +94,33 @@ class AppSearchManager(
             activityInfo = ActivityInfo().apply {
                 packageName = "whatsapp_contact"
                 name = contact  // Display contact name
+            }
+        }
+    }
+
+    private fun createGoogleMapsSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "maps_search"
+                name = query
+            }
+        }
+    }
+
+    private fun createYoutubeSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "yt_search"
+                name = query
+            }
+        }
+    }
+
+    private fun createFileSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "file_search"
+                name = query
             }
         }
     }
