@@ -253,13 +253,8 @@ class MainActivity : ComponentActivity() {
                 .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
                 .toMutableList()
 
-            val displayMetrics = Resources.getSystem().displayMetrics
-            val screenWidth = displayMetrics.widthPixels
-            val columnWidth = 160 // Adjust this value based on your preference
-            val spanCount = screenWidth / columnWidth
-
             recyclerView.layoutManager = if (isGridMode) {
-                GridLayoutManager(this, maxOf(2, spanCount)) // Ensuring at least 2 columns
+                GridLayoutManager(this, 4)
             } else {
                 LinearLayoutManager(this)
             }
