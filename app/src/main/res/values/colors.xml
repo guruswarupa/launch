@@ -29,4 +29,6 @@
     <color name="nord13">#EBCB8B</color> <!-- Yellow -->
     <color name="nord14">#A3BE8C</color> <!-- Green -->
     <color name="nord15">#B48EAD</color> <!-- Purple -->
+    <color name="surfaceColor">#121212</color> <!-- Dark surface color for dark mode -->
+    <color name="outlineColor">#3A3A3A</color>
 </resources>
