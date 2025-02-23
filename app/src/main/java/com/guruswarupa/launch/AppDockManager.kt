@@ -21,6 +21,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -330,22 +331,28 @@ class AppDockManager(
     }
 
     private fun showRemoveDockAppDialog(item: String) {
+        // Options for the dialog
         val options = if (item.startsWith("group:")) {
-            arrayOf("Remove", "Rename")
+            arrayOf("Remove", "Rename", "Modify Group")
         } else {
             arrayOf("Remove")
         }
 
-        MaterialAlertDialogBuilder(context)
+        // Create the dialog
+        MaterialAlertDialogBuilder(context, R.style.CustomDialogTheme)
             .setTitle("Manage Dock Item")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> removeDockItem(item)
                     1 -> if (item.startsWith("group:")) showRenameGroupDialog(item)
+                    2 -> if (item.startsWith("group:")) showModifyGroupDialog(item)
                 }
                 refreshDock()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .setBackground(ContextCompat.getDrawable(context, R.drawable.dialog_background)) // Custom background
             .show()
     }
 
@@ -381,6 +388,53 @@ class AppDockManager(
                         addGroupToDock(packageNames, newName)
                         refreshDock()
                     }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showModifyGroupDialog(item: String) {
+        if (!item.startsWith("group:")) return
+
+        val parts = item.split(":", limit = 3)
+        if (parts.size != 3) return
+
+        val groupName = parts[1]
+        val currentPackageNames = parts[2].split(',').toMutableList()
+
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val apps = packageManager.queryIntentActivities(intent, 0)
+        val sortedApps = apps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
+        val appPackageNames = sortedApps.map { it.activityInfo.packageName }
+
+        val checkedItems = BooleanArray(appNames.size) { false }
+        appPackageNames.forEachIndexed { index, packageName ->
+            if (currentPackageNames.contains(packageName)) {
+                checkedItems[index] = true
+            }
+        }
+
+        AlertDialog.Builder(context)
+            .setTitle("Modify Group: $groupName")
+            .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
+                val packageName = appPackageNames[which]
+                if (isChecked) {
+                    currentPackageNames.add(packageName)
+                } else {
+                    currentPackageNames.remove(packageName)
+                }
+            }
+            .setPositiveButton("Save") { _, _ ->
+                if (currentPackageNames.size >= 2) {
+                    removeDockItem(item)
+                    addGroupToDock(currentPackageNames, groupName)
+                    refreshDock()
+                } else {
+                    Toast.makeText(context, "A group must have at least 2 apps", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
