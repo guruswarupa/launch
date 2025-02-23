@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="CustomDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="colorSurface">@color/surfaceColor</item> <!-- Background color -->
+        <item name="colorOnSurface">@color/white</item> <!-- Text color -->
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item> <!-- Rounded corners -->
+    </style>
+    <style name="TextAppearance.Dialog.Title" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="TextAppearance.Dialog.Item" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+</resources>

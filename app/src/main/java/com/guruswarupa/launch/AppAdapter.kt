@@ -17,251 +17,125 @@ import android.database.Cursor
 import android.provider.ContactsContract
 
 class AppAdapter(
-    private val activity: MainActivity,
-    var appList: MutableList<ResolveInfo>,
-    private val searchBox: EditText,
-    private val isGridMode: Boolean
+    private val act: MainActivity,
+    var apps: MutableList<ResolveInfo>,
+    private val search: EditText,
+    private val isGrid: Boolean
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     class ViewHolder(view: View, isGrid: Boolean) : RecyclerView.ViewHolder(view) {
-        val appIcon: ImageView = view.findViewById(R.id.app_icon)
-        val appName: TextView? = view.findViewById(R.id.app_name)
+        val icon: ImageView = view.findViewById(R.id.app_icon)
+        val name: TextView? = view.findViewById(R.id.app_name)
     }
 
-    override fun getItemViewType(position: Int): Int {
-        return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
-    }
+    override fun getItemViewType(pos: Int) = if (isGrid) 1 else 0
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val layoutId = if (viewType == VIEW_TYPE_GRID) R.layout.app_item_grid else R.layout.app_item
-        val view = LayoutInflater.from(parent.context).inflate(layoutId, parent, false)
-        return ViewHolder(view, isGridMode)
-    }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ViewHolder(LayoutInflater.from(parent.context).inflate(if (viewType == 1) R.layout.app_item_grid else R.layout.app_item, parent, false), isGrid)
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val appInfo = appList[position]
-        val packageName = appInfo.activityInfo.packageName
+    override fun onBindViewHolder(holder: ViewHolder, pos: Int) {
+        val app = apps[pos]
+        val pkg = app.activityInfo.packageName
+        holder.name?.visibility = View.VISIBLE
 
-        // Always show the name in both grid and list mode
-        holder.appName?.visibility = View.VISIBLE
-
-        when (packageName) {
+        when (pkg) {
             "contact_search" -> {
-                // Display contact with phone icon
-                holder.appIcon.setImageResource(R.drawable.ic_phone) // Ensure ic_phone is in res/drawable
-                holder.appName?.text = appInfo.activityInfo.name // Contact name
-                holder.itemView.setOnClickListener {
-                    showCallConfirmationDialog(appInfo.activityInfo.name)
-                    searchBox.text.clear()
-                }
+                holder.icon.setImageResource(R.drawable.ic_phone); holder.name?.text = app.activityInfo.name
+                holder.itemView.setOnClickListener { showCallDialog(app.activityInfo.name); search.text.clear() }
             }
             "whatsapp_contact" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_whatsapp) // WhatsApp icon
-                holder.appName?.text = appInfo.activityInfo.name
-                holder.itemView.setOnClickListener {
-                    openWhatsAppChat(appInfo.activityInfo.name)
-                    searchBox.text.clear()
-                }
+                holder.icon.setImageResource(R.drawable.ic_whatsapp); holder.name?.text = app.activityInfo.name
+                holder.itemView.setOnClickListener { openWhatsApp(app.activityInfo.name); search.text.clear() }
             }
             "sms_contact" -> {
-                // Display SMS option
-                holder.appIcon.setImageResource(R.drawable.ic_message)
-                holder.appName?.text = appInfo.activityInfo.name
-                holder.itemView.setOnClickListener {
-                    openSMSChat(appInfo.activityInfo.name)
-                    searchBox.text.clear()
-                }
+                holder.icon.setImageResource(R.drawable.ic_message); holder.name?.text = app.activityInfo.name
+                holder.itemView.setOnClickListener { openSms(app.activityInfo.name); search.text.clear() }
             }
             "play_store_search" -> {
-                // Display Play Store search option
-                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} on Play Store"
-                holder.itemView.setOnClickListener {
-                    val encodedQuery = Uri.encode(appInfo.activityInfo.name)
-                    activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=$encodedQuery")))
-                    searchBox.text.clear()
-                }
+                holder.icon.setImageDrawable(act.packageManager.getApplicationIcon("com.android.vending")); holder.name?.text = "Search ${app.activityInfo.name} on Play Store"
+                holder.itemView.setOnClickListener { act.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/search?q=${Uri.encode(app.activityInfo.name)}"))); search.text.clear() }
             }
             "maps_search" -> {
-                // Set the Google Maps icon
-                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} in Google Maps"
+                holder.icon.setImageDrawable(act.packageManager.getApplicationIcon("com.google.android.apps.maps")); holder.name?.text = "Search ${app.activityInfo.name} in Google Maps"
                 holder.itemView.setOnClickListener {
-                    // Create an Intent to open Google Maps
-                    val gmmIntentUri = Uri.parse("geo:0,0?q=${Uri.encode(appInfo.activityInfo.name)}")
-                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                    mapIntent.setPackage("com.google.android.apps.maps")
-                    try {
-                        activity.startActivity(mapIntent)
-                    } catch (e: Exception) {
-                        Toast.makeText(activity, "Google Maps not installed.", Toast.LENGTH_SHORT).show()
-                    }
-                    searchBox.text.clear()
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(app.activityInfo.name)}")).setPackage("com.google.android.apps.maps")
+                    try { act.startActivity(intent) } catch (e: Exception) { Toast.makeText(act, "Maps not installed.", Toast.LENGTH_SHORT).show() }
+                    search.text.clear()
                 }
             }
             "yt_search" -> {
-                // Set the YouTube icon
-                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} on YouTube"
+                holder.icon.setImageDrawable(act.packageManager.getApplicationIcon("com.google.android.youtube")); holder.name?.text = "Search ${app.activityInfo.name} on YouTube"
                 holder.itemView.setOnClickListener {
-                    // Create an Intent to open YouTube search
-                    val ytIntentUri = Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(appInfo.activityInfo.name)}")
-                    val ytIntent = Intent(Intent.ACTION_VIEW, ytIntentUri)
-                    ytIntent.setPackage("com.google.android.youtube") // Open in YouTube app if installed
-                    try {
-                        activity.startActivity(ytIntent)
-                    } catch (e: Exception) {
-                        Toast.makeText(activity, "YouTube app not installed. Opening in browser.", Toast.LENGTH_SHORT).show()
-                        activity.startActivity(Intent(Intent.ACTION_VIEW, ytIntentUri)) // Open in browser as fallback
-                    }
-                    searchBox.text.clear()
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(app.activityInfo.name)}")).setPackage("com.google.android.youtube")
+                    try { act.startActivity(intent) } catch (e: Exception) { Toast.makeText(act, "YouTube not installed. Browser opened.", Toast.LENGTH_SHORT).show(); act.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(app.activityInfo.name)}"))) }
+                    search.text.clear()
                 }
             }
             "browser_search" -> {
-                // Display browser search option
-                holder.appIcon.setImageResource(R.drawable.ic_browser)
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} in Browser"
-                holder.itemView.setOnClickListener {
-                    activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${appInfo.activityInfo.name}")))
-                    searchBox.text.clear()
-                }
+                holder.icon.setImageResource(R.drawable.ic_browser); holder.name?.text = "Search ${app.activityInfo.name} in Browser"
+                holder.itemView.setOnClickListener { act.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${app.activityInfo.name}"))); search.text.clear() }
             }
             else -> {
-                // Display installed app
-                holder.appIcon.setImageDrawable(appInfo.loadIcon(activity.packageManager))
-                holder.appName?.text = appInfo.loadLabel(activity.packageManager) // Display app name
-
+                holder.icon.setImageDrawable(app.loadIcon(act.packageManager)); holder.name?.text = app.loadLabel(act.packageManager)
                 holder.itemView.setOnClickListener {
-                    val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
-                    if (intent != null) {
-                        activity.startActivity(intent)
-                        searchBox.text.clear()
-                    } else {
-                        Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
-                    }
+                    act.packageManager.getLaunchIntentForPackage(pkg)?.let { act.startActivity(it); search.text.clear() } ?: Toast.makeText(act, "Cannot launch app", Toast.LENGTH_SHORT).show()
                 }
-
-                holder.itemView.setOnLongClickListener {
-                    uninstallApp(packageName)
-                    true
-                }
+                holder.itemView.setOnLongClickListener { uninstall(pkg); true }
             }
         }
     }
 
-    override fun getItemCount(): Int = appList.size
+    override fun getItemCount() = apps.size
 
-    private fun uninstallApp(packageName: String) {
-        val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
-            data = Uri.parse("package:$packageName")
-        }
-        activity.startActivity(intent)
+    private fun uninstall(pkg: String) {
+        act.startActivity(Intent(Intent.ACTION_UNINSTALL_PACKAGE, Uri.parse("package:$pkg")))
+        apps.removeAll { it.activityInfo.packageName == pkg }; notifyDataSetChanged()
     }
 
-    private fun showCallConfirmationDialog(contactName: String) {
-        val phoneNumber = getPhoneNumberForContact(contactName) // Fetch phone number for the contact
-
-        AlertDialog.Builder(activity)
-            .setTitle("Call $contactName?")
-            .setMessage("Phone: $phoneNumber\nDo you want to proceed?")
-            .setPositiveButton("Call") { _, _ ->
-                call(phoneNumber)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+    private fun showCallDialog(name: String) {
+        val num = getNum(name)
+        AlertDialog.Builder(act).setTitle("Call $name?").setMessage("Phone: $num\nDo you want to proceed?").setPositiveButton("Call") { _, _ -> call(num) }.setNegativeButton("Cancel", null).show()
     }
 
-    private fun call(phoneNumber: String) {
-        val intent = Intent(Intent.ACTION_CALL).apply {
-            data = Uri.parse("tel:$phoneNumber")
-        }
-        activity.startActivity(intent)
-    }
+    private fun call(num: String) = act.startActivity(Intent(Intent.ACTION_CALL, Uri.parse("tel:$num")))
 
-    private fun getPhoneNumberForContact(contactName: String): String {
-        val contentResolver: ContentResolver = activity.contentResolver
-        val projection = arrayOf(
-            ContactsContract.CommonDataKinds.Phone.NUMBER
-        )
-
-        val selection = "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?"
-        val selectionArgs = arrayOf(contactName)
-
-        val cursor: Cursor? = contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            projection,
-            selection,
-            selectionArgs,
-            null
-        )
-
-        var phoneNumber: String? = null
-
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                if (numberIndex != -1) {
-                    phoneNumber = it.getString(numberIndex)
-                }
-            }
-        }
-
-        return phoneNumber ?: "Not found"
-    }
-
-    private fun openWhatsAppChat(contactName: String) {
-        val contentResolver: ContentResolver = activity.contentResolver
-        val cursor = contentResolver.query(
+    private fun getNum(name: String): String {
+        var num = "Not found"
+        act.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
             "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
-            arrayOf(contactName),
+            arrayOf(name),
             null
-        )
+        )?.use { cursor -> // Use 'use' to ensure cursor is closed
+            if (cursor.moveToFirst()) {
+                num = cursor.getString(0)
+            }
+        }
+        return num
+    }
 
-        cursor?.use {
-            if (it.moveToFirst()) {
-                var phoneNumber = it.getString(0).replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-
-                // Ensure it has a country code (modify +91 to your country code if needed)
-                if (!phoneNumber.startsWith("+")) {
-                    phoneNumber = "+91$phoneNumber"  // Change +91 to your country code
-                }
-
+    private fun openWhatsApp(name: String) {
+        act.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
+            arrayOf(name),
+            null
+        )?.use { cursor -> // Use 'use' to ensure cursor is closed
+            if (cursor.moveToFirst()) {
+                var num = cursor.getString(0).replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+                if (!num.startsWith("+")) num = "+91$num"
                 try {
-                    val intent = Intent(Intent.ACTION_VIEW)
-                    intent.data = Uri.parse("https://wa.me/${Uri.encode(phoneNumber)}")
-                    intent.setPackage("com.whatsapp")
-                    activity.startActivity(intent)
+                    act.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/${Uri.encode(num)}")).setPackage("com.whatsapp"))
                 } catch (e: Exception) {
-                    Toast.makeText(activity, "WhatsApp not installed.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(act, "WhatsApp not installed.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    private fun openSMSChat(contactName: String) {
-        val phoneNumber = getPhoneNumberForContact(contactName)
-
-        val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("smsto:$phoneNumber") // Ensures only SMS apps respond
-            putExtra("sms_body", "") // Optional: You can pre-fill the message here
-        }
-
-        try {
-            if (intent.resolveActivity(activity.packageManager) != null) {
-                activity.startActivity(intent)
-            } else {
-                Toast.makeText(activity, "No SMS app installed!", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Toast.makeText(activity, "Failed to open messaging app.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-
-    companion object {
-        private const val VIEW_TYPE_LIST = 0
-        private const val VIEW_TYPE_GRID = 1
+    private fun openSms(name: String) {
+        val num = getNum(name)
+        act.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$num")).putExtra("sms_body", "").apply { if (resolveActivity(act.packageManager) == null) Toast.makeText(act, "No SMS app installed!", Toast.LENGTH_SHORT).show() })
     }
 }
