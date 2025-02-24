@@ -8,116 +8,157 @@ import android.net.Uri
 import android.widget.EditText
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.*
-import java.util.concurrent.ConcurrentHashMap
 
 class AppSearchManager(
-    private val pm: PackageManager,
-    private val apps: MutableList<ResolveInfo>,
-    private var allApps: MutableList<ResolveInfo>,
+    private val packageManager: PackageManager,
+    private val appList: MutableList<ResolveInfo>,
+    private val fullAppList: MutableList<ResolveInfo>,
     private val adapter: AppAdapter,
-    private val rv: RecyclerView,
-    private val search: EditText,
-    private val contacts: List<String>
+    private val recyclerView: RecyclerView,
+    private val searchBox: EditText,
+    private val contactsList: List<String> // List of contact names or numbers
 ) {
-    private var searchJob: Job? = null
-    private val searchScope = CoroutineScope(Dispatchers.Main)
-    private var currentQuery: String = ""
-    private val appLabels = ConcurrentHashMap<ResolveInfo, String>() // Cache app labels
 
     init {
-        // Pre-cache app labels for faster lookup
-        CoroutineScope(Dispatchers.IO).launch {
-            allApps.forEach { app ->
-                appLabels[app] = app.loadLabel(pm).toString().lowercase()
-            }
-        }
-
-        search.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-                // Implementation (can be empty if not needed)
-            }
+        searchBox.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val newQuery = s.toString()
-                if (newQuery != currentQuery) {
-                    currentQuery = newQuery
-                    searchJob?.cancel() // Cancel previous job
-                    searchJob = searchScope.launch {
-                        delay(300) // Debounce delay
-                        filter(newQuery)
-                    }
-                }
+                filterAppsAndContacts(s.toString())
             }
 
-            override fun afterTextChanged(s: android.text.Editable?) {
-            }
+            override fun afterTextChanged(s: android.text.Editable?) {}
         })
 
-        search.setOnLongClickListener {
+        searchBox.setOnLongClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {
-                search.context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                searchBox.context.startActivity(intent)
             } catch (e: Exception) {
-                Toast.makeText(search.context, "Browser not found!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(searchBox.context, "No browser found!", Toast.LENGTH_SHORT).show()
             }
             true
         }
     }
 
-    fun updateAppLabels() {
-        appLabels.clear()
-        CoroutineScope(Dispatchers.IO).launch {
-            allApps.forEach { app ->
-                appLabels[app] = app.loadLabel(pm).toString().lowercase()
-            }
-        }
-    }
+    fun filterAppsAndContacts(query: String) {
+        val newFilteredList = mutableListOf<ResolveInfo>()
 
-    private suspend fun filter(query: String) = withContext(Dispatchers.Default) {
-        val filtered = mutableListOf<ResolveInfo>()
         if (query.isNotEmpty()) {
-            val lowerQuery = query.lowercase()
+            // Filter installed apps
+            newFilteredList.addAll(fullAppList.filter {
+                it.loadLabel(packageManager).toString().contains(query, ignoreCase = true)
+            })
 
-            val validApps = allApps.filter { appLabels[it]?.contains(lowerQuery) == true } //Filter valid apps.
-            filtered.addAll(validApps)
+            // Group contacts by name
+            val groupedContacts = contactsList.filter {
+                it.contains(query, ignoreCase = true)
+            }.groupBy { it }
 
-            contacts.filter { it.lowercase().contains(lowerQuery) }.groupBy { it }.forEach { (_, list) ->
-                list.map { createWhatsApp(it) }.let { filtered.addAll(it) }
-                list.forEach { filtered.add(createContact(it)); filtered.add(createSms(it)) }
+            // Create contact options
+            groupedContacts.forEach { (contactName, contactList) ->
+                // Create WhatsApp contacts for each contact in the group
+                val filteredWhatsAppContacts = contactList.map { createWhatsAppContactOption(it) }
+
+                // Add WhatsApp contacts first
+                newFilteredList.addAll(filteredWhatsAppContacts)
+
+                // Add SMS and phone options for each contact
+                contactList.forEach { contact ->
+                    newFilteredList.add(createContactOption(contact))
+                    newFilteredList.add(createSmsOption(contact))
+                }
             }
-            if (filtered.isEmpty()) {
-                filtered.add(createPlayStore(query)); filtered.add(createMaps(query)); filtered.add(createYoutube(query)); filtered.add(createBrowser(query))
+
+            // Fallback if no results found
+            if (newFilteredList.isEmpty()) {
+                newFilteredList.add(createPlayStoreSearchOption(query))
+                newFilteredList.add(createGoogleMapsSearchOption(query))
+                newFilteredList.add(createYoutubeSearchOption(query))
+                newFilteredList.add(createBrowserSearchOption(query))
             }
         } else {
-            // Show only the app list when search is empty
-            filtered.addAll(allApps.sortedBy { appLabels[it] })
+            // If query is empty, show all apps sorted
+            newFilteredList.addAll(fullAppList.sortedBy { it.loadLabel(packageManager).toString().lowercase() })
         }
 
-        withContext(Dispatchers.Main) {
-            apps.clear()
-            apps.addAll(filtered)
-            adapter.notifyDataSetChanged()
-        }
+        // Update the actual list
+        appList.clear()
+        appList.addAll(newFilteredList)
+        adapter.notifyDataSetChanged() // Ensure UI updates
     }
 
-    fun removeInvalidApps() {
-        val iterator = allApps.iterator()
-        while (iterator.hasNext()) {
-            val app = iterator.next()
-            try {
-                pm.getApplicationLabel(app.activityInfo.applicationInfo)
-            } catch (e: Exception) {
-                iterator.remove()
+    private fun createWhatsAppContactOption(contact: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "whatsapp_contact"
+                name = contact  // Display contact name
             }
         }
-        updateAppLabels()
     }
 
-    private fun createWhatsApp(contact: String) = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "whatsapp_contact"; name = contact } }
-    private fun createMaps(query: String) = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "maps_search"; name = query } }
-    private fun createYoutube(query: String) = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "yt_search"; name = query } }
-    private fun createPlayStore(query: String) = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "play_store_search"; name = query } }
-    private fun createBrowser(query: String) = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "browser_search"; name = query } }
-    private fun createSms(contact: String) = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "sms_contact"; name = contact } }
-    private fun createContact(contact: String) = ResolveInfo().apply { activityInfo = ActivityInfo().apply { packageName = "contact_search"; name = contact } }
+    private fun createGoogleMapsSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "maps_search"
+                name = query
+            }
+        }
+    }
+
+    private fun createYoutubeSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "yt_search"
+                name = query
+            }
+        }
+    }
+
+    private fun createFileSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "file_search"
+                name = query
+            }
+        }
+    }
+
+    private fun createPlayStoreSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "play_store_search"
+                name = query
+            }
+        }
+    }
+
+    private fun createBrowserSearchOption(query: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "browser_search"
+                name = query
+
+            }
+        }
+    }
+
+    private fun createSmsOption(contact: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "sms_contact"
+                name = contact
+            }
+        }
+    }
+
+    private fun createContactOption(contact: String): ResolveInfo {
+        return ResolveInfo().apply {
+            activityInfo = ActivityInfo().apply {
+                packageName = "contact_search"
+                name = contact  // Display contact name or number
+            }
+        }
+    }
 }
