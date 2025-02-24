@@ -195,11 +195,15 @@ class MainActivity : ComponentActivity() {
     private val packageRemoveReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_PACKAGE_REMOVED) {
-                // Check if the package is not being replaced (i.e., it's a true uninstall)
                 if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                    loadApps()
-                    adapter.appList = appList
-                    adapter.notifyDataSetChanged()
+                    val packageName = intent.data?.encodedSchemeSpecificPart // Get the package name
+                    if (packageName != null) {
+                        appList.removeAll { it.activityInfo.packageName == packageName }
+                        fullAppList.removeAll { it.activityInfo.packageName == packageName }
+
+                        adapter.appList = appList
+                        adapter.notifyDataSetChanged()
+                    }
                 }
             }
         }
@@ -236,8 +240,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun loadApps() {
-        val viewPreference =
-            sharedPreferences.getString("view_preference", "list") // Read the latest preference
+        val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
