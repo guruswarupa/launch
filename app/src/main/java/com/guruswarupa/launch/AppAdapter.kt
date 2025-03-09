@@ -15,12 +15,13 @@ import androidx.recyclerview.widget.RecyclerView
 import android.content.ContentResolver
 import android.database.Cursor
 import android.provider.ContactsContract
+import androidx.room.util.query
 
 class AppAdapter(
     private val activity: MainActivity,
     var appList: MutableList<ResolveInfo>,
     private val searchBox: EditText,
-    private val isGridMode: Boolean
+    private val isGridMode: Boolean,
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     class ViewHolder(view: View, isGrid: Boolean) : RecyclerView.ViewHolder(view) {
@@ -125,6 +126,10 @@ class AppAdapter(
                     activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${appInfo.activityInfo.name}")))
                     searchBox.text.clear()
                 }
+            }
+            "math_result" -> {
+                holder.appIcon.setImageResource(R.drawable.ic_calculator) // Ensure ic_calculator is in res/drawable
+                holder.appName?.text = appInfo.activityInfo.name
             }
             else -> {
                 // Display installed app
