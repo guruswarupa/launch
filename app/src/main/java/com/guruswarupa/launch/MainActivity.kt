@@ -12,6 +12,7 @@ import android.content.pm.ResolveInfo
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.provider.ContactsContract
@@ -92,6 +93,17 @@ class MainActivity : ComponentActivity() {
                 chooseWallpaper()
             }
             lastSearchTapTime = currentTime
+        }
+
+        searchBox.setOnLongClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                searchBox.context.startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(searchBox.context, "No browser found!", Toast.LENGTH_SHORT).show()
+            }
+            true
         }
 
         wallpaperBackground = findViewById(R.id.wallpaper_background)

@@ -4,18 +4,21 @@ import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class OnboardingActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
-
+C
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_onboarding)
@@ -26,6 +29,7 @@ class OnboardingActivity : ComponentActivity() {
         findViewById<Button>(R.id.set_display_style).setOnClickListener { chooseDisplayStyle() }
     }
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun requestPermissions() {
         val permissions = arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.SEND_SMS, Manifest.permission.CALL_PHONE, Manifest.permission.READ_MEDIA_IMAGES)
         val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }.toTypedArray()
