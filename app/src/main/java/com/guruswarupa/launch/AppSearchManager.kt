@@ -7,9 +7,15 @@ import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.CalendarContract
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.recyclerview.widget.RecyclerView
+import net.objecthunter.exp4j.ExpressionBuilder
+import org.json.JSONObject
+import java.net.URL
+import java.sql.Date
 
 class AppSearchManager(
     private val packageManager: PackageManager,
@@ -50,24 +56,24 @@ class AppSearchManager(
         val newFilteredList = mutableListOf<ResolveInfo>()
 
         if (query.isNotEmpty()) {
-            // Filter apps
-            newFilteredList.addAll(fullAppList.filter {
-                appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true)
-            })
-
-            // Filter contacts and create options
-            contactsList.filter { it.contains(query, ignoreCase = true) }.forEach { contact ->
-                newFilteredList.add(createWhatsAppContactOption(contact))
-                newFilteredList.add(createSmsOption(contact))
-                newFilteredList.add(createContactOption(contact))
-            }
-
-            // Fallback options
-            if (newFilteredList.isEmpty()) {
-                newFilteredList.add(createPlayStoreSearchOption(query))
-                newFilteredList.add(createGoogleMapsSearchOption(query))
-                newFilteredList.add(createYoutubeSearchOption(query))
-                newFilteredList.add(createBrowserSearchOption(query))
+            val mathResult = evaluateMathExpression(query)
+            if (mathResult != null) {
+                newFilteredList.add(createMathResultOption(query, mathResult))
+            } else {
+                newFilteredList.addAll(fullAppList.filter {
+                    appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true)
+                })
+                contactsList.filter { it.contains(query, ignoreCase = true) }.forEach { contact ->
+                    newFilteredList.add(createWhatsAppContactOption(contact))
+                    newFilteredList.add(createSmsOption(contact))
+                    newFilteredList.add(createContactOption(contact))
+                }
+                if (newFilteredList.isEmpty()) {
+                    newFilteredList.add(createPlayStoreSearchOption(query))
+                    newFilteredList.add(createGoogleMapsSearchOption(query))
+                    newFilteredList.add(createYoutubeSearchOption(query))
+                    newFilteredList.add(createBrowserSearchOption(query))
+                }
             }
         } else {
             newFilteredList.addAll(fullAppList.sortedBy { appLabels[fullAppList.indexOf(it)] })
@@ -79,6 +85,26 @@ class AppSearchManager(
     }
 
     private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()
+
+    private fun evaluateMathExpression(expression: String): String? {
+        return try {
+            val result = ExpressionBuilder(expression).build().evaluate()
+            result.toString()
+        } catch (e: Exception) {
+            null // Return null if it's not a valid math expression
+        }
+    }
+
+    private fun createMathResultOption(expression: String, result: String): ResolveInfo {
+        return cachedResolveInfos.getOrPut("math_result_$expression") {
+            ResolveInfo().apply {
+                activityInfo = ActivityInfo().apply {
+                    packageName = "math_result"
+                    name = "$expression = $result"
+                }
+            }
+        }
+    }
 
     private fun createWhatsAppContactOption(contact: String): ResolveInfo {
         return cachedResolveInfos.getOrPut("whatsapp_contact_$contact") {
