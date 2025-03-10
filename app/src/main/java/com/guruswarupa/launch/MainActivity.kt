@@ -67,9 +67,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        
-        // Add chat button
-        addChatButton()
+
+        findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.chatFab)?.apply {
+            setOnClickListener {
+                val intent = Intent(this@MainActivity, ChatActivity::class.java)
+                startActivity(intent)
+            }
+        }
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
@@ -257,7 +261,8 @@ class MainActivity : ComponentActivity() {
     }
 
     fun loadApps() {
-        val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
+        val viewPreference =
+            sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
