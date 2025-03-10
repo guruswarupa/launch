@@ -28,7 +28,7 @@ data class Message(
 
 data class ChatCompletionResponse(
     val id: String,
-    val object: String,
+    val objectType: String,
     val created: Long,
     val model: String,
     val choices: List<Choice>,

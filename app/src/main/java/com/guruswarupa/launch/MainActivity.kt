@@ -22,6 +22,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
@@ -158,6 +159,7 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    @RequiresPermission(anyOf = ["android.permission.READ_WALLPAPER_INTERNAL", Manifest.permission.MANAGE_EXTERNAL_STORAGE])
     private fun setWallpaperBackground() {
         val wallpaperManager = WallpaperManager.getInstance(this)
         try {
