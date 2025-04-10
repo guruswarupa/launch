@@ -17,7 +17,7 @@ import androidx.core.content.ContextCompat
 class OnboardingActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
-C
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
