@@ -245,10 +245,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateDate() {
-        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
         val currentTime = sdf.format(Date())
         dateTextView.text = currentTime
-        handler.postDelayed({ updateTime() }, 1000)
+
+        handler.postDelayed({ updateDate() }, 60_000) // Refresh every minute
     }
 
     fun loadApps() {
