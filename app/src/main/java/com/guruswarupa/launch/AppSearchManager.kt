@@ -66,9 +66,6 @@ class AppSearchManager(
                     .filter { appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true) }
                     .sortedByDescending { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
                 newFilteredList.addAll(filteredAndSorted)
-                newFilteredList.addAll(fullAppList.filter {
-                    appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true)
-                })
                 contactsList.filter { it.contains(query, ignoreCase = true) }.forEach { contact ->
                     newFilteredList.add(createWhatsAppContactOption(contact))
                     newFilteredList.add(createSmsOption(contact))
