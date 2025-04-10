@@ -15,7 +15,9 @@ import androidx.recyclerview.widget.RecyclerView
 import android.content.ContentResolver
 import android.database.Cursor
 import android.provider.ContactsContract
+import androidx.activity.ComponentActivity
 import androidx.room.util.query
+import kotlin.apply
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -305,7 +307,6 @@ class AppAdapter(
             Toast.makeText(activity, "Failed to open messaging app.", Toast.LENGTH_SHORT).show()
         }
     }
-
 
     companion object {
         private const val VIEW_TYPE_LIST = 0
