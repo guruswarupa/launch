@@ -136,7 +136,6 @@ class MainActivity : ComponentActivity() {
         }
 
         loadApps()
-
         adapter = AppAdapter(this, appList, searchBox, isGridMode)
         recyclerView.adapter = adapter
 
@@ -223,6 +222,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        setWallpaperBackground()
         val filter = IntentFilter(Intent.ACTION_PACKAGE_REMOVED).apply {
             addDataScheme("package")
         }
@@ -245,10 +245,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateDate() {
-        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
         val currentTime = sdf.format(Date())
         dateTextView.text = currentTime
-        handler.postDelayed({ updateTime() }, 1000)
+
+        handler.postDelayed({ updateDate() }, 60_000) // Refresh every minute
     }
 
     fun loadApps() {
@@ -264,8 +265,15 @@ class MainActivity : ComponentActivity() {
         if (appList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
         } else {
+            val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
             appList = appList.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+                .sortedWith(
+                    compareByDescending<ResolveInfo> {
+                        prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                    }.thenBy {
+                        it.loadLabel(packageManager).toString().lowercase()
+                    }
+                )
                 .toMutableList()
 
             recyclerView.layoutManager = if (isGridMode) {
