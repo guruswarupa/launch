@@ -50,8 +50,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var wallpaperBackground: ImageView
     private var currentWallpaperBitmap: Bitmap? = null
 
-    private lateinit var appSearchManager: AppSearchManager
-    private lateinit var appDockManager: AppDockManager
+    lateinit var appSearchManager: AppSearchManager
+    private lateinit var appDockManager: AppDockManager 
     private var contactsList: List<String> = emptyList()
     private var lastSearchTapTime = 0L
     private val DOUBLE_TAP_THRESHOLD = 300
@@ -265,15 +265,9 @@ class MainActivity : ComponentActivity() {
         if (appList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
         } else {
-            val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+            val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
             appList = appList.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                .sortedWith(
-                    compareByDescending<ResolveInfo> {
-                        prefs.getInt("usage_${it.activityInfo.packageName}", 0)
-                    }.thenBy {
-                        it.loadLabel(packageManager).toString().lowercase()
-                    }
-                )
+                .sortedByDescending { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
                 .toMutableList()
 
             recyclerView.layoutManager = if (isGridMode) {

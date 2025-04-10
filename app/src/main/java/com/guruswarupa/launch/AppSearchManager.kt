@@ -55,33 +55,21 @@ class AppSearchManager(
 
     fun filterAppsAndContacts(query: String) {
         val newFilteredList = mutableListOf<ResolveInfo>()
+        val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
 
         if (query.isNotEmpty()) {
             val mathResult = evaluateMathExpression(query)
             if (mathResult != null) {
                 newFilteredList.add(createMathResultOption(query, mathResult))
             } else {
-                // Get filtered apps while maintaining usage order
-                val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-                val filteredApps = fullAppList.filter {
-                    it.loadLabel(packageManager).toString().contains(query, ignoreCase = true)
-                }.sortedWith(
-                    compareByDescending<ResolveInfo> {
-                        prefs.getInt("usage_${it.activityInfo.packageName}", 0)
-                    }.thenBy {
-                        it.loadLabel(packageManager).toString().lowercase()
-                    }
-                )
-                newFilteredList.addAll(filteredApps)
-
-                // Add contact-related options
+                newFilteredList.addAll(fullAppList.filter {
+                    appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true)
+                })
                 contactsList.filter { it.contains(query, ignoreCase = true) }.forEach { contact ->
                     newFilteredList.add(createWhatsAppContactOption(contact))
                     newFilteredList.add(createSmsOption(contact))
                     newFilteredList.add(createContactOption(contact))
                 }
-
-                // Add search options if no results found
                 if (newFilteredList.isEmpty()) {
                     newFilteredList.add(createPlayStoreSearchOption(query))
                     newFilteredList.add(createGoogleMapsSearchOption(query))
@@ -90,18 +78,16 @@ class AppSearchManager(
                 }
             }
         } else {
-            // When search is empty, sort by usage
-            val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-            newFilteredList.addAll(fullAppList.sortedWith(
-                compareByDescending<ResolveInfo> {
-                    prefs.getInt("usage_${it.activityInfo.packageName}", 0)
-                }.thenBy {
-                    it.loadLabel(packageManager).toString().lowercase()
-                }
-            ))
+            // Sort by usage count when no search query
+            newFilteredList.addAll(fullAppList.sortedByDescending {
+                prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+            })
         }
 
         appList.clear()
+        recyclerView.post {
+            adapter.notifyDataSetChanged()
+        }
         appList.addAll(newFilteredList)
         adapter.notifyDataSetChanged()
     }
