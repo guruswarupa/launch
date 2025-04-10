@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
     private var currentWallpaperBitmap: Bitmap? = null
 
     lateinit var appSearchManager: AppSearchManager
-    private lateinit var appDockManager: AppDockManager 
+    private lateinit var appDockManager: AppDockManager
     private var contactsList: List<String> = emptyList()
     private var lastSearchTapTime = 0L
     private val DOUBLE_TAP_THRESHOLD = 300
@@ -259,8 +259,12 @@ class MainActivity : ComponentActivity() {
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        appList = packageManager.queryIntentActivities(intent, 0).toMutableList()
-        fullAppList = appList.toMutableList()
+        val unsortedList = packageManager.queryIntentActivities(intent, 0)
+            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .toMutableList()
+
+        appList = unsortedList.toMutableList()
+        fullAppList = unsortedList.toMutableList()
 
         if (appList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
