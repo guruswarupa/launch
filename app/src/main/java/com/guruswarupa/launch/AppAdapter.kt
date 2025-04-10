@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import android.content.ContentResolver
+import android.content.Context
 import android.database.Cursor
 import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
@@ -183,8 +184,14 @@ class AppAdapter(
                 holder.itemView.setOnClickListener {
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                     if (intent != null) {
+                        // Update usage count
+                        val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+                        val usageCount = prefs.getInt("usage_$packageName", 0)
+                        prefs.edit().putInt("usage_$packageName", usageCount + 1).apply()
                         activity.startActivity(intent)
                         searchBox.text.clear()
+                        // Refresh the list to update positions
+                        activity.loadApps()
                     } else {
                         Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
                     }

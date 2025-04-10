@@ -265,8 +265,15 @@ class MainActivity : ComponentActivity() {
         if (appList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
         } else {
+            val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
             appList = appList.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+                .sortedWith(
+                    compareByDescending<ResolveInfo> {
+                        prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                    }.thenBy {
+                        it.loadLabel(packageManager).toString().lowercase()
+                    }
+                )
                 .toMutableList()
 
             recyclerView.layoutManager = if (isGridMode) {
