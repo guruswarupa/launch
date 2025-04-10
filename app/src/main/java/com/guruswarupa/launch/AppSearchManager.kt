@@ -56,12 +56,16 @@ class AppSearchManager(
     fun filterAppsAndContacts(query: String) {
         val newFilteredList = mutableListOf<ResolveInfo>()
         val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-
         if (query.isNotEmpty()) {
             val mathResult = evaluateMathExpression(query)
             if (mathResult != null) {
                 newFilteredList.add(createMathResultOption(query, mathResult))
             } else {
+                // Sort filtered results by usage count
+                val filteredAndSorted = fullAppList
+                    .filter { appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true) }
+                    .sortedByDescending { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
+                newFilteredList.addAll(filteredAndSorted)
                 newFilteredList.addAll(fullAppList.filter {
                     appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true)
                 })
