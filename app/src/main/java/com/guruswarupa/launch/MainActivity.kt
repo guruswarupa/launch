@@ -136,7 +136,6 @@ class MainActivity : ComponentActivity() {
         }
 
         loadApps()
-
         adapter = AppAdapter(this, appList, searchBox, isGridMode)
         recyclerView.adapter = adapter
 
@@ -223,6 +222,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        setWallpaperBackground()
         val filter = IntentFilter(Intent.ACTION_PACKAGE_REMOVED).apply {
             addDataScheme("package")
         }
