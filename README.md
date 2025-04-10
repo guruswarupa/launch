@@ -9,3 +9,4 @@ features and gestures:
 - add favorite apps and groups to dock
 - long press apps from dock to remove or rename
 - double tap searchbar to change wallpaper
+- inbuilt calculator in searchbar.
