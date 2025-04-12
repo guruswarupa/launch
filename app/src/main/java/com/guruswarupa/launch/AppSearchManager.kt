@@ -46,49 +46,63 @@ class AppSearchManager(
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 handler.removeCallbacks(debounceRunnable)
-                handler.postDelayed(debounceRunnable, 300) // Adjust delay as needed
+                handler.postDelayed(debounceRunnable, 50)
             }
 
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
     }
 
+    private val appLabelMap: Map<ResolveInfo, String> by lazy {
+        fullAppList.associateWith { it.loadLabel(packageManager).toString().lowercase() }
+    }
+
     fun filterAppsAndContacts(query: String) {
         val newFilteredList = mutableListOf<ResolveInfo>()
         val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        val queryLower = query.lowercase()
+
         if (query.isNotEmpty()) {
-            val mathResult = evaluateMathExpression(query)
-            if (mathResult != null) {
-                newFilteredList.add(createMathResultOption(query, mathResult))
-            } else {
-                // Sort filtered results by usage count
-                val filteredAndSorted = fullAppList
-                    .filter { appLabels[fullAppList.indexOf(it)].contains(query, ignoreCase = true) }
-                    .sortedByDescending { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
-                newFilteredList.addAll(filteredAndSorted)
+            evaluateMathExpression(query)?.let { result ->
+                newFilteredList.add(createMathResultOption(query, result))
+            } ?: run {
+                val appMatches = appLabelMap
+                    .filterValues { it.contains(queryLower) }
+                    .toList()
+                    .sortedByDescending { (info, _) ->
+                        prefs.getInt("usage_${info.activityInfo.packageName}", 0)
+                    }
+                    .map { it.first }
+
+                newFilteredList.addAll(appMatches)
+
                 contactsList.filter { it.contains(query, ignoreCase = true) }.forEach { contact ->
                     newFilteredList.add(createWhatsAppContactOption(contact))
                     newFilteredList.add(createSmsOption(contact))
                     newFilteredList.add(createContactOption(contact))
                 }
+
                 if (newFilteredList.isEmpty()) {
-                    newFilteredList.add(createPlayStoreSearchOption(query))
-                    newFilteredList.add(createGoogleMapsSearchOption(query))
-                    newFilteredList.add(createYoutubeSearchOption(query))
-                    newFilteredList.add(createBrowserSearchOption(query))
+                    // Defer suggestions to avoid blocking main UI
+                    handler.postDelayed({
+                        newFilteredList.add(createPlayStoreSearchOption(query))
+                        newFilteredList.add(createGoogleMapsSearchOption(query))
+                        newFilteredList.add(createYoutubeSearchOption(query))
+                        newFilteredList.add(createBrowserSearchOption(query))
+                        appList.clear()
+                        appList.addAll(newFilteredList)
+                        adapter.notifyDataSetChanged()
+                    }, 100)
+                    return
                 }
             }
         } else {
-            // Sort by usage count when no search query
             newFilteredList.addAll(fullAppList.sortedByDescending {
                 prefs.getInt("usage_${it.activityInfo.packageName}", 0)
             })
         }
 
         appList.clear()
-        recyclerView.post {
-            adapter.notifyDataSetChanged()
-        }
         appList.addAll(newFilteredList)
         adapter.notifyDataSetChanged()
     }
