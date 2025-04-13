@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
     private var currentWallpaperBitmap: Bitmap? = null
 
     lateinit var appSearchManager: AppSearchManager
-    private lateinit var appDockManager: AppDockManager 
+    private lateinit var appDockManager: AppDockManager
     private var contactsList: List<String> = emptyList()
     private var lastSearchTapTime = 0L
     private val DOUBLE_TAP_THRESHOLD = 300
@@ -203,17 +203,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val packageRemoveReceiver = object : BroadcastReceiver() {
+    private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_PACKAGE_REMOVED) {
-                if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                    val packageName = intent.data?.encodedSchemeSpecificPart // Get the package name
-                    if (packageName != null) {
-                        appList.removeAll { it.activityInfo.packageName == packageName }
-                        fullAppList.removeAll { it.activityInfo.packageName == packageName }
-
-                        adapter.appList = appList
-                        adapter.notifyDataSetChanged()
+            when (intent?.action) {
+                Intent.ACTION_PACKAGE_REMOVED -> {
+                    if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
+                        val packageName = intent.data?.encodedSchemeSpecificPart
+                        if (packageName != null) {
+                            appList.removeAll { it.activityInfo.packageName == packageName }
+                            fullAppList.removeAll { it.activityInfo.packageName == packageName }
+                            adapter.appList = appList
+                            adapter.notifyDataSetChanged()
+                        }
+                    }
+                }
+                Intent.ACTION_PACKAGE_ADDED -> {
+                    if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
+                        loadApps()
                     }
                 }
             }
@@ -223,16 +229,18 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         setWallpaperBackground()
-        val filter = IntentFilter(Intent.ACTION_PACKAGE_REMOVED).apply {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
             addDataScheme("package")
         }
-        registerReceiver(packageRemoveReceiver, filter)
+        registerReceiver(packageReceiver, filter)
         registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
     }
 
     override fun onPause() {
         super.onPause()
-        unregisterReceiver(packageRemoveReceiver)
+        unregisterReceiver(packageReceiver)
         unregisterReceiver(wallpaperChangeReceiver)
     }
 
@@ -259,8 +267,12 @@ class MainActivity : ComponentActivity() {
         val intent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        appList = packageManager.queryIntentActivities(intent, 0).toMutableList()
-        fullAppList = appList.toMutableList()
+        val unsortedList = packageManager.queryIntentActivities(intent, 0)
+            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .toMutableList()
+
+        appList = unsortedList.toMutableList()
+        fullAppList = unsortedList.toMutableList()
 
         if (appList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()

@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import android.content.ContentResolver
+import android.content.Context
 import android.database.Cursor
 import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
@@ -183,6 +184,10 @@ class AppAdapter(
                 holder.itemView.setOnClickListener {
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                     if (intent != null) {
+                        val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+                        val currentCount = prefs.getInt("usage_$packageName", 0)
+                        prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
+
                         activity.startActivity(intent)
                         activity.runOnUiThread {
                             searchBox.text.clear()
