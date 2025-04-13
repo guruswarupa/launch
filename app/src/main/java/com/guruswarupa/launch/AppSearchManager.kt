@@ -40,7 +40,10 @@ class AppSearchManager(
         contactsList.map { it.lowercase() }.toSet()
     }
 
+    private var appLabelMap: Map<ResolveInfo, String> = emptyMap()
+
     init {
+        refreshAppList()
         searchBox.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
@@ -53,8 +56,9 @@ class AppSearchManager(
         })
     }
 
-    private val appLabelMap: Map<ResolveInfo, String> by lazy {
-        fullAppList.associateWith { it.loadLabel(packageManager).toString().lowercase() }
+
+    private fun refreshAppList() {
+        appLabelMap = fullAppList.associateWith { it.loadLabel(packageManager).toString().lowercase() }
     }
 
     fun filterAppsAndContacts(query: String) {

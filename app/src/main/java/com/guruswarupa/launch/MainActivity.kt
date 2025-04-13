@@ -1,6 +1,8 @@
 package com.guruswarupa.launch
 
 import android.Manifest
+import android.app.Activity
+import android.app.PendingIntent
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -219,7 +221,13 @@ class MainActivity : ComponentActivity() {
                 }
                 Intent.ACTION_PACKAGE_ADDED -> {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                        loadApps()
+                        val relaunchIntent = Intent(context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context?.startActivity(relaunchIntent)
+                        if (context is Activity) {
+                            context.finish()
+                        }
                     }
                 }
             }
