@@ -203,17 +203,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val packageRemoveReceiver = object : BroadcastReceiver() {
+    private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_PACKAGE_REMOVED) {
-                if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                    val packageName = intent.data?.encodedSchemeSpecificPart // Get the package name
-                    if (packageName != null) {
-                        appList.removeAll { it.activityInfo.packageName == packageName }
-                        fullAppList.removeAll { it.activityInfo.packageName == packageName }
-
-                        adapter.appList = appList
-                        adapter.notifyDataSetChanged()
+            when (intent?.action) {
+                Intent.ACTION_PACKAGE_REMOVED -> {
+                    if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
+                        val packageName = intent.data?.encodedSchemeSpecificPart
+                        if (packageName != null) {
+                            appList.removeAll { it.activityInfo.packageName == packageName }
+                            fullAppList.removeAll { it.activityInfo.packageName == packageName }
+                            adapter.appList = appList
+                            adapter.notifyDataSetChanged()
+                        }
+                    }
+                }
+                Intent.ACTION_PACKAGE_ADDED -> {
+                    if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
+                        loadApps()
                     }
                 }
             }
@@ -223,16 +229,18 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         setWallpaperBackground()
-        val filter = IntentFilter(Intent.ACTION_PACKAGE_REMOVED).apply {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
             addDataScheme("package")
         }
-        registerReceiver(packageRemoveReceiver, filter)
+        registerReceiver(packageReceiver, filter)
         registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
     }
 
     override fun onPause() {
         super.onPause()
-        unregisterReceiver(packageRemoveReceiver)
+        unregisterReceiver(packageReceiver)
         unregisterReceiver(wallpaperChangeReceiver)
     }
 
