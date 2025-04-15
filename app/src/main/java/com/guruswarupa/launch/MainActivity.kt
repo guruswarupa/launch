@@ -165,6 +165,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun getPhoneNumberForContact(contactName: String): String? {
+        val cursor = contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
+            arrayOf(contactName),
+            null
+        )
+
+        return cursor?.use {
+            if (it.moveToFirst()) {
+                it.getString(0)
+            } else null
+        }
+    }
+
     private fun startVoiceSearch() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
@@ -200,6 +216,28 @@ class MainActivity : ComponentActivity() {
 
     private fun handleVoiceCommand(command: String) {
         when {
+            command.startsWith("call ", ignoreCase = true) -> {
+                val contactName = command.substringAfter("call ", "").trim()
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(this,
+                        arrayOf(Manifest.permission.CALL_PHONE), REQUEST_CODE_CALL_PHONE)
+                    return
+                }
+                val phoneNumber = getPhoneNumberForContact(contactName)
+                phoneNumber?.let {
+                    val callIntent = Intent(Intent.ACTION_CALL)
+                    callIntent.data = Uri.parse("tel:$it")
+                    startActivity(callIntent)
+                    searchBox.text.clear()
+                }
+            }
+            command.startsWith("search ", ignoreCase = true) -> {
+                val query = command.substringAfter("search ", "").trim()
+                val searchIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(query)}"))
+                startActivity(searchIntent)
+                searchBox.text.clear()
+            }
             command.startsWith("open ", ignoreCase = true) -> {
                 val appName = command.substringAfter("open ", "").trim()
                 val matchingApp = appList.find {
@@ -227,18 +265,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            else -> {
-                try {
-                    val expression = ExpressionBuilder(command).build()
-                    val result = expression.evaluate()
-                    searchBox.setText("$command = $result")
-                } catch (e: Exception) {
-                    searchBox.setText(command)
-                }
-            }
         }
     }
-
 
     private fun setWallpaperBackground() {
         val wallpaperManager = WallpaperManager.getInstance(this)
