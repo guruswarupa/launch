@@ -215,7 +215,7 @@ class AppAdapter(
         activity.startActivity(intent)
     }
 
-    private fun showCallConfirmationDialog(contactName: String) {
+     fun showCallConfirmationDialog(contactName: String) {
         val phoneNumber = getPhoneNumberForContact(contactName) // Fetch phone number for the contact
 
         AlertDialog.Builder(activity)

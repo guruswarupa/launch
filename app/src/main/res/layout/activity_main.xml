@@ -55,21 +55,35 @@
                     android:layout_marginBottom="24dp"/>
 
                 <!-- Search Box -->
-                <EditText
-                    android:id="@+id/search_box"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/search_text"
-                    android:textColor="@color/text"
-                    android:textColorHint="@color/text_secondary"
-                    android:padding="12dp"
-                    android:background="@drawable/search_box_transparent_bg"
-                    android:drawableStart="@android:drawable/ic_menu_search"
-                    android:drawablePadding="8dp"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="16dp"
-                    android:singleLine="true"
-                    android:imeOptions="actionSearch"/>
+                    android:orientation="horizontal">
+                    <EditText
+                        android:id="@+id/search_box"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/search_text"
+                        android:textColor="@color/text"
+                        android:textColorHint="@color/text_secondary"
+                        android:padding="12dp"
+                        android:background="@drawable/search_box_transparent_bg"
+                        android:drawableStart="@android:drawable/ic_menu_search"
+                        android:drawablePadding="8dp"
+                        android:textSize="16sp"
+                        android:layout_marginBottom="16dp"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"/>
+                    <ImageButton
+                        android:id="@+id/voice_search_button"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginStart="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_mic"
+                        android:contentDescription="Voice Search"/>
+                </LinearLayout>
 
                 <!-- App Dock -->
                 <HorizontalScrollView
