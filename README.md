@@ -52,6 +52,7 @@ The launcher requires minimal permissions:
 |--------|---------|--------|
 | Open Clock | Tap time widget | Opens system clock |
 | Open Calendar | Tap date widget | Opens system calendar |
+| Open Google | Long press search bar | Opens new Google tab in default browser |
 | Uninstall App | Long press app icon | Opens uninstall dialog |
 | Change Wallpaper | Double tap search bar | Opens wallpaper picker |
 | Remove Dock Item | Long press dock item | Opens removal option |
