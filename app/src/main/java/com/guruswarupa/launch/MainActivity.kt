@@ -287,7 +287,10 @@ class MainActivity : ComponentActivity() {
         } else {
             val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
             appList = appList.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                .sortedByDescending { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
+                .sortedWith(
+                    compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
+                        .thenBy { it.loadLabel(packageManager).toString().lowercase() }
+                )
                 .toMutableList()
 
             recyclerView.layoutManager = if (isGridMode) {
