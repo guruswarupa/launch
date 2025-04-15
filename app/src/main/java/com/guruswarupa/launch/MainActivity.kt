@@ -18,7 +18,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.provider.ContactsContract
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -32,6 +35,8 @@ import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.ActivityNotFoundException
+import net.objecthunter.exp4j.ExpressionBuilder
 
 
 class MainActivity : ComponentActivity() {
@@ -61,8 +66,9 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
         private const val REQUEST_CODE_CALL_PHONE = 200
-        private val SMS_PERMISSION_REQUEST = 300
+        val SMS_PERMISSION_REQUEST = 300
         private const val WALLPAPER_REQUEST_CODE = 456
+        private const val VOICE_SEARCH_REQUEST = 500
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -154,7 +160,85 @@ class MainActivity : ComponentActivity() {
         appDockManager.loadDockApps()
         setWallpaperBackground()
 
+        findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
+            startVoiceSearch()
+        }
     }
+
+    private fun startVoiceSearch() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                arrayOf(Manifest.permission.RECORD_AUDIO), VOICE_SEARCH_REQUEST)
+            return
+        }
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+        }
+        try {
+            startActivityForResult(intent, VOICE_SEARCH_REQUEST)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(this, "Voice recognition not supported",
+                Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == VOICE_SEARCH_REQUEST && resultCode == RESULT_OK) {
+            val results = data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            results?.get(0)?.let { result ->
+                searchBox.setText(result)
+                searchBox.setSelection(result.length)
+                handleVoiceCommand(result) //process the command
+            }
+        }
+    }
+
+    private fun handleVoiceCommand(command: String) {
+        when {
+            command.startsWith("open ", ignoreCase = true) -> {
+                val appName = command.substringAfter("open ", "").trim()
+                val matchingApp = appList.find {
+                    it.loadLabel(packageManager).toString().equals(appName, ignoreCase = true)
+                }
+                matchingApp?.let {
+                    val intent = packageManager.getLaunchIntentForPackage(it.activityInfo.packageName)
+                    intent?.let { startActivity(it) }
+                    searchBox.text.clear()
+                } ?: searchBox.setText(command)
+            }
+            command.contains(" to ", ignoreCase = true) -> {
+                val locations = command.split(" to ", ignoreCase = true)
+                if (locations.size == 2) {
+                    val origin = locations[0].trim()
+                    val destination = locations[1].trim()
+                    val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=${Uri.encode(origin)}&destination=${Uri.encode(destination)}&travelmode=driving")
+                    val mapIntent = Intent(Intent.ACTION_VIEW, uri)
+                    mapIntent.setPackage("com.google.android.apps.maps")
+                    try {
+                        startActivity(mapIntent)
+                        searchBox.text.clear()
+                    } catch (e: Exception) {
+                        Toast.makeText(this, "Google Maps not installed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            else -> {
+                try {
+                    val expression = ExpressionBuilder(command).build()
+                    val result = expression.evaluate()
+                    searchBox.setText("$command = $result")
+                } catch (e: Exception) {
+                    searchBox.setText(command)
+                }
+            }
+        }
+    }
+
 
     private fun setWallpaperBackground() {
         val wallpaperManager = WallpaperManager.getInstance(this)
@@ -369,6 +453,11 @@ class MainActivity : ComponentActivity() {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission granted, proceed with SMS functionality
                 } else {
+                }
+            }
+            VOICE_SEARCH_REQUEST -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                    startVoiceSearch()
                 }
             }
         }
