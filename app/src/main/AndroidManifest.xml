@@ -18,6 +18,7 @@
     <uses-permission android:name="android.permission.SET_WALLPAPER"/>
     <uses-permission android:name="android.permission.SET_WALLPAPER_HINTS"/>
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Queries declaration to access installed apps -->
     <queries>
