@@ -101,9 +101,10 @@ class AppSearchManager(
                 }
             }
         } else {
-            newFilteredList.addAll(fullAppList.sortedByDescending {
-                prefs.getInt("usage_${it.activityInfo.packageName}", 0)
-            })
+            newFilteredList.addAll(fullAppList.sortedWith(
+                compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
+                    .thenBy { it.loadLabel(packageManager).toString().lowercase() }
+            ))
         }
 
         appList.clear()
