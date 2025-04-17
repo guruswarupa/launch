@@ -36,6 +36,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import android.content.ActivityNotFoundException
+import android.content.ContentResolver
 import net.objecthunter.exp4j.ExpressionBuilder
 
 
@@ -209,13 +210,115 @@ class MainActivity : ComponentActivity() {
             results?.get(0)?.let { result ->
                 searchBox.setText(result)
                 searchBox.setSelection(result.length)
-                handleVoiceCommand(result) //process the command
+                handleVoiceCommand(result)
             }
+        }
+    }
+
+    private fun sendWhatsAppMessage(phoneNumber: String, message: String) {
+        try {
+            val formattedPhoneNumber = phoneNumber.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+            if (!formattedPhoneNumber.startsWith("+")) {
+                val fullPhoneNumber = "+91$formattedPhoneNumber" // Adjust the country code as needed
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://wa.me/${Uri.encode(fullPhoneNumber)}?text=${Uri.encode(message)}")
+                    setPackage("com.whatsapp")
+                }
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "WhatsApp not installed or failed to open message.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openWhatsAppChat(contactName: String) {
+        val contentResolver: ContentResolver = contentResolver
+        val cursor = contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
+            arrayOf(contactName),
+            null
+        )
+
+        cursor?.use {
+            if (it.moveToFirst()) {
+                var phoneNumber = it.getString(0)
+                    .replace(" ", "")
+                    .replace("-", "")
+                    .replace("(", "")
+                    .replace(")", "")
+
+                if (!phoneNumber.startsWith("+")) {
+                    phoneNumber = "+91$phoneNumber"
+                }
+
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("https://wa.me/${Uri.encode(phoneNumber)}")
+                        setPackage("com.whatsapp")
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "WhatsApp not installed.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "Contact not found", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun openSMSChat(contactName: String) {
+        val phoneNumber = getPhoneNumberForContact(contactName)
+
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("smsto:$phoneNumber")
+            putExtra("sms_body", "")
+        }
+
+        try {
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "No SMS app installed!", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to open messaging app.", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun handleVoiceCommand(command: String) {
         when {
+            command.startsWith("WhatsApp ", ignoreCase = true) -> {
+                val contactName = command.substringAfter("WhatsApp ", "").trim()
+                val phoneNumber = getPhoneNumberForContact(contactName)
+                phoneNumber?.let {
+                    openWhatsAppChat(contactName)
+                    searchBox.text.clear()
+                }
+            }
+            command.startsWith("send ", ignoreCase = true) && command.contains(" to ", ignoreCase = true) -> {
+                val parts = command.split(" to ", ignoreCase = true)
+                if (parts.size == 2) {
+                    val message = parts[0].substringAfter("send ").trim() // Extract message (e.g., "hi")
+                    val contactName = parts[1].trim() // Extract contact name (e.g., "Swaroop")
+                    val phoneNumber = getPhoneNumberForContact(contactName)
+
+                    phoneNumber?.let {
+                        sendWhatsAppMessage(it, message)
+                        searchBox.text.clear()
+                    } ?: Toast.makeText(this, "Contact not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            command.startsWith("message ", ignoreCase = true) -> {
+                val contactName = command.substringAfter("message ", "").trim()
+                val phoneNumber = getPhoneNumberForContact(contactName)
+                phoneNumber?.let {
+                    openSMSChat(contactName)
+                    searchBox.text.clear()
+                }
+            }
             command.startsWith("call ", ignoreCase = true) -> {
                 val contactName = command.substringAfter("call ", "").trim()
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
@@ -240,14 +343,51 @@ class MainActivity : ComponentActivity() {
             }
             command.startsWith("open ", ignoreCase = true) -> {
                 val appName = command.substringAfter("open ", "").trim()
-                val matchingApp = appList.find {
-                    it.loadLabel(packageManager).toString().equals(appName, ignoreCase = true)
+                if (appName.isNotEmpty()) {
+                    val matchingApp = appList.find { resolveInfo ->
+                        try {
+                            val label = resolveInfo.activityInfo?.applicationInfo?.let {
+                                resolveInfo.loadLabel(packageManager)?.toString()
+                            }
+                            label?.contains(appName, ignoreCase = true) ?: false
+                        } catch (e: Exception) {
+                            false
+                        }
+                    }
+                    matchingApp?.let {
+                        val intent = packageManager.getLaunchIntentForPackage(it.activityInfo.packageName)
+                        intent?.let { startActivity(it) }
+                        searchBox.text.clear()
+                    } ?: searchBox.setText(command)
+                } else {
+                    searchBox.setText(command)
                 }
-                matchingApp?.let {
-                    val intent = packageManager.getLaunchIntentForPackage(it.activityInfo.packageName)
-                    intent?.let { startActivity(it) }
-                    searchBox.text.clear()
-                } ?: searchBox.setText(command)
+            }
+            command.startsWith("uninstall ", ignoreCase = true) -> {
+                val appName = command.substringAfter("uninstall ", "").trim()
+                if (appName.isNotEmpty()) {
+                    val matchingApp = appList.find { resolveInfo ->
+                        try {
+                            val label = resolveInfo.activityInfo?.applicationInfo?.let {
+                                resolveInfo.loadLabel(packageManager)?.toString()
+                            }
+                            label?.contains(appName, ignoreCase = true) ?: false
+                        } catch (e: Exception) {
+                            false
+                        }
+                    }
+
+                    matchingApp?.let {
+                        val packageName = it.activityInfo.packageName
+                        val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                        searchBox.text.clear()
+                    } ?: searchBox.setText(command)
+                } else {
+                    searchBox.setText(command)
+                }
             }
             command.contains(" to ", ignoreCase = true) -> {
                 val locations = command.split(" to ", ignoreCase = true)
