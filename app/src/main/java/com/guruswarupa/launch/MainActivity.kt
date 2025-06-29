@@ -553,6 +553,17 @@ class MainActivity : ComponentActivity() {
 
             adapter = AppAdapter(this, appList, searchBox, isGridMode) // pass isGridMode
             recyclerView.adapter = adapter
+
+            // Initialize AppSearchManager
+            appSearchManager = AppSearchManager(
+                packageManager,
+                appList,
+                fullAppList,
+                adapter,
+                recyclerView,
+                searchBox,
+                contactsList
+            )
         }
     }
 

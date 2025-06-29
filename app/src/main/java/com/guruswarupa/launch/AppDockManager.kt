@@ -244,10 +244,14 @@ class AppDockManager(
             )
         }
 
+        val iconCache = mutableMapOf<String, Drawable>()
+
         packageNames.forEach { packageName ->
             try {
-                val appInfo = packageManager.getApplicationInfo(packageName, 0)
-                val appIcon = packageManager.getApplicationIcon(appInfo)
+                val appIcon = iconCache.getOrPut(packageName) {
+                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                    packageManager.getApplicationIcon(appInfo)
+                }
 
                 ImageView(context).apply {
                     setImageDrawable(appIcon)

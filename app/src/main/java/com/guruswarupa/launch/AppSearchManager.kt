@@ -32,15 +32,14 @@ class AppSearchManager(
         filterAppsAndContacts(searchBox.text.toString())
     }
 
-    private val appLabels: List<String> by lazy {
-        fullAppList.map { it.loadLabel(packageManager).toString().lowercase() }
-    }
+    private val appLabelCache = mutableMapOf<String, String>()
 
     private val contactNames: Set<String> by lazy {
         contactsList.map { it.lowercase() }.toSet()
     }
 
     private var appLabelMap: Map<ResolveInfo, String> = emptyMap()
+    private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
 
     init {
         refreshAppList()
@@ -49,67 +48,129 @@ class AppSearchManager(
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 handler.removeCallbacks(debounceRunnable)
-                handler.postDelayed(debounceRunnable, 50)
+                handler.postDelayed(debounceRunnable, 30)
             }
 
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
     }
 
-
     private fun refreshAppList() {
-        appLabelMap = fullAppList.associateWith { it.loadLabel(packageManager).toString().lowercase() }
+        appLabelMap = fullAppList.associateWith { resolveInfo ->
+            appLabelCache.getOrPut(resolveInfo.activityInfo.packageName) {
+                resolveInfo.loadLabel(packageManager).toString().lowercase()
+            }
+        }
+        searchCache.clear()
     }
 
     fun filterAppsAndContacts(query: String) {
-        val newFilteredList = mutableListOf<ResolveInfo>()
-        val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-        val queryLower = query.lowercase()
+        val queryLower = query.lowercase().trim()
 
-        if (query.isNotEmpty()) {
+        // Use cached results for repeated queries
+        val cachedResult = searchCache[queryLower]
+        if (cachedResult != null) {
+            appList.clear()
+            appList.addAll(cachedResult)
+            adapter.notifyDataSetChanged()
+            return
+        }
+
+        val newFilteredList = ArrayList<ResolveInfo>()
+        val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+
+        if (queryLower.isNotEmpty()) {
             evaluateMathExpression(query)?.let { result ->
                 newFilteredList.add(createMathResultOption(query, result))
             } ?: run {
-                val appMatches = appLabelMap
-                    .filterValues { it.contains(queryLower) }
-                    .toList()
-                    .sortedByDescending { (info, _) ->
-                        prefs.getInt("usage_${info.activityInfo.packageName}", 0)
+                // Use more efficient filtering with early termination for exact matches
+                val exactMatches = ArrayList<ResolveInfo>()
+                val partialMatches = ArrayList<ResolveInfo>()
+
+                appLabelMap.forEach { (info, label) ->
+                    when {
+                        label == queryLower -> exactMatches.add(info)
+                        label.startsWith(queryLower) -> partialMatches.add(0, info)
+                        label.contains(queryLower) -> partialMatches.add(info)
                     }
-                    .map { it.first }
-
-                newFilteredList.addAll(appMatches)
-
-                contactsList.filter { it.contains(query, ignoreCase = true) }.forEach { contact ->
-                    newFilteredList.add(createWhatsAppContactOption(contact))
-                    newFilteredList.add(createSmsOption(contact))
-                    newFilteredList.add(createContactOption(contact))
                 }
+
+                // Sort by usage count only for matches found
+                val sortedExact = exactMatches.sortedByDescending {
+                    prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                }
+                val sortedPartial = partialMatches.sortedByDescending {
+                    prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                }
+
+                newFilteredList.addAll(sortedExact)
+                newFilteredList.addAll(sortedPartial)
+
+                // Optimize contact filtering
+                contactsList.asSequence()
+                    .filter { it.contains(query, ignoreCase = true) }
+                    .take(5) // Limit contact results
+                    .forEach { contact ->
+                        newFilteredList.add(createWhatsAppContactOption(contact))
+                        newFilteredList.add(createSmsOption(contact))
+                        newFilteredList.add(createContactOption(contact))
+                    }
 
                 if (newFilteredList.isEmpty()) {
                     // Defer suggestions to avoid blocking main UI
                     handler.postDelayed({
-                        newFilteredList.add(createPlayStoreSearchOption(query))
-                        newFilteredList.add(createGoogleMapsSearchOption(query))
-                        newFilteredList.add(createYoutubeSearchOption(query))
-                        newFilteredList.add(createBrowserSearchOption(query))
+                        val suggestions = ArrayList<ResolveInfo>().apply {
+                            add(createPlayStoreSearchOption(query))
+                            add(createGoogleMapsSearchOption(query))
+                            add(createYoutubeSearchOption(query))
+                            add(createBrowserSearchOption(query))
+                        }
                         appList.clear()
-                        appList.addAll(newFilteredList)
+                        appList.addAll(suggestions)
                         adapter.notifyDataSetChanged()
-                    }, 100)
+                    }, 50)
                     return
                 }
             }
         } else {
-            newFilteredList.addAll(fullAppList.sortedWith(
-                compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
-                    .thenBy { it.loadLabel(packageManager).toString().lowercase() }
-            ))
+            // Cache sorted app list for empty queries
+            val emptyQueryKey = ""
+            val cachedEmpty = searchCache[emptyQueryKey]
+            if (cachedEmpty != null) {
+                newFilteredList.addAll(cachedEmpty)
+            } else {
+                val sorted = fullAppList.sortedWith(
+                    compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
+                        .thenBy { appLabelMap[it] ?: "" }
+                )
+                newFilteredList.addAll(sorted)
+                searchCache[emptyQueryKey] = ArrayList(sorted)
+            }
         }
 
-        appList.clear()
-        appList.addAll(newFilteredList)
-        adapter.notifyDataSetChanged()
+        // Cache the result for future use
+        searchCache[queryLower] = ArrayList(newFilteredList)
+
+        // Use more efficient list update
+        if (appList.size != newFilteredList.size) {
+            appList.clear()
+            appList.addAll(newFilteredList)
+            adapter.notifyDataSetChanged()
+        } else {
+            // Check if lists are actually different before updating
+            var different = false
+            for (i in newFilteredList.indices) {
+                if (appList[i] != newFilteredList[i]) {
+                    different = true
+                    break
+                }
+            }
+            if (different) {
+                appList.clear()
+                appList.addAll(newFilteredList)
+                adapter.notifyDataSetChanged()
+            }
+        }
     }
 
     private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()

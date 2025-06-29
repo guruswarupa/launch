@@ -31,9 +31,22 @@ class OnboardingActivity : ComponentActivity() {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun requestPermissions() {
-        val permissions = arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.SEND_SMS, Manifest.permission.CALL_PHONE, Manifest.permission.READ_MEDIA_IMAGES)
-        val missing = permissions.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }.toTypedArray()
-        if (missing.isNotEmpty()) ActivityCompat.requestPermissions(this, missing, 100) else Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show()
+        val permissions = arrayOf(
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.READ_MEDIA_IMAGES
+        )
+
+        val missing = permissions.filterTo(ArrayList()) {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missing.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missing.toTypedArray(), 100)
+        } else {
+            Toast.makeText(this, "Permissions granted!", Toast.LENGTH_SHORT).show()
+        }
         requestStoragePermission()
     }
 
