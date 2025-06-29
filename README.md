@@ -1,5 +1,5 @@
 
-# Minimal Launcher
+# Launch
 
 A clean, efficient, and minimalist Android launcher that prioritizes simplicity and functionality.
 
