@@ -169,17 +169,51 @@ class MainActivity : ComponentActivity() {
     private fun getPhoneNumberForContact(contactName: String): String? {
         val cursor = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
-            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
-            arrayOf(contactName),
-            null
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            ),
+            null, null, null
         )
 
-        return cursor?.use {
-            if (it.moveToFirst()) {
-                it.getString(0)
-            } else null
+        fun normalize(name: String): List<String> {
+            return name.lowercase()
+                .replace(Regex("[^a-z0-9 ]"), "")
+                .split(" ")
+                .filter { it.isNotBlank() }
         }
+
+        val inputParts = normalize(contactName)
+        val seenNames = mutableSetOf<String>() // Track unique names
+
+        val matches = mutableListOf<Pair<String, String>>() // name -> number
+
+        cursor?.use {
+            while (it.moveToNext()) {
+                val name = it.getString(0)?.trim() ?: continue
+                val number = it.getString(1)?.trim() ?: continue
+
+                if (number.isEmpty() || !number.any { it.isDigit() }) continue
+
+                val nameParts = normalize(name)
+
+                if (inputParts.any { input -> nameParts.any { part -> part.contains(input) } }) {
+                    if (!seenNames.contains(name.lowercase())) {
+                        matches.add(name to number)
+                        seenNames.add(name.lowercase())
+                    }
+                }
+            }
+        }
+
+        return matches.minByOrNull { (name, _) ->
+            val norm = normalize(name).joinToString(" ")
+            when {
+                norm == inputParts.joinToString(" ") -> 0
+                norm.startsWith(inputParts.joinToString(" ")) -> 1
+                else -> 2
+            }
+        }?.second
     }
 
     private fun startVoiceSearch() {
