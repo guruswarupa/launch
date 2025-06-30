@@ -14,6 +14,9 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
+import android.app.usage.UsageStatsManager
+import android.app.AppOpsManager
+
 class OnboardingActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
@@ -67,9 +70,37 @@ class OnboardingActivity : ComponentActivity() {
     }
 
     private fun continueSetup() {
+        // Request usage stats permission
+        if (!hasUsageStatsPermission()) {
+            AlertDialog.Builder(this)
+                .setTitle("Usage Stats Permission")
+                .setMessage("Grant usage access to see app usage time. You can skip this if you prefer.")
+                .setPositiveButton("Grant") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                }
+                .setNegativeButton("Skip") { _, _ ->
+                    finishSetup()
+                }
+                .show()
+        } else {
+            finishSetup()
+        }
+    }
+
+    private fun finishSetup() {
         prefs.edit().putBoolean("isFirstTime", false).apply()
         startActivity(Intent(this, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK })
         finish()
+    }
+
+    private fun hasUsageStatsPermission(): Boolean {
+        val appOpsManager = getSystemService(APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOpsManager.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName
+        )
+        return mode == AppOpsManager.MODE_ALLOWED
     }
 
     private fun setDefaultLauncher() = startActivity(Intent(Settings.ACTION_HOME_SETTINGS))

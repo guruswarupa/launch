@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.app.AlertDialog
 import android.Manifest
 import android.app.Activity
 import android.app.PendingIntent
@@ -60,9 +61,11 @@ class MainActivity : ComponentActivity() {
 
     lateinit var appSearchManager: AppSearchManager
     private lateinit var appDockManager: AppDockManager
+    private lateinit var usageStatsManager: AppUsageStatsManager
     private var contactsList: List<String> = emptyList()
     private var lastSearchTapTime = 0L
     private val DOUBLE_TAP_THRESHOLD = 300
+    private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -70,6 +73,7 @@ class MainActivity : ComponentActivity() {
         val SMS_PERMISSION_REQUEST = 300
         private const val WALLPAPER_REQUEST_CODE = 456
         private const val VOICE_SEARCH_REQUEST = 500
+        private const val USAGE_STATS_REQUEST = 600
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -115,11 +119,20 @@ class MainActivity : ComponentActivity() {
             true
         }
 
+        appDock = findViewById(R.id.app_dock)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
+        weeklyUsageGraph = findViewById(R.id.weekly_usage_graph)
 
-        requestCallPermission()
+        usageStatsManager = AppUsageStatsManager(this)
+
+        // Request necessary permissions
         requestContactsPermission()
         requestSmsPermission()
+        requestUsageStatsPermission()
+
+        // Load weekly usage data
+        loadWeeklyUsageData()
+
 
         if (isGridMode) {
             recyclerView.layoutManager = GridLayoutManager(this, 4)
@@ -639,6 +652,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Request usage stats permission
+    private fun requestUsageStatsPermission() {
+        if (!usageStatsManager.hasUsageStatsPermission()) {
+            AlertDialog.Builder(this)
+                .setTitle("Usage Stats Permission")
+                .setMessage("To show app usage time, please grant usage access permission in the next screen.")
+                .setPositiveButton("Grant") { _, _ ->
+                    startActivityForResult(usageStatsManager.requestUsageStatsPermission(), USAGE_STATS_REQUEST)
+                }
+                .setNegativeButton("Skip", null)
+                .show()
+        }
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -690,5 +717,12 @@ class MainActivity : ComponentActivity() {
             }
         }
         return contacts
+    }
+
+    // Method to load weekly usage data
+    private fun loadWeeklyUsageData() {
+        val usageData = usageStatsManager.getWeeklyUsageData()
+        weeklyUsageGraph.setUsageData(usageData)
+        weeklyUsageGraph.invalidate() // Redraw the graph
     }
 }

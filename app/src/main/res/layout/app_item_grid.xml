@@ -25,8 +25,18 @@
         android:textSize="12sp"
         android:textColor="@android:color/white"
         android:layout_marginTop="4dp"
-        android:layout_marginBottom="8dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:maxWidth="90dp" /> <!-- Approximate width for 14 chars (depending on the font) -->
+        android:maxWidth="90dp" />
+
+    <!-- Usage Time TextView -->
+    <TextView
+        android:id="@+id/app_usage_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="10sp"
+        android:textColor="@android:color/white"
+        android:alpha="0.7"
+        android:layout_marginBottom="8dp"
+        android:maxWidth="90dp" />
 </LinearLayout>
