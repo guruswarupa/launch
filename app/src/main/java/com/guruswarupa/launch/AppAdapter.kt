@@ -28,6 +28,12 @@ class AppAdapter(
     class ViewHolder(view: View, isGrid: Boolean) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
+        val usageTime: TextView? = view.findViewById(R.id.usage_time)
+    }
+
+    private fun getTodayDateKey(): String {
+        val calendar = java.util.Calendar.getInstance()
+        return "${calendar.get(java.util.Calendar.YEAR)}_${calendar.get(java.util.Calendar.DAY_OF_YEAR)}"
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -186,6 +192,12 @@ class AppAdapter(
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
 
+                        // Track usage time - add current timestamp
+                        val currentTime = System.currentTimeMillis()
+                        val todayKey = "time_${packageName}_${getTodayDateKey()}"
+                        val todayUsage = prefs.getLong(todayKey, 0L)
+                        prefs.edit().putLong(todayKey, todayUsage + 1).apply() // Increment usage count for today
+
                         activity.startActivity(intent)
                         activity.runOnUiThread {
                             searchBox.text.clear()
@@ -213,7 +225,7 @@ class AppAdapter(
         activity.startActivity(intent)
     }
 
-     fun showCallConfirmationDialog(contactName: String) {
+    fun showCallConfirmationDialog(contactName: String) {
         val phoneNumber = getPhoneNumberForContact(contactName) // Fetch phone number for the contact
 
         AlertDialog.Builder(activity)
