@@ -25,9 +25,12 @@ class AppAdapter(
     private val isGridMode: Boolean,
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
+    private val usageStatsManager = AppUsageStatsManager(activity)
+
     class ViewHolder(view: View, isGrid: Boolean) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
+        val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -46,6 +49,12 @@ class AppAdapter(
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
+
+        // Show usage time
+        val usageTime = usageStatsManager.getAppUsageTime(packageName)
+        val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+        holder.appUsageTime?.text = formattedTime
+        holder.appUsageTime?.visibility = if (usageTime > 0) View.VISIBLE else View.GONE
 
         when (packageName) {
             "contact_search" -> {
