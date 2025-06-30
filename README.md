@@ -58,6 +58,25 @@ The launcher requires minimal permissions:
 | Remove Dock Item | Long press dock item | Opens removal option |
 | Calculator | Type in search bar | Instant calculations |
 
+## Voice Commands
+
+Use voice commands in the search bar to quickly interact with your phone. Just tap the microphone icon (or long-press the search bar if implemented) and speak naturally.
+
+### Supported Commands
+
+| Command Example           | Action                                         |
+|---------------------------|------------------------------------------------|
+| `Call Swaroop`            | Initiates a phone call to Swaroop              |
+| `Message Swaroop`         | Opens SMS chat with Swaroop                    |
+| `WhatsApp Swaroop`        | Opens WhatsApp chat with Swaroop               |
+| `Send hi to Swaroop`      | Sends "hi" to Swaroop via WhatsApp             |
+| `Search weather tomorrow` | Performs a Google search                       |
+| `Open YouTube`            | Launches the YouTube app                       |
+| `Uninstall WhatsApp`      | Opens the uninstall screen for WhatsApp        |
+| `Bangalore to Mysore`     | Opens Google Maps with driving directions      |
+
+> **Note**: Contact-related commands require Contacts, Phone, and SMS permissions.
+
 ## Contributing
 
 Feel free to contribute to this project by submitting issues or pull requests. All contributions are welcome!
