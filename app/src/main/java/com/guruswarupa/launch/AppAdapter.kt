@@ -186,12 +186,6 @@ class AppAdapter(
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
 
-                        // Track usage time - add current timestamp
-                        val currentTime = System.currentTimeMillis()
-                        val todayKey = "time_${packageName}_${getTodayDateKey()}"
-                        val todayUsage = prefs.getLong(todayKey, 0L)
-                        prefs.edit().putLong(todayKey, todayUsage + 1).apply() // Increment usage count for today
-
                         activity.startActivity(intent)
                         activity.runOnUiThread {
                             searchBox.text.clear()
