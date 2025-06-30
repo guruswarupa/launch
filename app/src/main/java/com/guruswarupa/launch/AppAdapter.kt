@@ -28,12 +28,6 @@ class AppAdapter(
     class ViewHolder(view: View, isGrid: Boolean) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
-        val usageTime: TextView? = view.findViewById(R.id.usage_time)
-    }
-
-    private fun getTodayDateKey(): String {
-        val calendar = java.util.Calendar.getInstance()
-        return "${calendar.get(java.util.Calendar.YEAR)}_${calendar.get(java.util.Calendar.DAY_OF_YEAR)}"
     }
 
     override fun getItemViewType(position: Int): Int {
