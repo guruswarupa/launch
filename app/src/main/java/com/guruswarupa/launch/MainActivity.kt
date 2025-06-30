@@ -721,8 +721,14 @@ class MainActivity : ComponentActivity() {
 
     // Method to load weekly usage data
     private fun loadWeeklyUsageData() {
-        val usageData = usageStatsManager.getWeeklyUsageData()
-        weeklyUsageGraph.setUsageData(usageData)
+        val appUsageData = usageStatsManager.getWeeklyAppUsageData()
+        if (appUsageData.isNotEmpty()) {
+            weeklyUsageGraph.setAppUsageData(appUsageData)
+        } else {
+            // Fallback to total usage data if app-specific data is not available
+            val usageData = usageStatsManager.getWeeklyUsageData()
+            weeklyUsageGraph.setUsageData(usageData)
+        }
         weeklyUsageGraph.invalidate() // Redraw the graph
     }
 }

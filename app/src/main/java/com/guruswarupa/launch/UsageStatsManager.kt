@@ -33,7 +33,11 @@ class AppUsageStatsManager(private val context: Context) {
         if (!hasUsageStatsPermission()) return 0L
 
         val calendar = Calendar.getInstance()
-        calendar.add(Calendar.DAY_OF_YEAR, -1) // Get usage for last 24 hours only
+        // Set to start of current day
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
         val startTime = calendar.timeInMillis
         val endTime = System.currentTimeMillis()
 
@@ -120,6 +124,84 @@ class AppUsageStatsManager(private val context: Context) {
             }
 
             weeklyData.add(dayFormat to totalDayUsage)
+        }
+
+        return weeklyData
+    }
+
+    fun getWeeklyAppUsageData(): List<Pair<String, Map<String, Long>>> {
+        if (!hasUsageStatsPermission()) return emptyList()
+
+        val weeklyData = mutableListOf<Pair<String, Map<String, Long>>>()
+        val calendar = Calendar.getInstance()
+
+        // Get data for the last 7 days
+        for (i in 6 downTo 0) {
+            calendar.time = Date()
+            calendar.add(Calendar.DAY_OF_YEAR, -i)
+
+            // Set to start of day
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val startTime = calendar.timeInMillis
+
+            // Set to end of day
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            val endTime = calendar.timeInMillis
+
+            // Use INTERVAL_BEST for more accurate granular data
+            val usageStatsList = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_BEST,
+                startTime,
+                endTime
+            )
+
+            // Get app-specific usage for this day
+            val appUsageMap = mutableMapOf<String, Long>()
+            usageStatsList
+                .filter { stats ->
+                    stats.totalTimeInForeground > 0 &&
+                            stats.lastTimeUsed >= startTime &&
+                            stats.lastTimeUsed <= endTime &&
+                            // Filter out system apps and this launcher
+                            !stats.packageName.startsWith("com.android") &&
+                            !stats.packageName.startsWith("android") &&
+                            stats.packageName != "com.guruswarupa.launch"
+                }
+                .forEach { stats ->
+                    val appName = try {
+                        context.packageManager.getApplicationLabel(
+                            context.packageManager.getApplicationInfo(stats.packageName, 0)
+                        ).toString()
+                    } catch (e: Exception) {
+                        stats.packageName.substringAfterLast(".")
+                    }
+                    appUsageMap[appName] = (appUsageMap[appName] ?: 0) + stats.totalTimeInForeground
+                }
+
+            // Sort by usage and take top 5 apps for each day
+            val topApps = appUsageMap.toList()
+                .sortedByDescending { it.second }
+                .take(5)
+                .toMap()
+
+            // Format day label
+            val dayFormat = when (i) {
+                0 -> "Today"
+                1 -> "Yesterday"
+                else -> {
+                    calendar.time = Date()
+                    calendar.add(Calendar.DAY_OF_YEAR, -i)
+                    SimpleDateFormat("EEE", Locale.getDefault()).format(calendar.time)
+                }
+            }
+
+            weeklyData.add(dayFormat to topApps)
         }
 
         return weeklyData
