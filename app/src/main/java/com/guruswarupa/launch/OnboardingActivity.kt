@@ -21,6 +21,8 @@ class OnboardingActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
+    private var hasRequestedStoragePermission = false
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +32,16 @@ class OnboardingActivity : ComponentActivity() {
         findViewById<Button>(R.id.continue_button).setOnClickListener { continueSetup() }
         findViewById<Button>(R.id.set_default_launcher_button).setOnClickListener { setDefaultLauncher() }
         findViewById<Button>(R.id.set_display_style).setOnClickListener { chooseDisplayStyle() }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Check if user returned from storage permission settings
+        if (hasRequestedStoragePermission && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            hasRequestedStoragePermission = false
+            // Now request usage stats permission
+            continueSetup()
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -55,9 +67,16 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun requestStoragePermission() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            try { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) } catch (e: Exception) { Toast.makeText(this, "Enable file access in settings.", Toast.LENGTH_LONG).show() }
+            try {
+                hasRequestedStoragePermission = true
+                startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Enable file access in settings.", Toast.LENGTH_LONG).show()
+            }
         } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 101)
+        } else {
+            continueSetup()
         }
     }
 
@@ -66,22 +85,18 @@ class OnboardingActivity : ComponentActivity() {
         if (requestCode == 100 || requestCode == 101) {
             val msg = if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) "Permissions granted!" else "Permissions denied."
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
+            // Auto-request usage stats after storage permission for legacy versions
+            if (requestCode == 101) {
+                continueSetup()
+            }
         }
     }
 
     private fun continueSetup() {
-        // Request usage stats permission
+        // Request usage stats permission automatically after storage permission
         if (!hasUsageStatsPermission()) {
-            AlertDialog.Builder(this)
-                .setTitle("Usage Stats Permission")
-                .setMessage("Grant usage access to see app usage time. You can skip this if you prefer.")
-                .setPositiveButton("Grant") { _, _ ->
-                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                }
-                .setNegativeButton("Skip") { _, _ ->
-                    finishSetup()
-                }
-                .show()
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         } else {
             finishSetup()
         }
