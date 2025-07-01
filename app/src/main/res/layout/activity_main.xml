@@ -52,7 +52,32 @@
                     android:textColor="@color/text_secondary"
                     android:gravity="center"
                     android:fontFamily="sans-serif-light"
-                    android:layout_marginBottom="24dp"/>
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Weather Widget -->
+                <LinearLayout
+                    android:id="@+id/weather_widget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="24dp">
+
+                    <ImageView
+                        android:id="@+id/weather_icon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Weather Icon"/>
+
+                    <TextView
+                        android:id="@+id/weather_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:textColor="@color/text_secondary"
+                        android:fontFamily="sans-serif-light"/>
+                </LinearLayout>
 
                 <!-- Search Box -->
                 <LinearLayout
