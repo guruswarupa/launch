@@ -30,6 +30,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var weatherManager: WeatherManager // Add this line
     private lateinit var weatherIcon: ImageView
     private lateinit var weatherText: TextView
+    private lateinit var quickNoteText: EditText
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -103,6 +105,7 @@ class MainActivity : ComponentActivity() {
         searchBox = findViewById(R.id.search_box)
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
+        quickNoteText = findViewById(R.id.quick_note_text)
 
         searchBox.setOnClickListener {
             val currentTime = System.currentTimeMillis()
@@ -185,10 +188,14 @@ class MainActivity : ComponentActivity() {
         setWallpaperBackground()
 
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
+            Toast.makeText(this, "Voice search button clicked", Toast.LENGTH_SHORT).show()
             startVoiceSearch()
         }
 
         lastUpdateDate = getCurrentDateString()
+
+        loadQuickNote()
+        setupQuickNoteAutoSave()
     }
 
     private fun getPhoneNumberForContact(contactName: String): String? {
@@ -253,11 +260,18 @@ class MainActivity : ComponentActivity() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
-        try {
-            startActivityForResult(intent, VOICE_SEARCH_REQUEST)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, "Voice recognition not supported",
+
+        if (intent.resolveActivity(packageManager) != null) {
+            try {
+                startActivityForResult(intent, VOICE_SEARCH_REQUEST)
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(this, "Voice recognition not supported on this device",
+                    Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Voice recognition not available",
                 Toast.LENGTH_SHORT).show()
         }
     }
@@ -575,6 +589,7 @@ class MainActivity : ComponentActivity() {
         handler.removeCallbacks(updateRunnable)
         unregisterReceiver(packageReceiver)
         unregisterReceiver(wallpaperChangeReceiver)
+        saveQuickNote()
     }
 
     private fun updateTime() {
@@ -818,5 +833,31 @@ class MainActivity : ComponentActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun setupQuickNoteAutoSave() {
+        quickNoteText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                // Auto-save after user stops typing for 1 second
+                quickNoteText.removeCallbacks(saveNoteRunnable)
+                quickNoteText.postDelayed(saveNoteRunnable, 1000)
+            }
+        })
+    }
+
+    private val saveNoteRunnable = Runnable {
+        saveQuickNote()
+    }
+
+    private fun loadQuickNote() {
+        val savedNote = sharedPreferences.getString("quick_note", "")
+        quickNoteText.setText(savedNote)
+    }
+
+    private fun saveQuickNote() {
+        val noteText = quickNoteText.text.toString()
+        sharedPreferences.edit().putString("quick_note", noteText).apply()
     }
 }
