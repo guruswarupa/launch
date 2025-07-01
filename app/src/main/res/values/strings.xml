@@ -1,4 +1,5 @@
 <resources>
-    <string name="app_name">launch</string>
+    <string name="app_name">Launch</string>
+    <string name="settings_app_name">Launch Settings</string>
     <string name="search_text"> Search...</string>
 </resources>
