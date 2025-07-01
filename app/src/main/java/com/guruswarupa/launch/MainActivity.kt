@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var weatherIcon: ImageView
     private lateinit var weatherText: TextView
     private lateinit var quickNoteText: EditText
+    private lateinit var voiceSearchButton: ImageButton
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -106,6 +107,7 @@ class MainActivity : ComponentActivity() {
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
         quickNoteText = findViewById(R.id.quick_note_text)
+        voiceSearchButton = findViewById(R.id.voice_search_button)
 
         searchBox.setOnClickListener {
             val currentTime = System.currentTimeMillis()
@@ -666,6 +668,15 @@ class MainActivity : ComponentActivity() {
                 contactsList
             )
         }
+
+        // Set visibility of search bar and voice search button based on focus mode
+        if (appDockManager.getCurrentMode()) {
+            searchBox.visibility = android.view.View.GONE
+            voiceSearchButton.visibility = android.view.View.GONE
+        } else {
+            searchBox.visibility = android.view.View.VISIBLE
+            voiceSearchButton.visibility = android.view.View.VISIBLE
+        }
     }
 
     private fun requestContactsPermission() {
@@ -782,10 +793,17 @@ class MainActivity : ComponentActivity() {
 
             appList.clear()
             appList.addAll(filteredApps)
+
+            searchBox.visibility = android.view.View.GONE
+            voiceSearchButton.visibility = android.view.View.GONE
+
         } else {
             // Show all apps
             appList.clear()
             appList.addAll(fullAppList)
+
+            searchBox.visibility = android.view.View.VISIBLE
+            voiceSearchButton.visibility = android.view.View.VISIBLE
         }
 
         adapter.notifyDataSetChanged()
