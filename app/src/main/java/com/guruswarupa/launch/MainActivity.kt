@@ -198,6 +198,11 @@ class MainActivity : ComponentActivity() {
         setupQuickNoteAutoSave()
     }
 
+    fun refreshAppsForFocusMode() {
+        loadApps()
+        adapter.notifyDataSetChanged()
+    }
+
     private fun getPhoneNumberForContact(contactName: String): String? {
         val cursor = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -621,14 +626,23 @@ class MainActivity : ComponentActivity() {
             .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
             .toMutableList()
 
-        appList = unsortedList.toMutableList()
         fullAppList = unsortedList.toMutableList()
 
-        if (appList.isEmpty()) {
+        if (unsortedList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
         } else {
             val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-            appList = appList.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            val focusModeManager = FocusModeManager(this, prefs)
+
+            // Apply focus mode filtering
+            val filteredApps = if (focusModeManager.isFocusModeEnabled()) {
+                val allowedApps = focusModeManager.getAllowedApps()
+                unsortedList.filter { allowedApps.contains(it.activityInfo.packageName) }
+            } else {
+                unsortedList
+            }
+
+            appList = filteredApps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
                 .sortedWith(
                     compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
                         .thenBy { it.loadLabel(packageManager).toString().lowercase() }
