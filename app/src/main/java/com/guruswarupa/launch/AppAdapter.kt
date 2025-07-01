@@ -47,8 +47,20 @@ class AppAdapter(
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
 
+        // Cache app info to avoid repeated packageManager calls
+        val appName = appInfo.loadLabel(activity.packageManager).toString()
+
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
+        holder.appName?.text = appName
+
+        // Load icon efficiently
+        try {
+            val icon = appInfo.loadIcon(activity.packageManager)
+            holder.appIcon.setImageDrawable(icon)
+        } catch (e: Exception) {
+            holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+        }
 
         // Show usage time
         val usageTime = usageStatsManager.getAppUsageTime(packageName)

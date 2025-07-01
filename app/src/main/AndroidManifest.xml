@@ -49,10 +49,12 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:alwaysRetainTaskState="true"
+            android:stateNotNeeded="true"
             android:theme="@style/Theme.Launch"
             android:screenOrientation="portrait">
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
