@@ -7,6 +7,7 @@ import android.location.Location
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
@@ -31,18 +32,64 @@ class WeatherManager(private val context: Context) {
         prefs.edit().putString("weather_api_key", apiKey).apply()
     }
 
-    fun updateWeather(weatherIcon: ImageView, weatherText: TextView, latitude: Double = 0.0, longitude: Double = 0.0) {
+    private fun hasUserRejectedApiKey(): Boolean {
+        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        return prefs.getBoolean("weather_api_key_rejected", false)
+    }
+
+    private fun setUserRejectedApiKey(rejected: Boolean) {
+        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("weather_api_key_rejected", rejected).apply()
+    }
+
+    fun updateWeather(weatherIcon: ImageView, weatherText: TextView, latitude: Double = 0.0, longitude: Double = 0.0, forcePrompt: Boolean = false) {
         val apiKey = getApiKey()
 
         if (apiKey == null) {
+            if (hasUserRejectedApiKey() && !forcePrompt) {
+                handler.post {
+                    weatherText.text = "Tap to set weather API key"
+                    weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+
+                    // Set click listener to prompt for API key when user taps weather
+                    val clickListener = View.OnClickListener {
+                        promptForApiKey { key ->
+                            if (key != null) {
+                                saveApiKey(key)
+                                setUserRejectedApiKey(false)
+                                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                            }
+                        }
+                    }
+                    weatherIcon.setOnClickListener(clickListener)
+                    weatherText.setOnClickListener(clickListener)
+                }
+                return
+            }
+
             promptForApiKey { key ->
                 if (key != null) {
                     saveApiKey(key)
+                    setUserRejectedApiKey(false)
                     fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
                 } else {
+                    setUserRejectedApiKey(true)
                     handler.post {
-                        weatherText.text = "Weather API key required"
+                        weatherText.text = "Tap to set weather API key"
                         weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+
+                        // Set click listener to prompt for API key when user taps weather
+                        val clickListener = View.OnClickListener {
+                            promptForApiKey { key ->
+                                if (key != null) {
+                                    saveApiKey(key)
+                                    setUserRejectedApiKey(false)
+                                    fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                                }
+                            }
+                        }
+                        weatherIcon.setOnClickListener(clickListener)
+                        weatherText.setOnClickListener(clickListener)
                     }
                 }
             }
