@@ -1,4 +1,3 @@
-
 # Launch
 
 A clean, efficient, and minimalist Android launcher that prioritizes simplicity and functionality.
@@ -8,6 +7,8 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
 ### Smart App Management
 - Apps are intelligently sorted by usage frequency
 - Unused apps are organized alphabetically
+- App usage stats displayed next to each app
+- Weekly phone usage summary shown at the bottom
 - Quick app uninstall with long-press gesture
 - Smooth grid and list view options
 
@@ -21,9 +22,10 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
 - **Time Widget**: Tap to open clock app
 - **Date Widget**: Tap to open calendar
 - **Search Bar**:
-    - Long press to open new Google tab
-    - Double tap to change wallpaper
-    - Direct calculator functionality
+  - Long press to open new Google tab
+  - Double tap to change wallpaper
+  - Direct calculator functionality
+- **Weather**: Shows current weather status and forecast
 
 ### Dock Customization
 - Add favorite apps to dock
@@ -31,12 +33,24 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
 - Long press dock items to remove or rename
 - Customizable dock layout
 
+### Focus Mode 🔕
+- Choose apps to show in Focus Mode by long-pressing the mode icon
+- Hide distracting apps temporarily
+- Set a timer for how long Focus Mode should last
+- Cannot exit Focus Mode until timer completes
+- Countdown timer is visibly shown on screen
+
+### Quick Notes Widget
+- Easily jot down short notes directly from the launcher
+- Notes saved locally for quick access
+- Long press to edit or delete notes
+
 ### Privacy & Permissions
 The launcher requires minimal permissions:
 - Contacts (for contact search)
 - SMS (for messaging features)
 - Phone (for calling features)
-- Storage (for wallpaper management)
+- Storage (for wallpaper and notes management)
 
 ## Getting Started
 
@@ -48,15 +62,17 @@ The launcher requires minimal permissions:
 
 ## Gestures Guide
 
-| Action | Gesture | Result |
-|--------|---------|--------|
-| Open Clock | Tap time widget | Opens system clock |
-| Open Calendar | Tap date widget | Opens system calendar |
-| Open Google | Long press search bar | Opens new Google tab in default browser |
-| Uninstall App | Long press app icon | Opens uninstall dialog |
-| Change Wallpaper | Double tap search bar | Opens wallpaper picker |
-| Remove Dock Item | Long press dock item | Opens removal option |
-| Calculator | Type in search bar | Instant calculations |
+| Action             | Gesture                     | Result                                      |
+|--------------------|------------------------------|---------------------------------------------|
+| Open Clock         | Tap time widget              | Opens system clock                          |
+| Open Calendar      | Tap date widget              | Opens system calendar                       |
+| Open Google        | Long press search bar        | Opens new Google tab in default browser     |
+| Uninstall App      | Long press app icon          | Opens uninstall dialog                      |
+| Change Wallpaper   | Double tap search bar        | Opens wallpaper picker                      |
+| Remove Dock Item   | Long press dock item         | Opens removal option                        |
+| Calculator         | Type in search bar           | Instant calculations                        |
+| Enter Focus Mode   | Long press focus icon        | Select apps to show, set timer              |
+| Exit Focus Mode    | Not allowed until timer ends | Shows countdown until mode auto-disables    |
 
 ## Voice Commands
 
