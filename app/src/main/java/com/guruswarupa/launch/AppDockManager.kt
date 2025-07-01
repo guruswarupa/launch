@@ -26,7 +26,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
-
 class AppDockManager(
     private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
@@ -37,6 +36,7 @@ class AppDockManager(
     private val DOCK_APPS_KEY = "dock_apps"
     private val FOCUS_MODE_KEY = "focus_mode_enabled"
     private val FOCUS_MODE_HIDDEN_APPS_KEY = "focus_mode_hidden_apps"
+    private val FOCUS_MODE_END_TIME_KEY = "focus_mode_end_time"
 
     private lateinit var addIcon: ImageView
     private lateinit var focusModeToggle: ImageView
@@ -46,6 +46,7 @@ class AppDockManager(
         loadFocusMode()
         ensureAddIcon()
         ensureFocusModeToggle()
+        updateDockVisibility()
     }
 
     fun openAppPicker() {
@@ -481,6 +482,7 @@ class AppDockManager(
         ensureFocusModeToggle()
         loadDockApps()
         ensureAddIcon()
+        updateDockVisibility()
     }
 
     fun loadDockApps() {
@@ -553,13 +555,105 @@ class AppDockManager(
     }
 
     private fun toggleFocusMode() {
-        isFocusMode = !isFocusMode
+        if (isFocusMode) {
+            // Check if timer has expired
+            val endTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+            val currentTime = System.currentTimeMillis()
+
+            if (currentTime < endTime) {
+                val remainingMinutes = (endTime - currentTime) / (1000 * 60)
+                Toast.makeText(context, "Focus mode active for ${remainingMinutes} more minutes", Toast.LENGTH_LONG).show()
+                return
+            } else {
+                // Timer expired, allow switching to normal mode
+                disableFocusMode()
+            }
+        } else {
+            // Show duration picker dialog
+            showFocusModeDurationPicker()
+        }
+    }
+
+    private fun showFocusModeDurationPicker() {
+        val durations = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Custom")
+        val durationValues = arrayOf(15, 30, 60, 120, 240, -1) // -1 for custom
+
+        AlertDialog.Builder(context)
+            .setTitle("Select Focus Mode Duration")
+            .setItems(durations) { _, which ->
+                if (durationValues[which] == -1) {
+                    showCustomDurationDialog()
+                } else {
+                    enableFocusMode(durationValues[which])
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showCustomDurationDialog() {
+        val input = android.widget.EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "Enter minutes (1-480)"
+        }
+
+        AlertDialog.Builder(context)
+            .setTitle("Custom Duration")
+            .setMessage("Enter duration in minutes:")
+            .setView(input)
+            .setPositiveButton("Start") { _, _ ->
+                val minutes = input.text.toString().toIntOrNull()
+                if (minutes != null && minutes in 1..480) {
+                    enableFocusMode(minutes)
+                } else {
+                    Toast.makeText(context, "Please enter a valid duration (1-480 minutes)", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun enableFocusMode(durationMinutes: Int) {
+        isFocusMode = true
+        val endTime = System.currentTimeMillis() + (durationMinutes * 60 * 1000)
+
         saveFocusMode()
+        sharedPreferences.edit().putLong(FOCUS_MODE_END_TIME_KEY, endTime).apply()
+
         updateFocusModeIcon()
+        updateDockVisibility()
         refreshAppsForFocusMode()
 
-        val message = if (isFocusMode) "Focus mode enabled" else "Normal mode enabled"
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Focus mode enabled for $durationMinutes minutes", Toast.LENGTH_LONG).show()
+
+        // Start timer to automatically disable focus mode
+        startFocusModeTimer(endTime)
+    }
+
+    private fun disableFocusMode() {
+        isFocusMode = false
+        saveFocusMode()
+        sharedPreferences.edit().remove(FOCUS_MODE_END_TIME_KEY).apply()
+
+        updateFocusModeIcon()
+        updateDockVisibility()
+        refreshAppsForFocusMode()
+
+        Toast.makeText(context, "Focus mode disabled", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun startFocusModeTimer(endTime: Long) {
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        val checkTimer = object : Runnable {
+            override fun run() {
+                if (isFocusMode && System.currentTimeMillis() >= endTime) {
+                    disableFocusMode()
+                } else if (isFocusMode) {
+                    handler.postDelayed(this, 60000) // Check every minute
+                }
+            }
+        }
+        handler.postDelayed(checkTimer, 60000)
     }
 
     private fun updateFocusModeIcon() {
@@ -570,6 +664,16 @@ class AppDockManager(
 
     private fun refreshAppsForFocusMode() {
         (context as? MainActivity)?.refreshAppsForFocusMode()
+    }
+
+    private fun updateDockVisibility() {
+        // Hide/show all dock items except the focus mode toggle
+        for (i in 0 until appDock.childCount) {
+            val child = appDock.getChildAt(i)
+            if (child.tag != "focus_mode_toggle") {
+                child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+            }
+        }
     }
 
     private fun showFocusModeSettings() {
