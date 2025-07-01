@@ -782,38 +782,41 @@ class MainActivity : ComponentActivity() {
         loadWeeklyUsageData()
     }
 
-private fun setupWeather() {
-    val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
-    val weatherText = findViewById<TextView>(R.id.weather_text)
+    private fun setupWeather() {
+        val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
+        val weatherText = findViewById<TextView>(R.id.weather_text)
 
-    weatherManager.updateWeather(weatherIcon, weatherText)
-}
+        weatherManager.updateWeather(weatherIcon, weatherText)
+    }
 
-private fun showWeatherSettings() {
-    val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-    val currentApiKey = prefs.getString("weather_api_key", "")
+    private fun showWeatherSettings() {
+        val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+        val currentApiKey = prefs.getString("weather_api_key", "")
 
-    val builder = AlertDialog.Builder(this)
-    val input = EditText(this)
-    input.setText(currentApiKey)
-    input.hint = "Enter your OpenWeatherMap API key"
+        val builder = AlertDialog.Builder(this)
+        val input = EditText(this)
+        input.setText(currentApiKey)
+        input.hint = "Enter your OpenWeatherMap API key"
 
-    builder.setTitle("Weather API Settings")
-        .setMessage("Update your OpenWeatherMap API key.\n\nGet one free at: openweathermap.org/api")
-        .setView(input)
-        .setPositiveButton("Save") { _, _ ->
-            val apiKey = input.text.toString().trim()
-            if (apiKey.isNotEmpty()) {
-                prefs.edit().putString("weather_api_key", apiKey).apply()
-                Toast.makeText(this, "API key saved", Toast.LENGTH_SHORT).show()
-                // Refresh weather
-                setupWeather()
-            } else {
-                prefs.edit().remove("weather_api_key").apply()
-                Toast.makeText(this, "API key removed", Toast.LENGTH_SHORT).show()
+        builder.setTitle("Weather API Settings")
+            .setMessage("Update your OpenWeatherMap API key.\n\nGet one free at: openweathermap.org/api")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val apiKey = input.text.toString().trim()
+                if (apiKey.isNotEmpty()) {
+                    prefs.edit()
+                        .putString("weather_api_key", apiKey)
+                        .putBoolean("weather_api_key_rejected", false)
+                        .apply()
+                    Toast.makeText(this, "API key saved", Toast.LENGTH_SHORT).show()
+                    // Refresh weather
+                    setupWeather()
+                } else {
+                    prefs.edit().remove("weather_api_key").apply()
+                    Toast.makeText(this, "API key removed", Toast.LENGTH_SHORT).show()
+                }
             }
-        }
-        .setNegativeButton("Cancel", null)
-        .show()
-}
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 }
