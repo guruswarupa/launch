@@ -15,4 +15,40 @@
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">@color/white</item>
     </style>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <!-- Widget text style with background -->
+    <style name="WidgetTextStyle">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:background">@drawable/widget_background</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:shadowColor">#000000</item>
+        <item name="android:shadowDx">1</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">2</item>
+    </style>
+
+    <!-- Time widget style -->
+    <style name="TimeWidgetStyle" parent="WidgetTextStyle">
+        <item name="android:textSize">24sp</item>
+    </style>
+
+    <!-- Date widget style -->
+    <style name="DateWidgetStyle" parent="WidgetTextStyle">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Weather widget style -->
+    <style name="WeatherWidgetStyle" parent="WidgetTextStyle">
+        <item name="android:textSize">12sp</item>
+    </style>
 </resources>

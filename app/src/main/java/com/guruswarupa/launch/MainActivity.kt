@@ -30,6 +30,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -39,6 +40,7 @@ import java.util.Locale
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import net.objecthunter.exp4j.ExpressionBuilder
+import java.util.Calendar
 
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +68,11 @@ class MainActivity : ComponentActivity() {
     private var lastSearchTapTime = 0L
     private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
+    private var lastUpdateDate: String = ""
+    private lateinit var weatherManager: WeatherManager // Add this line
+    private lateinit var weatherIcon: ImageView
+    private lateinit var weatherText: TextView
+    private lateinit var quickNoteText: EditText
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -98,6 +105,7 @@ class MainActivity : ComponentActivity() {
         searchBox = findViewById(R.id.search_box)
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
+        quickNoteText = findViewById(R.id.quick_note_text)
 
         searchBox.setOnClickListener {
             val currentTime = System.currentTimeMillis()
@@ -122,8 +130,12 @@ class MainActivity : ComponentActivity() {
         appDock = findViewById(R.id.app_dock)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
         weeklyUsageGraph = findViewById(R.id.weekly_usage_graph)
+        weatherIcon = findViewById(R.id.weather_icon) // Initialize weatherIcon
+        weatherText = findViewById(R.id.weather_text) // Initialize weatherText
+
 
         usageStatsManager = AppUsageStatsManager(this)
+        weatherManager = WeatherManager(this)
 
         // Request necessary permissions
         requestContactsPermission()
@@ -146,6 +158,7 @@ class MainActivity : ComponentActivity() {
 
         updateTime()
         updateDate()
+        updateWeather()
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
 
@@ -175,8 +188,18 @@ class MainActivity : ComponentActivity() {
         setWallpaperBackground()
 
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
+            Toast.makeText(this, "Voice search button clicked", Toast.LENGTH_SHORT).show()
             startVoiceSearch()
         }
+
+        lastUpdateDate = getCurrentDateString()
+
+        loadQuickNote()
+        setupQuickNoteAutoSave()
+    }
+
+    fun refreshAppsForFocusMode() {
+        loadApps()
     }
 
     private fun getPhoneNumberForContact(contactName: String): String? {
@@ -241,11 +264,18 @@ class MainActivity : ComponentActivity() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak to search")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
-        try {
-            startActivityForResult(intent, VOICE_SEARCH_REQUEST)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, "Voice recognition not supported",
+
+        if (intent.resolveActivity(packageManager) != null) {
+            try {
+                startActivityForResult(intent, VOICE_SEARCH_REQUEST)
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(this, "Voice recognition not supported on this device",
+                    Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Voice recognition not available",
                 Toast.LENGTH_SHORT).show()
         }
     }
@@ -533,8 +563,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val updateRunnable = object : Runnable {
+        override fun run() {
+            updateTime()
+            updateDate()
+            checkDateChangeAndRefreshUsage()
+            handler.postDelayed(this, 1000)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        // Refresh usage stats when returning to launcher
+        refreshUsageStats()
+        handler.post(updateRunnable)
+
         setWallpaperBackground()
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -547,8 +590,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        handler.removeCallbacks(updateRunnable)
         unregisterReceiver(packageReceiver)
         unregisterReceiver(wallpaperChangeReceiver)
+        saveQuickNote()
     }
 
     private fun updateTime() {
@@ -556,15 +601,17 @@ class MainActivity : ComponentActivity() {
         val currentTime = sdf.format(Date())
         timeTextView.text = currentTime
 
-        handler.postDelayed({ updateTime() }, 1000)
+        // Update weather every 30 minutes (1800000 milliseconds)
+        val currentTimeMillis = System.currentTimeMillis()
+        if (currentTimeMillis % 1800000 < 1000) {
+            updateWeather()
+        }
     }
 
     private fun updateDate() {
         val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
         val currentTime = sdf.format(Date())
         dateTextView.text = currentTime
-
-        handler.postDelayed({ updateDate() }, 60_000) // Refresh every minute
     }
 
     fun loadApps() {
@@ -578,16 +625,23 @@ class MainActivity : ComponentActivity() {
             .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
             .toMutableList()
 
-        appList = unsortedList.toMutableList()
         fullAppList = unsortedList.toMutableList()
 
-        if (appList.isEmpty()) {
+        if (unsortedList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
         } else {
-            val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-            appList = appList.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            // Apply focus mode filtering using AppDockManager logic
+            val filteredApps = if (appDockManager.getCurrentMode()) {
+                unsortedList.filter { app ->
+                    !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+                }
+            } else {
+                unsortedList
+            }
+
+            appList = filteredApps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
                 .sortedWith(
-                    compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
+                    compareByDescending<ResolveInfo> { sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0) }
                         .thenBy { it.loadLabel(packageManager).toString().lowercase() }
                 )
                 .toMutableList()
@@ -719,16 +773,131 @@ class MainActivity : ComponentActivity() {
         return contacts
     }
 
-    // Method to load weekly usage data
-    private fun loadWeeklyUsageData() {
-        val appUsageData = usageStatsManager.getWeeklyAppUsageData()
-        if (appUsageData.isNotEmpty()) {
-            weeklyUsageGraph.setAppUsageData(appUsageData)
+    fun applyFocusMode(isFocusMode: Boolean) {
+        if (isFocusMode) {
+            // Filter out hidden apps
+            val filteredApps = fullAppList.filter { app ->
+                !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+            }.toMutableList()
+
+            appList.clear()
+            appList.addAll(filteredApps)
         } else {
-            // Fallback to total usage data if app-specific data is not available
-            val usageData = usageStatsManager.getWeeklyUsageData()
-            weeklyUsageGraph.setUsageData(usageData)
+            // Show all apps
+            appList.clear()
+            appList.addAll(fullAppList)
         }
-        weeklyUsageGraph.invalidate() // Redraw the graph
+
+        adapter.notifyDataSetChanged()
+
+        // Update search manager with new app list
+        appSearchManager = AppSearchManager(
+            packageManager,
+            appList,
+            fullAppList,
+            adapter,
+            recyclerView,
+            searchBox,
+            contactsList
+        )
+    }
+
+    private fun loadWeeklyUsageData() {
+        if (usageStatsManager.hasUsageStatsPermission()) {
+            val weeklyData = usageStatsManager.getWeeklyUsageData()
+            weeklyUsageGraph.setUsageData(weeklyData)
+
+            val appUsageData = usageStatsManager.getWeeklyAppUsageData()
+            weeklyUsageGraph.setAppUsageData(appUsageData)
+        }
+    }
+
+    private fun updateWeather() {
+        weatherManager.updateWeather(weatherIcon, weatherText)
+    }
+
+    private fun getCurrentDateString(): String {
+        val calendar = Calendar.getInstance()
+        return "${calendar.get(Calendar.DAY_OF_YEAR)}-${calendar.get(Calendar.YEAR)}"
+    }
+
+    private fun checkDateChangeAndRefreshUsage() {
+        val currentDate = getCurrentDateString()
+        if (currentDate != lastUpdateDate) {
+            lastUpdateDate = currentDate
+            refreshUsageStats()
+        }
+    }
+
+    private fun refreshUsageStats() {
+        // Refresh adapter usage data
+        adapter.notifyDataSetChanged()
+
+        // Refresh weekly usage graph
+        loadWeeklyUsageData()
+    }
+
+    private fun setupWeather() {
+        val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
+        val weatherText = findViewById<TextView>(R.id.weather_text)
+
+        weatherManager.updateWeather(weatherIcon, weatherText)
+    }
+
+    private fun showWeatherSettings() {
+        val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+        val currentApiKey = prefs.getString("weather_api_key", "")
+
+        val builder = AlertDialog.Builder(this)
+        val input = EditText(this)
+        input.setText(currentApiKey)
+        input.hint = "Enter your OpenWeatherMap API key"
+
+        builder.setTitle("Weather API Settings")
+            .setMessage("Update your OpenWeatherMap API key.\n\nGet one free at: openweathermap.org/api")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val apiKey = input.text.toString().trim()
+                if (apiKey.isNotEmpty()) {
+                    prefs.edit()
+                        .putString("weather_api_key", apiKey)
+                        .putBoolean("weather_api_key_rejected", false)
+                        .apply()
+                    Toast.makeText(this, "API key saved", Toast.LENGTH_SHORT).show()
+                    // Refresh weather
+                    setupWeather()
+                } else {
+                    prefs.edit().remove("weather_api_key").apply()
+                    Toast.makeText(this, "API key removed", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun setupQuickNoteAutoSave() {
+        quickNoteText.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                // Auto-save after user stops typing for 1 second
+                quickNoteText.removeCallbacks(saveNoteRunnable)
+                quickNoteText.postDelayed(saveNoteRunnable, 1000)
+            }
+        })
+    }
+
+    private val saveNoteRunnable = Runnable {
+        saveQuickNote()
+    }
+
+    private fun loadQuickNote() {
+        val savedNote = sharedPreferences.getString("quick_note", "")
+        quickNoteText.setText(savedNote)
+    }
+
+    private fun saveQuickNote() {
+        val noteText = quickNoteText.text.toString()
+        sharedPreferences.edit().putString("quick_note", noteText).apply()
     }
 }

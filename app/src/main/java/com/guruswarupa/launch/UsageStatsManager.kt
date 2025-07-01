@@ -1,4 +1,3 @@
-
 package com.guruswarupa.launch
 
 import android.app.AppOpsManager
@@ -52,19 +51,6 @@ class AppUsageStatsManager(private val context: Context) {
         return usageStatsList
             .filter { it.packageName == packageName && it.totalTimeInForeground > 0 }
             .sumOf { it.totalTimeInForeground }
-    }
-
-    fun formatUsageTime(timeInMillis: Long): String {
-        if (timeInMillis <= 0) return ""
-
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(timeInMillis)
-        val hours = TimeUnit.MILLISECONDS.toHours(timeInMillis)
-
-        return when {
-            hours > 0 -> "${hours}h ${minutes % 60}m"
-            minutes > 0 -> "${minutes}m"
-            else -> "<1m"
-        }
     }
 
     fun getWeeklyUsageData(): List<Pair<String, Long>> {
@@ -205,5 +191,20 @@ class AppUsageStatsManager(private val context: Context) {
         }
 
         return weeklyData
+    }
+
+    fun formatUsageTime(timeInMillis: Long): String {
+        if (timeInMillis == 0L) return ""
+
+        val totalMinutes = TimeUnit.MILLISECONDS.toMinutes(timeInMillis)
+        return when {
+            totalMinutes < 1 -> "${TimeUnit.MILLISECONDS.toSeconds(timeInMillis)}s"
+            totalMinutes < 60 -> "${totalMinutes}m"
+            else -> {
+                val hours = totalMinutes / 60
+                val minutes = totalMinutes % 60
+                if (minutes == 0L) "${hours}h" else "${hours}h ${minutes}m"
+            }
+        }
     }
 }
