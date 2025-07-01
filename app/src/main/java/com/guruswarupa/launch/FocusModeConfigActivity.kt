@@ -45,9 +45,10 @@ class FocusModeConfigActivity : ComponentActivity() {
             addCategory(android.content.Intent.CATEGORY_LAUNCHER)
         }
 
-        appList = packageManager.queryIntentActivities(intent, 0)
+        val apps = packageManager.queryIntentActivities(intent, 0)
             .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-            .toMutableList()
+
+        appList = apps.toMutableList()
     }
 }
