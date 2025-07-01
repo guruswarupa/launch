@@ -68,6 +68,9 @@ class MainActivity : ComponentActivity() {
     private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
     private var lastUpdateDate: String = ""
+    private lateinit var weatherManager: WeatherManager // Add this line
+    private lateinit var weatherIcon: ImageView
+    private lateinit var weatherText: TextView
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -124,8 +127,12 @@ class MainActivity : ComponentActivity() {
         appDock = findViewById(R.id.app_dock)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
         weeklyUsageGraph = findViewById(R.id.weekly_usage_graph)
+        weatherIcon = findViewById(R.id.weather_icon) // Initialize weatherIcon
+        weatherText = findViewById(R.id.weather_text) // Initialize weatherText
+
 
         usageStatsManager = AppUsageStatsManager(this)
+        weatherManager = WeatherManager(this)
 
         // Request necessary permissions
         requestContactsPermission()
@@ -148,6 +155,7 @@ class MainActivity : ComponentActivity() {
 
         updateTime()
         updateDate()
+        updateWeather()
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
 
@@ -573,6 +581,12 @@ class MainActivity : ComponentActivity() {
         val sdf = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
         val currentTime = sdf.format(Date())
         timeTextView.text = currentTime
+
+        // Update weather every 30 minutes (1800000 milliseconds)
+        val currentTimeMillis = System.currentTimeMillis()
+        if (currentTimeMillis % 1800000 < 1000) {
+            updateWeather()
+        }
     }
 
     private fun updateDate() {
@@ -743,6 +757,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun updateWeather() {
+        weatherManager.updateWeather(weatherIcon, weatherText)
+    }
+
     private fun getCurrentDateString(): String {
         val calendar = Calendar.getInstance()
         return "${calendar.get(Calendar.DAY_OF_YEAR)}-${calendar.get(Calendar.YEAR)}"
@@ -763,4 +781,39 @@ class MainActivity : ComponentActivity() {
         // Refresh weekly usage graph
         loadWeeklyUsageData()
     }
+
+private fun setupWeather() {
+    val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
+    val weatherText = findViewById<TextView>(R.id.weather_text)
+
+    weatherManager.updateWeather(weatherIcon, weatherText)
+}
+
+private fun showWeatherSettings() {
+    val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+    val currentApiKey = prefs.getString("weather_api_key", "")
+
+    val builder = AlertDialog.Builder(this)
+    val input = EditText(this)
+    input.setText(currentApiKey)
+    input.hint = "Enter your OpenWeatherMap API key"
+
+    builder.setTitle("Weather API Settings")
+        .setMessage("Update your OpenWeatherMap API key.\n\nGet one free at: openweathermap.org/api")
+        .setView(input)
+        .setPositiveButton("Save") { _, _ ->
+            val apiKey = input.text.toString().trim()
+            if (apiKey.isNotEmpty()) {
+                prefs.edit().putString("weather_api_key", apiKey).apply()
+                Toast.makeText(this, "API key saved", Toast.LENGTH_SHORT).show()
+                // Refresh weather
+                setupWeather()
+            } else {
+                prefs.edit().remove("weather_api_key").apply()
+                Toast.makeText(this, "API key removed", Toast.LENGTH_SHORT).show()
+            }
+        }
+        .setNegativeButton("Cancel", null)
+        .show()
+}
 }
