@@ -46,7 +46,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         }
 
         val apps = packageManager.queryIntentActivities(intent, 0)
-            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .filter { it.activityInfo.name != "com.guruswarupa.launch.MainActivity" }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
 
         appList = apps.toMutableList()

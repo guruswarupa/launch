@@ -74,14 +74,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var weatherText: TextView
     private lateinit var quickNoteText: EditText
 
-    private val settingsUpdateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
-                loadApps() // Refresh apps with new settings
-            }
-        }
-    }
-
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
         private const val REQUEST_CODE_CALL_PHONE = 200
@@ -96,11 +88,6 @@ class MainActivity : ComponentActivity() {
         setContentView(R.layout.activity_main)
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-
-        // Register broadcast receiver for settings updates
-        val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
-        registerReceiver(settingsUpdateReceiver, filter)
-
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
 
         if (isFirstRun) {
@@ -519,7 +506,6 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
-        unregisterReceiver(settingsUpdateReceiver)
     }
 
     private val wallpaperChangeReceiver = object : BroadcastReceiver() {

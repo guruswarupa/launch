@@ -585,7 +585,25 @@ class AppDockManager(
                 visibility = if (isFocusMode) View.VISIBLE else View.GONE
             }
 
+            // Add settings icon
+            val settingsIcon = ImageView(context).apply {
+                tag = "settings_icon"
+                setImageResource(R.drawable.ic_settings)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24,24,24,24)
+                    marginStart = 8
+                }
+                setOnClickListener {
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                }
+            }
+
             focusContainer.addView(focusModeToggle)
+            focusContainer.addView(settingsIcon)
             focusContainer.addView(focusTimerText)
 
             // Add focus container as the first item
@@ -774,7 +792,7 @@ class AppDockManager(
         }
 
         val apps = packageManager.queryIntentActivities(intent, 0)
-        val sortedApps = apps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+        val sortedApps = apps.filter { it.activityInfo.name != "com.guruswarupa.launch.MainActivity" }
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
         val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
         val appPackageNames = sortedApps.map { it.activityInfo.packageName }
