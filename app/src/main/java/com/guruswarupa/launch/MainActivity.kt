@@ -588,6 +588,9 @@ class MainActivity : ComponentActivity() {
         }
         registerReceiver(packageReceiver, filter)
         registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
+
+        // Reapply focus mode state when returning from apps
+        applyFocusMode(appDockManager.getCurrentMode())
     }
 
     override fun onPause() {
