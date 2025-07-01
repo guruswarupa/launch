@@ -39,6 +39,7 @@ import java.util.Locale
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import net.objecthunter.exp4j.ExpressionBuilder
+import java.util.Calendar
 
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +67,7 @@ class MainActivity : ComponentActivity() {
     private var lastSearchTapTime = 0L
     private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
+    private var lastUpdateDate: String = ""
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -177,6 +179,8 @@ class MainActivity : ComponentActivity() {
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
             startVoiceSearch()
         }
+
+        lastUpdateDate = getCurrentDateString()
     }
 
     private fun getPhoneNumberForContact(contactName: String): String? {
@@ -533,8 +537,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val updateRunnable = object : Runnable {
+        override fun run() {
+            updateTime()
+            updateDate()
+            checkDateChangeAndRefreshUsage()
+            handler.postDelayed(this, 1000)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        // Refresh usage stats when returning to launcher
+        refreshUsageStats()
+        handler.post(updateRunnable)
+
         setWallpaperBackground()
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -547,6 +564,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        handler.removeCallbacks(updateRunnable)
         unregisterReceiver(packageReceiver)
         unregisterReceiver(wallpaperChangeReceiver)
     }
@@ -555,16 +573,12 @@ class MainActivity : ComponentActivity() {
         val sdf = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
         val currentTime = sdf.format(Date())
         timeTextView.text = currentTime
-
-        handler.postDelayed({ updateTime() }, 1000)
     }
 
     private fun updateDate() {
         val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
         val currentTime = sdf.format(Date())
         dateTextView.text = currentTime
-
-        handler.postDelayed({ updateDate() }, 60_000) // Refresh every minute
     }
 
     fun loadApps() {
@@ -719,16 +733,34 @@ class MainActivity : ComponentActivity() {
         return contacts
     }
 
-    // Method to load weekly usage data
     private fun loadWeeklyUsageData() {
-        val appUsageData = usageStatsManager.getWeeklyAppUsageData()
-        if (appUsageData.isNotEmpty()) {
+        if (usageStatsManager.hasUsageStatsPermission()) {
+            val weeklyData = usageStatsManager.getWeeklyUsageData()
+            weeklyUsageGraph.setUsageData(weeklyData)
+
+            val appUsageData = usageStatsManager.getWeeklyAppUsageData()
             weeklyUsageGraph.setAppUsageData(appUsageData)
-        } else {
-            // Fallback to total usage data if app-specific data is not available
-            val usageData = usageStatsManager.getWeeklyUsageData()
-            weeklyUsageGraph.setUsageData(usageData)
         }
-        weeklyUsageGraph.invalidate() // Redraw the graph
+    }
+
+    private fun getCurrentDateString(): String {
+        val calendar = Calendar.getInstance()
+        return "${calendar.get(Calendar.DAY_OF_YEAR)}-${calendar.get(Calendar.YEAR)}"
+    }
+
+    private fun checkDateChangeAndRefreshUsage() {
+        val currentDate = getCurrentDateString()
+        if (currentDate != lastUpdateDate) {
+            lastUpdateDate = currentDate
+            refreshUsageStats()
+        }
+    }
+
+    private fun refreshUsageStats() {
+        // Refresh adapter usage data
+        adapter.notifyDataSetChanged()
+
+        // Refresh weekly usage graph
+        loadWeeklyUsageData()
     }
 }
