@@ -28,16 +28,24 @@ import com.google.android.material.textfield.TextInputLayout
 
 
 class AppDockManager(
-    private val context: Context,
+    private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
     private val packageManager: PackageManager
 ) {
+    private val context: Context = activity
     private val DOCK_APPS_KEY = "dock_apps"
+    private val FOCUS_MODE_KEY = "focus_mode_enabled"
+    private val FOCUS_MODE_HIDDEN_APPS_KEY = "focus_mode_hidden_apps"
+
     private lateinit var addIcon: ImageView
+    private lateinit var focusModeToggle: ImageView
+    private var isFocusMode: Boolean = false
 
     init {
+        loadFocusMode()
         ensureAddIcon()
+        ensureFocusModeToggle()
     }
 
     fun openAppPicker() {
@@ -470,6 +478,7 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
+        ensureFocusModeToggle()
         loadDockApps()
         ensureAddIcon()
     }
@@ -511,6 +520,120 @@ class AppDockManager(
             }
             appDock.addView(addIcon)
         }
+    }
+
+    private fun ensureFocusModeToggle() {
+        if (appDock.findViewWithTag<ImageView>("focus_mode_toggle") == null) {
+            focusModeToggle = ImageView(context).apply {
+                tag = "focus_mode_toggle"
+                setImageResource(if (isFocusMode) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24,24,24,24)
+                }
+                setOnClickListener { toggleFocusMode() }
+                setOnLongClickListener {
+                    showFocusModeSettings()
+                    true
+                }
+            }
+            // Add focus toggle as the first item
+            appDock.addView(focusModeToggle, 0)
+        }
+    }
+
+    private fun loadFocusMode() {
+        isFocusMode = sharedPreferences.getBoolean(FOCUS_MODE_KEY, false)
+    }
+
+    private fun saveFocusMode() {
+        sharedPreferences.edit().putBoolean(FOCUS_MODE_KEY, isFocusMode).apply()
+    }
+
+    private fun toggleFocusMode() {
+        isFocusMode = !isFocusMode
+        saveFocusMode()
+        updateFocusModeIcon()
+        refreshAppsForFocusMode()
+
+        val message = if (isFocusMode) "Focus mode enabled" else "Normal mode enabled"
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updateFocusModeIcon() {
+        focusModeToggle.setImageResource(
+            if (isFocusMode) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode
+        )
+    }
+
+    private fun refreshAppsForFocusMode() {
+        activity.applyFocusMode(isFocusMode)
+    }
+
+    private fun showFocusModeSettings() {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+
+        val apps = packageManager.queryIntentActivities(intent, 0)
+        val sortedApps = apps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+
+        val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
+        val appPackageNames = sortedApps.map { it.activityInfo.packageName }
+
+        val hiddenApps = getHiddenAppsInFocusMode()
+        val checkedItems = BooleanArray(appNames.size) { index ->
+            hiddenApps.contains(appPackageNames[index])
+        }
+
+        AlertDialog.Builder(context)
+            .setTitle("Focus Mode Settings")
+            .setMessage("Select apps to hide in focus mode:")
+            .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
+                val packageName = appPackageNames[which]
+                if (isChecked) {
+                    addAppToHiddenList(packageName)
+                } else {
+                    removeAppFromHiddenList(packageName)
+                }
+            }
+            .setPositiveButton("Done") { _, _ ->
+                if (isFocusMode) {
+                    refreshAppsForFocusMode()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun getHiddenAppsInFocusMode(): Set<String> {
+        return sharedPreferences.getStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
+    }
+
+    private fun addAppToHiddenList(packageName: String) {
+        val hiddenApps = getHiddenAppsInFocusMode().toMutableSet()
+        hiddenApps.add(packageName)
+        sharedPreferences.edit().putStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, hiddenApps).apply()
+    }
+
+    private fun removeAppFromHiddenList(packageName: String) {
+        val hiddenApps = getHiddenAppsInFocusMode().toMutableSet()
+        hiddenApps.remove(packageName)
+        sharedPreferences.edit().putStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, hiddenApps).apply()
+    }
+
+    fun isAppHiddenInFocusMode(packageName: String): Boolean {
+        return if (isFocusMode) {
+            getHiddenAppsInFocusMode().contains(packageName)
+        } else {
+            false
+        }
+    }
+
+    fun getCurrentMode(): Boolean {
+        return isFocusMode
     }
 }
 

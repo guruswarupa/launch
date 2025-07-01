@@ -41,10 +41,16 @@
         android:theme="@style/Theme.Launch"
         tools:targetApi="22">
 
-        <activity android:name=".OnboardingActivity"
+        <activity
+            android:name=".OnboardingActivity"
             android:exported="true"
             android:theme="@style/Theme.Launch"
             android:screenOrientation="portrait"/>
+
+        <activity
+            android:name=".FocusModeConfigActivity"
+            android:exported="false"
+            android:label="Focus Mode Configuration" />
 
         <activity
             android:name=".MainActivity"

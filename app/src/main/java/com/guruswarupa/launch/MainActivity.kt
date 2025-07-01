@@ -762,6 +762,35 @@ class MainActivity : ComponentActivity() {
         return contacts
     }
 
+    fun applyFocusMode(isFocusMode: Boolean) {
+        if (isFocusMode) {
+            // Filter out hidden apps
+            val filteredApps = fullAppList.filter { app ->
+                !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+            }.toMutableList()
+
+            appList.clear()
+            appList.addAll(filteredApps)
+        } else {
+            // Show all apps
+            appList.clear()
+            appList.addAll(fullAppList)
+        }
+
+        adapter.notifyDataSetChanged()
+
+        // Update search manager with new app list
+        appSearchManager = AppSearchManager(
+            packageManager,
+            appList,
+            fullAppList,
+            adapter,
+            recyclerView,
+            searchBox,
+            contactsList
+        )
+    }
+
     private fun loadWeeklyUsageData() {
         if (usageStatsManager.hasUsageStatsPermission()) {
             val weeklyData = usageStatsManager.getWeeklyUsageData()
