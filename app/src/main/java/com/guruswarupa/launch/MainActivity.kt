@@ -200,7 +200,6 @@ class MainActivity : ComponentActivity() {
 
     fun refreshAppsForFocusMode() {
         loadApps()
-        adapter.notifyDataSetChanged()
     }
 
     private fun getPhoneNumberForContact(contactName: String): String? {
@@ -631,20 +630,18 @@ class MainActivity : ComponentActivity() {
         if (unsortedList.isEmpty()) {
             Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
         } else {
-            val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-            val focusModeManager = FocusModeManager(this, prefs)
-
-            // Apply focus mode filtering
-            val filteredApps = if (focusModeManager.isFocusModeEnabled()) {
-                val allowedApps = focusModeManager.getAllowedApps()
-                unsortedList.filter { allowedApps.contains(it.activityInfo.packageName) }
+            // Apply focus mode filtering using AppDockManager logic
+            val filteredApps = if (appDockManager.getCurrentMode()) {
+                unsortedList.filter { app ->
+                    !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+                }
             } else {
                 unsortedList
             }
 
             appList = filteredApps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
                 .sortedWith(
-                    compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
+                    compareByDescending<ResolveInfo> { sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0) }
                         .thenBy { it.loadLabel(packageManager).toString().lowercase() }
                 )
                 .toMutableList()

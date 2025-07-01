@@ -578,8 +578,8 @@ class AppDockManager(
         }
 
         val apps = packageManager.queryIntentActivities(intent, 0)
-        val sortedApps = apps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-
+        val sortedApps = apps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
         val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
         val appPackageNames = sortedApps.map { it.activityInfo.packageName }
 
@@ -589,8 +589,7 @@ class AppDockManager(
         }
 
         AlertDialog.Builder(context)
-            .setTitle("Focus Mode Settings")
-            .setMessage("Select apps to hide in focus mode:")
+            .setTitle("Focus Mode — Select apps to hide")
             .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
                 val packageName = appPackageNames[which]
                 if (isChecked) {
