@@ -20,7 +20,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_focus_mode_config)
 
-        focusModeManager = FocusModeManager(this, getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
+        focusModeManager = FocusModeManager(getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
 
         recyclerView = findViewById(R.id.focus_mode_app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
