@@ -40,13 +40,28 @@ class AppDockManager(
 
     private lateinit var addIcon: ImageView
     private lateinit var focusModeToggle: ImageView
+    private lateinit var focusTimerText: TextView
     private var isFocusMode: Boolean = false
+    private var timerHandler: android.os.Handler? = null
+    private var timerRunnable: Runnable? = null
 
     init {
         loadFocusMode()
         ensureAddIcon()
         ensureFocusModeToggle()
         updateDockVisibility()
+
+        // Check if focus mode timer should be restored
+        if (isFocusMode) {
+            val endTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+            if (endTime > System.currentTimeMillis()) {
+                startTimerDisplay()
+                startFocusModeTimer(endTime)
+            } else {
+                // Timer expired, disable focus mode
+                disableFocusMode()
+            }
+        }
     }
 
     fun openAppPicker() {
@@ -526,6 +541,16 @@ class AppDockManager(
 
     private fun ensureFocusModeToggle() {
         if (appDock.findViewWithTag<ImageView>("focus_mode_toggle") == null) {
+            // Create container for focus mode toggle and timer
+            val focusContainer = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                )
+                tag = "focus_mode_container"
+            }
+
             focusModeToggle = ImageView(context).apply {
                 tag = "focus_mode_toggle"
                 setImageResource(if (isFocusMode) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
@@ -537,12 +562,39 @@ class AppDockManager(
                 }
                 setOnClickListener { toggleFocusMode() }
                 setOnLongClickListener {
-                    showFocusModeSettings()
+                    if (!isFocusMode) {
+                        showFocusModeSettings()
+                    } else {
+                        Toast.makeText(context, "Focus mode settings unavailable during focus mode", Toast.LENGTH_SHORT).show()
+                    }
                     true
                 }
             }
-            // Add focus toggle as the first item
-            appDock.addView(focusModeToggle, 0)
+
+            focusTimerText = TextView(context).apply {
+                tag = "focus_timer_text"
+                textSize = 12f
+                setTextColor(context.resources.getColor(android.R.color.white))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                ).apply {
+                    marginStart = 8
+                }
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                visibility = if (isFocusMode) View.VISIBLE else View.GONE
+            }
+
+            focusContainer.addView(focusModeToggle)
+            focusContainer.addView(focusTimerText)
+
+            // Add focus container as the first item
+            appDock.addView(focusContainer, 0)
+
+            // Start timer update if focus mode is already active
+            if (isFocusMode) {
+                startTimerDisplay()
+            }
         }
     }
 
@@ -623,6 +675,7 @@ class AppDockManager(
         updateFocusModeIcon()
         updateDockVisibility()
         refreshAppsForFocusMode()
+        startTimerDisplay()
 
         Toast.makeText(context, "Focus mode enabled for $durationMinutes minutes", Toast.LENGTH_LONG).show()
 
@@ -638,6 +691,7 @@ class AppDockManager(
         updateFocusModeIcon()
         updateDockVisibility()
         refreshAppsForFocusMode()
+        stopTimerDisplay()
 
         Toast.makeText(context, "Focus mode disabled", Toast.LENGTH_SHORT).show()
     }
@@ -667,13 +721,51 @@ class AppDockManager(
     }
 
     private fun updateDockVisibility() {
-        // Hide/show all dock items except the focus mode toggle
+        // Hide/show all dock items except the focus mode container
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
-            if (child.tag != "focus_mode_toggle") {
+            if (child.tag != "focus_mode_container") {
                 child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+            } else {
+                child.visibility = View.VISIBLE
             }
         }
+    }
+
+    private fun startTimerDisplay() {
+        stopTimerDisplay() // Stop any existing timer
+
+        focusTimerText.visibility = View.VISIBLE
+        timerHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+        timerRunnable = object : Runnable {
+            override fun run() {
+                if (isFocusMode) {
+                    val endTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+                    val currentTime = System.currentTimeMillis()
+
+                    if (endTime > currentTime) {
+                        val remainingTime = endTime - currentTime
+                        val minutes = (remainingTime / (1000 * 60)).toInt()
+                        val seconds = ((remainingTime % (1000 * 60)) / 1000).toInt()
+
+                        focusTimerText.text = String.format("%02d:%02d", minutes, seconds)
+                        timerHandler?.postDelayed(this, 1000)
+                    } else {
+                        focusTimerText.text = "00:00"
+                    }
+                }
+            }
+        }
+
+        timerHandler?.post(timerRunnable!!)
+    }
+
+    private fun stopTimerDisplay() {
+        timerHandler?.removeCallbacks(timerRunnable ?: return)
+        timerHandler = null
+        timerRunnable = null
+        focusTimerText.visibility = View.GONE
     }
 
     private fun showFocusModeSettings() {
