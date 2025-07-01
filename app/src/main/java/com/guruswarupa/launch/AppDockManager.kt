@@ -569,7 +569,7 @@ class AppDockManager(
     }
 
     private fun refreshAppsForFocusMode() {
-        activity.applyFocusMode(isFocusMode)
+        (context as? MainActivity)?.refreshAppsForFocusMode()
     }
 
     private fun showFocusModeSettings() {
