@@ -1,14 +1,19 @@
 package com.guruswarupa.launch
 
-import androidx.activity.ComponentActivity
+import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.*
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.documentfile.provider.DocumentFile
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class SettingsActivity : ComponentActivity() {
 
@@ -28,6 +33,9 @@ class SettingsActivity : ComponentActivity() {
         val setDefaultLauncherButton = findViewById<Button>(R.id.set_default_launcher_button)
         val exportButton = findViewById<Button>(R.id.export_settings_button)
         val importButton = findViewById<Button>(R.id.import_settings_button)
+        // Add reset button
+        val resetButton = findViewById<Button>(R.id.reset_usage_button)
+
 
         // Load current settings
         loadCurrentSettings(weatherApiKeyInput, displayStyleGroup, gridOption, listOption)
@@ -46,6 +54,11 @@ class SettingsActivity : ComponentActivity() {
 
         importButton.setOnClickListener {
             importSettings()
+        }
+
+        // Set listener for reset button
+        resetButton.setOnClickListener {
+            resetAppUsageCount()
         }
     }
 
@@ -101,6 +114,37 @@ class SettingsActivity : ComponentActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Could not open launcher settings", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun resetAppUsageCount() {
+        // Show confirmation dialog
+        AlertDialog.Builder(this)
+            .setTitle("Reset App Usage Count")
+            .setMessage("This will reset all app usage statistics and reorder apps alphabetically. Are you sure?")
+            .setPositiveButton("Reset") { _, _ ->
+                // Clear app usage preferences
+                val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
+                appUsagePrefs.edit().clear().apply()
+
+                // Clear usage count from main preferences as well
+                val mainPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+                val editor = mainPrefs.edit()
+                val allPrefs = mainPrefs.all
+                for (key in allPrefs.keys) {
+                    if (key.startsWith("usage_")) {
+                        editor.remove(key)
+                    }
+                }
+                editor.apply()
+
+                Toast.makeText(this, "App usage count reset successfully", Toast.LENGTH_SHORT).show()
+
+                // Send broadcast to refresh MainActivity
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun exportSettings() {
