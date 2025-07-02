@@ -801,9 +801,17 @@ class MainActivity : ComponentActivity() {
             voiceSearchButton.visibility = android.view.View.GONE
 
         } else {
-            // Show all apps
+            // Restore all apps and sort by usage then alphabetically
+            val prefs = getSharedPreferences("app_usage", Context.MODE_PRIVATE)
+            val sortedApps = fullAppList.sortedWith(
+                compareByDescending<ResolveInfo> {
+                    sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0)
+                }.thenBy {
+                    it.loadLabel(packageManager).toString().lowercase()
+                }
+            )
             appList.clear()
-            appList.addAll(fullAppList)
+            appList.addAll(sortedApps)
 
             searchBox.visibility = android.view.View.VISIBLE
             voiceSearchButton.visibility = android.view.View.VISIBLE
