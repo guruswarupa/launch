@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
-import java.util.concurrent.TimeUnit
 
 class WeeklyUsageGraphView @JvmOverloads constructor(
     context: Context,

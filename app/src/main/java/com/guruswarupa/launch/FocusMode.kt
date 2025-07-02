@@ -1,9 +1,7 @@
 
 package com.guruswarupa.launch
 
-import android.content.Context
 import android.content.SharedPreferences
-import android.content.pm.ResolveInfo
 
 class FocusModeManager(private val sharedPreferences: SharedPreferences) {
 

@@ -1,29 +1,19 @@
 package com.guruswarupa.launch
 
 import android.content.Context
-import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.provider.CalendarContract
 import android.widget.EditText
-import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.recyclerview.widget.RecyclerView
 import net.objecthunter.exp4j.ExpressionBuilder
-import org.json.JSONObject
-import java.net.URL
-import java.sql.Date
 
 class AppSearchManager(
     private val packageManager: PackageManager,
     private val appList: MutableList<ResolveInfo>,
     private val fullAppList: MutableList<ResolveInfo>,
     private val adapter: AppAdapter,
-    private val recyclerView: RecyclerView,
     private val searchBox: EditText,
     private val contactsList: List<String>
 ) {

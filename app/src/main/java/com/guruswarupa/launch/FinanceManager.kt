@@ -1,11 +1,10 @@
 package com.guruswarupa.launch
 
-import android.content.Context
 import android.content.SharedPreferences
 import java.text.SimpleDateFormat
 import java.util.*
 
-class FinanceManager(private val context: Context, private val sharedPreferences: SharedPreferences) {
+class FinanceManager(private val sharedPreferences: SharedPreferences) {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val currentMonth = dateFormat.format(Date())
