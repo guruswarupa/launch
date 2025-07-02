@@ -1,19 +1,20 @@
-
 package com.guruswarupa.launch
 
+import android.app.AlertDialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.widget.Button
-import android.widget.EditText
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.ComponentActivity
+import org.json.JSONArray
+import org.json.JSONObject
 
 class SettingsActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
+    private val EXPORT_REQUEST_CODE = 1
+    private val IMPORT_REQUEST_CODE = 2
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +26,11 @@ class SettingsActivity : ComponentActivity() {
         val listOption = findViewById<RadioButton>(R.id.list_option)
         val saveButton = findViewById<Button>(R.id.save_settings_button)
         val setDefaultLauncherButton = findViewById<Button>(R.id.set_default_launcher_button)
+        val exportButton = findViewById<Button>(R.id.export_settings_button)
+        val importButton = findViewById<Button>(R.id.import_settings_button)
+        // Add reset button
+        val resetButton = findViewById<Button>(R.id.reset_usage_button)
+
 
         // Load current settings
         loadCurrentSettings(weatherApiKeyInput, displayStyleGroup, gridOption, listOption)
@@ -35,6 +41,19 @@ class SettingsActivity : ComponentActivity() {
 
         setDefaultLauncherButton.setOnClickListener {
             openDefaultLauncherSettings()
+        }
+
+        exportButton.setOnClickListener {
+            exportSettings()
+        }
+
+        importButton.setOnClickListener {
+            importSettings()
+        }
+
+        // Set listener for reset button
+        resetButton.setOnClickListener {
+            resetAppUsageCount()
         }
     }
 
@@ -89,6 +108,147 @@ class SettingsActivity : ComponentActivity() {
             startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
         } catch (e: Exception) {
             Toast.makeText(this, "Could not open launcher settings", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun resetAppUsageCount() {
+        // Show confirmation dialog
+        AlertDialog.Builder(this)
+            .setTitle("Reset App Usage Count")
+            .setMessage("This will reset all app usage statistics and reorder apps alphabetically. Are you sure?")
+            .setPositiveButton("Reset") { _, _ ->
+                // Clear app usage preferences
+                val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
+                appUsagePrefs.edit().clear().apply()
+
+                // Clear usage count from main preferences as well
+                val mainPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+                val editor = mainPrefs.edit()
+                val allPrefs = mainPrefs.all
+                for (key in allPrefs.keys) {
+                    if (key.startsWith("usage_")) {
+                        editor.remove(key)
+                    }
+                }
+                editor.apply()
+
+                Toast.makeText(this, "App usage count reset successfully", Toast.LENGTH_SHORT).show()
+
+                // Send broadcast to refresh MainActivity
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun exportSettings() {
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(Intent.EXTRA_TITLE, "launch_settings_backup.json")
+        }
+        startActivityForResult(intent, EXPORT_REQUEST_CODE)
+    }
+
+    private fun importSettings() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        startActivityForResult(intent, IMPORT_REQUEST_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (resultCode == RESULT_OK && data != null) {
+            when (requestCode) {
+                EXPORT_REQUEST_CODE -> {
+                    data.data?.let { uri ->
+                        exportSettingsToFile(uri)
+                    }
+                }
+                IMPORT_REQUEST_CODE -> {
+                    data.data?.let { uri ->
+                        importSettingsFromFile(uri)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun exportSettingsToFile(uri: Uri) {
+        try {
+            val allPrefs = prefs.all
+            val settingsJson = JSONObject()
+
+            for ((key, value) in allPrefs) {
+                when (value) {
+                    is String -> settingsJson.put(key, value)
+                    is Boolean -> settingsJson.put(key, value)
+                    is Int -> settingsJson.put(key, value)
+                    is Long -> settingsJson.put(key, value)
+                    is Float -> settingsJson.put(key, value)
+                    is Set<*> -> {
+                        val jsonArray = JSONArray()
+                        value.forEach { jsonArray.put(it) }
+                        settingsJson.put(key, jsonArray)
+                    }
+                }
+            }
+
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(settingsJson.toString(2).toByteArray())
+            }
+
+            Toast.makeText(this, "Settings exported successfully", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to export settings: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun importSettingsFromFile(uri: Uri) {
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val jsonString = inputStream.bufferedReader().use { it.readText() }
+                val settingsJson = JSONObject(jsonString)
+                val editor = prefs.edit()
+
+                val keys = settingsJson.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val value = settingsJson.get(key)
+
+                    when (value) {
+                        is String -> editor.putString(key, value)
+                        is Boolean -> editor.putBoolean(key, value)
+                        is Int -> editor.putInt(key, value)
+                        is Long -> editor.putLong(key, value)
+                        is Double -> editor.putFloat(key, value.toFloat())
+                        is JSONArray -> {
+                            val stringSet = mutableSetOf<String>()
+                            for (i in 0 until value.length()) {
+                                stringSet.add(value.getString(i))
+                            }
+                            editor.putStringSet(key, stringSet)
+                        }
+                    }
+                }
+
+                editor.apply()
+
+                // Reload current settings in UI
+                val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
+                val displayStyleGroup = findViewById<RadioGroup>(R.id.display_style_group)
+                val gridOption = findViewById<RadioButton>(R.id.grid_option)
+                val listOption = findViewById<RadioButton>(R.id.list_option)
+                loadCurrentSettings(weatherApiKeyInput, displayStyleGroup, gridOption, listOption)
+
+                Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to import settings: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 }

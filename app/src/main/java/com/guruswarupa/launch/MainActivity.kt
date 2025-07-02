@@ -2,8 +2,8 @@ package com.guruswarupa.launch
 
 import android.app.AlertDialog
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.PendingIntent
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -12,7 +12,6 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
@@ -20,7 +19,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.provider.ContactsContract
 import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -30,7 +28,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -39,7 +36,7 @@ import java.util.Date
 import java.util.Locale
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
-import net.objecthunter.exp4j.ExpressionBuilder
+import android.widget.Button
 import java.util.Calendar
 
 
@@ -73,6 +70,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var weatherIcon: ImageView
     private lateinit var weatherText: TextView
     private lateinit var quickNoteText: EditText
+    private lateinit var voiceSearchButton: ImageButton
+
+    // Finance widget variables
+    private lateinit var financeManager: FinanceManager
+    private lateinit var balanceText: TextView
+    private lateinit var monthlySpentText: TextView
+    private lateinit var amountInput: EditText
+    private lateinit var descriptionInput: EditText
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -83,6 +88,7 @@ class MainActivity : ComponentActivity() {
         private const val USAGE_STATS_REQUEST = 600
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -99,6 +105,9 @@ class MainActivity : ComponentActivity() {
             setContentView(R.layout.activity_main)
         }
 
+        val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
+        registerReceiver(settingsUpdateReceiver, filter)
+
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
 
@@ -106,6 +115,7 @@ class MainActivity : ComponentActivity() {
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
         quickNoteText = findViewById(R.id.quick_note_text)
+        voiceSearchButton = findViewById(R.id.voice_search_button)
 
         searchBox.setOnClickListener {
             val currentTime = System.currentTimeMillis()
@@ -133,7 +143,6 @@ class MainActivity : ComponentActivity() {
         weatherIcon = findViewById(R.id.weather_icon) // Initialize weatherIcon
         weatherText = findViewById(R.id.weather_text) // Initialize weatherText
 
-
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
 
@@ -144,7 +153,6 @@ class MainActivity : ComponentActivity() {
 
         // Load weekly usage data
         loadWeeklyUsageData()
-
 
         if (isGridMode) {
             recyclerView.layoutManager = GridLayoutManager(this, 4)
@@ -179,7 +187,6 @@ class MainActivity : ComponentActivity() {
             appList = appList,
             fullAppList = fullAppList,
             adapter = adapter,
-            recyclerView = recyclerView,
             searchBox = searchBox,
             contactsList = contactsList
         )
@@ -194,12 +201,31 @@ class MainActivity : ComponentActivity() {
 
         lastUpdateDate = getCurrentDateString()
 
+        quickNoteText = findViewById(R.id.quick_note_text)
         loadQuickNote()
         setupQuickNoteAutoSave()
+
+        // Initialize finance widget
+        financeManager = FinanceManager(sharedPreferences)
+        balanceText = findViewById(R.id.balance_text)
+        monthlySpentText = findViewById(R.id.monthly_spent_text)
+        amountInput = findViewById(R.id.amount_input)
+        descriptionInput = findViewById(R.id.description_input)
+
+        setupFinanceWidget()
+        updateFinanceDisplay()
     }
 
     fun refreshAppsForFocusMode() {
         loadApps()
+    }
+
+    private val settingsUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
+                loadApps() // Refresh apps with new settings
+            }
+        }
     }
 
     private fun getPhoneNumberForContact(contactName: String): String? {
@@ -279,6 +305,7 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_SHORT).show()
         }
     }
+
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -586,6 +613,9 @@ class MainActivity : ComponentActivity() {
         }
         registerReceiver(packageReceiver, filter)
         registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
+
+        // Reapply focus mode state when returning from apps
+        applyFocusMode(appDockManager.getCurrentMode())
     }
 
     override fun onPause() {
@@ -661,10 +691,18 @@ class MainActivity : ComponentActivity() {
                 appList,
                 fullAppList,
                 adapter,
-                recyclerView,
                 searchBox,
                 contactsList
             )
+        }
+
+        // Set visibility of search bar and voice search button based on focus mode
+        if (appDockManager.getCurrentMode()) {
+            searchBox.visibility = android.view.View.GONE
+            voiceSearchButton.visibility = android.view.View.GONE
+        } else {
+            searchBox.visibility = android.view.View.VISIBLE
+            voiceSearchButton.visibility = android.view.View.VISIBLE
         }
     }
 
@@ -782,10 +820,25 @@ class MainActivity : ComponentActivity() {
 
             appList.clear()
             appList.addAll(filteredApps)
+
+            searchBox.visibility = android.view.View.GONE
+            voiceSearchButton.visibility = android.view.View.GONE
+
         } else {
-            // Show all apps
+            // Restore all apps and sort by usage then alphabetically
+            val prefs = getSharedPreferences("app_usage", Context.MODE_PRIVATE)
+            val sortedApps = fullAppList.sortedWith(
+                compareByDescending<ResolveInfo> {
+                    sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0)
+                }.thenBy {
+                    it.loadLabel(packageManager).toString().lowercase()
+                }
+            )
             appList.clear()
-            appList.addAll(fullAppList)
+            appList.addAll(sortedApps)
+
+            searchBox.visibility = android.view.View.VISIBLE
+            voiceSearchButton.visibility = android.view.View.VISIBLE
         }
 
         adapter.notifyDataSetChanged()
@@ -796,7 +849,6 @@ class MainActivity : ComponentActivity() {
             appList,
             fullAppList,
             adapter,
-            recyclerView,
             searchBox,
             contactsList
         )
@@ -899,5 +951,85 @@ class MainActivity : ComponentActivity() {
     private fun saveQuickNote() {
         val noteText = quickNoteText.text.toString()
         sharedPreferences.edit().putString("quick_note", noteText).apply()
+    }
+
+    private fun showTransactionHistory() {
+        val transactions = financeManager.getTransactionHistory()
+
+        if (transactions.isEmpty()) {
+            Toast.makeText(this, "No transactions found", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialogBuilder = android.app.AlertDialog.Builder(this)
+        dialogBuilder.setTitle("Transaction History")
+
+        val transactionList = transactions.take(20).map { (type, amount, description) ->
+            val typeText = if (type == "income") "Income" else "Expense"
+            val symbol = if (type == "income") "+" else "-"
+            val descText = if (description.isNotEmpty()) " - $description" else ""
+            "$symbol$amount ($typeText)$descText"
+        }.toTypedArray()
+
+        dialogBuilder.setItems(transactionList) { _, _ -> }
+        dialogBuilder.setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
+
+        dialogBuilder.create().show()
+    }
+
+    private fun setupFinanceWidget() {
+        findViewById<Button>(R.id.add_income_btn).setOnClickListener {
+            addTransaction(true)
+        }
+
+        findViewById<Button>(R.id.add_expense_btn).setOnClickListener {
+            addTransaction(false)
+        }
+
+        // Long press on balance text to show transaction history
+        balanceText.setOnLongClickListener {
+            showTransactionHistory()
+            true
+        }
+    }
+
+    private fun addTransaction(isIncome: Boolean) {
+        val amountText = amountInput.text.toString()
+        val description = descriptionInput.text.toString().trim()
+
+        if (amountText.isNotEmpty()) {
+            val amount = amountText.toDoubleOrNull()
+            if (amount != null && amount > 0) {
+                // 🔧 Use addIncome or addExpense instead of addTransaction
+                if (isIncome) {
+                    financeManager.addIncome(amount, description)
+                } else {
+                    financeManager.addExpense(amount, description)
+                }
+
+                // Clear inputs after adding transaction
+                amountInput.text.clear()
+                descriptionInput.text.clear()
+
+                updateFinanceDisplay()
+
+                val action = if (isIncome) "Income" else "Expense"
+                val message = if (description.isNotEmpty()) {
+                    "$action of ₹$amount added: $description"
+                } else {
+                    "$action of ₹$amount added"
+                }
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Please enter a valid amount", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "Please enter an amount", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateFinanceDisplay() {
+        balanceText.text = "Balance: ₹${financeManager.getBalance()}"
+        monthlySpentText.text = "Monthly Spent: ₹${financeManager.getMonthlyExpenses()}"
     }
 }
