@@ -137,6 +137,27 @@
 
     </LinearLayout>
 
+    <!-- Reset App Usage Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="App Usage"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/text"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/reset_usage_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Reset Most Used App Count"
+        android:background="@drawable/button_background"
+        android:textColor="@color/text"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:layout_marginBottom="24dp" />
+
     <!-- Save Button -->
     <Button
         android:id="@+id/save_settings_button"
