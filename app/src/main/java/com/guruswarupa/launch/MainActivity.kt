@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.PendingIntent
 import android.app.WallpaperManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -13,7 +12,6 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
@@ -21,7 +19,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.provider.ContactsContract
 import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -31,7 +28,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.widget.addTextChangedListener
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -41,7 +37,6 @@ import java.util.Locale
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.widget.Button
-import net.objecthunter.exp4j.ExpressionBuilder
 import java.util.Calendar
 
 
@@ -192,7 +187,6 @@ class MainActivity : ComponentActivity() {
             appList = appList,
             fullAppList = fullAppList,
             adapter = adapter,
-            recyclerView = recyclerView,
             searchBox = searchBox,
             contactsList = contactsList
         )
@@ -212,7 +206,7 @@ class MainActivity : ComponentActivity() {
         setupQuickNoteAutoSave()
 
         // Initialize finance widget
-        financeManager = FinanceManager(this, sharedPreferences)
+        financeManager = FinanceManager(sharedPreferences)
         balanceText = findViewById(R.id.balance_text)
         monthlySpentText = findViewById(R.id.monthly_spent_text)
         amountInput = findViewById(R.id.amount_input)
@@ -697,7 +691,6 @@ class MainActivity : ComponentActivity() {
                 appList,
                 fullAppList,
                 adapter,
-                recyclerView,
                 searchBox,
                 contactsList
             )
@@ -856,7 +849,6 @@ class MainActivity : ComponentActivity() {
             appList,
             fullAppList,
             adapter,
-            recyclerView,
             searchBox,
             contactsList
         )

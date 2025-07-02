@@ -27,7 +27,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
 class AppDockManager(
-    private val activity: MainActivity,
+    activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
     private val packageManager: PackageManager

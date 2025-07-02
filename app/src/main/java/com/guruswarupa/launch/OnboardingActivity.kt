@@ -13,8 +13,6 @@ import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-
-import android.app.usage.UsageStatsManager
 import android.app.AppOpsManager
 
 class OnboardingActivity : ComponentActivity() {

@@ -27,7 +27,7 @@ class AppAdapter(
 
     private val usageStatsManager = AppUsageStatsManager(activity)
 
-    class ViewHolder(view: View, isGrid: Boolean) : RecyclerView.ViewHolder(view) {
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
         val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
@@ -40,7 +40,7 @@ class AppAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val layoutId = if (viewType == VIEW_TYPE_GRID) R.layout.app_item_grid else R.layout.app_item
         val view = LayoutInflater.from(parent.context).inflate(layoutId, parent, false)
-        return ViewHolder(view, isGridMode)
+        return ViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
