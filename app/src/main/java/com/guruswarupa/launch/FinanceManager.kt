@@ -53,14 +53,40 @@ class FinanceManager(private val context: Context, private val sharedPreferences
         return getMonthlyIncome() - getMonthlyExpenses()
     }
 
-     fun addTransaction(amount: Double, type: String) {
+    fun addTransaction(amount: Double, type: String, description: String = "") {
         val timestamp = System.currentTimeMillis()
         val transactionKey = "transaction_$timestamp"
-        val transactionData = "$type:$amount:$timestamp"
+        val transactionData = "$type:$amount:$timestamp:$description"
         sharedPreferences.edit().putString(transactionKey, transactionData).apply()
 
         // Keep only last 100 transactions to avoid storage bloat
         cleanupOldTransactions()
+    }
+
+    fun getTransactionHistory(): List<Triple<String, Double, String>> {
+        val allPrefs = sharedPreferences.all
+        val transactions = mutableListOf<Triple<String, Double, String>>()
+
+        allPrefs.keys.filter { it.startsWith("transaction_") }.forEach { key ->
+            val transactionData = sharedPreferences.getString(key, "") ?: ""
+            val parts = transactionData.split(":")
+            if (parts.size >= 3) {
+                val type = parts[0]
+                val amount = parts[1].toDoubleOrNull() ?: 0.0
+                val description = if (parts.size > 3) parts[3] else ""
+                transactions.add(Triple(type, amount, description))
+            }
+        }
+
+        return transactions.sortedByDescending {
+            allPrefs.keys.filter { it.startsWith("transaction_") }
+                .find { key ->
+                    val data = sharedPreferences.getString(key, "") ?: ""
+                    data.split(":").let { parts ->
+                        parts.size >= 3 && parts[0] == it.first && parts[1].toDoubleOrNull() == it.second
+                    }
+                }?.substringAfter("transaction_")?.toLongOrNull() ?: 0L
+        }
     }
 
     private fun cleanupOldTransactions() {
