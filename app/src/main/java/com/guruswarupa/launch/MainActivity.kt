@@ -995,8 +995,12 @@ class MainActivity : ComponentActivity() {
         if (amountText.isNotEmpty()) {
             val amount = amountText.toDoubleOrNull()
             if (amount != null && amount > 0) {
-                val type = if (isIncome) "income" else "expense"
-                financeManager.addTransaction(amount, type, description)
+                // 🔧 Use addIncome or addExpense instead of addTransaction
+                if (isIncome) {
+                    financeManager.addIncome(amount, description)
+                } else {
+                    financeManager.addExpense(amount, description)
+                }
 
                 // Clear inputs after adding transaction
                 amountInput.text.clear()
@@ -1006,9 +1010,9 @@ class MainActivity : ComponentActivity() {
 
                 val action = if (isIncome) "Income" else "Expense"
                 val message = if (description.isNotEmpty()) {
-                    "$action of $amount added: $description"
+                    "$action of ₹$amount added: $description"
                 } else {
-                    "$action of $amount added"
+                    "$action of ₹$amount added"
                 }
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             } else {

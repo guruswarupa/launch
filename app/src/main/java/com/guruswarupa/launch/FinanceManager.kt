@@ -11,30 +11,26 @@ class FinanceManager(private val context: Context, private val sharedPreferences
     private val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val currentMonth = dateFormat.format(Date())
 
-    fun addIncome(amount: Double) {
+    fun addIncome(amount: Double, description: String = "") {
         val currentBalance = getBalance()
         val newBalance = currentBalance + amount
         sharedPreferences.edit().putFloat("finance_balance", newBalance.toFloat()).apply()
 
-        // Track monthly income
         val monthlyIncome = getMonthlyIncome()
         sharedPreferences.edit().putFloat("finance_income_$currentMonth", (monthlyIncome + amount).toFloat()).apply()
 
-        // Add to transaction history
-        addTransaction(amount, "income")
+        addTransaction(amount, "income", description)
     }
 
-    fun addExpense(amount: Double) {
+    fun addExpense(amount: Double, description: String = "") {
         val currentBalance = getBalance()
         val newBalance = currentBalance - amount
         sharedPreferences.edit().putFloat("finance_balance", newBalance.toFloat()).apply()
 
-        // Track monthly expenses
         val monthlyExpenses = getMonthlyExpenses()
         sharedPreferences.edit().putFloat("finance_expenses_$currentMonth", (monthlyExpenses + amount).toFloat()).apply()
 
-        // Add to transaction history
-        addTransaction(-amount, "expense")
+        addTransaction(-amount, "expense", description)
     }
 
     fun getBalance(): Double {
@@ -47,10 +43,6 @@ class FinanceManager(private val context: Context, private val sharedPreferences
 
     fun getMonthlyIncome(): Double {
         return sharedPreferences.getFloat("finance_income_$currentMonth", 0.0f).toDouble()
-    }
-
-    fun getMonthlyNet(): Double {
-        return getMonthlyIncome() - getMonthlyExpenses()
     }
 
     fun addTransaction(amount: Double, type: String, description: String = "") {
