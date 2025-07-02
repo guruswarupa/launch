@@ -140,8 +140,11 @@ class AppSearchManager(
                 newFilteredList.addAll(cachedEmpty)
             } else {
                 val sorted = fullAppList.sortedWith(
-                    compareByDescending<ResolveInfo> { prefs.getInt("usage_${it.activityInfo.packageName}", 0) }
-                        .thenBy { appLabelMap[it] ?: "" }
+                    compareByDescending<ResolveInfo> {
+                        prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                    }.thenBy {
+                        appLabelMap[it]?.lowercase() ?: it.loadLabel(packageManager).toString().lowercase()
+                    }
                 )
                 newFilteredList.addAll(sorted)
                 searchCache[emptyQueryKey] = ArrayList(sorted)
