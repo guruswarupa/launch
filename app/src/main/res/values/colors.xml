@@ -31,4 +31,9 @@
     <color name="nord15">#B48EAD</color> <!-- Purple -->
     <color name="surfaceColor">#121212</color> <!-- Dark surface color for dark mode -->
     <color name="outlineColor">#3A3A3A</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="red">#FFFF4444</color>
+    <color name="green">#FF44FF44</color>
+    <color name="gray_light">#FFCCCCCC</color>
 </resources>

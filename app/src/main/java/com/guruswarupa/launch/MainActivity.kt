@@ -39,6 +39,7 @@ import java.util.Date
 import java.util.Locale
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
+import android.widget.Button
 import net.objecthunter.exp4j.ExpressionBuilder
 import java.util.Calendar
 
@@ -74,6 +75,12 @@ class MainActivity : ComponentActivity() {
     private lateinit var weatherText: TextView
     private lateinit var quickNoteText: EditText
     private lateinit var voiceSearchButton: ImageButton
+
+    // Finance widget variables
+    private lateinit var financeManager: FinanceManager
+    private lateinit var balanceText: TextView
+    private lateinit var monthlySpentText: TextView
+    private lateinit var amountInput: EditText
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -135,7 +142,6 @@ class MainActivity : ComponentActivity() {
         weatherIcon = findViewById(R.id.weather_icon) // Initialize weatherIcon
         weatherText = findViewById(R.id.weather_text) // Initialize weatherText
 
-
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
 
@@ -146,7 +152,6 @@ class MainActivity : ComponentActivity() {
 
         // Load weekly usage data
         loadWeeklyUsageData()
-
 
         if (isGridMode) {
             recyclerView.layoutManager = GridLayoutManager(this, 4)
@@ -196,8 +201,18 @@ class MainActivity : ComponentActivity() {
 
         lastUpdateDate = getCurrentDateString()
 
+        quickNoteText = findViewById(R.id.quick_note_text)
         loadQuickNote()
         setupQuickNoteAutoSave()
+
+        // Initialize finance widget
+        financeManager = FinanceManager(this, sharedPreferences)
+        balanceText = findViewById(R.id.balance_text)
+        monthlySpentText = findViewById(R.id.monthly_spent_text)
+        amountInput = findViewById(R.id.amount_input)
+
+        setupFinanceWidget()
+        updateFinanceDisplay()
     }
 
     fun refreshAppsForFocusMode() {
@@ -928,5 +943,36 @@ class MainActivity : ComponentActivity() {
     private fun saveQuickNote() {
         val noteText = quickNoteText.text.toString()
         sharedPreferences.edit().putString("quick_note", noteText).apply()
+    }
+
+    private fun setupFinanceWidget() {
+        findViewById<Button>(R.id.add_income_btn).setOnClickListener {
+            addTransaction(true)
+        }
+
+        findViewById<Button>(R.id.add_expense_btn).setOnClickListener {
+            addTransaction(false)
+        }
+    }
+
+    private fun addTransaction(isIncome: Boolean) {
+        val amountText = amountInput.text.toString()
+        if (amountText.isNotEmpty()) {
+            val amount = amountText.toDouble()
+            if (isIncome) {
+                financeManager.addIncome(amount)
+            } else {
+                financeManager.addExpense(amount)
+            }
+            updateFinanceDisplay()
+            amountInput.text.clear()
+        } else {
+            Toast.makeText(this, "Please enter an amount", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateFinanceDisplay() {
+        balanceText.text = "Balance: ₹${financeManager.getBalance()}"
+        monthlySpentText.text = "Monthly Spent: ₹${financeManager.getMonthlyExpenses()}"
     }
 }
