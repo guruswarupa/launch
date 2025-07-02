@@ -95,6 +95,48 @@
         android:padding="12dp"
         android:layout_marginBottom="24dp" />
 
+    <!-- Import/Export Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Backup &amp; Restore"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/text"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="24dp">
+
+        <Button
+            android:id="@+id/export_settings_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Export Settings"
+            android:background="@drawable/button_background"
+            android:textColor="@color/text"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/import_settings_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Import Settings"
+            android:background="@drawable/button_background"
+            android:textColor="@color/text"
+            android:textSize="14sp"
+            android:padding="12dp"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
     <!-- Save Button -->
     <Button
         android:id="@+id/save_settings_button"

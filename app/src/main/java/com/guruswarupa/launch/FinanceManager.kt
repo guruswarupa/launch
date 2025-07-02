@@ -1,4 +1,3 @@
-
 package com.guruswarupa.launch
 
 import android.content.Context
@@ -10,6 +9,7 @@ class FinanceManager(private val context: Context, private val sharedPreferences
 
     private val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val currentMonth = dateFormat.format(Date())
+    private val BALANCE_KEY = "finance_balance"
 
     fun addIncome(amount: Double, description: String = "") {
         val currentBalance = getBalance()
@@ -34,15 +34,38 @@ class FinanceManager(private val context: Context, private val sharedPreferences
     }
 
     fun getBalance(): Double {
-        return sharedPreferences.getFloat("finance_balance", 0.0f).toDouble()
+        return try {
+            sharedPreferences.getFloat(BALANCE_KEY, 0.0f).toDouble()
+        } catch (e: ClassCastException) {
+            // Handle case where balance was stored as Integer
+            val intBalance = sharedPreferences.getInt(BALANCE_KEY, 0)
+            val floatBalance = intBalance.toFloat()
+            // Update to Float for future use
+            sharedPreferences.edit().putFloat(BALANCE_KEY, floatBalance).apply()
+            floatBalance.toDouble()
+        }
     }
 
     fun getMonthlyExpenses(): Double {
-        return sharedPreferences.getFloat("finance_expenses_$currentMonth", 0.0f).toDouble()
+        return try {
+            sharedPreferences.getFloat("finance_expenses_$currentMonth", 0.0f).toDouble()
+        } catch (e: ClassCastException) {
+            val intExpenses = sharedPreferences.getInt("finance_expenses_$currentMonth", 0)
+            val floatExpenses = intExpenses.toFloat()
+            sharedPreferences.edit().putFloat("finance_expenses_$currentMonth", floatExpenses).apply()
+            floatExpenses.toDouble()
+        }
     }
 
     fun getMonthlyIncome(): Double {
-        return sharedPreferences.getFloat("finance_income_$currentMonth", 0.0f).toDouble()
+        return try {
+            sharedPreferences.getFloat("finance_income_$currentMonth", 0.0f).toDouble()
+        } catch (e: ClassCastException) {
+            val intIncome = sharedPreferences.getInt("finance_income_$currentMonth", 0)
+            val floatIncome = intIncome.toFloat()
+            sharedPreferences.edit().putFloat("finance_income_$currentMonth", floatIncome).apply()
+            floatIncome.toDouble()
+        }
     }
 
     fun addTransaction(amount: Double, type: String, description: String = "") {
