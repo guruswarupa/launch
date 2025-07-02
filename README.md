@@ -29,7 +29,7 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
   - Calculator support built-in
 - **Weather Widget**:
   - Shows real-time weather and forecast
-  - Change API key via Settings for custom weather provider
+  - Change API key via Settings
 
 ### 🧩 Dock Customization
 - Add and organize favorite apps
@@ -65,7 +65,7 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
 - **Import/Export Data**: Backup or restore your launcher settings and data
 - **Reset App Usage Stats**: Start fresh any time
 - **Change Display Style**: Toggle between grid and list view easily
-- **Update Weather API Key**: Use your preferred weather provider
+- **Update Weather API Key**: Use your personal API key from openweathermap.org
 
 ---
 
