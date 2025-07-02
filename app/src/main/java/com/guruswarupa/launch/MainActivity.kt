@@ -2,6 +2,7 @@ package com.guruswarupa.launch
 
 import android.app.AlertDialog
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.PendingIntent
 import android.app.WallpaperManager
@@ -92,6 +93,7 @@ class MainActivity : ComponentActivity() {
         private const val USAGE_STATS_REQUEST = 600
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -107,6 +109,9 @@ class MainActivity : ComponentActivity() {
         } else {
             setContentView(R.layout.activity_main)
         }
+
+        val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
+        registerReceiver(settingsUpdateReceiver, filter)
 
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
@@ -219,6 +224,14 @@ class MainActivity : ComponentActivity() {
 
     fun refreshAppsForFocusMode() {
         loadApps()
+    }
+
+    private val settingsUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
+                loadApps() // Refresh apps with new settings
+            }
+        }
     }
 
     private fun getPhoneNumberForContact(contactName: String): String? {
