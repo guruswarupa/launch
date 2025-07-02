@@ -81,6 +81,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var balanceText: TextView
     private lateinit var monthlySpentText: TextView
     private lateinit var amountInput: EditText
+    private lateinit var descriptionInput: EditText
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -210,6 +211,7 @@ class MainActivity : ComponentActivity() {
         balanceText = findViewById(R.id.balance_text)
         monthlySpentText = findViewById(R.id.monthly_spent_text)
         amountInput = findViewById(R.id.amount_input)
+        descriptionInput = findViewById(R.id.description_input)
 
         setupFinanceWidget()
         updateFinanceDisplay()
@@ -296,6 +298,7 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_SHORT).show()
         }
     }
+
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -945,6 +948,30 @@ class MainActivity : ComponentActivity() {
         sharedPreferences.edit().putString("quick_note", noteText).apply()
     }
 
+    private fun showTransactionHistory() {
+        val transactions = financeManager.getTransactionHistory()
+
+        if (transactions.isEmpty()) {
+            Toast.makeText(this, "No transactions found", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val dialogBuilder = android.app.AlertDialog.Builder(this)
+        dialogBuilder.setTitle("Transaction History")
+
+        val transactionList = transactions.take(20).map { (type, amount, description) ->
+            val typeText = if (type == "income") "Income" else "Expense"
+            val symbol = if (type == "income") "+" else "-"
+            val descText = if (description.isNotEmpty()) " - $description" else ""
+            "$symbol$amount ($typeText)$descText"
+        }.toTypedArray()
+
+        dialogBuilder.setItems(transactionList) { _, _ -> }
+        dialogBuilder.setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
+
+        dialogBuilder.create().show()
+    }
+
     private fun setupFinanceWidget() {
         findViewById<Button>(R.id.add_income_btn).setOnClickListener {
             addTransaction(true)
@@ -953,19 +980,40 @@ class MainActivity : ComponentActivity() {
         findViewById<Button>(R.id.add_expense_btn).setOnClickListener {
             addTransaction(false)
         }
+
+        // Long press on balance text to show transaction history
+        balanceText.setOnLongClickListener {
+            showTransactionHistory()
+            true
+        }
     }
 
     private fun addTransaction(isIncome: Boolean) {
         val amountText = amountInput.text.toString()
+        val description = descriptionInput.text.toString().trim()
+
         if (amountText.isNotEmpty()) {
-            val amount = amountText.toDouble()
-            if (isIncome) {
-                financeManager.addIncome(amount)
+            val amount = amountText.toDoubleOrNull()
+            if (amount != null && amount > 0) {
+                val type = if (isIncome) "income" else "expense"
+                financeManager.addTransaction(amount, type, description)
+
+                // Clear inputs after adding transaction
+                amountInput.text.clear()
+                descriptionInput.text.clear()
+
+                updateFinanceDisplay()
+
+                val action = if (isIncome) "Income" else "Expense"
+                val message = if (description.isNotEmpty()) {
+                    "$action of $amount added: $description"
+                } else {
+                    "$action of $amount added"
+                }
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             } else {
-                financeManager.addExpense(amount)
+                Toast.makeText(this, "Please enter a valid amount", Toast.LENGTH_SHORT).show()
             }
-            updateFinanceDisplay()
-            amountInput.text.clear()
         } else {
             Toast.makeText(this, "Please enter an amount", Toast.LENGTH_SHORT).show()
         }
