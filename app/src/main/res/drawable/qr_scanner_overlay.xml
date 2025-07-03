@@ -1,4 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Semi-transparent background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#B0000000" />
+        </shape>
+    </item>
 
-</selector>
+    <!-- Square cutout in center -->
+    <item android:gravity="center">
+        <shape android:shape="rectangle">
+            <size
+                android:width="250dp"
+                android:height="250dp" />
+            <stroke
+                android:width="3dp"
+                android:color="@color/white"
+                android:dashWidth="20dp"
+                android:dashGap="10dp" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+
+    <!-- Corner indicators -->
+    <item android:gravity="center">
+        <shape android:shape="rectangle">
+            <size
+                android:width="250dp"
+                android:height="250dp" />
+            <stroke
+                android:width="4dp"
+                android:color="@color/white" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</layer-list>

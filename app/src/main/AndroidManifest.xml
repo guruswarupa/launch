@@ -20,6 +20,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- Queries declaration to access installed apps -->
     <queries>
@@ -70,10 +75,14 @@
 
         <activity
             android:name=".SettingsActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Launch"
-            android:label="@string/settings_app_name">
-        </activity>
+            android:exported="false"
+            android:theme="@style/Theme.Launch" />
+
+        <activity
+            android:name=".QRScannerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.FullScreen"
+            android:screenOrientation="portrait" />
     </application>
 
 </manifest>

@@ -36,4 +36,7 @@
     <color name="red">#FFFF4444</color>
     <color name="green">#FF44FF44</color>
     <color name="gray_light">#FFCCCCCC</color>
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC5</color>
 </resources>
