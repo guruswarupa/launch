@@ -45,13 +45,48 @@ class AppAdapter(
     }
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
-        // Skip update if list is identical
-        if (appList.size == newAppList.size &&
-            appList.zip(newAppList).all { (old, new) ->
-                old.activityInfo.packageName == new.activityInfo.packageName
-            }) {
-            return
-        }
+        Thread {
+            // Skip update if list is identical
+            if (appList.size == newAppList.size &&
+                appList.zip(newAppList).all { (old, new) ->
+                    old.activityInfo.packageName == new.activityInfo.packageName
+                }) {
+                return@Thread
+            }
+
+            // Pre-load icons and labels for better performance
+            newAppList.forEach { app ->
+                val packageName = app.activityInfo.packageName
+
+                // Pre-cache icon
+                if (!iconCache.containsKey(packageName)) {
+                    try {
+                        val icon = app.loadIcon(activity.packageManager)
+                        iconCache[packageName] = icon
+                    } catch (e: Exception) {
+                        // Use default icon if loading fails
+                    }
+                }
+
+                // Pre-cache label
+                if (!labelCache.containsKey(packageName)) {
+                    try {
+                        val label = app.loadLabel(activity.packageManager).toString()
+                        labelCache[packageName] = label
+                    } catch (e: Exception) {
+                        // Use package name as fallback
+                        labelCache[packageName] = packageName
+                    }
+                }
+            }
+
+            // Update on main thread
+            activity.runOnUiThread {
+                appList.clear()
+                appList.addAll(newAppList)
+                notifyDataSetChanged()
+            }
+        }.start()
 
         // Use more efficient update instead of notifyDataSetChanged
         val oldSize = appList.size

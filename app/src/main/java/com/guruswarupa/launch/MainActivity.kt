@@ -672,16 +672,15 @@ class MainActivity : ComponentActivity() {
         dateTextView.text = currentTime
     }
 
-    fun loadApps() {
+     fun loadApps() {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
-        // Load apps in background to avoid blocking UI
         Thread {
             try {
-                val intent = Intent(Intent.ACTION_MAIN, null)
-                intent.addCategory(Intent.CATEGORY_LAUNCHER)
-                val unsortedList = packageManager.queryIntentActivities(intent, 0)
+                val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                val unsortedList = packageManager.queryIntentActivities(mainIntent, 0)
 
                 if (unsortedList.isEmpty()) {
                     runOnUiThread {
@@ -689,20 +688,21 @@ class MainActivity : ComponentActivity() {
                         recyclerView.visibility = View.VISIBLE
                     }
                 } else {
-                    // Apply focus mode filtering using AppDockManager logic
-                    val filteredApps = if (appDockManager.getCurrentMode()) {
-                        unsortedList.filter { app ->
-                            !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+                    // Use concurrent filtering for better performance
+                    val filteredApps = unsortedList.parallelStream()
+                        .filter { app ->
+                            app.activityInfo.packageName != "com.guruswarupa.launch" &&
+                                    (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName))
                         }
-                    } else {
-                        unsortedList
-                    }
+                        .collect(java.util.stream.Collectors.toList())
 
-                    val processedAppList = filteredApps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                        .sortedWith(
+                    // Sort in parallel for better performance
+                    val processedAppList = filteredApps.parallelStream()
+                        .sorted(
                             compareByDescending<ResolveInfo> { sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0) }
                                 .thenBy { it.loadLabel(packageManager).toString().lowercase() }
                         )
+                        .collect(java.util.stream.Collectors.toList())
                         .toMutableList()
 
                     // Update UI on main thread
@@ -840,34 +840,31 @@ class MainActivity : ComponentActivity() {
 
     private fun loadContacts() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            // Load contacts in background
             Thread {
                 try {
-                    val projection = arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                    val tempContactsList = mutableListOf<String>()
                     val cursor = contentResolver.query(
                         ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                        projection,
+                        arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
                         null,
                         null,
-                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+                        null
                     )
-
-                    val tempContactsList = mutableListOf<String>()
                     cursor?.use {
-                        val nameIndex = it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                         while (it.moveToNext()) {
-                            val name = it.getString(nameIndex)
-                            if (!name.isNullOrBlank()) {
+                            val name = it.getString(it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))
+                            if (name != null && !tempContactsList.contains(name)) {
                                 tempContactsList.add(name)
                             }
                         }
                     }
 
-                    // Update contacts list on main thread
+                    // Sort contacts in background thread
+                    tempContactsList.sort()
+
                     runOnUiThread {
                         contactsList.clear()
                         contactsList.addAll(tempContactsList)
-
                         // Update search manager if it exists
                         if (::appSearchManager.isInitialized) {
                             appSearchManager.updateContactsList(contactsList)
