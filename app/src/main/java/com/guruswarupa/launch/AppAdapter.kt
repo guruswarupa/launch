@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
+import android.graphics.drawable.Drawable
 import android.provider.ContactsContract
 import kotlin.apply
 
@@ -26,11 +27,63 @@ class AppAdapter(
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     private val usageStatsManager = AppUsageStatsManager(activity)
+    private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
+    private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
+    private val labelCache = mutableMapOf<String, String>() // packageName to label
+    private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
+    private val CACHE_DURATION = 60000L // 1 minute cache
+
+    companion object {
+        private const val VIEW_TYPE_LIST = 0
+        private const val VIEW_TYPE_GRID = 1
+    }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
         val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
+    }
+
+    fun updateAppList(newAppList: List<ResolveInfo>) {
+        // Skip update if list is identical
+        if (appList.size == newAppList.size &&
+            appList.zip(newAppList).all { (old, new) ->
+                old.activityInfo.packageName == new.activityInfo.packageName
+            }) {
+            return
+        }
+
+        // Use more efficient update instead of notifyDataSetChanged
+        val oldSize = appList.size
+        val newSize = newAppList.size
+
+        appList.clear()
+        appList.addAll(newAppList)
+
+        when {
+            oldSize == newSize -> notifyItemRangeChanged(0, newSize)
+            oldSize < newSize -> {
+                notifyItemRangeChanged(0, oldSize)
+                notifyItemRangeInserted(oldSize, newSize - oldSize)
+            }
+            else -> {
+                notifyItemRangeChanged(0, newSize)
+                notifyItemRangeRemoved(newSize, oldSize - newSize)
+            }
+        }
+    }
+
+    private fun getUsageTimeWithCache(packageName: String): Long {
+        val currentTime = System.currentTimeMillis()
+        val cached = usageCache[packageName]
+
+        return if (cached != null && (currentTime - cached.second) < CACHE_DURATION) {
+            cached.first
+        } else {
+            val usageTime = usageStatsManager.getAppUsageTime(packageName)
+            usageCache[packageName] = Pair(usageTime, currentTime)
+            usageTime
+        }
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -50,11 +103,16 @@ class AppAdapter(
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
 
-        // Show usage time
-        val usageTime = usageStatsManager.getAppUsageTime(packageName)
-        val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-        holder.appUsageTime?.text = formattedTime
-        holder.appUsageTime?.visibility = if (usageTime > 0) View.VISIBLE else View.GONE
+        // Show usage time only in list mode - defer formatting until needed
+        if (!isGridMode && holder.appUsageTime != null) {
+            // Use cached formatted time if available
+            val usageTime = getUsageTimeWithCache(packageName)
+            val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+            holder.appUsageTime?.text = formattedTime
+            holder.appUsageTime?.visibility = View.VISIBLE
+        } else {
+            holder.appUsageTime?.visibility = View.GONE
+        }
 
         when (packageName) {
             "contact_search" -> {
@@ -172,21 +230,41 @@ class AppAdapter(
             }
 
             else -> {
-                // Safely load icon and label
-                val label = try {
-                    appInfo.loadLabel(activity.packageManager)?.toString()
-                } catch (e: Exception) {
-                    appInfo.activityInfo.packageName
+                // For real apps, use aggressive caching to improve performance
+                // Check app validity once and cache result
+                val isValidApp = packageValidityCache.getOrPut(packageName) {
+                    appInfo.activityInfo?.applicationInfo != null
                 }
 
-                val icon = try {
-                    appInfo.loadIcon(activity.packageManager)
-                } catch (e: Exception) {
-                    activity.getDrawable(R.drawable.ic_default_app_icon)
+                // Use cached label or load and cache it
+                val label = labelCache.getOrPut(packageName) {
+                    try {
+                        if (isValidApp) {
+                            appInfo.loadLabel(activity.packageManager)?.toString()
+                                ?: appInfo.activityInfo.packageName
+                        } else {
+                            // For custom ResolveInfo objects, use the name directly
+                            appInfo.activityInfo?.name ?: "Unknown"
+                        }
+                    } catch (e: Exception) {
+                        appInfo.activityInfo?.packageName ?: "Unknown"
+                    }
                 }
-
-                holder.appIcon.setImageDrawable(icon)
                 holder.appName?.text = label
+
+                // Use cached icon or load and cache it
+                val icon = iconCache.getOrPut(packageName) {
+                    try {
+                        if (isValidApp) {
+                            appInfo.loadIcon(activity.packageManager)
+                        } else {
+                            activity.getDrawable(R.drawable.ic_default_app_icon)
+                        }
+                    } catch (e: Exception) {
+                        activity.getDrawable(R.drawable.ic_default_app_icon)
+                    } as Drawable
+                }
+                holder.appIcon.setImageDrawable(icon)
 
                 holder.itemView.setOnClickListener {
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
@@ -271,10 +349,5 @@ class AppAdapter(
         }
 
         return phoneNumber ?: "Not found"
-    }
-
-    companion object {
-        private const val VIEW_TYPE_LIST = 0
-        private const val VIEW_TYPE_GRID = 1
     }
 }

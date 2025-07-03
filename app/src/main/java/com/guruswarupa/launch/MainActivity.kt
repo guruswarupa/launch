@@ -39,6 +39,7 @@ import android.content.ContentResolver
 import android.os.Build
 import android.widget.Button
 import java.util.Calendar
+import android.view.View
 
 
 class MainActivity : ComponentActivity() {
@@ -62,7 +63,7 @@ class MainActivity : ComponentActivity() {
     lateinit var appSearchManager: AppSearchManager
     private lateinit var appDockManager: AppDockManager
     private lateinit var usageStatsManager: AppUsageStatsManager
-    private var contactsList: List<String> = emptyList()
+    private var contactsList: MutableList<String> = mutableListOf()
     private var lastSearchTapTime = 0L
     private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
@@ -188,6 +189,10 @@ class MainActivity : ComponentActivity() {
         dateTextView.setOnClickListener {
             launchApp("com.google.android.calendar", "Google Calendar")
         }
+
+        // Initialize appList before using it
+        appList = mutableListOf()
+        fullAppList = mutableListOf()
 
         loadApps()
         adapter = AppAdapter(this, appList, searchBox, isGridMode)
@@ -613,8 +618,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Refresh usage stats when returning to launcher
-        refreshUsageStats()
+
+        // Use background thread for heavy operations
+        Thread {
+            checkDateChangeAndRefreshUsage()
+        }.start()
+
+        // Only update weather if it's been more than 10 minutes
+        val lastWeatherUpdate = sharedPreferences.getLong("last_weather_update", 0)
+        if (System.currentTimeMillis() - lastWeatherUpdate > 600000) { // 10 minutes
+            setupWeather()
+            sharedPreferences.edit().putLong("last_weather_update", System.currentTimeMillis()).apply()
+        }
+
         handler.post(updateRunnable)
 
         setWallpaperBackground()
@@ -660,53 +676,68 @@ class MainActivity : ComponentActivity() {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
-        val intent = Intent(Intent.ACTION_MAIN, null).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        val unsortedList = packageManager.queryIntentActivities(intent, 0)
-            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-            .toMutableList()
+        // Load apps in background to avoid blocking UI
+        Thread {
+            try {
+                val intent = Intent(Intent.ACTION_MAIN, null)
+                intent.addCategory(Intent.CATEGORY_LAUNCHER)
+                val unsortedList = packageManager.queryIntentActivities(intent, 0)
 
-        fullAppList = unsortedList.toMutableList()
+                if (unsortedList.isEmpty()) {
+                    runOnUiThread {
+                        Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
+                        recyclerView.visibility = View.VISIBLE
+                    }
+                } else {
+                    // Apply focus mode filtering using AppDockManager logic
+                    val filteredApps = if (appDockManager.getCurrentMode()) {
+                        unsortedList.filter { app ->
+                            !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+                        }
+                    } else {
+                        unsortedList
+                    }
 
-        if (unsortedList.isEmpty()) {
-            Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
-        } else {
-            // Apply focus mode filtering using AppDockManager logic
-            val filteredApps = if (appDockManager.getCurrentMode()) {
-                unsortedList.filter { app ->
-                    !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+                    val processedAppList = filteredApps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+                        .sortedWith(
+                            compareByDescending<ResolveInfo> { sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0) }
+                                .thenBy { it.loadLabel(packageManager).toString().lowercase() }
+                        )
+                        .toMutableList()
+
+                    // Update UI on main thread
+                    runOnUiThread {
+                        appList = processedAppList
+                        fullAppList = ArrayList(processedAppList)
+
+                        recyclerView.layoutManager = if (isGridMode) {
+                            GridLayoutManager(this, 4)
+                        } else {
+                            LinearLayoutManager(this)
+                        }
+
+                        adapter = AppAdapter(this, appList, searchBox, isGridMode)
+                        recyclerView.adapter = adapter
+                        recyclerView.visibility = View.VISIBLE
+
+                        // Initialize AppSearchManager
+                        appSearchManager = AppSearchManager(
+                            packageManager,
+                            appList,
+                            fullAppList,
+                            adapter,
+                            searchBox,
+                            contactsList
+                        )
+                    }
                 }
-            } else {
-                unsortedList
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                    recyclerView.visibility = View.VISIBLE
+                }
             }
-
-            appList = filteredApps.filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                .sortedWith(
-                    compareByDescending<ResolveInfo> { sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0) }
-                        .thenBy { it.loadLabel(packageManager).toString().lowercase() }
-                )
-                .toMutableList()
-
-            recyclerView.layoutManager = if (isGridMode) {
-                GridLayoutManager(this, 4)
-            } else {
-                LinearLayoutManager(this)
-            }
-
-            adapter = AppAdapter(this, appList, searchBox, isGridMode) // pass isGridMode
-            recyclerView.adapter = adapter
-
-            // Initialize AppSearchManager
-            appSearchManager = AppSearchManager(
-                packageManager,
-                appList,
-                fullAppList,
-                adapter,
-                searchBox,
-                contactsList
-            )
-        }
+        }.start()
 
         // Set visibility of search bar and voice search button based on focus mode
         if (appDockManager.getCurrentMode()) {
@@ -728,7 +759,7 @@ class MainActivity : ComponentActivity() {
                 CONTACTS_PERMISSION_REQUEST
             )
         } else {
-            contactsList = loadContacts()
+            loadContacts()
         }
     }
 
@@ -781,7 +812,7 @@ class MainActivity : ComponentActivity() {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission granted, load contacts
-                    contactsList = loadContacts()
+                    loadContacts()
                 } else {
                 }
             }
@@ -807,20 +838,46 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun loadContacts(): List<String> {
-        val contacts = mutableListOf<String>()
-        val cursor = contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
-            null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
-        )
+    private fun loadContacts() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+            // Load contacts in background
+            Thread {
+                try {
+                    val projection = arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                    val cursor = contentResolver.query(
+                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        projection,
+                        null,
+                        null,
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+                    )
 
-        cursor?.use {
-            while (it.moveToNext()) {
-                contacts.add(it.getString(0))
-            }
+                    val tempContactsList = mutableListOf<String>()
+                    cursor?.use {
+                        val nameIndex = it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                        while (it.moveToNext()) {
+                            val name = it.getString(nameIndex)
+                            if (!name.isNullOrBlank()) {
+                                tempContactsList.add(name)
+                            }
+                        }
+                    }
+
+                    // Update contacts list on main thread
+                    runOnUiThread {
+                        contactsList.clear()
+                        contactsList.addAll(tempContactsList)
+
+                        // Update search manager if it exists
+                        if (::appSearchManager.isInitialized) {
+                            appSearchManager.updateContactsList(contactsList)
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Handle error silently or log
+                }
+            }.start()
         }
-        return contacts
     }
 
     fun applyFocusMode(isFocusMode: Boolean) {
@@ -900,7 +957,6 @@ class MainActivity : ComponentActivity() {
         // Refresh weekly usage graph
         loadWeeklyUsageData()
     }
-
     private fun setupWeather() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)
