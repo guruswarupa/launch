@@ -36,6 +36,7 @@ import java.util.Date
 import java.util.Locale
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
+import android.os.Build
 import android.widget.Button
 import java.util.Calendar
 
@@ -106,7 +107,11 @@ class MainActivity : ComponentActivity() {
         }
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
-        registerReceiver(settingsUpdateReceiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(settingsUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(settingsUpdateReceiver, filter)
+        }
 
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
@@ -169,6 +174,12 @@ class MainActivity : ComponentActivity() {
         updateWeather()
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
+
+        // Refresh apps after appDockManager is fully initialized
+        if (!appDockManager.getCurrentMode()) {
+            // If focus mode was disabled during init, refresh the apps
+            refreshAppsForFocusMode()
+        }
 
         timeTextView.setOnClickListener {
             launchApp("com.google.android.deskclock", "Google Clock")

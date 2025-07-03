@@ -47,6 +47,19 @@ class AppDockManager(
     private var timerRunnable: Runnable? = null
 
     init {
+        // Initialize focus mode state from preferences
+        isFocusMode = sharedPreferences.getBoolean(FOCUS_MODE_KEY, false)
+
+        // Check if focus mode timer has expired
+        val focusEndTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+        if (isFocusMode && focusEndTime > 0 && System.currentTimeMillis() > focusEndTime) {
+            // Just update the state without calling methods that depend on MainActivity
+            isFocusMode = false
+            sharedPreferences.edit()
+                .putBoolean(FOCUS_MODE_KEY, false)
+                .remove(FOCUS_MODE_END_TIME_KEY)
+                .apply()
+        }
         loadFocusMode()
         ensureRestartButton()
         ensureFocusModeToggle()
