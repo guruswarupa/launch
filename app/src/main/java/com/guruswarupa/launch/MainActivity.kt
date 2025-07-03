@@ -38,6 +38,10 @@ import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.widget.Button
 import java.util.Calendar
+import androidx.activity.result.contract.ActivityResultContracts
+import android.graphics.drawable.Drawable
+import android.os.Build
+
 
 
 class MainActivity : ComponentActivity() {
@@ -88,6 +92,16 @@ class MainActivity : ComponentActivity() {
         private const val USAGE_STATS_REQUEST = 600
     }
 
+    // Custom QR Scanner launcher
+    val QRScannerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val qrResult = result.data?.getStringExtra(QRScannerActivity.RESULT_QR_CODE)
+            qrResult?.let {
+                appDockManager.handleQRResult(it)
+            }
+        }
+    }
+
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -105,8 +119,13 @@ class MainActivity : ComponentActivity() {
             setContentView(R.layout.activity_main)
         }
 
+        // Register settings update receiver
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
-        registerReceiver(settingsUpdateReceiver, filter)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(settingsUpdateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(settingsUpdateReceiver, filter)
+        }
 
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
