@@ -29,8 +29,6 @@ import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
 
 class AppDockManager(
     activity: MainActivity,
@@ -171,8 +169,8 @@ class AppDockManager(
                     showRemoveDockAppDialog("single:$packageName")
                     true
                 }
-                // Insert app after focus mode (3rd position) but before add button
-                val insertIndex = if (appDock.childCount > 2) appDock.childCount - 2 else appDock.childCount -1
+                // Insert app before the add icon
+                val insertIndex = appDock.childCount - 1
                 appDock.addView(this, insertIndex)
             }
         } catch (e: PackageManager.NameNotFoundException) {
@@ -250,8 +248,8 @@ class AppDockManager(
             true
         }
 
-        // Insert group after focus mode (3rd position) but before add button
-        val insertIndex = if (appDock.childCount > 2) appDock.childCount - 2 else appDock.childCount -1
+        // Insert group before the add icon
+        val insertIndex = appDock.childCount - 1
         appDock.addView(groupLayout, insertIndex)
     }
 
@@ -509,11 +507,14 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
+
+        // Ensure the buttons are added in the correct order
         ensureRestartButton()
         ensureFocusModeToggle()
+        ensureQRScannerButton()
         loadDockApps()
         ensureAddIcon()
-        ensureQRScannerButton()
+
         updateDockVisibility()
     }
 
@@ -554,8 +555,7 @@ class AppDockManager(
                 }
                 setOnClickListener { openAppPicker() }
             }
-            val insertIndex = if (appDock.childCount > 1) appDock.childCount - 1 else appDock.childCount
-            appDock.addView(addIcon, insertIndex)
+            appDock.addView(addIcon)
         }
     }
 
@@ -569,6 +569,23 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 )
                 tag = "focus_mode_container"
+            }
+
+            // Add settings icon
+            val settingsIcon = ImageView(context).apply {
+                tag = "settings_icon"
+                setImageResource(R.drawable.ic_settings)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24,24,24,24)
+                    marginStart = 8
+                }
+                setOnClickListener {
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                }
             }
 
             focusModeToggle = ImageView(context).apply {
@@ -605,30 +622,11 @@ class AppDockManager(
                 visibility = if (isFocusMode) View.VISIBLE else View.GONE
             }
 
-            // Add settings icon
-            val settingsIcon = ImageView(context).apply {
-                tag = "settings_icon"
-                setImageResource(R.drawable.ic_settings)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(24,24,24,24)
-                    marginStart = 8
-                }
-                setOnClickListener {
-                    val intent = Intent(context, SettingsActivity::class.java)
-                    context.startActivity(intent)
-                }
-            }
-
             focusContainer.addView(settingsIcon)
             focusContainer.addView(focusModeToggle)
             focusContainer.addView(focusTimerText)
 
-            val insertIndex = if (appDock.childCount > 0) 0 else appDock.childCount
-            appDock.addView(focusContainer, insertIndex)
-
+            appDock.addView(focusContainer, 1) // Add after restart button
             if (isFocusMode) {
                 startTimerDisplay()
             }
@@ -652,7 +650,7 @@ class AppDockManager(
                     true
                 }
             }
-            appDock.addView(restartButton)
+            appDock.addView(restartButton, 0) // Add at the beginning
         }
     }
 
@@ -673,8 +671,7 @@ class AppDockManager(
                     true
                 }
             }
-            val insertIndex = if (appDock.childCount > 1) appDock.childCount - 1 else appDock.childCount
-            appDock.addView(qrScanButton, insertIndex)
+            appDock.addView(qrScanButton, 2) // add after settings and focus mode
         }
     }
 
@@ -818,7 +815,7 @@ class AppDockManager(
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
             when (child.tag) {
-                "focus_mode_container", "restart_button", "qr_scan_button" -> {
+                "focus_mode_container", "restart_button", "qr_scan_button", "settings_icon" -> {
                     child.visibility = View.VISIBLE
                 }
                 "add_icon" -> {
@@ -903,9 +900,7 @@ class AppDockManager(
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }
-
-    private fun getHiddenAppsInFocusMode(): Set<String> {
+    }    private fun getHiddenAppsInFocusMode(): Set<String> {
         return sharedPreferences.getStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
     }
 
