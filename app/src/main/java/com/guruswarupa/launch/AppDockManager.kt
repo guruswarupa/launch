@@ -510,8 +510,8 @@ class AppDockManager(
 
         // Ensure the buttons are added in the correct order
         ensureRestartButton()
-        ensureFocusModeToggle()
         ensureQRScannerButton()
+        ensureFocusModeToggle()
         loadDockApps()
         ensureAddIcon()
 
@@ -671,7 +671,7 @@ class AppDockManager(
                     true
                 }
             }
-            appDock.addView(qrScanButton, 2) // add after settings and focus mode
+            appDock.addView(qrScanButton, 1) // add after settings button
         }
     }
 
