@@ -41,14 +41,16 @@ class AppDockManager(
     private lateinit var addIcon: ImageView
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
+    private lateinit var restartButton: ImageView
     private var isFocusMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
 
     init {
         loadFocusMode()
-        ensureAddIcon()
+        ensureRestartButton()
         ensureFocusModeToggle()
+        ensureAddIcon()
         updateDockVisibility()
 
         // Check if focus mode timer should be restored
@@ -160,7 +162,9 @@ class AppDockManager(
                     showRemoveDockAppDialog("single:$packageName")
                     true
                 }
-                appDock.addView(this, appDock.childCount - 1)
+                // Insert app after focus mode (3rd position) but before add button
+                val insertIndex = if (appDock.childCount > 2) appDock.childCount - 1 else appDock.childCount
+                appDock.addView(this, insertIndex)
             }
         } catch (e: PackageManager.NameNotFoundException) {
             Toast.makeText(context, "App not found", Toast.LENGTH_SHORT).show()
@@ -237,7 +241,9 @@ class AppDockManager(
             true
         }
 
-        appDock.addView(groupLayout, appDock.childCount - 1)
+        // Insert group after focus mode (3rd position) but before add button
+        val insertIndex = if (appDock.childCount > 2) appDock.childCount - 1 else appDock.childCount
+        appDock.addView(groupLayout, insertIndex)
     }
 
     private fun createSquircleBackground(): Drawable {
@@ -494,6 +500,7 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
+        ensureRestartButton()
         ensureFocusModeToggle()
         loadDockApps()
         ensureAddIcon()
@@ -504,6 +511,9 @@ class AppDockManager(
         val dockItems = migrateLegacyItems(sharedPreferences.getStringSet(DOCK_APPS_KEY, mutableSetOf()) ?: mutableSetOf())
 
         dockItems.forEach { item ->
+            // In focus mode, skip loading any dock apps or groups
+            if (isFocusMode) return@forEach
+
             when {
                 item.startsWith("single:") -> {
                     val packageName = item.substringAfter("single:")
@@ -519,7 +529,6 @@ class AppDockManager(
                 }
             }
         }
-        ensureAddIcon()
     }
 
     private fun ensureAddIcon() {
@@ -602,17 +611,50 @@ class AppDockManager(
                 }
             }
 
-            focusContainer.addView(focusModeToggle)
             focusContainer.addView(settingsIcon)
+            focusContainer.addView(focusModeToggle)
             focusContainer.addView(focusTimerText)
 
-            // Add focus container as the first item
-            appDock.addView(focusContainer, 0)
+            val insertIndex = if (appDock.childCount > 1) 1 else appDock.childCount
+            appDock.addView(focusContainer, insertIndex)
 
-            // Start timer update if focus mode is already active
             if (isFocusMode) {
                 startTimerDisplay()
             }
+        }
+    }
+
+    private fun ensureRestartButton() {
+        if (appDock.findViewWithTag<ImageView>("restart_button") == null) {
+            restartButton = ImageView(context).apply {
+                tag = "restart_button"
+                setImageResource(R.drawable.ic_restart)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24, 24, 24, 24)
+                }
+                setOnClickListener { restartLauncher() }
+                setOnLongClickListener {
+                    Toast.makeText(context, "Restart Launcher", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            appDock.addView(restartButton)
+        }
+    }
+
+    private fun restartLauncher() {
+        try {
+            val packageManager = context.packageManager
+            val intent = packageManager.getLaunchIntentForPackage(context.packageName)
+            val componentName = intent!!.component
+            val mainIntent = Intent.makeRestartActivityTask(componentName)
+            context.startActivity(mainIntent)
+            Runtime.getRuntime().exit(0)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to restart launcher", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -739,13 +781,20 @@ class AppDockManager(
     }
 
     private fun updateDockVisibility() {
-        // Hide/show all dock items except the focus mode container
+        // Hide/show all dock items except the focus mode container and restart button
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
-            if (child.tag != "focus_mode_container") {
-                child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
-            } else {
-                child.visibility = View.VISIBLE
+            when (child.tag) {
+                "focus_mode_container", "restart_button" -> {
+                    child.visibility = View.VISIBLE
+                }
+                "add_icon" -> {
+                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+                }
+                else -> {
+                    // Hide all dock apps and groups when in focus mode
+                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+                }
             }
         }
     }

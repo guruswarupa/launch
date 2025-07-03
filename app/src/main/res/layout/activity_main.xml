@@ -104,7 +104,7 @@
                         android:textColorHint="@color/text"
                         android:padding="12dp"
                         android:background="@drawable/search_box_transparent_bg"
-                        android:drawableStart="@android:drawable/ic_menu_search"
+                        android:drawableStart="@drawable/ic_search"
                         android:drawablePadding="8dp"
                         android:textSize="16sp"
                         android:layout_marginBottom="16dp"
