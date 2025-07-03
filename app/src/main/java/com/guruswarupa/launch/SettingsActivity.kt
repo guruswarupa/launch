@@ -30,6 +30,7 @@ class SettingsActivity : ComponentActivity() {
         val importButton = findViewById<Button>(R.id.import_settings_button)
         // Add reset button
         val resetButton = findViewById<Button>(R.id.reset_usage_button)
+        val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
 
 
         // Load current settings
@@ -51,9 +52,12 @@ class SettingsActivity : ComponentActivity() {
             importSettings()
         }
 
-        // Set listener for reset button
         resetButton.setOnClickListener {
             resetAppUsageCount()
+        }
+
+        resetFinanceButton.setOnClickListener {
+            resetFinanceData()
         }
     }
 
@@ -109,37 +113,6 @@ class SettingsActivity : ComponentActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Could not open launcher settings", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun resetAppUsageCount() {
-        // Show confirmation dialog
-        AlertDialog.Builder(this)
-            .setTitle("Reset App Usage Count")
-            .setMessage("This will reset all app usage statistics and reorder apps alphabetically. Are you sure?")
-            .setPositiveButton("Reset") { _, _ ->
-                // Clear app usage preferences
-                val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
-                appUsagePrefs.edit().clear().apply()
-
-                // Clear usage count from main preferences as well
-                val mainPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-                val editor = mainPrefs.edit()
-                val allPrefs = mainPrefs.all
-                for (key in allPrefs.keys) {
-                    if (key.startsWith("usage_")) {
-                        editor.remove(key)
-                    }
-                }
-                editor.apply()
-
-                Toast.makeText(this, "App usage count reset successfully", Toast.LENGTH_SHORT).show()
-
-                // Send broadcast to refresh MainActivity
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                sendBroadcast(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun exportSettings() {
@@ -250,5 +223,61 @@ class SettingsActivity : ComponentActivity() {
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to import settings: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun resetAppUsageCount() {
+        // Show confirmation dialog
+        AlertDialog.Builder(this)
+            .setTitle("Reset App Usage Count")
+            .setMessage("This will reset all app usage statistics and reorder apps alphabetically. Are you sure?")
+            .setPositiveButton("Reset") { _, _ ->
+                // Clear app usage preferences
+                val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
+                appUsagePrefs.edit().clear().apply()
+
+                // Clear usage count from main preferences as well
+                val mainPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+                val editor = mainPrefs.edit()
+                val allPrefs = mainPrefs.all
+                for (key in allPrefs.keys) {
+                    if (key.startsWith("usage_")) {
+                        editor.remove(key)
+                    }
+                }
+                editor.apply()
+
+                Toast.makeText(this, "App usage count reset successfully", Toast.LENGTH_SHORT).show()
+
+                // Send broadcast to refresh MainActivity
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun resetFinanceData() {
+        AlertDialog.Builder(this)
+            .setTitle("Reset Finance Data")
+            .setMessage("Are you sure you want to reset all finance data? This will clear your balance, transaction history, and monthly records. This action cannot be undone.")
+            .setPositiveButton("Reset") { _, _ ->
+                // Reset all finance-related data
+                val editor = prefs.edit()
+                val allPrefs = prefs.all
+                for (key in allPrefs.keys) {
+                    if (key.startsWith("finance_") || key.startsWith("transaction_")) {
+                        editor.remove(key)
+                    }
+                }
+                editor.apply()
+
+                Toast.makeText(this, "Finance data reset successfully", Toast.LENGTH_SHORT).show()
+
+                // Send broadcast to refresh MainActivity
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }
