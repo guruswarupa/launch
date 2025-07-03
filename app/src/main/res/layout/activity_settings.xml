@@ -158,6 +158,27 @@
         android:padding="12dp"
         android:layout_marginBottom="24dp" />
 
+    <!-- Reset Finance Data Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Finance Data"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/text"
+        android:layout_marginBottom="8dp" />
+
+    <Button
+        android:id="@+id/reset_finance_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Reset Finance Data"
+        android:background="@drawable/button_background"
+        android:textColor="@color/text"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:layout_marginBottom="24dp" />
+
     <!-- Save Button -->
     <Button
         android:id="@+id/save_settings_button"

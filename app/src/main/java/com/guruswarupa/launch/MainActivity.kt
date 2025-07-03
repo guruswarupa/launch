@@ -224,6 +224,7 @@ class MainActivity : ComponentActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
                 loadApps() // Refresh apps with new settings
+                updateFinanceDisplay() // Refresh finance display after reset
             }
         }
     }
