@@ -1,32 +1,42 @@
 package com.guruswarupa.launch
 
-import android.Manifest
-import android.app.Activity
-import android.app.AlertDialog
-import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.SharedPreferences
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
-import android.view.Gravity
+import android.net.wifi.WifiConfiguration
+import android.net.wifi.WifiManager
+import android.net.wifi.WifiNetworkSpecifier
+import android.os.Build
 import android.view.View
-import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupWindow
-import android.widget.TextView
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import android.Manifest
+import android.content.ActivityNotFoundException
+import android.app.Activity
+import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.GridLayout
+import android.widget.PopupWindow
+import android.widget.TextView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -900,7 +910,8 @@ class AppDockManager(
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }    private fun getHiddenAppsInFocusMode(): Set<String> {
+    }
+    private fun getHiddenAppsInFocusMode(): Set<String> {
         return sharedPreferences.getStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
     }
 
@@ -955,12 +966,7 @@ class AppDockManager(
             }
             result.startsWith("tel:") -> {
                 // Handle phone number
-                try {
-                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse(result))
-                    context.startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(context, "No phone app found", Toast.LENGTH_SHORT).show()
-                }
+                handleTelQR(result)
             }
             result.startsWith("mailto:") -> {
                 // Handle email
@@ -971,19 +977,61 @@ class AppDockManager(
                     Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
                 }
             }
-            result.startsWith("sms:") -> {
+            result.startsWith("sms:") || result.startsWith("smsto:") -> {
                 // Handle SMS
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result))
-                    context.startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(context, "No SMS app found", Toast.LENGTH_SHORT).show()
-                }
+                handleSMSQR(result)
             }
             else -> {
                 // For other types, show dialog with options
                 showQRResultDialog(result)
             }
+        }
+    }
+
+    private fun handleTelQR(telString: String) {
+        try {
+            val phoneNumber = if (telString.startsWith("tel:+")) {
+                telString.substring(4)
+            } else {
+                telString.substring(4)
+            }
+
+            val intent = Intent(Intent.ACTION_DIAL)
+            intent.data = Uri.parse("tel:$phoneNumber")
+            context.startActivity(intent)
+
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "No phone app found", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun handleSMSQR(smsString: String) {
+        try {
+            var phoneNumber: String? = null
+            var smsBody: String? = null
+
+            if (smsString.startsWith("sms:")) {
+                phoneNumber = smsString.substring(4).split("?")[0]
+                if (smsString.contains("body=")) {
+                    smsBody = smsString.split("body=")[1]
+                }
+            } else if (smsString.startsWith("smsto:")) {
+                val parts = smsString.substring(6).split(":")
+                phoneNumber = parts[0]
+                if (parts.size > 1) {
+                    smsBody = parts[1]
+                }
+            }
+
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("smsto:$phoneNumber")
+                putExtra("sms_body", smsBody ?: "")
+            }
+
+            context.startActivity(intent)
+
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "No SMS app found", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1040,7 +1088,10 @@ class AppDockManager(
                 val status = wifiManager.addNetworkSuggestions(suggestionsList)
 
                 if (status == android.net.wifi.WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS) {
-                    Toast.makeText(context, "WiFi network suggestion added. Please check your notifications.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "WiFi network added.", Toast.LENGTH_LONG).show()
+                    val panelIntent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+                    context.startActivity(panelIntent)
+
                 } else {
                     Toast.makeText(context, "Failed to add WiFi suggestion", Toast.LENGTH_SHORT).show()
                 }
@@ -1082,11 +1133,10 @@ class AppDockManager(
     }
 
     private fun showQRResultDialog(result: String) {
-        val options = arrayOf("Copy to Clipboard", "Search Web", "Share")
+        val options = arrayOf("Copy to Clipboard", "Share")
 
         MaterialAlertDialogBuilder(context)
-            .setTitle("QR Code Result")
-            .setMessage(result)
+            .setTitle("$result")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> {
@@ -1096,17 +1146,6 @@ class AppDockManager(
                         Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                     }
                     1 -> {
-                        try {
-                            val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
-                                putExtra(android.app.SearchManager.QUERY, result)
-                            }
-                            context.startActivity(intent)
-                        } catch (e: ActivityNotFoundException) {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(result)}"))
-                            context.startActivity(intent)
-                        }
-                    }
-                    2 -> {
                         val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_TEXT, result)

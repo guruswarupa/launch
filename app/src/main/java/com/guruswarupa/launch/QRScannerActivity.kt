@@ -171,7 +171,10 @@ class QRScannerActivity : AppCompatActivity() {
                         for (barcode in barcodes) {
                             if (barcode.valueType == Barcode.TYPE_TEXT ||
                                 barcode.valueType == Barcode.TYPE_URL ||
-                                barcode.valueType == Barcode.TYPE_WIFI) {
+                                barcode.valueType == Barcode.TYPE_WIFI ||
+                                barcode.valueType == Barcode.TYPE_PHONE ||
+                                barcode.valueType == Barcode.TYPE_EMAIL ||
+                                barcode.valueType == Barcode.TYPE_SMS) {
                                 barcode.rawValue?.let { onQRCodeDetected(it) }
                                 break
                             }
