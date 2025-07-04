@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/app_info"
+        android:title="App Info"
+        android:icon="@drawable/ic_settings" />
 
+    <item
+        android:id="@+id/share_app"
+        android:title="Share"
+        android:icon="@drawable/ic_share" />
+
+    <item
+        android:id="@+id/uninstall_app"
+        android:title="Uninstall"
+        android:icon="@drawable/ic_settings" />
+
+    <item
+        android:id="@+id/add_to_dock"
+        android:title="Add to Dock"
+        android:icon="@drawable/ic_add" />
 </menu>

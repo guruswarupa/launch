@@ -145,7 +145,7 @@ class AppDockManager(
             .show()
     }
 
-    private fun addAppToDock(packageName: String) {
+    internal fun addAppToDock(packageName: String) {
         addAppToDockUI(packageName)
         saveDockItem("single:$packageName")
     }
@@ -155,7 +155,7 @@ class AppDockManager(
         saveDockItem("group:$groupName:${packageNames.joinToString(",")}")
     }
 
-    private fun addAppToDockUI(packageName: String) {
+     fun addAppToDockUI(packageName: String) {
         try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
             val appIcon = packageManager.getApplicationIcon(appInfo)
