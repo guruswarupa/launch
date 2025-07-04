@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
         private const val WALLPAPER_REQUEST_CODE = 456
         private const val VOICE_SEARCH_REQUEST = 500
         private const val USAGE_STATS_REQUEST = 600
+        private const val LOCATION_PERMISSION_REQUEST = 700
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -970,6 +971,17 @@ class MainActivity : ComponentActivity() {
     private fun setupWeather() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)
+
+        // Check for location permissions
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                LOCATION_PERMISSION_REQUEST
+            )
+        }
 
         weatherManager.updateWeather(weatherIcon, weatherText)
     }
