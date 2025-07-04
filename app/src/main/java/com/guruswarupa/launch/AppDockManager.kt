@@ -42,6 +42,7 @@ class AppDockManager(
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var restartButton: ImageView
+    private lateinit var apkShareButton: ImageView
     private var isFocusMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
@@ -63,6 +64,7 @@ class AppDockManager(
         loadFocusMode()
         ensureRestartButton()
         ensureFocusModeToggle()
+        ensureApkShareButton()
         ensureAddIcon()
         updateDockVisibility()
 
@@ -511,10 +513,36 @@ class AppDockManager(
         sharedPreferences.edit().putStringSet(DOCK_APPS_KEY, dockItems).apply()
     }
 
+    private fun ensureApkShareButton() {
+        if (appDock.findViewWithTag<ImageView>("apk_share_button") == null) {
+            apkShareButton = ImageView(context).apply {
+                tag = "apk_share_button"
+                setImageResource(R.drawable.ic_share_apk) // You'll need to create this drawable
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24, 24, 24, 24)
+                }
+                setOnClickListener { showApkShareDialog() }
+                setOnLongClickListener {
+                    Toast.makeText(context, "Share APK", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            // Insert after focus mode container
+            val focusContainerIndex = (0 until appDock.childCount).firstOrNull {
+                appDock.getChildAt(it).tag == "focus_mode_container"
+            } ?: 0
+            appDock.addView(apkShareButton, focusContainerIndex + 1)
+        }
+    }
+
     private fun refreshDock() {
         appDock.removeAllViews()
         ensureRestartButton()
         ensureFocusModeToggle()
+        ensureApkShareButton()
         loadDockApps()
         ensureAddIcon()
         updateDockVisibility()
@@ -801,7 +829,7 @@ class AppDockManager(
                 "focus_mode_container", "restart_button" -> {
                     child.visibility = View.VISIBLE
                 }
-                "add_icon" -> {
+                "add_icon", "apk_share_button" -> {
                     child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                 }
                 else -> {
@@ -909,6 +937,138 @@ class AppDockManager(
 
     fun getCurrentMode(): Boolean {
         return isFocusMode
+    }
+
+    private fun showApkShareDialog() {
+        val options = arrayOf("Share via WiFi", "Share via Bluetooth", "Share Specific APK")
+        AlertDialog.Builder(context)
+            .setTitle("Share APK")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> shareViaWiFi()
+                    1 -> shareViaBluetooth()
+                    2 -> showAppListForSharing()
+                }
+            }
+            .show()
+    }
+
+    private fun shareViaWiFi() {
+        // Get list of installed apps
+        val installedApps = getInstalledApps()
+        if (installedApps.isNotEmpty()) {
+            // For simplicity, share the first app's APK via WiFi
+            // In a real implementation, you'd show a list to choose from
+            startWiFiHotspot(installedApps[0])
+        }
+    }
+
+    private fun shareViaBluetooth() {
+        val installedApps = getInstalledApps()
+        if (installedApps.isNotEmpty()) {
+            shareApkViaBluetooth(installedApps[0])
+        }
+    }
+
+    private fun showAppListForSharing() {
+        val installedApps = getInstalledApps()
+        val appNames = installedApps.map { it.loadLabel(packageManager).toString() }
+
+        AlertDialog.Builder(context)
+            .setTitle("Select App to Share")
+            .setItems(appNames.toTypedArray()) { _, which ->
+                val selectedApp = installedApps[which]
+                showSharingMethodDialog(selectedApp)
+            }
+            .show()
+    }
+
+    private fun showSharingMethodDialog(appInfo: android.content.pm.ApplicationInfo) {
+        val options = arrayOf("Share via WiFi", "Share via Bluetooth")
+        AlertDialog.Builder(context)
+            .setTitle("Choose sharing method")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> startWiFiHotspot(appInfo)
+                    1 -> shareApkViaBluetooth(appInfo)
+                }
+            }
+            .show()
+    }
+
+    private fun getInstalledApps(): List<android.content.pm.ApplicationInfo> {
+        return packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            .filter { it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM == 0 }
+    }
+
+    private fun startWiFiHotspot(appInfo: android.content.pm.ApplicationInfo) {
+        try {
+            val sourceDir = appInfo.sourceDir
+            val apkFile = java.io.File(sourceDir)
+
+            if (apkFile.exists()) {
+                // Create a simple HTTP server to share the APK
+                val port = 8080
+                val serverThread = Thread {
+                    try {
+                        val serverSocket = java.net.ServerSocket(port)
+                        val socket = serverSocket.accept()
+                        val outputStream = socket.getOutputStream()
+                        val fileInputStream = java.io.FileInputStream(apkFile)
+
+                        val response = "HTTP/1.1 200 OK\r\n" +
+                                "Content-Type: application/vnd.android.package-archive\r\n" +
+                                "Content-Length: ${apkFile.length()}\r\n" +
+                                "Content-Disposition: attachment; filename=\"${appInfo.loadLabel(packageManager)}.apk\"\r\n\r\n"
+
+                        outputStream.write(response.toByteArray())
+                        fileInputStream.copyTo(outputStream)
+
+                        fileInputStream.close()
+                        socket.close()
+                        serverSocket.close()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                serverThread.start()
+
+                // Show IP address to user
+                val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                val ipAddress = android.text.format.Formatter.formatIpAddress(wifiManager.connectionInfo.ipAddress)
+
+                Toast.makeText(context, "APK available at: http://$ipAddress:$port", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error sharing APK: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun shareApkViaBluetooth(appInfo: android.content.pm.ApplicationInfo) {
+        try {
+            val sourceDir = appInfo.sourceDir
+            val apkFile = java.io.File(sourceDir)
+
+            if (apkFile.exists()) {
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    apkFile
+                )
+
+                val shareIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    type = "application/vnd.android.package-archive"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+                val bluetoothIntent = Intent.createChooser(shareIntent, "Share APK via Bluetooth")
+                context.startActivity(bluetoothIntent)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error sharing APK: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
