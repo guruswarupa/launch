@@ -389,7 +389,7 @@ class AppAdapter(
     fun showCallConfirmationDialog(contactName: String) {
         val phoneNumber = getPhoneNumberForContact(contactName) // Fetch phone number for the contact
 
-        AlertDialog.Builder(activity)
+        AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setTitle("Call $contactName?")
             .setMessage("Phone: $phoneNumber\nDo you want to proceed?")
             .setPositiveButton("Call") { _, _ ->

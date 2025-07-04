@@ -803,7 +803,7 @@ class MainActivity : ComponentActivity() {
     // Request usage stats permission
     private fun requestUsageStatsPermission() {
         if (!usageStatsManager.hasUsageStatsPermission()) {
-            AlertDialog.Builder(this)
+            AlertDialog.Builder(this, R.style.CustomDialogTheme)
                 .setTitle("Usage Stats Permission")
                 .setMessage("To show app usage time, please grant usage access permission in the next screen.")
                 .setPositiveButton("Grant") { _, _ ->
@@ -978,7 +978,7 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
         val currentApiKey = prefs.getString("weather_api_key", "")
 
-        val builder = AlertDialog.Builder(this)
+        val builder = AlertDialog.Builder(this, R.style.CustomDialogTheme)
         val input = EditText(this)
         input.setText(currentApiKey)
         input.hint = "Enter your OpenWeatherMap API key"
@@ -1039,7 +1039,7 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        val dialogBuilder = android.app.AlertDialog.Builder(this)
+        val dialogBuilder = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Transaction History")
 
         val transactionList = transactions.take(20).map { (type, amount, description) ->

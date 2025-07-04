@@ -83,7 +83,7 @@ class AppDockManager(
 
     fun openAppPicker() {
         val options = arrayOf("Add Single App", "Create Group")
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Add to Dock")
             .setItems(options) { _, which ->
                 when (which) {
@@ -105,7 +105,7 @@ class AppDockManager(
         val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
         val appPackageNames = sortedApps.map { it.activityInfo.packageName }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Choose an app")
             .setItems(appNames.toTypedArray()) { _, which ->
                 addAppToDock(appPackageNames[which])
@@ -125,7 +125,7 @@ class AppDockManager(
         val selectedPackages = mutableListOf<String>()
         val checkedItems = BooleanArray(appNames.size) { false }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select apps for group")
             .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
                 if (isChecked) {
@@ -467,7 +467,7 @@ class AppDockManager(
             }
         }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Modify Group: $groupName")
             .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
                 val packageName = appPackageNames[which]
@@ -492,7 +492,7 @@ class AppDockManager(
 
     private fun showGroupNameDialog(selectedPackages: List<String>) {
         val editText = EditText(context)
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enter group name")
             .setView(editText)
             .setPositiveButton("Create") { _, _ ->
@@ -731,7 +731,7 @@ class AppDockManager(
         val durations = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Custom")
         val durationValues = arrayOf(15, 30, 60, 120, 240, -1) // -1 for custom
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select Focus Mode Duration")
             .setItems(durations) { _, which ->
                 if (durationValues[which] == -1) {
@@ -750,7 +750,7 @@ class AppDockManager(
             hint = "Enter minutes (1-480)"
         }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Duration")
             .setMessage("Enter duration in minutes:")
             .setView(input)
@@ -892,7 +892,7 @@ class AppDockManager(
             hiddenApps.contains(appPackageNames[index])
         }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Focus Mode — Select apps to hide")
             .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
                 val packageName = appPackageNames[which]

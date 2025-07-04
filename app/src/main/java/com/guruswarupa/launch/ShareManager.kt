@@ -16,7 +16,7 @@ import java.io.FileOutputStream
 class ShareManager(private val context: Context) {
 
     fun showApkSharingDialog() {
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("What would you like to share?")
             .setItems(arrayOf("Share an App (APK)", "Share a File")) { _, which ->
                 when (which) {
@@ -37,7 +37,7 @@ class ShareManager(private val context: Context) {
 
         val appNames = installedApps.map { it.first }.toTypedArray()
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select App to Share")
             .setItems(appNames) { _, which ->
                 val selectedApp = installedApps[which]

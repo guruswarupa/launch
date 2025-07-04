@@ -227,7 +227,7 @@ class SettingsActivity : ComponentActivity() {
 
     private fun resetAppUsageCount() {
         // Show confirmation dialog
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Reset App Usage Count")
             .setMessage("This will reset all app usage statistics and reorder apps alphabetically. Are you sure?")
             .setPositiveButton("Reset") { _, _ ->
@@ -257,7 +257,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun resetFinanceData() {
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Reset Finance Data")
             .setMessage("Are you sure you want to reset all finance data? This will clear your balance, transaction history, and monthly records. This action cannot be undone.")
             .setPositiveButton("Reset") { _, _ ->

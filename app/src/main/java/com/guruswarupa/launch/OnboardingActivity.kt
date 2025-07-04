@@ -119,7 +119,7 @@ class OnboardingActivity : ComponentActivity() {
     private fun setDefaultLauncher() = startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
 
     private fun chooseDisplayStyle() {
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Choose App Display Style")
             .setMessage("Grid or List?")
             .setPositiveButton("Grid") { _, _ -> setViewPreference("grid") }
