@@ -15,8 +15,13 @@ import androidx.recyclerview.widget.RecyclerView
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
+import android.graphics.drawable.Drawable
 import android.provider.ContactsContract
 import kotlin.apply
+
+import android.provider.Settings
+import android.view.Gravity
+import android.widget.PopupMenu
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -26,11 +31,98 @@ class AppAdapter(
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     private val usageStatsManager = AppUsageStatsManager(activity)
+    private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
+    private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
+    private val labelCache = mutableMapOf<String, String>() // packageName to label
+    private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
+    private val CACHE_DURATION = 60000L // 1 minute cache
+
+    companion object {
+        private const val VIEW_TYPE_LIST = 0
+        private const val VIEW_TYPE_GRID = 1
+    }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
         val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
+    }
+
+    fun updateAppList(newAppList: List<ResolveInfo>) {
+        Thread {
+            // Skip update if list is identical
+            if (appList.size == newAppList.size &&
+                appList.zip(newAppList).all { (old, new) ->
+                    old.activityInfo.packageName == new.activityInfo.packageName
+                }) {
+                return@Thread
+            }
+
+            // Pre-load icons and labels for better performance
+            newAppList.forEach { app ->
+                val packageName = app.activityInfo.packageName
+
+                // Pre-cache icon
+                if (!iconCache.containsKey(packageName)) {
+                    try {
+                        val icon = app.loadIcon(activity.packageManager)
+                        iconCache[packageName] = icon
+                    } catch (e: Exception) {
+                        // Use default icon if loading fails
+                    }
+                }
+
+                // Pre-cache label
+                if (!labelCache.containsKey(packageName)) {
+                    try {
+                        val label = app.loadLabel(activity.packageManager).toString()
+                        labelCache[packageName] = label
+                    } catch (e: Exception) {
+                        // Use package name as fallback
+                        labelCache[packageName] = packageName
+                    }
+                }
+            }
+
+            // Update on main thread
+            activity.runOnUiThread {
+                appList.clear()
+                appList.addAll(newAppList)
+                notifyDataSetChanged()
+            }
+        }.start()
+
+        // Use more efficient update instead of notifyDataSetChanged
+        val oldSize = appList.size
+        val newSize = newAppList.size
+
+        appList.clear()
+        appList.addAll(newAppList)
+
+        when {
+            oldSize == newSize -> notifyItemRangeChanged(0, newSize)
+            oldSize < newSize -> {
+                notifyItemRangeChanged(0, oldSize)
+                notifyItemRangeInserted(oldSize, newSize - oldSize)
+            }
+            else -> {
+                notifyItemRangeChanged(0, newSize)
+                notifyItemRangeRemoved(newSize, oldSize - newSize)
+            }
+        }
+    }
+
+    private fun getUsageTimeWithCache(packageName: String): Long {
+        val currentTime = System.currentTimeMillis()
+        val cached = usageCache[packageName]
+
+        return if (cached != null && (currentTime - cached.second) < CACHE_DURATION) {
+            cached.first
+        } else {
+            val usageTime = usageStatsManager.getAppUsageTime(packageName)
+            usageCache[packageName] = Pair(usageTime, currentTime)
+            usageTime
+        }
     }
 
     override fun getItemViewType(position: Int): Int {
@@ -50,11 +142,16 @@ class AppAdapter(
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
 
-        // Show usage time
-        val usageTime = usageStatsManager.getAppUsageTime(packageName)
-        val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-        holder.appUsageTime?.text = formattedTime
-        holder.appUsageTime?.visibility = if (usageTime > 0) View.VISIBLE else View.GONE
+        // Show usage time only in list mode - defer formatting until needed
+        if (!isGridMode && holder.appUsageTime != null) {
+            // Use cached formatted time if available
+            val usageTime = getUsageTimeWithCache(packageName)
+            val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+            holder.appUsageTime?.text = formattedTime
+            holder.appUsageTime?.visibility = View.VISIBLE
+        } else {
+            holder.appUsageTime?.visibility = View.GONE
+        }
 
         when (packageName) {
             "contact_search" -> {
@@ -172,21 +269,41 @@ class AppAdapter(
             }
 
             else -> {
-                // Safely load icon and label
-                val label = try {
-                    appInfo.loadLabel(activity.packageManager)?.toString()
-                } catch (e: Exception) {
-                    appInfo.activityInfo.packageName
+                // For real apps, use aggressive caching to improve performance
+                // Check app validity once and cache result
+                val isValidApp = packageValidityCache.getOrPut(packageName) {
+                    appInfo.activityInfo?.applicationInfo != null
                 }
 
-                val icon = try {
-                    appInfo.loadIcon(activity.packageManager)
-                } catch (e: Exception) {
-                    activity.getDrawable(R.drawable.ic_default_app_icon)
+                // Use cached label or load and cache it
+                val label = labelCache.getOrPut(packageName) {
+                    try {
+                        if (isValidApp) {
+                            appInfo.loadLabel(activity.packageManager)?.toString()
+                                ?: appInfo.activityInfo.packageName
+                        } else {
+                            // For custom ResolveInfo objects, use the name directly
+                            appInfo.activityInfo?.name ?: "Unknown"
+                        }
+                    } catch (e: Exception) {
+                        appInfo.activityInfo?.packageName ?: "Unknown"
+                    }
                 }
-
-                holder.appIcon.setImageDrawable(icon)
                 holder.appName?.text = label
+
+                // Use cached icon or load and cache it
+                val icon = iconCache.getOrPut(packageName) {
+                    try {
+                        if (isValidApp) {
+                            appInfo.loadIcon(activity.packageManager)
+                        } else {
+                            activity.getDrawable(R.drawable.ic_default_app_icon)
+                        }
+                    } catch (e: Exception) {
+                        activity.getDrawable(R.drawable.ic_default_app_icon)
+                    } as Drawable
+                }
+                holder.appIcon.setImageDrawable(icon)
 
                 holder.itemView.setOnClickListener {
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
@@ -206,7 +323,7 @@ class AppAdapter(
                 }
 
                 holder.itemView.setOnLongClickListener {
-                    uninstallApp(packageName)
+                    showAppContextMenu(holder.itemView, packageName, appInfo)
                     true
                 }
             }
@@ -215,6 +332,48 @@ class AppAdapter(
 
     override fun getItemCount(): Int = appList.size
 
+    private fun showAppContextMenu(view: View, packageName: String, appInfo: ResolveInfo) {
+        val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
+        popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
+
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.app_info -> {
+                    showAppInfo(packageName)
+                    true
+                }
+                R.id.share_app -> {
+                    shareApp(packageName, appInfo)
+                    true
+                }
+                R.id.uninstall_app -> {
+                    uninstallApp(packageName)
+                    true
+                }
+                R.id.add_to_dock -> {
+                    addToDock(packageName, appInfo)
+                    true
+                }
+                else -> false
+            }
+        }
+
+        popupMenu.show()
+    }
+
+    private fun showAppInfo(packageName: String) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        activity.startActivity(intent)
+    }
+
+    private fun shareApp(packageName: String, appInfo: ResolveInfo) {
+        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        val shareManager = ShareManager(activity)
+        shareManager.shareApk(packageName, appName)
+    }
+
     private fun uninstallApp(packageName: String) {
         val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
             data = Uri.parse("package:$packageName")
@@ -222,10 +381,15 @@ class AppAdapter(
         activity.startActivity(intent)
     }
 
+    private fun addToDock(packageName: String, appInfo: ResolveInfo) {
+        activity.appDockManager.addAppToDock(packageName)
+        Toast.makeText(activity, "Added ${appInfo.loadLabel(activity.packageManager)} to dock", Toast.LENGTH_SHORT).show()
+    }
+
     fun showCallConfirmationDialog(contactName: String) {
         val phoneNumber = getPhoneNumberForContact(contactName) // Fetch phone number for the contact
 
-        AlertDialog.Builder(activity)
+        AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setTitle("Call $contactName?")
             .setMessage("Phone: $phoneNumber\nDo you want to proceed?")
             .setPositiveButton("Call") { _, _ ->
@@ -271,10 +435,5 @@ class AppAdapter(
         }
 
         return phoneNumber ?: "Not found"
-    }
-
-    companion object {
-        private const val VIEW_TYPE_LIST = 0
-        private const val VIEW_TYPE_GRID = 1
     }
 }

@@ -45,6 +45,11 @@ class AppSearchManager(
         })
     }
 
+    fun updateContactsList(newContactsList: List<String>) {
+        // Update contacts list and clear search cache
+        searchCache.clear()
+    }
+
     private fun refreshAppList() {
         appLabelMap = fullAppList.associateWith { resolveInfo ->
             appLabelCache.getOrPut(resolveInfo.activityInfo.packageName) {
@@ -144,26 +149,8 @@ class AppSearchManager(
         // Cache the result for future use
         searchCache[queryLower] = ArrayList(newFilteredList)
 
-        // Use more efficient list update
-        if (appList.size != newFilteredList.size) {
-            appList.clear()
-            appList.addAll(newFilteredList)
-            adapter.notifyDataSetChanged()
-        } else {
-            // Check if lists are actually different before updating
-            var different = false
-            for (i in newFilteredList.indices) {
-                if (appList[i] != newFilteredList[i]) {
-                    different = true
-                    break
-                }
-            }
-            if (different) {
-                appList.clear()
-                appList.addAll(newFilteredList)
-                adapter.notifyDataSetChanged()
-            }
-        }
+        // Use more efficient adapter update method
+        adapter.updateAppList(newFilteredList)
     }
 
     private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()

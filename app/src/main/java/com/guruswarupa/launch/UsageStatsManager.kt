@@ -13,6 +13,12 @@ class AppUsageStatsManager(private val context: Context) {
 
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
+    // Cache for expensive operations
+    private var dailyUsageCache: Pair<String, Long>? = null // date to total usage
+    private var weeklyDataCache: Pair<Long, List<Pair<String, Long>>>? = null // timestamp to data
+    private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usage, timestamp)
+    private val CACHE_DURATION = 300000L // 5 minutes
+
     fun hasUsageStatsPermission(): Boolean {
         val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = appOpsManager.checkOpNoThrow(
@@ -29,6 +35,14 @@ class AppUsageStatsManager(private val context: Context) {
 
     fun getAppUsageTime(packageName: String): Long {
         if (!hasUsageStatsPermission()) return 0L
+
+        // Check cache first
+        val currentTime = System.currentTimeMillis()
+        usageCache[packageName]?.let { (cachedUsage, timestamp) ->
+            if (currentTime - timestamp < CACHE_DURATION) {
+                return cachedUsage
+            }
+        }
 
         val calendar = Calendar.getInstance()
         // Set to start of current day
@@ -54,6 +68,14 @@ class AppUsageStatsManager(private val context: Context) {
 
     fun getWeeklyUsageData(): List<Pair<String, Long>> {
         if (!hasUsageStatsPermission()) return emptyList()
+
+        // Check cache first
+        val currentTime = System.currentTimeMillis()
+        weeklyDataCache?.let { (timestamp, data) ->
+            if (currentTime - timestamp < CACHE_DURATION) {
+                return data
+            }
+        }
 
         val weeklyData = mutableListOf<Pair<String, Long>>()
         val calendar = Calendar.getInstance()
@@ -111,6 +133,8 @@ class AppUsageStatsManager(private val context: Context) {
             weeklyData.add(dayFormat to totalDayUsage)
         }
 
+        // Cache the result
+        weeklyDataCache = Pair(currentTime, weeklyData)
         return weeklyData
     }
 

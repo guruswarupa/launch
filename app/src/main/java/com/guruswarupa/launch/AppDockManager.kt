@@ -1,42 +1,28 @@
 package com.guruswarupa.launch
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
-import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.net.NetworkRequest
-import android.net.Uri
-import android.net.wifi.WifiConfiguration
-import android.net.wifi.WifiManager
-import android.net.wifi.WifiNetworkSpecifier
-import android.os.Build
-import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.Toast
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import android.Manifest
-import android.content.ActivityNotFoundException
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.GridLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -51,23 +37,35 @@ class AppDockManager(
     private val FOCUS_MODE_KEY = "focus_mode_enabled"
     private val FOCUS_MODE_HIDDEN_APPS_KEY = "focus_mode_hidden_apps"
     private val FOCUS_MODE_END_TIME_KEY = "focus_mode_end_time"
-    private val activity: MainActivity = activity
 
     private lateinit var addIcon: ImageView
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var restartButton: ImageView
+    private lateinit var apkShareButton: ImageView
     private var isFocusMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
-    private lateinit var qrScanButton: ImageView
 
     init {
+        // Initialize focus mode state from preferences
+        isFocusMode = sharedPreferences.getBoolean(FOCUS_MODE_KEY, false)
+
+        // Check if focus mode timer has expired
+        val focusEndTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+        if (isFocusMode && focusEndTime > 0 && System.currentTimeMillis() > focusEndTime) {
+            // Just update the state without calling methods that depend on MainActivity
+            isFocusMode = false
+            sharedPreferences.edit()
+                .putBoolean(FOCUS_MODE_KEY, false)
+                .remove(FOCUS_MODE_END_TIME_KEY)
+                .apply()
+        }
         loadFocusMode()
         ensureRestartButton()
         ensureFocusModeToggle()
+        ensureApkShareButton()
         ensureAddIcon()
-        ensureQRScannerButton()
         updateDockVisibility()
 
         // Check if focus mode timer should be restored
@@ -85,7 +83,7 @@ class AppDockManager(
 
     fun openAppPicker() {
         val options = arrayOf("Add Single App", "Create Group")
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Add to Dock")
             .setItems(options) { _, which ->
                 when (which) {
@@ -107,7 +105,7 @@ class AppDockManager(
         val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
         val appPackageNames = sortedApps.map { it.activityInfo.packageName }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Choose an app")
             .setItems(appNames.toTypedArray()) { _, which ->
                 addAppToDock(appPackageNames[which])
@@ -127,7 +125,7 @@ class AppDockManager(
         val selectedPackages = mutableListOf<String>()
         val checkedItems = BooleanArray(appNames.size) { false }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select apps for group")
             .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
                 if (isChecked) {
@@ -147,7 +145,7 @@ class AppDockManager(
             .show()
     }
 
-    private fun addAppToDock(packageName: String) {
+    internal fun addAppToDock(packageName: String) {
         addAppToDockUI(packageName)
         saveDockItem("single:$packageName")
     }
@@ -157,7 +155,7 @@ class AppDockManager(
         saveDockItem("group:$groupName:${packageNames.joinToString(",")}")
     }
 
-    private fun addAppToDockUI(packageName: String) {
+     fun addAppToDockUI(packageName: String) {
         try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
             val appIcon = packageManager.getApplicationIcon(appInfo)
@@ -179,8 +177,8 @@ class AppDockManager(
                     showRemoveDockAppDialog("single:$packageName")
                     true
                 }
-                // Insert app before the add icon
-                val insertIndex = appDock.childCount - 1
+                // Insert app after focus mode (3rd position) but before add button
+                val insertIndex = if (appDock.childCount > 2) appDock.childCount - 1 else appDock.childCount
                 appDock.addView(this, insertIndex)
             }
         } catch (e: PackageManager.NameNotFoundException) {
@@ -258,8 +256,8 @@ class AppDockManager(
             true
         }
 
-        // Insert group before the add icon
-        val insertIndex = appDock.childCount - 1
+        // Insert group after focus mode (3rd position) but before add button
+        val insertIndex = if (appDock.childCount > 2) appDock.childCount - 1 else appDock.childCount
         appDock.addView(groupLayout, insertIndex)
     }
 
@@ -469,7 +467,7 @@ class AppDockManager(
             }
         }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Modify Group: $groupName")
             .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
                 val packageName = appPackageNames[which]
@@ -494,7 +492,7 @@ class AppDockManager(
 
     private fun showGroupNameDialog(selectedPackages: List<String>) {
         val editText = EditText(context)
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enter group name")
             .setView(editText)
             .setPositiveButton("Create") { _, _ ->
@@ -515,16 +513,38 @@ class AppDockManager(
         sharedPreferences.edit().putStringSet(DOCK_APPS_KEY, dockItems).apply()
     }
 
+    private fun ensureApkShareButton() {
+        if (appDock.findViewWithTag<ImageView>("apk_share_button") == null) {
+            apkShareButton = ImageView(context).apply {
+                tag = "apk_share_button"
+                setImageResource(R.drawable.ic_share) // You'll need to create this drawable
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24, 24, 24, 24)
+                }
+                setOnClickListener { showApkShareDialog() }
+                setOnLongClickListener {
+                    Toast.makeText(context, "Share APK", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            // Insert after focus mode container
+            val focusContainerIndex = (0 until appDock.childCount).firstOrNull {
+                appDock.getChildAt(it).tag == "focus_mode_container"
+            } ?: 0
+            appDock.addView(apkShareButton, focusContainerIndex + 1)
+        }
+    }
+
     private fun refreshDock() {
         appDock.removeAllViews()
-
-        // Ensure the buttons are added in the correct order
         ensureRestartButton()
-        ensureQRScannerButton()
         ensureFocusModeToggle()
+        ensureApkShareButton()
         loadDockApps()
         ensureAddIcon()
-
         updateDockVisibility()
     }
 
@@ -581,23 +601,6 @@ class AppDockManager(
                 tag = "focus_mode_container"
             }
 
-            // Add settings icon
-            val settingsIcon = ImageView(context).apply {
-                tag = "settings_icon"
-                setImageResource(R.drawable.ic_settings)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(24,24,24,24)
-                    marginStart = 8
-                }
-                setOnClickListener {
-                    val intent = Intent(context, SettingsActivity::class.java)
-                    context.startActivity(intent)
-                }
-            }
-
             focusModeToggle = ImageView(context).apply {
                 tag = "focus_mode_toggle"
                 setImageResource(if (isFocusMode) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
@@ -632,11 +635,30 @@ class AppDockManager(
                 visibility = if (isFocusMode) View.VISIBLE else View.GONE
             }
 
+            // Add settings icon
+            val settingsIcon = ImageView(context).apply {
+                tag = "settings_icon"
+                setImageResource(R.drawable.ic_settings)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24,24,24,24)
+                    marginStart = 8
+                }
+                setOnClickListener {
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                }
+            }
+
             focusContainer.addView(settingsIcon)
             focusContainer.addView(focusModeToggle)
             focusContainer.addView(focusTimerText)
 
-            appDock.addView(focusContainer, 1) // Add after restart button
+            val insertIndex = if (appDock.childCount > 1) 1 else appDock.childCount
+            appDock.addView(focusContainer, insertIndex)
+
             if (isFocusMode) {
                 startTimerDisplay()
             }
@@ -660,28 +682,7 @@ class AppDockManager(
                     true
                 }
             }
-            appDock.addView(restartButton, 0) // Add at the beginning
-        }
-    }
-
-    private fun ensureQRScannerButton() {
-        if (appDock.findViewWithTag<ImageView>("qr_scan_button") == null) {
-            qrScanButton = ImageView(context).apply {
-                tag = "qr_scan_button"
-                setImageResource(R.drawable.ic_qr_scanner)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(24, 24, 24, 24)
-                }
-                setOnClickListener { startQRScanner() }
-                setOnLongClickListener {
-                    Toast.makeText(context, "QR Scanner", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            appDock.addView(qrScanButton, 1) // add after settings button
+            appDock.addView(restartButton)
         }
     }
 
@@ -730,7 +731,7 @@ class AppDockManager(
         val durations = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Custom")
         val durationValues = arrayOf(15, 30, 60, 120, 240, -1) // -1 for custom
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select Focus Mode Duration")
             .setItems(durations) { _, which ->
                 if (durationValues[which] == -1) {
@@ -749,7 +750,7 @@ class AppDockManager(
             hint = "Enter minutes (1-480)"
         }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Duration")
             .setMessage("Enter duration in minutes:")
             .setView(input)
@@ -825,10 +826,10 @@ class AppDockManager(
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
             when (child.tag) {
-                "focus_mode_container", "restart_button", "qr_scan_button", "settings_icon" -> {
+                "focus_mode_container", "restart_button" -> {
                     child.visibility = View.VISIBLE
                 }
-                "add_icon" -> {
+                "add_icon", "apk_share_button" -> {
                     child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                 }
                 else -> {
@@ -891,13 +892,11 @@ class AppDockManager(
             hiddenApps.contains(appPackageNames[index])
         }
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Focus Mode — Select apps to hide")
             .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
                 val packageName = appPackageNames[which]
                 if (isChecked) {
-
-// This code adds QR scanner functionality to the Android launcher app's dock.
                     addAppToHiddenList(packageName)
                 } else {
                     removeAppFromHiddenList(packageName)
@@ -911,6 +910,7 @@ class AppDockManager(
             .setNegativeButton("Cancel", null)
             .show()
     }
+
     private fun getHiddenAppsInFocusMode(): Set<String> {
         return sharedPreferences.getStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
     }
@@ -939,223 +939,11 @@ class AppDockManager(
         return isFocusMode
     }
 
-    private fun startQRScanner() {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.CAMERA), 1001)
-            return
-        }
+    // APK sharing functionality moved to ApkShareManager
+    private val shareManager = ShareManager(context)
 
-        val intent = Intent(context, QRScannerActivity::class.java)
-        activity.QRScannerLauncher.launch(intent)
-    }
-
-    fun handleQRResult(result: String) {
-        when {
-            result.startsWith("http://") || result.startsWith("https://") -> {
-                // Open URL in browser
-                try {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(result))
-                    context.startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(context, "No browser found", Toast.LENGTH_SHORT).show()
-                }
-            }
-            result.startsWith("WIFI:") -> {
-                // Handle WiFi QR code
-                handleWiFiQR(result)
-            }
-            result.startsWith("tel:") -> {
-                // Handle phone number
-                handleTelQR(result)
-            }
-            result.startsWith("mailto:") -> {
-                // Handle email
-                try {
-                    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse(result))
-                    context.startActivity(intent)
-                } catch (e: ActivityNotFoundException) {
-                    Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
-                }
-            }
-            result.startsWith("sms:") || result.startsWith("smsto:") -> {
-                // Handle SMS
-                handleSMSQR(result)
-            }
-            else -> {
-                // For other types, show dialog with options
-                showQRResultDialog(result)
-            }
-        }
-    }
-
-    private fun handleTelQR(telString: String) {
-        try {
-            val phoneNumber = if (telString.startsWith("tel:+")) {
-                telString.substring(4)
-            } else {
-                telString.substring(4)
-            }
-
-            val intent = Intent(Intent.ACTION_DIAL)
-            intent.data = Uri.parse("tel:$phoneNumber")
-            context.startActivity(intent)
-
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(context, "No phone app found", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun handleSMSQR(smsString: String) {
-        try {
-            var phoneNumber: String? = null
-            var smsBody: String? = null
-
-            if (smsString.startsWith("sms:")) {
-                phoneNumber = smsString.substring(4).split("?")[0]
-                if (smsString.contains("body=")) {
-                    smsBody = smsString.split("body=")[1]
-                }
-            } else if (smsString.startsWith("smsto:")) {
-                val parts = smsString.substring(6).split(":")
-                phoneNumber = parts[0]
-                if (parts.size > 1) {
-                    smsBody = parts[1]
-                }
-            }
-
-            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("smsto:$phoneNumber")
-                putExtra("sms_body", smsBody ?: "")
-            }
-
-            context.startActivity(intent)
-
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(context, "No SMS app found", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun handleWiFiQR(wifiString: String) {
-        try {
-            // Parse WiFi QR format: WIFI:T:WPA;S:NetworkName;P:Password;H:false;;
-            val parts = wifiString.split(";")
-            var ssid = ""
-            var password = ""
-            var security = "WPA"
-
-            for (part in parts) {
-                when {
-                    part.startsWith("S:") -> ssid = part.substring(2)
-                    part.startsWith("P:") -> password = part.substring(2)
-                    part.startsWith("T:") -> security = part.substring(2)
-                }
-            }
-
-            if (ssid.isNotEmpty()) {
-                showWiFiConnectionDialog(ssid, password, security)
-            } else {
-                Toast.makeText(context, "Invalid WiFi QR code", Toast.LENGTH_SHORT).show()
-            }
-        } catch (e: Exception) {
-            Toast.makeText(context, "Error parsing WiFi QR code", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun showWiFiConnectionDialog(ssid: String, password: String, security: String) {
-        MaterialAlertDialogBuilder(context)
-            .setTitle("Connect to WiFi")
-            .setMessage("Network: $ssid\nSecurity: $security")
-            .setPositiveButton("Connect") { _, _ ->
-                connectToWiFi(ssid, password, security)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun connectToWiFi(ssid: String, password: String, security: String) {
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                // For Android 10+ (API 29+), use WifiNetworkSuggestion
-                val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-
-                val suggestion = android.net.wifi.WifiNetworkSuggestion.Builder()
-                    .setSsid(ssid)
-                    .setWpa2Passphrase(password)
-                    .setIsAppInteractionRequired(true)
-                    .build()
-
-                val suggestionsList = listOf(suggestion)
-                val status = wifiManager.addNetworkSuggestions(suggestionsList)
-
-                if (status == android.net.wifi.WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS) {
-                    Toast.makeText(context, "WiFi network added.", Toast.LENGTH_LONG).show()
-                    val panelIntent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
-                    context.startActivity(panelIntent)
-
-                } else {
-                    Toast.makeText(context, "Failed to add WiFi suggestion", Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                // For older Android versions, use legacy WifiConfiguration
-                val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-                val wifiConfig = android.net.wifi.WifiConfiguration()
-                wifiConfig.SSID = "\"$ssid\""
-
-                when (security.uppercase()) {
-                    "WPA", "WPA2" -> {
-                        wifiConfig.preSharedKey = "\"$password\""
-                        wifiConfig.allowedProtocols.set(android.net.wifi.WifiConfiguration.Protocol.RSN)
-                        wifiConfig.allowedKeyManagement.set(android.net.wifi.WifiConfiguration.KeyMgmt.WPA_PSK)
-                    }
-                    "WEP" -> {
-                        wifiConfig.wepKeys[0] = "\"$password\""
-                        wifiConfig.wepTxKeyIndex = 0
-                        wifiConfig.allowedKeyManagement.set(android.net.wifi.WifiConfiguration.KeyMgmt.NONE)
-                    }
-                    "NONE" -> {
-                        wifiConfig.allowedKeyManagement.set(android.net.wifi.WifiConfiguration.KeyMgmt.NONE)
-                    }
-                }
-
-                val networkId = wifiManager.addNetwork(wifiConfig)
-                if (networkId != -1) {
-                    wifiManager.disconnect()
-                    wifiManager.enableNetwork(networkId, true)
-                    wifiManager.reconnect()
-                    Toast.makeText(context, "Connecting to $ssid...", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Failed to add network", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } catch (e: Exception) {
-            Toast.makeText(context, "Error connecting to WiFi: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun showQRResultDialog(result: String) {
-        val options = arrayOf("Copy to Clipboard", "Share")
-
-        MaterialAlertDialogBuilder(context)
-            .setTitle("$result")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        val clip = android.content.ClipData.newPlainText("QR Result", result)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-                    }
-                    1 -> {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, result)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share QR Result"))
-                    }
-                }
-            }
-            .setNegativeButton("Close", null)
-            .show()
+    private fun showApkShareDialog() {
+        shareManager.showApkSharingDialog()
     }
 }
 
