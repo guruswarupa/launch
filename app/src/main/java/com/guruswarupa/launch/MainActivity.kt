@@ -81,6 +81,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var amountInput: EditText
     private lateinit var descriptionInput: EditText
 
+    // APK sharing manager
+    private lateinit var apkShareManager: ApkShareManager
+
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
         private const val REQUEST_CODE_CALL_PHONE = 200
@@ -106,6 +109,9 @@ class MainActivity : ComponentActivity() {
         } else {
             setContentView(R.layout.activity_main)
         }
+
+        // Initialize APK sharing manager
+        apkShareManager = ApkShareManager(this)
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -408,6 +414,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    fun showApkSharingDialog() {
+        apkShareManager.showApkSharingDialog()
+    }
+
     private fun handleVoiceCommand(command: String) {
         when {
             command.startsWith("WhatsApp ", ignoreCase = true) -> {
@@ -672,7 +682,7 @@ class MainActivity : ComponentActivity() {
         dateTextView.text = currentTime
     }
 
-     fun loadApps() {
+    fun loadApps() {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
