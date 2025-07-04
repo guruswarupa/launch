@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var descriptionInput: EditText
 
     // APK sharing manager
-    private lateinit var apkShareManager: ApkShareManager
+    private lateinit var shareManager: ShareManager
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // Initialize APK sharing manager
-        apkShareManager = ApkShareManager(this)
+        shareManager = ShareManager(this)
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -340,6 +340,9 @@ class MainActivity : ComponentActivity() {
                 handleVoiceCommand(result)
             }
         }
+        if (requestCode == ShareManager.FILE_PICKER_REQUEST_CODE && resultCode == RESULT_OK) {
+            shareManager.handleFilePickerResult(data?.data)
+        }
     }
 
     private fun sendWhatsAppMessage(phoneNumber: String, message: String) {
@@ -415,7 +418,7 @@ class MainActivity : ComponentActivity() {
     }
 
     fun showApkSharingDialog() {
-        apkShareManager.showApkSharingDialog()
+        shareManager.showApkSharingDialog()
     }
 
     private fun handleVoiceCommand(command: String) {
