@@ -55,11 +55,38 @@ class ApkShareManager(private val context: Context) {
         }
 
         try {
-            val chooser = Intent.createChooser(intent, "Select file to share")
-            context.startActivity(chooser)
+            (context as MainActivity).startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
         } catch (e: Exception) {
             Toast.makeText(context, "No file manager available", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun handleFilePickerResult(uri: Uri?) {
+        if (uri != null) {
+            shareFile(uri)
+        } else {
+            Toast.makeText(context, "No file selected", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun shareFile(uri: Uri) {
+        try {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = context.contentResolver.getType(uri) ?: "*/*"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                putExtra(Intent.EXTRA_TEXT, "Sharing file")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = Intent.createChooser(shareIntent, "Share file")
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error sharing file: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    companion object {
+        const val FILE_PICKER_REQUEST_CODE = 1001
     }
 
     private fun getInstalledApps(): List<Pair<String, String>> {
