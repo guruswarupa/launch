@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
     private var currentWallpaperBitmap: Bitmap? = null
 
     lateinit var appSearchManager: AppSearchManager
-    private lateinit var appDockManager: AppDockManager
+    internal lateinit var appDockManager: AppDockManager
     private lateinit var usageStatsManager: AppUsageStatsManager
     private var contactsList: MutableList<String> = mutableListOf()
     private var lastSearchTapTime = 0L

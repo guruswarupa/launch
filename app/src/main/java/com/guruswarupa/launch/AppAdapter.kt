@@ -19,6 +19,10 @@ import android.graphics.drawable.Drawable
 import android.provider.ContactsContract
 import kotlin.apply
 
+import android.provider.Settings
+import android.view.Gravity
+import android.widget.PopupMenu
+
 class AppAdapter(
     private val activity: MainActivity,
     var appList: MutableList<ResolveInfo>,
@@ -319,7 +323,7 @@ class AppAdapter(
                 }
 
                 holder.itemView.setOnLongClickListener {
-                    uninstallApp(packageName)
+                    showAppContextMenu(holder.itemView, packageName, appInfo)
                     true
                 }
             }
@@ -328,11 +332,58 @@ class AppAdapter(
 
     override fun getItemCount(): Int = appList.size
 
+    private fun showAppContextMenu(view: View, packageName: String, appInfo: ResolveInfo) {
+        val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
+        popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
+
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.app_info -> {
+                    showAppInfo(packageName)
+                    true
+                }
+                R.id.share_app -> {
+                    shareApp(packageName, appInfo)
+                    true
+                }
+                R.id.uninstall_app -> {
+                    uninstallApp(packageName)
+                    true
+                }
+                R.id.add_to_dock -> {
+                    addToDock(packageName, appInfo)
+                    true
+                }
+                else -> false
+            }
+        }
+
+        popupMenu.show()
+    }
+
+    private fun showAppInfo(packageName: String) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        activity.startActivity(intent)
+    }
+
+    private fun shareApp(packageName: String, appInfo: ResolveInfo) {
+        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        val shareManager = ShareManager(activity)
+        shareManager.shareApk(packageName, appName)
+    }
+
     private fun uninstallApp(packageName: String) {
         val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
             data = Uri.parse("package:$packageName")
         }
         activity.startActivity(intent)
+    }
+
+    private fun addToDock(packageName: String, appInfo: ResolveInfo) {
+        activity.appDockManager.addAppToDock(packageName)
+        Toast.makeText(activity, "Added ${appInfo.loadLabel(activity.packageManager)} to dock", Toast.LENGTH_SHORT).show()
     }
 
     fun showCallConfirmationDialog(contactName: String) {

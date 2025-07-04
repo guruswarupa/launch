@@ -10,6 +10,10 @@
         <item name="android:textSize">18sp</item>
         <item name="android:textColor">@color/white</item>
     </style>
+    <style name="PopupMenuStyle" parent="Widget.AppCompat.PopupMenu">
+        <item name="android:popupBackground">@drawable/menu_background</item>
+    </style>
+
 
     <style name="TextAppearance.Dialog.Item" parent="TextAppearance.MaterialComponents.Body1">
         <item name="android:textSize">16sp</item>

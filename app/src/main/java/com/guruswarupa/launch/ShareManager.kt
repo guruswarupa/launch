@@ -110,7 +110,7 @@ class ShareManager(private val context: Context) {
             .sortedBy { it.first }
     }
 
-    private fun shareApk(packageName: String, appName: String) {
+     fun shareApk(packageName: String, appName: String) {
         try {
             val packageManager = context.packageManager
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
