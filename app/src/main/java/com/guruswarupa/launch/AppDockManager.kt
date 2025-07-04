@@ -517,7 +517,7 @@ class AppDockManager(
         if (appDock.findViewWithTag<ImageView>("apk_share_button") == null) {
             apkShareButton = ImageView(context).apply {
                 tag = "apk_share_button"
-                setImageResource(R.drawable.ic_share_apk) // You'll need to create this drawable
+                setImageResource(R.drawable.ic_share) // You'll need to create this drawable
                 layoutParams = LinearLayout.LayoutParams(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
@@ -940,10 +940,10 @@ class AppDockManager(
     }
 
     // APK sharing functionality moved to ApkShareManager
-    private val apkShareManager = ApkShareManager(context)
+    private val shareManager = ShareManager(context)
 
     private fun showApkShareDialog() {
-        apkShareManager.showApkSharingDialog()
+        shareManager.showApkSharingDialog()
     }
 }
 

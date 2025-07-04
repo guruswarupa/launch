@@ -13,7 +13,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
-class ApkShareManager(private val context: Context) {
+class ShareManager(private val context: Context) {
 
     fun showApkSharingDialog() {
         AlertDialog.Builder(context)
