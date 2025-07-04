@@ -97,7 +97,7 @@ class WeatherManager(private val context: Context) {
 
     private fun promptForApiKey(callback: (String?) -> Unit) {
         handler.post {
-            val builder = AlertDialog.Builder(context)
+            val builder = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             val input = EditText(context)
             input.hint = "Enter your OpenWeatherMap API key"
 

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="CustomDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
-        <item name="colorSurface">@color/surfaceColor</item> <!-- Background color -->
+        <item name="android:windowBackground">@drawable/alert_dialog_background</item>
+        <item name="colorSurface">@android:color/transparent</item> <!-- Transparent surface -->
         <item name="colorOnSurface">@color/white</item> <!-- Text color -->
+        <item name="colorPrimary">@color/nord7</item> <!-- Button color -->
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item> <!-- Rounded corners -->
     </style>
@@ -54,5 +56,12 @@
     <!-- Weather widget style -->
     <style name="WeatherWidgetStyle" parent="WidgetTextStyle">
         <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Dialog button style -->
+    <style name="DialogButtonStyle" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/nord7</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="rippleColor">@color/nord7</item>
     </style>
 </resources>
