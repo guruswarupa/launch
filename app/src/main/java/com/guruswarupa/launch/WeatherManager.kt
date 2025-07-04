@@ -13,11 +13,18 @@ import android.widget.TextView
 import org.json.JSONObject
 import java.net.URL
 import java.util.concurrent.Executors
+import android.location.LocationManager
+import android.location.LocationListener
+import android.location.Location
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
 
 class WeatherManager(private val context: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
+    private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
     private fun getApiKey(): String? {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
@@ -48,13 +55,12 @@ class WeatherManager(private val context: Context) {
                     weatherText.text = "Tap to set weather API key"
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
 
-                    // Set click listener to prompt for API key when user taps weather
                     val clickListener = View.OnClickListener {
                         promptForApiKey { key ->
                             if (key != null) {
                                 saveApiKey(key)
                                 setUserRejectedApiKey(false)
-                                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                                getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
                             }
                         }
                     }
@@ -68,20 +74,19 @@ class WeatherManager(private val context: Context) {
                 if (key != null) {
                     saveApiKey(key)
                     setUserRejectedApiKey(false)
-                    fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                    getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
                 } else {
                     setUserRejectedApiKey(true)
                     handler.post {
                         weatherText.text = "Tap to set weather API key"
                         weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
 
-                        // Set click listener to prompt for API key when user taps weather
                         val clickListener = View.OnClickListener {
                             promptForApiKey { key ->
                                 if (key != null) {
                                     saveApiKey(key)
                                     setUserRejectedApiKey(false)
-                                    fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                                    getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
                                 }
                             }
                         }
@@ -91,7 +96,49 @@ class WeatherManager(private val context: Context) {
                 }
             }
         } else {
-            fetchWeatherData(weatherIcon, weatherText, latitude, longitude, apiKey)
+            getUserLocationAndFetchWeather(weatherIcon, weatherText, apiKey)
+        }
+    }
+
+    private fun getUserLocationAndFetchWeather(weatherIcon: ImageView, weatherText: TextView, apiKey: String) {
+        // Check if we have location permissions
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+            try {
+                val locationListener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        locationManager.removeUpdates(this)
+                        fetchWeatherData(weatherIcon, weatherText, location.latitude, location.longitude, apiKey)
+                    }
+
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+
+                // Try to get last known location first
+                val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+
+                if (lastKnownLocation != null) {
+                    fetchWeatherData(weatherIcon, weatherText, lastKnownLocation.latitude, lastKnownLocation.longitude, apiKey)
+                } else {
+                    // Request fresh location
+                    locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, locationListener, null)
+
+                    // Fallback timeout - if no location after 5 seconds, use default
+                    handler.postDelayed({
+                        locationManager.removeUpdates(locationListener)
+                        fetchWeatherData(weatherIcon, weatherText, 0.0, 0.0, apiKey)
+                    }, 5000)
+                }
+            } catch (e: SecurityException) {
+                // Fallback to default location if security exception
+                fetchWeatherData(weatherIcon, weatherText, 0.0, 0.0, apiKey)
+            }
+        } else {
+            // No location permissions, use default location
+            fetchWeatherData(weatherIcon, weatherText, 0.0, 0.0, apiKey)
         }
     }
 
@@ -118,11 +165,11 @@ class WeatherManager(private val context: Context) {
     }
 
     private fun fetchWeatherData(weatherIcon: ImageView, weatherText: TextView, latitude: Double, longitude: Double, apiKey: String) {
-        // If no coordinates provided, use a default city (you can change this)
         val url = if (latitude != 0.0 && longitude != 0.0) {
             "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&appid=$apiKey&units=metric"
         } else {
-            "https://api.openweathermap.org/data/2.5/weather?q=New York&appid=$apiKey&units=metric"
+            // If no location available, try to get location by IP
+            "https://api.openweathermap.org/data/2.5/weather?q=&appid=$apiKey&units=metric"
         }
 
         executor.execute {
@@ -132,10 +179,10 @@ class WeatherManager(private val context: Context) {
 
                 val main = jsonObject.getJSONObject("main")
                 val weather = jsonObject.getJSONArray("weather").getJSONObject(0)
-
                 val temperature = main.getInt("temp")
                 val description = weather.getString("main")
                 val weatherId = weather.getInt("id")
+                val cityName = jsonObject.getString("name")
 
                 handler.post {
                     weatherText.text = "$temperature°C $description"
