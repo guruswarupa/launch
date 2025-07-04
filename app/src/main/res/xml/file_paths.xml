@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="shared_apks" path="shared_apks/" />
+    <external-cache-path name="external_shared_apks" path="shared_apks/" />
+    <files-path name="internal_files" path="." />
+    <external-files-path name="external_files" path="." />
 </paths>
