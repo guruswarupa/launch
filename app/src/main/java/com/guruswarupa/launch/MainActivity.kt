@@ -202,7 +202,7 @@ class MainActivity : ComponentActivity() {
         fullAppList = mutableListOf()
 
         loadApps()
-        adapter = AppAdapter(this, appList, searchBox, isGridMode)
+        adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
         recyclerView.adapter = adapter
 
         appSearchManager = AppSearchManager(
@@ -730,7 +730,7 @@ class MainActivity : ComponentActivity() {
                             LinearLayoutManager(this)
                         }
 
-                        adapter = AppAdapter(this, appList, searchBox, isGridMode)
+                        adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
                         recyclerView.adapter = adapter
                         recyclerView.visibility = View.VISIBLE
 
@@ -961,13 +961,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun refreshUsageStats() {
-        // Refresh adapter usage data
-        adapter.notifyDataSetChanged()
+    private lateinit var appAdapter: AppAdapter
+    private lateinit var usageStatsTextView: TextView
 
-        // Refresh weekly usage graph
-        loadWeeklyUsageData()
+    private fun refreshUsageStats() {
+        runOnUiThread {
+            appAdapter.notifyDataSetChanged()
+        }
     }
+
     private fun setupWeather() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)

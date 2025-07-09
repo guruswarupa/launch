@@ -22,12 +22,15 @@ import kotlin.apply
 import android.provider.Settings
 import android.view.Gravity
 import android.widget.PopupMenu
+import java.util.concurrent.Executors
+import android.app.Activity
 
 class AppAdapter(
     private val activity: MainActivity,
     var appList: MutableList<ResolveInfo>,
     private val searchBox: EditText,
     private val isGridMode: Boolean,
+    private val context: Context // Added context
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     private val usageStatsManager = AppUsageStatsManager(activity)
@@ -36,6 +39,7 @@ class AppAdapter(
     private val labelCache = mutableMapOf<String, String>() // packageName to label
     private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
     private val CACHE_DURATION = 60000L // 1 minute cache
+    private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
 
     companion object {
         private const val VIEW_TYPE_LIST = 0
@@ -49,65 +53,20 @@ class AppAdapter(
     }
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
-        Thread {
-            // Skip update if list is identical
-            if (appList.size == newAppList.size &&
-                appList.zip(newAppList).all { (old, new) ->
-                    old.activityInfo.packageName == new.activityInfo.packageName
-                }) {
-                return@Thread
+        executor.execute {
+            val newItems = mutableListOf<ResolveInfo>()
+
+            // Create a copy of the list to avoid concurrent modification
+            val safeCopy = ArrayList(newAppList)
+            for (app in safeCopy) {
+                newItems.add(app)
             }
 
-            // Pre-load icons and labels for better performance
-            newAppList.forEach { app ->
-                val packageName = app.activityInfo.packageName
-
-                // Pre-cache icon
-                if (!iconCache.containsKey(packageName)) {
-                    try {
-                        val icon = app.loadIcon(activity.packageManager)
-                        iconCache[packageName] = icon
-                    } catch (e: Exception) {
-                        // Use default icon if loading fails
-                    }
-                }
-
-                // Pre-cache label
-                if (!labelCache.containsKey(packageName)) {
-                    try {
-                        val label = app.loadLabel(activity.packageManager).toString()
-                        labelCache[packageName] = label
-                    } catch (e: Exception) {
-                        // Use package name as fallback
-                        labelCache[packageName] = packageName
-                    }
-                }
-            }
-
-            // Update on main thread
-            activity.runOnUiThread {
+            // Update UI on main thread
+            (context as? Activity)?.runOnUiThread {
                 appList.clear()
-                appList.addAll(newAppList)
+                appList.addAll(newItems)
                 notifyDataSetChanged()
-            }
-        }.start()
-
-        // Use more efficient update instead of notifyDataSetChanged
-        val oldSize = appList.size
-        val newSize = newAppList.size
-
-        appList.clear()
-        appList.addAll(newAppList)
-
-        when {
-            oldSize == newSize -> notifyItemRangeChanged(0, newSize)
-            oldSize < newSize -> {
-                notifyItemRangeChanged(0, oldSize)
-                notifyItemRangeInserted(oldSize, newSize - oldSize)
-            }
-            else -> {
-                notifyItemRangeChanged(0, newSize)
-                notifyItemRangeRemoved(newSize, oldSize - newSize)
             }
         }
     }
