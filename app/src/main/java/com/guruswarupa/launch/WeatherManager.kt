@@ -64,7 +64,12 @@ class WeatherManager(private val context: Context) {
                                 if (key != null) {
                                     saveApiKey(key)
                                     setUserRejectedApiKey(false)
-                                    getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                                    // Use the provided coordinates if available, otherwise get user location
+                                    if (latitude != 0.0 && longitude != 0.0) {
+                                        fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                                    } else {
+                                        getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                                    }
                                 }
                             }
                         }
@@ -83,7 +88,12 @@ class WeatherManager(private val context: Context) {
                     if (key != null) {
                         saveApiKey(key)
                         setUserRejectedApiKey(false)
-                        getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                        // Use the provided coordinates if available, otherwise get user location
+                        if (latitude != 0.0 && longitude != 0.0) {
+                            fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                        } else {
+                            getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                        }
                     } else {
                         setUserRejectedApiKey(true)
                         handler.post {
@@ -98,7 +108,12 @@ class WeatherManager(private val context: Context) {
                                         if (key != null) {
                                             saveApiKey(key)
                                             setUserRejectedApiKey(false)
-                                            getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                                            // Use the provided coordinates if available, otherwise get user location
+                                            if (latitude != 0.0 && longitude != 0.0) {
+                                                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                                            } else {
+                                                getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                                            }
                                         }
                                     }
                                 }
@@ -110,7 +125,12 @@ class WeatherManager(private val context: Context) {
                 }
             }
         } else {
-            getUserLocationAndFetchWeather(weatherIcon, weatherText, apiKey)
+            // Use the provided coordinates if available, otherwise get user location
+            if (latitude != 0.0 && longitude != 0.0) {
+                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, apiKey)
+            } else {
+                getUserLocationAndFetchWeather(weatherIcon, weatherText, apiKey)
+            }
         }
     }
 
