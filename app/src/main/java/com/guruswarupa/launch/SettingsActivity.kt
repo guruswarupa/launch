@@ -157,6 +157,7 @@ class SettingsActivity : ComponentActivity() {
             val settingsJson = JSONObject()
 
             for ((key, value) in allPrefs) {
+                // Include all keys including todo_items and transaction data
                 when (value) {
                     is String -> settingsJson.put(key, value)
                     is Boolean -> settingsJson.put(key, value)
@@ -199,6 +200,7 @@ class SettingsActivity : ComponentActivity() {
                         is Int -> editor.putInt(key, value)
                         is Long -> editor.putLong(key, value)
                         is Double -> editor.putFloat(key, value.toFloat())
+                        is Float -> editor.putFloat(key, value)
                         is JSONArray -> {
                             val stringSet = mutableSetOf<String>()
                             for (i in 0 until value.length()) {
