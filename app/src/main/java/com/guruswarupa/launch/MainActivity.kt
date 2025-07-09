@@ -71,7 +71,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var weatherManager: WeatherManager // Add this line
     private lateinit var weatherIcon: ImageView
     private lateinit var weatherText: TextView
-    private lateinit var quickNoteText: EditText
+    private lateinit var todoRecyclerView: RecyclerView
+    private lateinit var todoAdapter: TodoAdapter
+    private lateinit var addTodoButton: ImageButton
+    private var todoItems: MutableList<TodoItem> = mutableListOf()
     private lateinit var voiceSearchButton: ImageButton
 
     // Finance widget variables
@@ -127,7 +130,6 @@ class MainActivity : ComponentActivity() {
         searchBox = findViewById(R.id.search_box)
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        quickNoteText = findViewById(R.id.quick_note_text)
         voiceSearchButton = findViewById(R.id.voice_search_button)
 
         searchBox.setOnClickListener {
@@ -224,9 +226,20 @@ class MainActivity : ComponentActivity() {
 
         lastUpdateDate = getCurrentDateString()
 
-        quickNoteText = findViewById(R.id.quick_note_text)
-        loadQuickNote()
-        setupQuickNoteAutoSave()
+        todoRecyclerView = findViewById(R.id.todo_recycler_view)
+        addTodoButton = findViewById(R.id.add_todo_button)
+
+        todoRecyclerView.layoutManager = LinearLayoutManager(this)
+        todoAdapter = TodoAdapter(todoItems, { todoItem ->
+            removeTodoItem(todoItem)
+        })
+        todoRecyclerView.adapter = todoAdapter
+
+        addTodoButton.setOnClickListener {
+            showAddTodoDialog()
+        }
+
+        loadTodoItems()
 
         // Initialize finance widget
         financeManager = FinanceManager(sharedPreferences)
@@ -665,7 +678,7 @@ class MainActivity : ComponentActivity() {
         handler.removeCallbacks(updateRunnable)
         unregisterReceiver(packageReceiver)
         unregisterReceiver(wallpaperChangeReceiver)
-        saveQuickNote()
+        saveTodoItems()
     }
 
     private fun updateTime() {
@@ -1019,30 +1032,95 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
-    private fun setupQuickNoteAutoSave() {
-        quickNoteText.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                // Auto-save after user stops typing for 1 second
-                quickNoteText.removeCallbacks(saveNoteRunnable)
-                quickNoteText.postDelayed(saveNoteRunnable, 1000)
+    private fun showAddTodoDialog() {
+        val dialogBuilder = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
+        dialogBuilder.setTitle("Add Todo Item")
+
+        val input = EditText(this)
+        input.hint = "Enter todo item"
+        input.setTextColor(ContextCompat.getColor(this, R.color.white))
+        input.setHintTextColor(ContextCompat.getColor(this, R.color.gray))
+
+        dialogBuilder.setView(input)
+
+        dialogBuilder.setPositiveButton("One-time") { _, _ ->
+            val todoText = input.text.toString().trim()
+            if (todoText.isNotEmpty()) {
+                addTodoItem(todoText, false)
             }
-        })
+        }
+
+        dialogBuilder.setNeutralButton("Daily") { _, _ ->
+            val todoText = input.text.toString().trim()
+            if (todoText.isNotEmpty()) {
+                addTodoItem(todoText, true)
+            }
+        }
+
+        dialogBuilder.setNegativeButton("Cancel") { dialog, _ ->
+            dialog.cancel()
+        }
+
+        val dialog = dialogBuilder.create()
+        dialog.show()
     }
 
-    private val saveNoteRunnable = Runnable {
-        saveQuickNote()
+    private fun addTodoItem(text: String, isRecurring: Boolean) {
+        todoItems.add(TodoItem(text, false, isRecurring))
+        todoAdapter.notifyItemInserted(todoItems.size - 1)
+        saveTodoItems()
     }
 
-    private fun loadQuickNote() {
-        val savedNote = sharedPreferences.getString("quick_note", "")
-        quickNoteText.setText(savedNote)
+    private fun removeTodoItem(todoItem: TodoItem) {
+        val index = todoItems.indexOf(todoItem)
+        if (index != -1) {
+            todoItems.removeAt(index)
+            todoAdapter.notifyItemRemoved(index)
+            saveTodoItems()
+        }
     }
 
-    private fun saveQuickNote() {
-        val noteText = quickNoteText.text.toString()
-        sharedPreferences.edit().putString("quick_note", noteText).apply()
+    private fun loadTodoItems() {
+        val todoString = sharedPreferences.getString("todo_items", "") ?: ""
+        if (todoString.isNotEmpty()) {
+            val todoArray = todoString.split("|")
+            todoItems.clear()
+            for (todoString in todoArray) {
+                if (todoString.isNotEmpty()) {
+                    val parts = todoString.split(":")
+                    if (parts.size >= 3) {
+                        val text = parts[0]
+                        val isChecked = parts[1].toBoolean()
+                        val isRecurring = parts[2].toBoolean()
+                        val lastCompletedDate = if (parts.size > 3) parts[3] else null
+                        todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate))
+                    } else if (parts.size == 2) {
+                        // Legacy format support
+                        val text = parts[0]
+                        val isChecked = parts[1].toBoolean()
+                        todoItems.add(TodoItem(text, isChecked, false))
+                    }
+                }
+            }
+            checkRecurringTasks()
+            todoAdapter.notifyDataSetChanged()
+        }
+    }
+
+    private fun saveTodoItems() {
+        val todoString = todoItems.joinToString("|") {
+            "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}"
+        }
+        sharedPreferences.edit().putString("todo_items", todoString).apply()
+    }
+
+    private fun checkRecurringTasks() {
+        val currentDate = getCurrentDateString()
+        for (todoItem in todoItems) {
+            if (todoItem.isRecurring && todoItem.lastCompletedDate != currentDate) {
+                todoItem.isChecked = false
+            }
+        }
     }
 
     private fun showTransactionHistory() {

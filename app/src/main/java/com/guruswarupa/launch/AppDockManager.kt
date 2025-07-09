@@ -526,7 +526,7 @@ class AppDockManager(
                 }
                 setOnClickListener { showApkShareDialog() }
                 setOnLongClickListener {
-                    Toast.makeText(context, "Share APK", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Share Apps/Files", Toast.LENGTH_SHORT).show()
                     true
                 }
             }

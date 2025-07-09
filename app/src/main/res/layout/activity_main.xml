@@ -1,4 +1,5 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -144,40 +145,49 @@
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false"/>
 
-                <!-- Quick Note Widget -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/widget_background"
-                    android:padding="16dp">
-
-                    <TextView
+                <!-- To Do Widget -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Quick Notes"
-                        android:textSize="16sp"
-                        android:textColor="@color/white"
-                        android:textStyle="bold"
-                        android:gravity="start"
-                        android:layout_marginBottom="12dp"/>
-
-                    <EditText
-                        android:id="@+id/quick_note_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="120dp"
-                        android:hint="Jot down things you want to do..."
-                        android:textColor="@color/white"
-                        android:textColorHint="@color/gray_light"
-                        android:background="@drawable/search_box_transparent_bg"
+                        android:orientation="vertical"
+                        android:background="@drawable/widget_background"
                         android:padding="12dp"
-                        android:gravity="top|start"
-                        android:inputType="textMultiLine|textCapSentences"
-                        android:textSize="14sp"/>
-                </LinearLayout>
+                        android:layout_marginBottom="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="8dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Todo List"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <ImageButton
+                                android:id="@+id/add_todo_button"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:background="?android:attr/selectableItemBackgroundBorderless"
+                                android:src="@drawable/ic_add"
+                                app:tint="@color/white"
+                                android:contentDescription="Add todo item" />
+
+                        </LinearLayout>
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/todo_recycler_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:maxHeight="120dp" />
+
+                    </LinearLayout>
 
                 <!-- Finance Widget -->
                 <LinearLayout
