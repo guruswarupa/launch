@@ -1,4 +1,3 @@
-
 package com.guruswarupa.launch
 
 import android.app.AlertDialog
@@ -46,6 +45,8 @@ class WeatherManager(private val context: Context) {
         prefs.edit().putBoolean("weather_api_key_rejected", rejected).apply()
     }
 
+    private var isPromptingForApiKey = false
+
     fun updateWeather(weatherIcon: ImageView, weatherText: TextView, latitude: Double = 0.0, longitude: Double = 0.0, forcePrompt: Boolean = false) {
         val apiKey = getApiKey()
 
@@ -56,11 +57,20 @@ class WeatherManager(private val context: Context) {
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
 
                     val clickListener = View.OnClickListener {
-                        promptForApiKey { key ->
-                            if (key != null) {
-                                saveApiKey(key)
-                                setUserRejectedApiKey(false)
-                                getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                        if (!isPromptingForApiKey) {
+                            isPromptingForApiKey = true
+                            promptForApiKey { key ->
+                                isPromptingForApiKey = false
+                                if (key != null) {
+                                    saveApiKey(key)
+                                    setUserRejectedApiKey(false)
+                                    // Use the provided coordinates if available, otherwise get user location
+                                    if (latitude != 0.0 && longitude != 0.0) {
+                                        fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                                    } else {
+                                        getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                                    }
+                                }
                             }
                         }
                     }
@@ -70,33 +80,57 @@ class WeatherManager(private val context: Context) {
                 return
             }
 
-            promptForApiKey { key ->
-                if (key != null) {
-                    saveApiKey(key)
-                    setUserRejectedApiKey(false)
-                    getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
-                } else {
-                    setUserRejectedApiKey(true)
-                    handler.post {
-                        weatherText.text = "Tap to set weather API key"
-                        weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+            // Only prompt if not already prompting
+            if (!isPromptingForApiKey) {
+                isPromptingForApiKey = true
+                promptForApiKey { key ->
+                    isPromptingForApiKey = false
+                    if (key != null) {
+                        saveApiKey(key)
+                        setUserRejectedApiKey(false)
+                        // Use the provided coordinates if available, otherwise get user location
+                        if (latitude != 0.0 && longitude != 0.0) {
+                            fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                        } else {
+                            getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                        }
+                    } else {
+                        setUserRejectedApiKey(true)
+                        handler.post {
+                            weatherText.text = "Tap to set weather API key"
+                            weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
 
-                        val clickListener = View.OnClickListener {
-                            promptForApiKey { key ->
-                                if (key != null) {
-                                    saveApiKey(key)
-                                    setUserRejectedApiKey(false)
-                                    getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                            val clickListener = View.OnClickListener {
+                                if (!isPromptingForApiKey) {
+                                    isPromptingForApiKey = true
+                                    promptForApiKey { key ->
+                                        isPromptingForApiKey = false
+                                        if (key != null) {
+                                            saveApiKey(key)
+                                            setUserRejectedApiKey(false)
+                                            // Use the provided coordinates if available, otherwise get user location
+                                            if (latitude != 0.0 && longitude != 0.0) {
+                                                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
+                                            } else {
+                                                getUserLocationAndFetchWeather(weatherIcon, weatherText, key)
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                            weatherIcon.setOnClickListener(clickListener)
+                            weatherText.setOnClickListener(clickListener)
                         }
-                        weatherIcon.setOnClickListener(clickListener)
-                        weatherText.setOnClickListener(clickListener)
                     }
                 }
             }
         } else {
-            getUserLocationAndFetchWeather(weatherIcon, weatherText, apiKey)
+            // Use the provided coordinates if available, otherwise get user location
+            if (latitude != 0.0 && longitude != 0.0) {
+                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, apiKey)
+            } else {
+                getUserLocationAndFetchWeather(weatherIcon, weatherText, apiKey)
+            }
         }
     }
 
