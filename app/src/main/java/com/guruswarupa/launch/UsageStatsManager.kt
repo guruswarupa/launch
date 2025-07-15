@@ -216,6 +216,28 @@ class AppUsageStatsManager(private val context: Context) {
         return weeklyData
     }
 
+    fun getTotalUsageForPeriod(startTime: Long, endTime: Long): Long {
+        if (!hasUsageStatsPermission()) return 0L
+
+        // Use INTERVAL_BEST for more accurate data
+        val usageStatsList = usageStatsManager.queryUsageStats(
+            UsageStatsManager.INTERVAL_BEST,
+            startTime,
+            endTime
+        )
+
+        return usageStatsList
+            .filter { stats ->
+                stats.totalTimeInForeground > 0 &&
+                        stats.lastTimeUsed >= startTime &&
+                        stats.lastTimeUsed <= endTime &&
+                        !stats.packageName.startsWith("com.android") &&
+                        !stats.packageName.startsWith("android") &&
+                        stats.packageName != "com.guruswarupa.launch"
+            }
+            .sumOf { it.totalTimeInForeground }
+    }
+
     fun formatUsageTime(timeInMillis: Long): String {
         if (timeInMillis == 0L) return ""
 

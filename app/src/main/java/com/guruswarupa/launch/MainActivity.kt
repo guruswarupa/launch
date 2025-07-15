@@ -181,7 +181,13 @@ class MainActivity : ComponentActivity() {
 
         updateTime()
         updateDate()
-        updateWeather()
+        setupWeather()
+
+        // Initialize battery and phone usage widgets
+        setupBatteryAndUsage()
+
+        // Initialize todo widget
+        setupTodoWidget()
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
 
@@ -587,6 +593,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val batteryChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            updateBatteryInBackground()
+        }
+    }
+
     private fun chooseWallpaper() {
         val intent = Intent(Intent.ACTION_SET_WALLPAPER)
         startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
@@ -643,6 +655,38 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun updateBatteryInBackground() {
+        Thread {
+            val batteryManager = BatteryManager(this)
+
+            runOnUiThread {
+                val batteryPercentageTextView = findViewById<TextView>(R.id.battery_percentage)
+                batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
+            }
+        }.start()
+    }
+
+    private fun updateUsageInBackground() {
+        Thread {
+            // Get screen time usage for today
+            val calendar = Calendar.getInstance()
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val startTime = calendar.timeInMillis
+            val endTime = System.currentTimeMillis()
+
+            val screenTimeMillis = usageStatsManager.getTotalUsageForPeriod(startTime, endTime)
+            val formattedTime = usageStatsManager.formatUsageTime(screenTimeMillis)
+
+            runOnUiThread {
+                val screenTimeTextView = findViewById<TextView>(R.id.screen_time)
+                screenTimeTextView?.text = "Screen Time: $formattedTime"
+            }
+        }.start()
+    }
+
     override fun onResume() {
         super.onResume()
 
@@ -660,6 +704,10 @@ class MainActivity : ComponentActivity() {
 
         handler.post(updateRunnable)
 
+        // Immediately update battery and usage when app resumes
+        updateBatteryInBackground()
+        updateUsageInBackground()
+
         setWallpaperBackground()
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -669,6 +717,10 @@ class MainActivity : ComponentActivity() {
         registerReceiver(packageReceiver, filter)
         registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
 
+        // Register battery change receiver
+        val batteryFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        registerReceiver(batteryChangeReceiver, batteryFilter)
+
         // Reapply focus mode state when returning from apps
         applyFocusMode(appDockManager.getCurrentMode())
     }
@@ -676,8 +728,13 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(updateRunnable)
-        unregisterReceiver(packageReceiver)
-        unregisterReceiver(wallpaperChangeReceiver)
+        try {
+            unregisterReceiver(packageReceiver)
+            unregisterReceiver(wallpaperChangeReceiver)
+            unregisterReceiver(batteryChangeReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered
+        }
         saveTodoItems()
     }
 
@@ -886,7 +943,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Sort contacts in background thread
+                    // Sortcontacts in background thread
                     tempContactsList.sort()
 
                     runOnUiThread {
@@ -999,6 +1056,34 @@ class MainActivity : ComponentActivity() {
         }
 
         weatherManager.updateWeather(weatherIcon, weatherText)
+    }
+
+    private fun setupBatteryAndUsage() {
+        // Assuming you have TextViews in your layout with these IDs
+        val batteryPercentageTextView = findViewById<TextView>(R.id.battery_percentage)
+        val screenTimeTextView = findViewById<TextView>(R.id.screen_time)
+
+        // Get battery percentage using BatteryManager
+        val batteryManager = BatteryManager(this)
+        batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
+
+        // Get screen time usage in minutes for today
+        val calendar = Calendar.getInstance()
+        // Set to start of current day
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+
+        val screenTimeMillis = usageStatsManager.getTotalUsageForPeriod(startTime, endTime)
+        val formattedTime = usageStatsManager.formatUsageTime(screenTimeMillis)
+        screenTimeTextView?.text = "Screen Time: $formattedTime"
+    }
+
+    private fun setupTodoWidget() {
+        //Initialization logic for the todo widget
     }
 
     private fun showWeatherSettings() {
