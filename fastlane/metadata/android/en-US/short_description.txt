@@ -1,1 +1,1 @@
-A clean, efficient, and minimalist Android launcher that prioritizes simplicity and functionality.
+A clean, efficient, and minimalist Android launcher.

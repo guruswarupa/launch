@@ -124,4 +124,3 @@ Storage: to save notes, wallpaper, and backup data
 No background tracking. No ads. No analytics.
 
 Lightweight. Powerful. Intentional. Try Launch – and take back control of your home screen.
-
