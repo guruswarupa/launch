@@ -1,6 +1,209 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-             android:layout_width="match_parent"
-             android:layout_height="match_parent">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Task Input -->
+        <EditText
+            android:id="@+id/task_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Enter todo item"
+            android:textColor="@color/white"
+            android:textColorHint="@color/gray"
+            android:background="@drawable/search_box_transparent_bg"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Category Selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Category:"
+            android:textColor="@color/white"
+            android:layout_marginBottom="8dp" />
+
+        <Spinner
+            android:id="@+id/category_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Priority Selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Priority:"
+            android:textColor="@color/white"
+            android:layout_marginBottom="8dp" />
+
+        <Spinner
+            android:id="@+id/priority_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Due Time (Optional) -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Due Time (Optional):"
+            android:textColor="@color/white"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/time_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="HH:MM (e.g., 14:30)"
+            android:textColor="@color/white"
+            android:textColorHint="@color/gray"
+            android:background="@drawable/search_box_transparent_bg"
+            android:padding="12dp"
+            android:inputType="time"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Recurring Checkbox -->
+        <CheckBox
+            android:id="@+id/recurring_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Recurring Task"
+            android:textColor="@color/white"
+            android:buttonTint="@color/white"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Days Selection Container -->
+        <LinearLayout
+            android:id="@+id/days_selection_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select Days:"
+                android:textColor="@color/white"
+                android:layout_marginBottom="8dp" />
+
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="4"
+                android:rowCount="2"
+                android:alignmentMode="alignBounds"
+                android:useDefaultMargins="false">
+
+                <CheckBox
+                    android:id="@+id/checkbox_sunday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_gravity="fill_horizontal"
+                    android:text="Sun"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:buttonTint="@color/white"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_monday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_gravity="fill_horizontal"
+                    android:text="Mon"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:buttonTint="@color/white"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_tuesday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_gravity="fill_horizontal"
+                    android:text="Tue"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:buttonTint="@color/white"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_wednesday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_gravity="fill_horizontal"
+                    android:text="Wed"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:buttonTint="@color/white"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_thursday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_gravity="fill_horizontal"
+                    android:text="Thu"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:buttonTint="@color/white"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_friday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_gravity="fill_horizontal"
+                    android:text="Fri"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:buttonTint="@color/white"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+                <CheckBox
+                    android:id="@+id/checkbox_saturday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_gravity="fill_horizontal"
+                    android:text="Sat"
+                    android:textColor="@color/white"
+                    android:textSize="11sp"
+                    android:buttonTint="@color/white"
+                    android:gravity="center_vertical"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp" />
+
+            </GridLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

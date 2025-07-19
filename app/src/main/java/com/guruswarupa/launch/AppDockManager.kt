@@ -37,21 +37,27 @@ class AppDockManager(
     private val FOCUS_MODE_KEY = "focus_mode_enabled"
     private val FOCUS_MODE_HIDDEN_APPS_KEY = "focus_mode_hidden_apps"
     private val FOCUS_MODE_END_TIME_KEY = "focus_mode_end_time"
+    private val POWER_SAVER_MODE_KEY = "power_saver_mode_enabled"
 
     private lateinit var addIcon: ImageView
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var restartButton: ImageView
     private lateinit var apkShareButton: ImageView
+    private lateinit var powerSaverToggle: ImageView
     private var isFocusMode: Boolean = false
+    private var isPowerSaverMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
 
     init {
-        // Initialize focus mode state from preferences
         isFocusMode = sharedPreferences.getBoolean(FOCUS_MODE_KEY, false)
+        isPowerSaverMode = sharedPreferences.getBoolean(POWER_SAVER_MODE_KEY, false)
 
-        // Check if focus mode timer has expired
+        if (isPowerSaverMode) {
+            (context as MainActivity).applyPowerSaverMode(true)
+        }
+
         val focusEndTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
         if (isFocusMode && focusEndTime > 0 && System.currentTimeMillis() > focusEndTime) {
             // Just update the state without calling methods that depend on MainActivity
@@ -61,10 +67,10 @@ class AppDockManager(
                 .remove(FOCUS_MODE_END_TIME_KEY)
                 .apply()
         }
-        loadFocusMode()
         ensureRestartButton()
         ensureFocusModeToggle()
-        ensureApkShareButton()
+        ensurePowerSaverToggle()
+        loadDockApps()
         ensureAddIcon()
         updateDockVisibility()
 
@@ -155,7 +161,7 @@ class AppDockManager(
         saveDockItem("group:$groupName:${packageNames.joinToString(",")}")
     }
 
-     fun addAppToDockUI(packageName: String) {
+    fun addAppToDockUI(packageName: String) {
         try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
             val appIcon = packageManager.getApplicationIcon(appInfo)
@@ -538,10 +544,30 @@ class AppDockManager(
         }
     }
 
+    fun isPowerSaverActive(): Boolean {
+        return isPowerSaverMode
+    }
+
+    private fun togglePowerSaverMode() {
+        isPowerSaverMode = !isPowerSaverMode
+        sharedPreferences.edit().putBoolean(POWER_SAVER_MODE_KEY, isPowerSaverMode).apply()
+
+        // Update power saver toggle icon
+        powerSaverToggle.setImageResource(
+            if (isPowerSaverMode) R.drawable.ic_power_saver_on else R.drawable.ic_power_saver_off
+        )
+
+        // Apply power saver mode changes
+        (context as MainActivity).applyPowerSaverMode(isPowerSaverMode)
+
+        updateDockVisibility()
+    }
+
     private fun refreshDock() {
         appDock.removeAllViews()
         ensureRestartButton()
         ensureFocusModeToggle()
+        ensurePowerSaverToggle()
         ensureApkShareButton()
         loadDockApps()
         ensureAddIcon()
@@ -662,6 +688,31 @@ class AppDockManager(
             if (isFocusMode) {
                 startTimerDisplay()
             }
+        }
+    }
+
+    private fun ensurePowerSaverToggle() {
+        if (appDock.findViewWithTag<ImageView>("power_saver_toggle") == null) {
+            powerSaverToggle = ImageView(context).apply {
+                tag = "power_saver_toggle"
+                setImageResource(if (isPowerSaverMode) R.drawable.ic_power_saver_on else R.drawable.ic_power_saver_off)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24, 24, 24, 24)
+                }
+                setOnClickListener { togglePowerSaverMode() }
+                setOnLongClickListener {
+                    Toast.makeText(context, if (isPowerSaverMode) "Power Saver: ON" else "Power Saver: OFF", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            // Insert after focus mode container
+            val focusContainerIndex = (0 until appDock.childCount).firstOrNull {
+                appDock.getChildAt(it).tag == "focus_mode_container"
+            } ?: 1
+            appDock.addView(powerSaverToggle, focusContainerIndex + 1)
         }
     }
 
@@ -822,19 +873,19 @@ class AppDockManager(
     }
 
     private fun updateDockVisibility() {
-        // Hide/show all dock items except the focus mode container and restart button
+        // Hide/show all dock items except the focus mode container, power saver toggle and restart button
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
             when (child.tag) {
-                "focus_mode_container", "restart_button" -> {
+                "focus_mode_container", "restart_button", "power_saver_toggle" -> {
                     child.visibility = View.VISIBLE
                 }
                 "add_icon", "apk_share_button" -> {
-                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+                    child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
                 }
                 else -> {
-                    // Hide all dock apps and groups when in focus mode
-                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+                    // Hide all dock apps and groups when in focus mode or power saver mode
+                    child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
                 }
             }
         }

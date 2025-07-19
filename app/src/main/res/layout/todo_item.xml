@@ -2,33 +2,127 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:padding="8dp"
-    android:gravity="center_vertical">
+    android:background="@drawable/card_background"
+    android:layout_marginBottom="4dp">
 
-    <CheckBox
-        android:id="@+id/todo_checkbox"
-        android:layout_width="wrap_content"
+    <!-- Main row with checkbox, text, and delete button -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:buttonTint="@color/white"
-        android:layout_marginEnd="8dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-    <TextView
-        android:id="@+id/todo_text"
-        android:layout_width="0dp"
+        <!-- Priority indicator -->
+        <View
+            android:id="@+id/priority_indicator"
+            android:layout_width="4dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
+            android:background="@color/white" />
+
+        <CheckBox
+            android:id="@+id/todo_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/white"
+            android:layout_marginEnd="8dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginEnd="8dp">
+
+            <TextView
+                android:id="@+id/todo_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/category_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/gray"
+                    android:textSize="10sp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/due_time_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/gray"
+                    android:textSize="10sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/delete_todo_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_delete"
+            android:contentDescription="Delete todo item" />
+
+    </LinearLayout>
+
+    <!-- Days of week indicators for recurring tasks -->
+    <LinearLayout
+        android:id="@+id/days_container"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textColor="@color/white"
-        android:textSize="14sp"
-        android:layout_marginEnd="8dp" />
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="36dp"
+        android:visibility="gone">
 
-    <ImageButton
-        android:id="@+id/delete_todo_button"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_delete"
-        android:tint="@color/red"
-        android:contentDescription="Delete todo item" />
+        <TextView
+            android:id="@+id/day_sun"
+            style="@style/DayBadge"
+            android:text="S" />
+
+        <TextView
+            android:id="@+id/day_mon"
+            style="@style/DayBadge"
+            android:text="M" />
+
+        <TextView
+            android:id="@+id/day_tue"
+            style="@style/DayBadge"
+            android:text="T" />
+
+        <TextView
+            android:id="@+id/day_wed"
+            style="@style/DayBadge"
+            android:text="W" />
+
+        <TextView
+            android:id="@+id/day_thu"
+            style="@style/DayBadge"
+            android:text="T" />
+
+        <TextView
+            android:id="@+id/day_fri"
+            style="@style/DayBadge"
+            android:text="F" />
+
+        <TextView
+            android:id="@+id/day_sat"
+            style="@style/DayBadge"
+            android:text="S" />
+
+    </LinearLayout>
 
 </LinearLayout>
