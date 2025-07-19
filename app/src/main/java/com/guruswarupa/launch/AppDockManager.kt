@@ -58,6 +58,7 @@ class AppDockManager(
             (context as MainActivity).applyPowerSaverMode(true)
         }
 
+        // Handle focus mode expiry
         val focusEndTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
         if (isFocusMode && focusEndTime > 0 && System.currentTimeMillis() > focusEndTime) {
             // Just update the state without calling methods that depend on MainActivity
@@ -67,12 +68,9 @@ class AppDockManager(
                 .remove(FOCUS_MODE_END_TIME_KEY)
                 .apply()
         }
-        ensureRestartButton()
-        ensureFocusModeToggle()
-        ensurePowerSaverToggle()
-        loadDockApps()
-        ensureAddIcon()
-        updateDockVisibility()
+
+        // Initialize dock with all components
+        refreshDock()
 
         // Check if focus mode timer should be restored
         if (isFocusMode) {
@@ -152,13 +150,13 @@ class AppDockManager(
     }
 
     internal fun addAppToDock(packageName: String) {
-        addAppToDockUI(packageName)
         saveDockItem("single:$packageName")
+        refreshDock()
     }
 
     private fun addGroupToDock(packageNames: List<String>, groupName: String) {
-        addGroupToDockUI(packageNames, groupName)
         saveDockItem("group:$groupName:${packageNames.joinToString(",")}")
+        refreshDock()
     }
 
     fun addAppToDockUI(packageName: String) {
@@ -183,9 +181,11 @@ class AppDockManager(
                     showRemoveDockAppDialog("single:$packageName")
                     true
                 }
-                // Insert app after focus mode (3rd position) but before add button
-                val insertIndex = if (appDock.childCount > 2) appDock.childCount - 1 else appDock.childCount
-                appDock.addView(this, insertIndex)
+                // Insert app before the add icon
+                val addIconIndex = (0 until appDock.childCount).firstOrNull {
+                    appDock.getChildAt(it).tag == "add_icon"
+                } ?: appDock.childCount
+                appDock.addView(this, addIconIndex)
             }
         } catch (e: PackageManager.NameNotFoundException) {
             Toast.makeText(context, "App not found", Toast.LENGTH_SHORT).show()
@@ -262,9 +262,11 @@ class AppDockManager(
             true
         }
 
-        // Insert group after focus mode (3rd position) but before add button
-        val insertIndex = if (appDock.childCount > 2) appDock.childCount - 1 else appDock.childCount
-        appDock.addView(groupLayout, insertIndex)
+        // Insert group before the add icon
+        val addIconIndex = (0 until appDock.childCount).firstOrNull {
+            appDock.getChildAt(it).tag == "add_icon"
+        } ?: appDock.childCount
+        appDock.addView(groupLayout, addIconIndex)
     }
 
     private fun createSquircleBackground(): Drawable {
@@ -569,8 +571,8 @@ class AppDockManager(
         ensureFocusModeToggle()
         ensurePowerSaverToggle()
         ensureApkShareButton()
-        loadDockApps()
         ensureAddIcon()
+        loadDockApps()
         updateDockVisibility()
     }
 
@@ -876,10 +878,9 @@ class AppDockManager(
         // Hide/show all dock items except the focus mode container, power saver toggle and restart button
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
-            when (child.tag) {
-                "focus_mode_container", "restart_button", "power_saver_toggle" -> {
-                    child.visibility = View.VISIBLE
-                }
+            when (child.tag) {                "focus_mode_container", "restart_button", "power_saver_toggle" -> {
+                child.visibility = View.VISIBLE
+            }
                 "add_icon", "apk_share_button" -> {
                     child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
                 }
