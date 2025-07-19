@@ -44,10 +44,13 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
 - Cannot exit until timer ends — stay on track
 - Visible timer countdown displayed on screen
 
-### 📝 Quick Notes Widget
-- Instantly jot down and view notes from the home screen
-- Long press to edit or delete
-- Stored locally for speed and privacy
+### ✅ Todo List Widget
+- Add and manage daily tasks directly from the home screen
+- Set tasks for specific days of the week (not just one-time or daily repeats)
+- Mark tasks as complete with visual strikethrough
+- Tap "Add Todo" to create new tasks with day-specific scheduling
+- Tasks persist and show completion status
+- Clean, minimal interface integrated into the launcher
 
 ---
 
