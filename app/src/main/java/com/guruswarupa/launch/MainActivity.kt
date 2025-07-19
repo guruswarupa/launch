@@ -81,6 +81,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var addTodoButton: ImageButton
     private var todoItems: MutableList<TodoItem> = mutableListOf()
     private lateinit var voiceSearchButton: ImageButton
+    private var isInPowerSaverMode = false
 
     // Finance widget variables
     private lateinit var financeManager: FinanceManager
@@ -194,6 +195,21 @@ class MainActivity : ComponentActivity() {
         // Initialize todo widget
         setupTodoWidget()
 
+        todoRecyclerView = findViewById(R.id.todo_recycler_view)
+        addTodoButton = findViewById(R.id.add_todo_button)
+
+        todoRecyclerView.layoutManager = LinearLayoutManager(this)
+        todoAdapter = TodoAdapter(todoItems, { todoItem ->
+            removeTodoItem(todoItem)
+        })
+        todoRecyclerView.adapter = todoAdapter
+
+        addTodoButton.setOnClickListener {
+            showAddTodoDialog()
+        }
+
+        loadTodoItems()
+
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
 
         // Refresh apps after appDockManager is fully initialized
@@ -227,7 +243,6 @@ class MainActivity : ComponentActivity() {
             contactsList = contactsList
         )
 
-        appDockManager.loadDockApps()
         setWallpaperBackground()
 
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
@@ -236,21 +251,6 @@ class MainActivity : ComponentActivity() {
         }
 
         lastUpdateDate = getCurrentDateString()
-
-        todoRecyclerView = findViewById(R.id.todo_recycler_view)
-        addTodoButton = findViewById(R.id.add_todo_button)
-
-        todoRecyclerView.layoutManager = LinearLayoutManager(this)
-        todoAdapter = TodoAdapter(todoItems, { todoItem ->
-            removeTodoItem(todoItem)
-        })
-        todoRecyclerView.adapter = todoAdapter
-
-        addTodoButton.setOnClickListener {
-            showAddTodoDialog()
-        }
-
-        loadTodoItems()
 
         // Initialize finance widget
         financeManager = FinanceManager(sharedPreferences)
@@ -654,9 +654,18 @@ class MainActivity : ComponentActivity() {
     private val updateRunnable = object : Runnable {
         override fun run() {
             updateTime()
-            updateDate()
-            checkDateChangeAndRefreshUsage()
-            handler.postDelayed(this, 1000)
+
+            // In power saver mode, update less frequently and skip heavy operations
+            if (!isInPowerSaverMode) {
+                updateUsageInBackground()
+                updateBatteryInBackground()
+            } else {
+                // In power saver mode, only update time and battery (less frequently)
+                if (System.currentTimeMillis() % 120000 < 30000) { // Every 2 minutes
+                    updateBatteryInBackground()
+                }
+            }
+            handler.postDelayed(this, if (!isInPowerSaverMode) 30000 else 60000)
         }
     }
 
@@ -1369,12 +1378,18 @@ class MainActivity : ComponentActivity() {
     }
 
     fun applyPowerSaverMode(isEnabled: Boolean) {
+        isInPowerSaverMode = isEnabled // Track the state
+
         if (isEnabled) {
             setPitchBlackBackground()
             hideNonEssentialWidgets()
+            // Reduce CPU usage by setting a lower priority to the main thread
+            Thread.currentThread().priority = Thread.MIN_PRIORITY
         } else {
             restoreOriginalBackground()
             showNonEssentialWidgets()
+            // Restore the priority of the main thread
+            Thread.currentThread().priority = Thread.NORM_PRIORITY
         }
     }
 
@@ -1385,6 +1400,9 @@ class MainActivity : ComponentActivity() {
         findViewById<TextView>(R.id.screen_time)?.visibility = View.GONE
         findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.GONE
         weeklyUsageGraph.visibility = View.GONE
+
+        // Hide the wallpaper background in power saver mode
+        findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.GONE
 
         // Hide the todo widget (the LinearLayout containing todo list)
         todoRecyclerView.parent?.let { parent ->
@@ -1402,7 +1420,10 @@ class MainActivity : ComponentActivity() {
         findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.VISIBLE
         weeklyUsageGraph.visibility = View.VISIBLE
 
-        // Show the todo widget
+        // Show the wallpaper background when power saver mode is disabled
+        findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
+
+        // Show the todo widget (the LinearLayout containing todo list)
         todoRecyclerView.parent?.let { parent ->
             if (parent is View) {
                 parent.visibility = View.VISIBLE
@@ -1410,11 +1431,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun setPitchBlackBackground() {
-        findViewById<android.view.View>(android.R.id.content).setBackgroundColor(android.graphics.Color.BLACK)
-    }
+fun setPitchBlackBackground() {
+    findViewById<android.view.View>(android.R.id.content).setBackgroundColor(android.graphics.Color.BLACK)
+}
 
-    fun restoreOriginalBackground() {
-        findViewById<android.view.View>(android.R.id.content).setBackgroundResource(R.drawable.wallpaper_background)
-    }
+fun restoreOriginalBackground() {
+    findViewById<android.view.View>(android.R.id.content).setBackgroundResource(R.drawable.wallpaper_background)
+}
 }
