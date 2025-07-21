@@ -654,18 +654,9 @@ class MainActivity : ComponentActivity() {
     private val updateRunnable = object : Runnable {
         override fun run() {
             updateTime()
-
-            // In power saver mode, update less frequently and skip heavy operations
-            if (!isInPowerSaverMode) {
-                updateUsageInBackground()
-                updateBatteryInBackground()
-            } else {
-                // In power saver mode, only update time and battery (less frequently)
-                if (System.currentTimeMillis() % 120000 < 30000) { // Every 2 minutes
-                    updateBatteryInBackground()
-                }
-            }
-            handler.postDelayed(this, if (!isInPowerSaverMode) 30000 else 60000)
+            updateDate()
+            checkDateChangeAndRefreshUsage()
+            handler.postDelayed(this, 1000)
         }
     }
 
@@ -1418,7 +1409,9 @@ class MainActivity : ComponentActivity() {
         findViewById<TextView>(R.id.battery_percentage)?.visibility = View.VISIBLE
         findViewById<TextView>(R.id.screen_time)?.visibility = View.VISIBLE
         findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.VISIBLE
-        weeklyUsageGraph.visibility = View.VISIBLE
+        if (::weeklyUsageGraph.isInitialized) {
+            weeklyUsageGraph.visibility = View.GONE
+        }
 
         // Show the wallpaper background when power saver mode is disabled
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
@@ -1431,11 +1424,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-fun setPitchBlackBackground() {
-    findViewById<android.view.View>(android.R.id.content).setBackgroundColor(android.graphics.Color.BLACK)
-}
+    fun setPitchBlackBackground() {
+        findViewById<android.view.View>(android.R.id.content).setBackgroundColor(android.graphics.Color.BLACK)
+    }
 
-fun restoreOriginalBackground() {
-    findViewById<android.view.View>(android.R.id.content).setBackgroundResource(R.drawable.wallpaper_background)
-}
+    fun restoreOriginalBackground() {
+        findViewById<android.view.View>(android.R.id.content).setBackgroundResource(R.drawable.wallpaper_background)
+    }
 }
