@@ -30,7 +30,8 @@ class AppDockManager(
     activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
-    private val packageManager: PackageManager
+    private val packageManager: PackageManager,
+    private val appLockManager: AppLockManager
 ) {
     private val context: Context = activity
     private val DOCK_APPS_KEY = "dock_apps"

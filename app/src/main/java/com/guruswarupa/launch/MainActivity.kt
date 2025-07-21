@@ -211,7 +211,7 @@ class MainActivity : ComponentActivity() {
 
         loadTodoItems()
 
-        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
+        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager,  appLockManager)
 
         // Refresh apps after appDockManager is fully initialized
         if (!appDockManager.getCurrentMode()) {

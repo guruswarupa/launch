@@ -1,4 +1,3 @@
-
 package com.guruswarupa.launch
 
 import android.content.pm.ApplicationInfo
@@ -214,8 +213,12 @@ class AppLockSettingsActivity : ComponentActivity() {
             val app = apps[position]
             holder.icon.setImageDrawable(app.icon)
             holder.name.text = app.appName
+
+            // Clear listener first to prevent unwanted triggers
+            holder.lockSwitch.setOnCheckedChangeListener(null)
             holder.lockSwitch.isChecked = appLockManager.isAppLocked(app.packageName)
 
+            // Set listener after setting the state
             holder.lockSwitch.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked) {
                     appLockManager.lockApp(app.packageName)
