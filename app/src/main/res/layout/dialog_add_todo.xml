@@ -57,16 +57,21 @@
             android:textColor="@color/white"
             android:layout_marginBottom="8dp" />
 
-        <EditText
-            android:id="@+id/time_input"
-            android:layout_width="match_parent"
+        <CheckBox
+            android:id="@+id/enable_time_checkbox"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:hint="HH:MM (e.g., 14:30)"
+            android:text="Set Due Time"
             android:textColor="@color/white"
-            android:textColorHint="@color/gray"
-            android:background="@drawable/search_box_transparent_bg"
-            android:padding="12dp"
-            android:inputType="time"
+            android:buttonTint="@color/white"
+            android:layout_marginBottom="8dp" />
+
+        <TimePicker
+            android:id="@+id/time_picker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:timePickerMode="spinner"
+            android:visibility="gone"
             android:layout_marginBottom="16dp" />
 
         <!-- Recurring Checkbox -->
