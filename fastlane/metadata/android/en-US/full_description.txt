@@ -1,81 +1,114 @@
 Launch is a clean, efficient, and minimalist Android launcher designed to maximize simplicity and productivity.
 
-FEATURES:
+---
 
-Smart App Management:
-- Automatically sorts apps by usage frequency
-- Rarely used apps grouped and listed alphabetically
+🧠 Smart App Management
+- Sorts apps by usage frequency
+- Rarely used apps grouped alphabetically
 - App usage time shown beside icons
-- Weekly usage summary at bottom
+- Weekly usage summary at the bottom
 - One-tap uninstall via long press
-- Switch between grid and list views
+- Switch between grid and list view
 
-Smart Universal Search:
-- Search apps, contacts, and the web
+---
+
+🔍 Smart Universal Search
+- Search apps, contacts, and web
 - Built-in calculator in search bar
-- Quick actions for Play Store, YouTube, Maps, and Browser
+- Quick links to Play Store, YouTube, Maps, and Browser
 - Tap to call, SMS, or WhatsApp contacts from results
 
-Quick Actions:
-- Time widget opens Clock app
-- Date widget opens Calendar app
-- Search bar: long press for browser, double tap for wallpaper
-- Weather widget with real-time updates and API customization
+---
 
-Dock Customization:
-- Add and manage favorite apps
-- Organize dock apps into groups
-- Rename/remove apps via long press
-- Customizable layout
+⚡ Quick Actions
+- Time widget → Clock  
+- Date widget → Calendar  
+- Search bar:  
+  • Long press → Google search in browser  
+  • Double tap → Change wallpaper  
+- Weather widget with live data and API key support
 
-Focus Mode:
+---
+
+🔖 Dock Customization
+- Add, rename, or group favorite apps
+- Customize number of dock icons and layout
+
+---
+
+🚫 Focus Mode
 - Temporarily hide distracting apps
 - Whitelist allowed apps
-- Countdown timer with lockout enforcement
-- Visible remaining time
+- Set a countdown timer
+- Cannot exit until timer ends
 
-App Lock:
-- Lock apps with PIN or fingerprint
-- 1-minute timeout for convenience
-- Protect apps like WhatsApp, Instagram, and more
+---
 
-Todo List Widget:
-- Create tasks with due time and priority
-- Supports daily, weekly, and custom recurring tasks
-- Simple interface with completion tracking
+🔐 App Lock
+- Lock individual apps with PIN or fingerprint
+- 1-minute timeout window after unlocking
+- Protect apps like WhatsApp, Instagram, etc.
 
-Finance Tracker:
+---
+
+✅ To-do List Widget
+- Add tasks with due time and priority
+- Supports daily, weekly, or custom recurring tasks
+- Visual completion tracking on home screen
+
+---
+
+💰 Finance Tracker
 - Track income and expenses
-- Add descriptions to transactions
-- View net savings monthly
-- Offline-first and lightweight
+- Add notes to transactions
+- Monthly savings overview
 
-Settings:
-- Backup and restore settings
-- Reset usage stats anytime
-- Change layout style
-- Set your own weather API key
-- lock your apps
+---
 
-Gestures:
-- Tap or long press widgets and icons for custom actions
+⚙️ Settings
+- Backup and restore all data
+- Reset usage stats any time
+- Toggle grid/list layout
+- Change weather API key
+- Manage app locks
+
+---
+
+🔋 Power Saver Mode
+- Keeps wallpaper black to save battery
+- Hides app usage stats and weather updates
+- Ideal for low-power or OLED displays
+
+---
+
+🤏 Gestures
+- Tap or long-press widgets for quick actions
+- Long-press icons for uninstall or rename
 - Calculator in search bar
-- Long press icons for uninstall or rename
 
-Voice Commands:
-- Use natural voice input to call, message, search, open apps, uninstall, or navigate
-- Examples: "Call Swaroop", "Search weather", "Uninstall WhatsApp"
+---
 
-PRIVACY:
-Launch is fully offline and requires only minimal permissions:
-- Contacts (for search)
-- SMS and Phone (for communication shortcuts)
-- Storage (for notes, wallpaper and backups)
-- location (for fetching weather through openweathermap)
-- microphone (for voice commands)
+🎙️ Voice Commands
+Use your voice in the search bar:
+- Call Swaroop
+- Search weather
+- Uninstall WhatsApp
+- Open YouTube
 
-No ads. No tracking. 100% open source.
+---
 
-Get started by installing Launch, setting it as your default launcher, and personalizing your layout and dock.
+🔐 Privacy
+Launch is 100% open source. No ads. No tracking.
 
-Built for those who want speed, clarity, and control.
+Permissions used:
+- Contacts → for search
+- Phone & SMS → for quick actions
+- Storage → for notes, wallpapers, and backups
+- Location → for weather (OpenWeatherMap)
+- Microphone → for voice input
+
+---
+
+Built for those who value speed, clarity, and control.  
+Simple. Clean. Powerful.  
+Try Launch now and make your phone yours.

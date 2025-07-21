@@ -35,3 +35,17 @@
 
 # Keep R class (prevents missing resources)
 -keep class **.R$* { *; }
+
+# Keep annotation classes used by external libraries (e.g., Tink, Guava, Firebase)
+-keep class javax.annotation.** { *; }
+-keep class javax.annotation.concurrent.** { *; }
+# Keep attributes related to annotations
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+# If you're using Google Tink or similar:
+-keep class com.google.crypto.tink.** { *; }
+-keep class com.google.protobuf.** { *; }
+# Keep Tink KeysDownloader and required Google HTTP classes
+-keep class com.google.crypto.tink.util.** { *; }
+-keep class com.google.api.client.http.** { *; }
+-keep class com.google.api.client.http.javanet.** { *; }
+-keep class org.joda.time.** { *; }
