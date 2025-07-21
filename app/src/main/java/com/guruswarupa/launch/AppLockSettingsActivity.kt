@@ -10,8 +10,9 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.fragment.app.FragmentActivity
 
-class AppLockSettingsActivity : ComponentActivity() {
+class AppLockSettingsActivity : FragmentActivity() {
 
     private lateinit var appLockManager: AppLockManager
     private lateinit var appsRecyclerView: RecyclerView

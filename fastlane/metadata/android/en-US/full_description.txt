@@ -1,126 +1,81 @@
-Launch – A Clean, Minimalist Android Launcher Focused on Simplicity and Productivity
+Launch is a clean, efficient, and minimalist Android launcher designed to maximize simplicity and productivity.
 
-Launch is a lightweight, efficient Android launcher that blends minimalism with powerful smart features to help you stay focused, organized, and in control of your device. Designed for users who value speed, clarity, and privacy, Launch makes managing your phone easier than ever before.
+FEATURES:
 
-✨ Key Features
-🔍 Smart App Management
-Automatically sorts apps by usage frequency
+Smart App Management:
+- Automatically sorts apps by usage frequency
+- Rarely used apps grouped and listed alphabetically
+- App usage time shown beside icons
+- Weekly usage summary at bottom
+- One-tap uninstall via long press
+- Switch between grid and list views
 
-Rarely used apps grouped and ordered alphabetically
+Smart Universal Search:
+- Search apps, contacts, and the web
+- Built-in calculator in search bar
+- Quick actions for Play Store, YouTube, Maps, and Browser
+- Tap to call, SMS, or WhatsApp contacts from results
 
-App usage statistics shown beside each app icon
+Quick Actions:
+- Time widget opens Clock app
+- Date widget opens Calendar app
+- Search bar: long press for browser, double tap for wallpaper
+- Weather widget with real-time updates and API customization
 
-Weekly phone usage summary displayed on the home screen
+Dock Customization:
+- Add and manage favorite apps
+- Organize dock apps into groups
+- Rename/remove apps via long press
+- Customizable layout
 
-Long press to uninstall apps instantly
+Focus Mode:
+- Temporarily hide distracting apps
+- Whitelist allowed apps
+- Countdown timer with lockout enforcement
+- Visible remaining time
 
-Easily toggle between grid and list layouts
+App Lock:
+- Lock apps with PIN or fingerprint
+- 1-minute timeout for convenience
+- Protect apps like WhatsApp, Instagram, and more
 
-🔎 Smart Universal Search
-Search apps, contacts, and even the web—all in one bar
+Todo List Widget:
+- Create tasks with due time and priority
+- Supports daily, weekly, and custom recurring tasks
+- Simple interface with completion tracking
 
-Built-in calculator for instant calculations as you type
+Finance Tracker:
+- Track income and expenses
+- Add descriptions to transactions
+- View net savings monthly
+- Offline-first and lightweight
 
-Tap-to-call, message, or WhatsApp from contact results
+Settings:
+- Backup and restore settings
+- Reset usage stats anytime
+- Change layout style
+- Set your own weather API key
+- lock your apps
 
-Quick access links to Play Store, YouTube, Maps, and more
+Gestures:
+- Tap or long press widgets and icons for custom actions
+- Calculator in search bar
+- Long press icons for uninstall or rename
 
-⚡ Quick Actions & Widgets
-Time Widget: Tap to open the Clock app
+Voice Commands:
+- Use natural voice input to call, message, search, open apps, uninstall, or navigate
+- Examples: "Call Swaroop", "Search weather", "Uninstall WhatsApp"
 
-Date Widget: Tap to open the Calendar
+PRIVACY:
+Launch is fully offline and requires only minimal permissions:
+- Contacts (for search)
+- SMS and Phone (for communication shortcuts)
+- Storage (for notes, wallpaper and backups)
+- location (for fetching weather through openweathermap)
+- microphone (for voice commands)
 
-Search Bar:
+No ads. No tracking. 100% open source.
 
-Long press → Open Google in browser
+Get started by installing Launch, setting it as your default launcher, and personalizing your layout and dock.
 
-Double tap → Change wallpaper
-
-Instant math calculation built-in
-
-Weather Widget: Real-time weather and forecast with support for OpenWeatherMap API key
-
-🧩 Customizable Dock
-Add favorite apps and organize them in groups
-
-Rename or remove dock apps with a long press
-
-Customize the layout and number of dock apps
-
-🔕 Focus Mode
-Stay productive and distraction-free:
-
-Long press Focus icon to configure allowed apps
-
-Temporarily hide selected apps during focus time
-
-Countdown timer to lock you in until the session ends
-
-Visual timer displayed on screen
-
-📝 Quick Notes Widget
-Add, view, and edit notes directly from the home screen
-
-Long press to delete or modify notes
-
-All notes are stored locally for privacy and speed
-
-💰 Built-in Finance Tracker
-A minimal, offline-first tool to manage your income and expenses:
-
-Track earnings and spending with custom descriptions
-
-View net savings for the current month
-
-Long press the Balance to see your transaction history
-
-Lightweight and doesn't require internet access
-
-⚙️ Customization & Settings
-Import/export launcher data for easy backup and restore
-
-Reset app usage stats anytime
-
-Toggle between list/grid layouts
-
-Update your personal weather API key easily
-
-🤏 Gestures & Interactions
-Gesture	Action
-Tap Time Widget	Open Clock
-Tap Date Widget	Open Calendar
-Long Press Search Bar	Open Google in browser
-Double Tap Search Bar	Change wallpaper
-Long Press App Icon	Uninstall the app
-Long Press Dock App	Rename or remove app
-Type Math in Search	Instantly calculate
-Long Press Focus Icon	Configure Focus Mode
-Long Press Balance	View financial history
-
-🎙️ Voice Commands
-Control your device hands-free via search bar voice input:
-
-Example Command	Action
-"Call Swaroop"	Initiates a phone call
-"Message Swaroop"	Opens the SMS app
-"WhatsApp Swaroop"	Launches WhatsApp conversation
-"Send hi to Swaroop"	Sends a WhatsApp message
-"Search weather tomorrow"	Performs a Google search
-"Open YouTube"	Launches YouTube
-"Uninstall WhatsApp"	Opens uninstall prompt
-"Bangalore to Mysore"	Opens Google Maps with directions
-
-Required Permissions: Contacts, Phone, SMS (used only for the features you invoke)
-
-🔐 Privacy First
-Launch is privacy-respecting and offline-friendly. It only requests essential permissions for functionality:
-
-Contacts: for app and contact search
-
-Phone/SMS: to make calls or send messages when requested
-
-Storage: to save notes, wallpaper, and backup data
-
-No background tracking. No ads. No analytics.
-
-Lightweight. Powerful. Intentional. Try Launch – and take back control of your home screen.
+Built for those who want speed, clarity, and control.
