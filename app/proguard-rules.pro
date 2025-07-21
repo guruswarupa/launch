@@ -20,6 +20,19 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
+# Keep Apache HTTP Client classes (not available on Android)
+-dontwarn javax.naming.**
+-dontwarn org.ietf.jgss.**
+-dontwarn org.apache.http.**
+
+# Keep Joda Time annotations
+-dontwarn org.joda.convert.**
+-keep class org.joda.convert.** { *; }
+
+# Keep Google HTTP Client classes
+-keep class com.google.api.client.** { *; }
+-dontwarn com.google.api.client.**
+
 # Keep all app classes
 -keep class com.guruswarupa.launch.** { *; }
 
