@@ -34,7 +34,7 @@ class AppLockManager(private val context: Context) {
         private const val PREF_LOCKED_APPS = "locked_apps"
         private const val PREF_IS_APP_LOCK_ENABLED = "is_app_lock_enabled"
         private const val PREF_LAST_AUTH_TIME = "last_auth_time"
-        private const val AUTH_TIMEOUT = 5 * 60 * 1000L // 5 minutes
+        private const val AUTH_TIMEOUT = 2 * 60 * 1000L //2 min
     }
 
     // Hash the PIN for secure storage
