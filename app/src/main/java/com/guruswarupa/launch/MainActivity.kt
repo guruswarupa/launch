@@ -906,7 +906,7 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private lateinit var appLockManager: AppLockManager
+    internal lateinit var appLockManager: AppLockManager
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -944,7 +944,6 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
-    
     private fun loadContacts() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
             Thread {
@@ -966,7 +965,7 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
-                    // Sortcontacts in background thread
+                    // Sort contacts in background thread
                     tempContactsList.sort()
 
                     runOnUiThread {
