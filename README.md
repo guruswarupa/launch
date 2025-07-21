@@ -52,6 +52,11 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
 - After timeout, locked apps require authentication again  
 - Ideal for securing sensitive apps like WhatsApp, Instagram, etc.
 
+### 🔋 Power Saver Mode
+- Keeps wallpaper black to save battery
+- Hides app usage stats and weather updates
+- Ideal for low-power or OLED displays
+
 ### ✅ Todo List Widget (Now Smarter)
 - Add and manage daily tasks directly from the home screen  
 - Set **due time** for each task  
