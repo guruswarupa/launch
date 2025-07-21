@@ -174,7 +174,7 @@ class AppDockManager(
                 }
 
                 setOnClickListener {
-                    launchApp(packageName)
+                    launchAppWithLockCheck(packageName)
                 }
 
                 setOnLongClickListener {
@@ -314,7 +314,7 @@ class AppDockManager(
                         setMargins(8, 8, 8, 8)
                     }
                     setOnClickListener {
-                        launchApp(packageName)
+                        launchAppWithLockCheck(packageName)
                         (context as? Activity)?.dismissPopupWindow()
                     }
                     grid.addView(this)
@@ -378,6 +378,18 @@ class AppDockManager(
             context.startActivity(intent)
         } else {
             Toast.makeText(context, "App not found", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun launchAppWithLockCheck(packageName: String) {
+        if (appLockManager.isAppLocked(packageName)) {
+            appLockManager.verifyPin { isAuthenticated ->
+                if (isAuthenticated) {
+                    launchApp(packageName)
+                }
+            }
+        } else {
+            launchApp(packageName)
         }
     }
 

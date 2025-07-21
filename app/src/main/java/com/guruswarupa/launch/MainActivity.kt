@@ -107,6 +107,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        appLockManager = AppLockManager(this)
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
@@ -219,11 +220,11 @@ class MainActivity : ComponentActivity() {
         }
 
         timeTextView.setOnClickListener {
-            launchApp("com.google.android.deskclock", "Google Clock")
+            launchAppWithLockCheck("com.google.android.deskclock", "Google Clock")
         }
 
         dateTextView.setOnClickListener {
-            launchApp("com.google.android.calendar", "Google Calendar")
+            launchAppWithLockCheck("com.google.android.calendar", "Google Calendar")
         }
 
         // Initialize appList before using it
@@ -622,6 +623,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Method to launch app with lock check
+     fun launchAppWithLockCheck(packageName: String, appName: String) {
+        if (appLockManager.isAppLocked(packageName)) {
+            appLockManager.verifyPin { isAuthenticated ->
+                if (isAuthenticated) {
+                    launchApp(packageName,appName)
+                }
+            }
+        } else {
+            launchApp(packageName,appName)
+        }
+    }
+
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -890,6 +904,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private lateinit var appLockManager: AppLockManager
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -1131,7 +1147,8 @@ class MainActivity : ComponentActivity() {
         val taskInput = dialogView.findViewById<EditText>(R.id.task_input)
         val categorySpinner = dialogView.findViewById<Spinner>(R.id.category_spinner)
         val prioritySpinner = dialogView.findViewById<Spinner>(R.id.priority_spinner)
-        val timeInput = dialogView.findViewById<EditText>(R.id.time_input)
+        val enableTimeCheckbox = dialogView.findViewById<CheckBox>(R.id.enable_time_checkbox)
+        val timePicker = dialogView.findViewById<android.widget.TimePicker>(R.id.time_picker)
         val recurringCheckbox = dialogView.findViewById<CheckBox>(R.id.recurring_checkbox)
         val daysContainer = dialogView.findViewById<LinearLayout>(R.id.days_selection_container)
 
@@ -1155,6 +1172,11 @@ class MainActivity : ComponentActivity() {
         prioritySpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, priorities)
         prioritySpinner.setSelection(1) // Default to Medium
 
+        // Handle time picker checkbox
+        enableTimeCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            timePicker.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
         // Handle recurring checkbox
         recurringCheckbox.setOnCheckedChangeListener { _, isChecked ->
             daysContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
@@ -1176,7 +1198,23 @@ class MainActivity : ComponentActivity() {
 
                 val category = categories[categorySpinner.selectedItemPosition]
                 val priority = TodoItem.Priority.values()[prioritySpinner.selectedItemPosition]
-                val dueTime = timeInput.text.toString().trim().takeIf { it.isNotEmpty() }
+                val dueTime = if (enableTimeCheckbox.isChecked) {
+                    val hour = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        timePicker.hour
+                    } else {
+                        @Suppress("DEPRECATION")
+                        timePicker.currentHour
+                    }
+                    val minute = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        timePicker.minute
+                    } else {
+                        @Suppress("DEPRECATION")
+                        timePicker.currentMinute
+                    }
+                    String.format("%02d:%02d", hour, minute)
+                } else {
+                    null
+                }
 
                 addTodoItem(todoText, isRecurring, selectedDays, priority, category, dueTime)
             }
@@ -1272,6 +1310,11 @@ class MainActivity : ComponentActivity() {
         val currentDate = getCurrentDateString()
         val calendar = Calendar.getInstance()
         val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // 1=Sunday, 2=Monday, etc.
+        val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+        val currentMinute = calendar.get(Calendar.MINUTE)
+        val currentTimeInMinutes = currentHour * 60 + currentMinute
+
+        val itemsToRemove = mutableListOf<TodoItem>()
 
         for (todoItem in todoItems) {
             if (todoItem.isRecurring && todoItem.lastCompletedDate != currentDate) {
@@ -1284,7 +1327,37 @@ class MainActivity : ComponentActivity() {
                         todoItem.isChecked = false
                     }
                 }
+            } else if (!todoItem.isRecurring && todoItem.dueTime != null) {
+                // Check if non-recurring task with due time is overdue
+                val dueTimeParts = todoItem.dueTime.split(":")
+                if (dueTimeParts.size == 2) {
+                    try {
+                        val dueHour = dueTimeParts[0].toInt()
+                        val dueMinute = dueTimeParts[1].toInt()
+                        val dueTimeInMinutes = dueHour * 60 + dueMinute
+
+                        // If current time has passed the due time, mark for removal
+                        if (currentTimeInMinutes > dueTimeInMinutes) {
+                            itemsToRemove.add(todoItem)
+                        }
+                    } catch (e: NumberFormatException) {
+                        // Invalid time format, ignore
+                    }
+                }
             }
+        }
+
+        // Remove overdue non-recurring items
+        for (item in itemsToRemove) {
+            val index = todoItems.indexOf(item)
+            if (index != -1) {
+                todoItems.removeAt(index)
+                todoAdapter.notifyItemRemoved(index)
+            }
+        }
+
+        if (itemsToRemove.isNotEmpty()) {
+            saveTodoItems()
         }
     }
 
@@ -1390,7 +1463,11 @@ class MainActivity : ComponentActivity() {
         findViewById<TextView>(R.id.battery_percentage)?.visibility = View.GONE
         findViewById<TextView>(R.id.screen_time)?.visibility = View.GONE
         findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.GONE
-        weeklyUsageGraph.visibility = View.GONE
+        if (::weeklyUsageGraph.isInitialized) {
+            weeklyUsageGraph.visibility = View.GONE
+        }
+        // Hide the entire weekly usage widget container
+        findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.GONE
 
         // Hide the wallpaper background in power saver mode
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.GONE
@@ -1410,8 +1487,10 @@ class MainActivity : ComponentActivity() {
         findViewById<TextView>(R.id.screen_time)?.visibility = View.VISIBLE
         findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.VISIBLE
         if (::weeklyUsageGraph.isInitialized) {
-            weeklyUsageGraph.visibility = View.GONE
+            weeklyUsageGraph.visibility = View.VISIBLE
         }
+        // Show the entire weekly usage widget container
+        findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.VISIBLE
 
         // Show the wallpaper background when power saver mode is disabled
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE

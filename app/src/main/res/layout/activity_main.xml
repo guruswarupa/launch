@@ -357,6 +357,7 @@
 
                 <!-- Weekly Usage Graph -->
                 <LinearLayout
+                    android:id="@+id/weekly_usage_widget"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"

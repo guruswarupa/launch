@@ -11,6 +11,7 @@ composeBom = "2024.04.01"
 cardview = "1.0.0"
 material = "1.12.0"
 roomKtx = "2.6.1"
+androidxSecurity = "1.1.0-alpha06"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -32,6 +33,7 @@ cardview = { module = "androidx.cardview:cardview", version.ref = "cardview" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 exp4j = { module = "net.objecthunter:exp4j", version = "0.4.8" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "androidxSecurity" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
