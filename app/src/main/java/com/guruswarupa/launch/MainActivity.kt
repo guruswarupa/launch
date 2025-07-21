@@ -624,7 +624,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Method to launch app with lock check
-     fun launchAppWithLockCheck(packageName: String, appName: String) {
+    internal fun launchAppWithLockCheck(packageName: String, appName: String) {
         if (appLockManager.isAppLocked(packageName)) {
             appLockManager.verifyPin { isAuthenticated ->
                 if (isAuthenticated) {

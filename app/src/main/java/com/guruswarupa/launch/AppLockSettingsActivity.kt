@@ -53,12 +53,25 @@ class AppLockSettingsActivity : ComponentActivity() {
             isChecked = appLockManager.isAppLockEnabled()
             setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked && !appLockManager.isPinSet()) {
+                    // Enabling app lock - set up PIN
                     appLockManager.setupPin { success ->
                         if (!success) {
                             this.isChecked = false
                         }
                     }
+                } else if (!isChecked && appLockManager.isPinSet()) {
+                    // Disabling app lock - verify PIN first
+                    appLockManager.verifyPin { isAuthenticated ->
+                        if (isAuthenticated) {
+                            appLockManager.setAppLockEnabled(false)
+                            Toast.makeText(this@AppLockSettingsActivity, "App Lock disabled", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Revert switch back to enabled state if PIN verification failed
+                            this.isChecked = true
+                        }
+                    }
                 } else {
+                    // Direct enable/disable when no PIN is set
                     appLockManager.setAppLockEnabled(isChecked)
                 }
             }

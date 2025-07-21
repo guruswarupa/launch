@@ -97,6 +97,7 @@ class AppAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
+        val appName = appInfo.loadLabel(activity.packageManager).toString()
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
@@ -265,19 +266,24 @@ class AppAdapter(
                 holder.appIcon.setImageDrawable(icon)
 
                 holder.itemView.setOnClickListener {
-                    val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
-                    if (intent != null) {
-                        val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-                        val currentCount = prefs.getInt("usage_$packageName", 0)
-                        prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
+                    val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+                    val currentCount = prefs.getInt("usage_$packageName", 0)
+                    prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
 
-                        activity.startActivity(intent)
-                        activity.runOnUiThread {
-                            searchBox.text.clear()
-                            activity.appSearchManager.filterAppsAndContacts("")
+                    // Use the lock check function from MainActivity
+                    (activity as? MainActivity)?.launchAppWithLockCheck(packageName, appName) ?: run {
+                        // Fallback for non-MainActivity contexts
+                        val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
+                        if (intent != null) {
+                            activity.startActivity(intent)
+                        } else {
+                            Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
                         }
-                    } else {
-                        Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
+                    }
+
+                    activity.runOnUiThread {
+                        searchBox.text.clear()
+                        activity.appSearchManager.filterAppsAndContacts("")
                     }
                 }
 
