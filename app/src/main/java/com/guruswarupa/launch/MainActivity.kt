@@ -45,9 +45,11 @@ import android.widget.ArrayAdapter
 import android.widget.CheckBox
 import com.guruswarupa.launch.TodoItem
 import com.guruswarupa.launch.TodoAdapter
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private lateinit var sharedPreferences: SharedPreferences
     private val PREFS_NAME = "com.guruswarupa.launch.PREFS"
@@ -942,7 +944,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
+    
     private fun loadContacts() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
             Thread {

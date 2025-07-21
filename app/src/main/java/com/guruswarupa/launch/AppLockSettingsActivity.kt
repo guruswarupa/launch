@@ -18,6 +18,7 @@ class AppLockSettingsActivity : ComponentActivity() {
     private lateinit var enableAppLockSwitch: Switch
     private lateinit var changePinButton: Button
     private lateinit var resetAppLockButton: Button
+    private var isPinVerifiedForThisSession = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,6 +82,41 @@ class AppLockSettingsActivity : ComponentActivity() {
         switchLayout.addView(enableAppLockSwitch)
         mainLayout.addView(switchLayout)
 
+        // Fingerprint authentication switch (only show if available)
+        if (appLockManager.isFingerprintAvailable()) {
+            val fingerprintSwitchLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, 16, 0, 0)
+            }
+
+            val fingerprintSwitchLabel = TextView(this).apply {
+                text = "Enable Fingerprint"
+                textSize = 18f
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val fingerprintSwitch = Switch(this).apply {
+                isChecked = appLockManager.isFingerprintEnabled()
+                setOnCheckedChangeListener { _, isChecked ->
+                    if (appLockManager.isPinSet()) {
+                        appLockManager.setFingerprintEnabled(isChecked)
+                        Toast.makeText(
+                            this@AppLockSettingsActivity,
+                            if (isChecked) "Fingerprint enabled" else "Fingerprint disabled",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        this.isChecked = false
+                        Toast.makeText(this@AppLockSettingsActivity, "Please set up a PIN first", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            fingerprintSwitchLayout.addView(fingerprintSwitchLabel)
+            fingerprintSwitchLayout.addView(fingerprintSwitch)
+            mainLayout.addView(fingerprintSwitchLayout)
+        }
+
         // Change PIN button
         changePinButton = Button(this).apply {
             text = if (appLockManager.isPinSet()) "Change PIN" else "Set PIN"
@@ -111,11 +147,13 @@ class AppLockSettingsActivity : ComponentActivity() {
                     .setTitle("Reset App Lock")
                     .setMessage("This will remove the PIN and unlock all apps. Are you sure?")
                     .setPositiveButton("Reset") { _, _ ->
-                        appLockManager.resetAppLock()
-                        enableAppLockSwitch.isChecked = false
-                        changePinButton.text = "Set PIN"
-                        recreateAppsList()
-                        Toast.makeText(this@AppLockSettingsActivity, "App Lock reset", Toast.LENGTH_SHORT).show()
+                        appLockManager.resetAppLock { success ->
+                            if (success) {
+                                enableAppLockSwitch.isChecked = false
+                                changePinButton.text = "Set PIN"
+                                recreateAppsList()
+                            }
+                        }
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
@@ -149,9 +187,26 @@ class AppLockSettingsActivity : ComponentActivity() {
 
     private fun recreateAppsList() {
         val installedApps = getInstalledApps()
-        val adapter = AppLockAdapter(installedApps, appLockManager) {
-            // Refresh callback if needed
-        }
+        val adapter = AppLockAdapter(
+            installedApps,
+            appLockManager,
+            onItemChanged = {},
+            requestPinAuthIfNeeded = { onSuccess ->
+                if (isPinVerifiedForThisSession) {
+                    onSuccess()
+                } else {
+                    appLockManager.verifyPin { success ->
+                        if (success) {
+                            isPinVerifiedForThisSession = true
+                            onSuccess()
+                        } else {
+                            Toast.makeText(this, "PIN verification failed", Toast.LENGTH_SHORT).show()
+                            recreateAppsList() // Reset UI toggle state if auth failed
+                        }
+                    }
+                }
+            }
+        )
         appsRecyclerView.adapter = adapter
     }
 
@@ -180,7 +235,8 @@ class AppLockSettingsActivity : ComponentActivity() {
     class AppLockAdapter(
         private val apps: List<AppInfo>,
         private val appLockManager: AppLockManager,
-        private val onItemChanged: () -> Unit
+        private val onItemChanged: () -> Unit,
+        private val requestPinAuthIfNeeded: (onSuccess: () -> Unit) -> Unit
     ) : RecyclerView.Adapter<AppLockAdapter.ViewHolder>() {
 
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -233,12 +289,19 @@ class AppLockSettingsActivity : ComponentActivity() {
 
             // Set listener after setting the state
             holder.lockSwitch.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    appLockManager.lockApp(app.packageName)
-                } else {
-                    appLockManager.unlockApp(app.packageName)
+                requestPinAuthIfNeeded {
+                    if (isChecked) {
+                        appLockManager.lockApp(app.packageName)
+                    } else {
+                        appLockManager.unlockApp(app.packageName)
+                    }
+                    onItemChanged()
                 }
-                onItemChanged()
+
+                // Revert switch visually if user cancels or fails auth
+                if (!appLockManager.isPinSet()) {
+                    holder.lockSwitch.isChecked = false
+                }
             }
         }
 
