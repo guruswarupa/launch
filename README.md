@@ -2,6 +2,12 @@
 
 A clean, efficient, and minimalist Android launcher that prioritizes simplicity and functionality.
 
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
+     alt="Get it on F-Droid"
+     height="80">](https://f-droid.org/packages/com.guruswarupa.launch/)
+
+Or download the latest APK from the [Releases Section](https://github.com/guruswarupa/launch/releases/latest).
+
 ---
 
 ## ✨ Features
