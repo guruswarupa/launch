@@ -271,7 +271,15 @@ class AppAdapter(
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
 
-                        activity.startActivity(intent)
+                        if (activity.appLockManager.isAppLocked(packageName)) {
+                            activity.appLockManager.verifyPin { isAuthenticated ->
+                                if (isAuthenticated) {
+                                    activity.startActivity(intent)
+                                }
+                            }
+                        } else {
+                            activity.startActivity(intent)
+                        }
                         activity.runOnUiThread {
                             searchBox.text.clear()
                             activity.appSearchManager.filterAppsAndContacts("")

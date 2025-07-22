@@ -31,7 +31,7 @@ class SettingsActivity : ComponentActivity() {
         // Add reset button
         val resetButton = findViewById<Button>(R.id.reset_usage_button)
         val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
-
+        val appLockButton = findViewById<Button>(R.id.app_lock_button)
 
         // Load current settings
         loadCurrentSettings(weatherApiKeyInput, displayStyleGroup, gridOption, listOption)
@@ -58,6 +58,9 @@ class SettingsActivity : ComponentActivity() {
 
         resetFinanceButton.setOnClickListener {
             resetFinanceData()
+        }
+        appLockButton.setOnClickListener {
+            startActivity(Intent(this, AppLockSettingsActivity::class.java))
         }
     }
 
@@ -159,7 +162,27 @@ class SettingsActivity : ComponentActivity() {
             for ((key, value) in allPrefs) {
                 // Include all keys including todo_items and transaction data
                 when (value) {
-                    is String -> settingsJson.put(key, value)
+                    is String -> {
+                        settingsJson.put(key, value)
+                        // Special handling for todo_items to ensure proper format
+                        if (key == "todo_items" && value.isNotEmpty()) {
+                            // Validate todo items format before export
+                            val todoArray = value.split("|")
+                            var isValidFormat = true
+                            for (todoString in todoArray) {
+                                if (todoString.isNotEmpty()) {
+                                    val parts = todoString.split(":")
+                                    if (parts.size < 7) {
+                                        isValidFormat = false
+                                        break
+                                    }
+                                }
+                            }
+                            if (!isValidFormat) {
+                                Toast.makeText(this, "Warning: Todo items may not export correctly due to format issues", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
                     is Boolean -> settingsJson.put(key, value)
                     is Int -> settingsJson.put(key, value)
                     is Long -> settingsJson.put(key, value)

@@ -1,126 +1,114 @@
-Launch – A Clean, Minimalist Android Launcher Focused on Simplicity and Productivity
+Launch is a clean, efficient, and minimalist Android launcher designed to maximize simplicity and productivity.
 
-Launch is a lightweight, efficient Android launcher that blends minimalism with powerful smart features to help you stay focused, organized, and in control of your device. Designed for users who value speed, clarity, and privacy, Launch makes managing your phone easier than ever before.
+---
 
-✨ Key Features
-🔍 Smart App Management
-Automatically sorts apps by usage frequency
+🧠 Smart App Management
+- Sorts apps by usage frequency
+- Rarely used apps grouped alphabetically
+- App usage time shown beside icons
+- Weekly usage summary at the bottom
+- One-tap uninstall via long press
+- Switch between grid and list view
 
-Rarely used apps grouped and ordered alphabetically
+---
 
-App usage statistics shown beside each app icon
+🔍 Smart Universal Search
+- Search apps, contacts, and web
+- Built-in calculator in search bar
+- Quick links to Play Store, YouTube, Maps, and Browser
+- Tap to call, SMS, or WhatsApp contacts from results
 
-Weekly phone usage summary displayed on the home screen
+---
 
-Long press to uninstall apps instantly
+⚡ Quick Actions
+- Time widget → Clock  
+- Date widget → Calendar  
+- Search bar:  
+  • Long press → Google search in browser  
+  • Double tap → Change wallpaper  
+- Weather widget with live data and API key support
 
-Easily toggle between grid and list layouts
+---
 
-🔎 Smart Universal Search
-Search apps, contacts, and even the web—all in one bar
+🔖 Dock Customization
+- Add, rename, or group favorite apps
+- Customize number of dock icons and layout
 
-Built-in calculator for instant calculations as you type
+---
 
-Tap-to-call, message, or WhatsApp from contact results
+🚫 Focus Mode
+- Temporarily hide distracting apps
+- Whitelist allowed apps
+- Set a countdown timer
+- Cannot exit until timer ends
 
-Quick access links to Play Store, YouTube, Maps, and more
+---
 
-⚡ Quick Actions & Widgets
-Time Widget: Tap to open the Clock app
+🔐 App Lock
+- Lock individual apps with PIN or fingerprint
+- 1-minute timeout window after unlocking
+- Protect apps like WhatsApp, Instagram, etc.
 
-Date Widget: Tap to open the Calendar
+---
 
-Search Bar:
+✅ To-do List Widget
+- Add tasks with due time and priority
+- Supports daily, weekly, or custom recurring tasks
+- Visual completion tracking on home screen
 
-Long press → Open Google in browser
+---
 
-Double tap → Change wallpaper
+💰 Finance Tracker
+- Track income and expenses
+- Add notes to transactions
+- Monthly savings overview
 
-Instant math calculation built-in
+---
 
-Weather Widget: Real-time weather and forecast with support for OpenWeatherMap API key
+⚙️ Settings
+- Backup and restore all data
+- Reset usage stats any time
+- Toggle grid/list layout
+- Change weather API key
+- Manage app locks
 
-🧩 Customizable Dock
-Add favorite apps and organize them in groups
+---
 
-Rename or remove dock apps with a long press
+🔋 Power Saver Mode
+- Keeps wallpaper black to save battery
+- Hides app usage stats and weather updates
+- Ideal for low-power or OLED displays
 
-Customize the layout and number of dock apps
+---
 
-🔕 Focus Mode
-Stay productive and distraction-free:
+🤏 Gestures
+- Tap or long-press widgets for quick actions
+- Long-press icons for uninstall or rename
+- Calculator in search bar
 
-Long press Focus icon to configure allowed apps
-
-Temporarily hide selected apps during focus time
-
-Countdown timer to lock you in until the session ends
-
-Visual timer displayed on screen
-
-📝 Quick Notes Widget
-Add, view, and edit notes directly from the home screen
-
-Long press to delete or modify notes
-
-All notes are stored locally for privacy and speed
-
-💰 Built-in Finance Tracker
-A minimal, offline-first tool to manage your income and expenses:
-
-Track earnings and spending with custom descriptions
-
-View net savings for the current month
-
-Long press the Balance to see your transaction history
-
-Lightweight and doesn't require internet access
-
-⚙️ Customization & Settings
-Import/export launcher data for easy backup and restore
-
-Reset app usage stats anytime
-
-Toggle between list/grid layouts
-
-Update your personal weather API key easily
-
-🤏 Gestures & Interactions
-Gesture	Action
-Tap Time Widget	Open Clock
-Tap Date Widget	Open Calendar
-Long Press Search Bar	Open Google in browser
-Double Tap Search Bar	Change wallpaper
-Long Press App Icon	Uninstall the app
-Long Press Dock App	Rename or remove app
-Type Math in Search	Instantly calculate
-Long Press Focus Icon	Configure Focus Mode
-Long Press Balance	View financial history
+---
 
 🎙️ Voice Commands
-Control your device hands-free via search bar voice input:
+Use your voice in the search bar:
+- Call Swaroop
+- Search weather
+- Uninstall WhatsApp
+- Open YouTube
 
-Example Command	Action
-"Call Swaroop"	Initiates a phone call
-"Message Swaroop"	Opens the SMS app
-"WhatsApp Swaroop"	Launches WhatsApp conversation
-"Send hi to Swaroop"	Sends a WhatsApp message
-"Search weather tomorrow"	Performs a Google search
-"Open YouTube"	Launches YouTube
-"Uninstall WhatsApp"	Opens uninstall prompt
-"Bangalore to Mysore"	Opens Google Maps with directions
+---
 
-Required Permissions: Contacts, Phone, SMS (used only for the features you invoke)
+🔐 Privacy
+Launch is 100% open source. No ads. No tracking.
 
-🔐 Privacy First
-Launch is privacy-respecting and offline-friendly. It only requests essential permissions for functionality:
+Permissions used:
+- Contacts → for search
+- Phone & SMS → for quick actions
+- Storage → for notes, wallpapers, and backups
+- Location → for weather (OpenWeatherMap)
+- Microphone → for voice input
 
-Contacts: for app and contact search
+---
 
-Phone/SMS: to make calls or send messages when requested
-
-Storage: to save notes, wallpaper, and backup data
-
-No background tracking. No ads. No analytics.
-
-Lightweight. Powerful. Intentional. Try Launch – and take back control of your home screen.
+Built for those who value speed, clarity, and control.  
+Simple. Clean. Powerful.  
+Try Launch now and make your phone yours.

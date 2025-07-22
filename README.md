@@ -44,10 +44,27 @@ A clean, efficient, and minimalist Android launcher that prioritizes simplicity 
 - Cannot exit until timer ends — stay on track
 - Visible timer countdown displayed on screen
 
-### 📝 Quick Notes Widget
-- Instantly jot down and view notes from the home screen
-- Long press to edit or delete
-- Stored locally for speed and privacy
+### 🔐 App Lock
+- Lock any app via settings
+- **PIN-based authentication** before launching locked apps  
+- **Fingerprint unlock supported** (if available on your device)  
+- **1-minute timeout** after unlocking — no need to re-enter PIN during that window  
+- After timeout, locked apps require authentication again  
+- Ideal for securing sensitive apps like WhatsApp, Instagram, etc.
+
+### 🔋 Power Saver Mode
+- Keeps wallpaper black to save battery
+- Hides app usage stats and weather updates
+- Ideal for low-power or OLED displays
+
+### ✅ Todo List Widget (Now Smarter)
+- Add and manage daily tasks directly from the home screen  
+- Set **due time** for each task  
+- Assign **priority**: High, Medium, or Low  
+- Enable **recurring tasks**: Daily, Weekly, or Custom  
+- Mark tasks as complete with visual strikethrough  
+- Tap "Add Todo" to schedule tasks with advanced options  
+- Persistent task tracking with clean UI  
 
 ---
 

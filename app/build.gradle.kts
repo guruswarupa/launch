@@ -12,8 +12,8 @@ android {
         applicationId = "com.guruswarupa.launch"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "4.5"
+        versionCode = 2
+        versionName = "4.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -38,10 +38,21 @@ android {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt"
+            )
+        }
+    }
 }
 
 dependencies {
-
+    implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -62,4 +73,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.androidx.biometric)
+    implementation(libs.findbugs.jsr305)
+    implementation(libs.joda.time)
+    implementation(libs.google.http.client)
+    implementation(libs.google.http.client.android)
+
 }

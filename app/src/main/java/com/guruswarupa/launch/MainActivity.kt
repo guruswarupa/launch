@@ -40,9 +40,16 @@ import android.os.Build
 import android.widget.Button
 import java.util.Calendar
 import android.view.View
+import android.widget.Spinner
+import android.widget.ArrayAdapter
+import android.widget.CheckBox
+import com.guruswarupa.launch.TodoItem
+import com.guruswarupa.launch.TodoAdapter
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentActivity
 
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private lateinit var sharedPreferences: SharedPreferences
     private val PREFS_NAME = "com.guruswarupa.launch.PREFS"
@@ -76,6 +83,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var addTodoButton: ImageButton
     private var todoItems: MutableList<TodoItem> = mutableListOf()
     private lateinit var voiceSearchButton: ImageButton
+    private var isInPowerSaverMode = false
 
     // Finance widget variables
     private lateinit var financeManager: FinanceManager
@@ -101,6 +109,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        appLockManager = AppLockManager(this)
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
@@ -189,7 +198,22 @@ class MainActivity : ComponentActivity() {
         // Initialize todo widget
         setupTodoWidget()
 
-        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager)
+        todoRecyclerView = findViewById(R.id.todo_recycler_view)
+        addTodoButton = findViewById(R.id.add_todo_button)
+
+        todoRecyclerView.layoutManager = LinearLayoutManager(this)
+        todoAdapter = TodoAdapter(todoItems, { todoItem ->
+            removeTodoItem(todoItem)
+        })
+        todoRecyclerView.adapter = todoAdapter
+
+        addTodoButton.setOnClickListener {
+            showAddTodoDialog()
+        }
+
+        loadTodoItems()
+
+        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager,  appLockManager)
 
         // Refresh apps after appDockManager is fully initialized
         if (!appDockManager.getCurrentMode()) {
@@ -198,11 +222,11 @@ class MainActivity : ComponentActivity() {
         }
 
         timeTextView.setOnClickListener {
-            launchApp("com.google.android.deskclock", "Google Clock")
+            launchAppWithLockCheck("com.google.android.deskclock", "Google Clock")
         }
 
         dateTextView.setOnClickListener {
-            launchApp("com.google.android.calendar", "Google Calendar")
+            launchAppWithLockCheck("com.google.android.calendar", "Google Calendar")
         }
 
         // Initialize appList before using it
@@ -222,7 +246,6 @@ class MainActivity : ComponentActivity() {
             contactsList = contactsList
         )
 
-        appDockManager.loadDockApps()
         setWallpaperBackground()
 
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
@@ -231,21 +254,6 @@ class MainActivity : ComponentActivity() {
         }
 
         lastUpdateDate = getCurrentDateString()
-
-        todoRecyclerView = findViewById(R.id.todo_recycler_view)
-        addTodoButton = findViewById(R.id.add_todo_button)
-
-        todoRecyclerView.layoutManager = LinearLayoutManager(this)
-        todoAdapter = TodoAdapter(todoItems, { todoItem ->
-            removeTodoItem(todoItem)
-        })
-        todoRecyclerView.adapter = todoAdapter
-
-        addTodoButton.setOnClickListener {
-            showAddTodoDialog()
-        }
-
-        loadTodoItems()
 
         // Initialize finance widget
         financeManager = FinanceManager(sharedPreferences)
@@ -617,6 +625,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Method to launch app with lock check
+    internal fun launchAppWithLockCheck(packageName: String, appName: String) {
+        if (appLockManager.isAppLocked(packageName)) {
+            appLockManager.verifyPin { isAuthenticated ->
+                if (isAuthenticated) {
+                    launchApp(packageName,appName)
+                }
+            }
+        } else {
+            launchApp(packageName,appName)
+        }
+    }
+
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -885,6 +906,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    internal lateinit var appLockManager: AppLockManager
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -921,7 +944,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
     private fun loadContacts() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
             Thread {
@@ -943,7 +965,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Sortcontacts in background thread
+                    // Sort contacts in background thread
                     tempContactsList.sort()
 
                     runOnUiThread {
@@ -1121,24 +1143,81 @@ class MainActivity : ComponentActivity() {
         val dialogBuilder = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Add Todo Item")
 
-        val input = EditText(this)
-        input.hint = "Enter todo item"
-        input.setTextColor(ContextCompat.getColor(this, R.color.white))
-        input.setHintTextColor(ContextCompat.getColor(this, R.color.gray))
+        // Create custom layout
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_todo, null)
+        val taskInput = dialogView.findViewById<EditText>(R.id.task_input)
+        val categorySpinner = dialogView.findViewById<Spinner>(R.id.category_spinner)
+        val prioritySpinner = dialogView.findViewById<Spinner>(R.id.priority_spinner)
+        val enableTimeCheckbox = dialogView.findViewById<CheckBox>(R.id.enable_time_checkbox)
+        val timePicker = dialogView.findViewById<android.widget.TimePicker>(R.id.time_picker)
+        val recurringCheckbox = dialogView.findViewById<CheckBox>(R.id.recurring_checkbox)
+        val daysContainer = dialogView.findViewById<LinearLayout>(R.id.days_selection_container)
 
-        dialogBuilder.setView(input)
+        // Day checkboxes
+        val dayCheckboxes = listOf(
+            dialogView.findViewById<CheckBox>(R.id.checkbox_sunday),
+            dialogView.findViewById<CheckBox>(R.id.checkbox_monday),
+            dialogView.findViewById<CheckBox>(R.id.checkbox_tuesday),
+            dialogView.findViewById<CheckBox>(R.id.checkbox_wednesday),
+            dialogView.findViewById<CheckBox>(R.id.checkbox_thursday),
+            dialogView.findViewById<CheckBox>(R.id.checkbox_friday),
+            dialogView.findViewById<CheckBox>(R.id.checkbox_saturday)
+        )
 
-        dialogBuilder.setPositiveButton("One-time") { _, _ ->
-            val todoText = input.text.toString().trim()
-            if (todoText.isNotEmpty()) {
-                addTodoItem(todoText, false)
-            }
+        // Setup category spinner
+        val categories = arrayOf("General", "Work", "Personal", "Health", "Shopping", "Study")
+        categorySpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, categories)
+
+        // Setup priority spinner
+        val priorities = TodoItem.Priority.values().map { it.displayName }.toTypedArray()
+        prioritySpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, priorities)
+        prioritySpinner.setSelection(1) // Default to Medium
+
+        // Handle time picker checkbox
+        enableTimeCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            timePicker.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
-        dialogBuilder.setNeutralButton("Daily") { _, _ ->
-            val todoText = input.text.toString().trim()
+        // Handle recurring checkbox
+        recurringCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            daysContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        dialogBuilder.setView(dialogView)
+
+        dialogBuilder.setPositiveButton("Add Task") { _, _ ->
+            val todoText = taskInput.text.toString().trim()
             if (todoText.isNotEmpty()) {
-                addTodoItem(todoText, true)
+                val isRecurring = recurringCheckbox.isChecked
+                val selectedDays = if (isRecurring) {
+                    dayCheckboxes.mapIndexedNotNull { index, checkbox ->
+                        if (checkbox.isChecked) index + 1 else null // 1=Sunday, 2=Monday, etc.
+                    }.toSet()
+                } else {
+                    emptySet()
+                }
+
+                val category = categories[categorySpinner.selectedItemPosition]
+                val priority = TodoItem.Priority.values()[prioritySpinner.selectedItemPosition]
+                val dueTime = if (enableTimeCheckbox.isChecked) {
+                    val hour = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        timePicker.hour
+                    } else {
+                        @Suppress("DEPRECATION")
+                        timePicker.currentHour
+                    }
+                    val minute = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        timePicker.minute
+                    } else {
+                        @Suppress("DEPRECATION")
+                        timePicker.currentMinute
+                    }
+                    String.format("%02d:%02d", hour, minute)
+                } else {
+                    null
+                }
+
+                addTodoItem(todoText, isRecurring, selectedDays, priority, category, dueTime)
             }
         }
 
@@ -1150,8 +1229,15 @@ class MainActivity : ComponentActivity() {
         dialog.show()
     }
 
-    private fun addTodoItem(text: String, isRecurring: Boolean) {
-        todoItems.add(TodoItem(text, false, isRecurring))
+    private fun addTodoItem(
+        text: String,
+        isRecurring: Boolean,
+        selectedDays: Set<Int> = emptySet(),
+        priority: TodoItem.Priority = TodoItem.Priority.MEDIUM,
+        category: String = "General",
+        dueTime: String? = null
+    ) {
+        todoItems.add(TodoItem(text, false, isRecurring, null, selectedDays, priority, category, dueTime))
         todoAdapter.notifyItemInserted(todoItems.size - 1)
         saveTodoItems()
     }
@@ -1173,14 +1259,35 @@ class MainActivity : ComponentActivity() {
             for (todoString in todoArray) {
                 if (todoString.isNotEmpty()) {
                     val parts = todoString.split(":")
-                    if (parts.size >= 3) {
+                    if (parts.size >= 7) {
+                        // New format with all fields
+                        val text = parts[0]
+                        val isChecked = parts[1].toBoolean()
+                        val isRecurring = parts[2].toBoolean()
+                        val lastCompletedDate = if (parts[3].isNotEmpty()) parts[3] else null
+                        val selectedDays = if (parts[4].isNotEmpty()) {
+                            parts[4].split(",").map { it.toInt() }.toSet()
+                        } else {
+                            emptySet()
+                        }
+                        val priority = try {
+                            TodoItem.Priority.valueOf(parts[5])
+                        } catch (e: Exception) {
+                            TodoItem.Priority.MEDIUM
+                        }
+                        val category = parts[6]
+                        val dueTime = if (parts.size > 7 && parts[7].isNotEmpty()) parts[7] else null
+
+                        todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate, selectedDays, priority, category, dueTime))
+                    } else if (parts.size >= 3) {
+                        // Legacy format support
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         val isRecurring = parts[2].toBoolean()
                         val lastCompletedDate = if (parts.size > 3) parts[3] else null
                         todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate))
                     } else if (parts.size == 2) {
-                        // Legacy format support
+                        // Very old legacy format support
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         todoItems.add(TodoItem(text, isChecked, false))
@@ -1194,17 +1301,64 @@ class MainActivity : ComponentActivity() {
 
     private fun saveTodoItems() {
         val todoString = todoItems.joinToString("|") {
-            "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}"
+            val selectedDaysString = it.selectedDays.joinToString(",")
+            "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}:${selectedDaysString}:${it.priority.name}:${it.category}:${it.dueTime ?: ""}"
         }
         sharedPreferences.edit().putString("todo_items", todoString).apply()
     }
 
     private fun checkRecurringTasks() {
         val currentDate = getCurrentDateString()
+        val calendar = Calendar.getInstance()
+        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // 1=Sunday, 2=Monday, etc.
+        val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+        val currentMinute = calendar.get(Calendar.MINUTE)
+        val currentTimeInMinutes = currentHour * 60 + currentMinute
+
+        val itemsToRemove = mutableListOf<TodoItem>()
+
         for (todoItem in todoItems) {
             if (todoItem.isRecurring && todoItem.lastCompletedDate != currentDate) {
-                todoItem.isChecked = false
+                if (todoItem.selectedDays.isEmpty()) {
+                    // Daily recurring (legacy behavior)
+                    todoItem.isChecked = false
+                } else {
+                    // Weekly recurring - only reset if today is one of the selected days
+                    if (todoItem.selectedDays.contains(currentDayOfWeek)) {
+                        todoItem.isChecked = false
+                    }
+                }
+            } else if (!todoItem.isRecurring && todoItem.dueTime != null) {
+                // Check if non-recurring task with due time is overdue
+                val dueTimeParts = todoItem.dueTime.split(":")
+                if (dueTimeParts.size == 2) {
+                    try {
+                        val dueHour = dueTimeParts[0].toInt()
+                        val dueMinute = dueTimeParts[1].toInt()
+                        val dueTimeInMinutes = dueHour * 60 + dueMinute
+
+                        // If current time has passed the due time, mark for removal
+                        if (currentTimeInMinutes > dueTimeInMinutes) {
+                            itemsToRemove.add(todoItem)
+                        }
+                    } catch (e: NumberFormatException) {
+                        // Invalid time format, ignore
+                    }
+                }
             }
+        }
+
+        // Remove overdue non-recurring items
+        for (item in itemsToRemove) {
+            val index = todoItems.indexOf(item)
+            if (index != -1) {
+                todoItems.removeAt(index)
+                todoAdapter.notifyItemRemoved(index)
+            }
+        }
+
+        if (itemsToRemove.isNotEmpty()) {
+            saveTodoItems()
         }
     }
 
@@ -1286,5 +1440,75 @@ class MainActivity : ComponentActivity() {
     private fun updateFinanceDisplay() {
         balanceText.text = "Balance: ₹${financeManager.getBalance()}"
         monthlySpentText.text = "Monthly Spent: ₹${financeManager.getMonthlyExpenses()}"
+    }
+
+    fun applyPowerSaverMode(isEnabled: Boolean) {
+        isInPowerSaverMode = isEnabled // Track the state
+
+        if (isEnabled) {
+            setPitchBlackBackground()
+            hideNonEssentialWidgets()
+            // Reduce CPU usage by setting a lower priority to the main thread
+            Thread.currentThread().priority = Thread.MIN_PRIORITY
+        } else {
+            restoreOriginalBackground()
+            showNonEssentialWidgets()
+            // Restore the priority of the main thread
+            Thread.currentThread().priority = Thread.NORM_PRIORITY
+        }
+    }
+
+    private fun hideNonEssentialWidgets() {
+        // Hide weather, battery, usage stats, todo, finance widgets
+        findViewById<View>(R.id.weather_widget)?.visibility = View.GONE
+        findViewById<TextView>(R.id.battery_percentage)?.visibility = View.GONE
+        findViewById<TextView>(R.id.screen_time)?.visibility = View.GONE
+        findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.GONE
+        if (::weeklyUsageGraph.isInitialized) {
+            weeklyUsageGraph.visibility = View.GONE
+        }
+        // Hide the entire weekly usage widget container
+        findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.GONE
+
+        // Hide the wallpaper background in power saver mode
+        findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.GONE
+
+        // Hide the todo widget (the LinearLayout containing todo list)
+        todoRecyclerView.parent?.let { parent ->
+            if (parent is View) {
+                parent.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun showNonEssentialWidgets() {
+        // Restore weather, battery, usage stats, todo, finance widgets
+        findViewById<View>(R.id.weather_widget)?.visibility = View.VISIBLE
+        findViewById<TextView>(R.id.battery_percentage)?.visibility = View.VISIBLE
+        findViewById<TextView>(R.id.screen_time)?.visibility = View.VISIBLE
+        findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.VISIBLE
+        if (::weeklyUsageGraph.isInitialized) {
+            weeklyUsageGraph.visibility = View.VISIBLE
+        }
+        // Show the entire weekly usage widget container
+        findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.VISIBLE
+
+        // Show the wallpaper background when power saver mode is disabled
+        findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
+
+        // Show the todo widget (the LinearLayout containing todo list)
+        todoRecyclerView.parent?.let { parent ->
+            if (parent is View) {
+                parent.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    fun setPitchBlackBackground() {
+        findViewById<android.view.View>(android.R.id.content).setBackgroundColor(android.graphics.Color.BLACK)
+    }
+
+    fun restoreOriginalBackground() {
+        findViewById<android.view.View>(android.R.id.content).setBackgroundResource(R.drawable.wallpaper_background)
     }
 }
