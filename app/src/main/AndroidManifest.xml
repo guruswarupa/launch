@@ -75,6 +75,11 @@
             android:label="@string/settings_app_name">
         </activity>
 
+        <service
+            android:name=".AppUsageMonitor"
+            android:enabled="true"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
