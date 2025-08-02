@@ -144,7 +144,12 @@ class AppAdapter(
 
             "play_store_search" -> {
                 // Display Play Store search option
-                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
+                try {
+                    holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
+                } catch (e: Exception) {
+                    // Use a default icon if Play Store is not installed
+                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} on Play Store"
                 holder.itemView.setOnClickListener {
                     val encodedQuery = Uri.encode(appInfo.activityInfo.name)
@@ -159,8 +164,13 @@ class AppAdapter(
             }
 
             "maps_search" -> {
-                // Set the Google Maps icon
-                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
+                // Set the Google Maps icon with error handling
+                try {
+                    holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
+                } catch (e: Exception) {
+                    // Use a default icon if Google Maps is not installed
+                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} in Google Maps"
                 holder.itemView.setOnClickListener {
                     // Create an Intent to open Google Maps
@@ -179,18 +189,43 @@ class AppAdapter(
             }
 
             "yt_search" -> {
-                // Set the YouTube icon
-                holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
+                // Set the YouTube icon with error handling (prefer Revanced, then regular YouTube)
+                try {
+                    // Try Revanced first
+                    try {
+                        holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("app.revanced.android.youtube"))
+                    } catch (e: Exception) {
+                        // Fall back to regular YouTube
+                        holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
+                    }
+                } catch (e: Exception) {
+                    // Use a default icon if neither is installed
+                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} on YouTube"
                 holder.itemView.setOnClickListener {
                     // Create an Intent to open YouTube search
                     val ytIntentUri =
                         Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(appInfo.activityInfo.name)}")
                     val ytIntent = Intent(Intent.ACTION_VIEW, ytIntentUri)
-                    ytIntent.setPackage("com.google.android.youtube") // Open in YouTube app if installed
+
+                    // Try Revanced first, then regular YouTube
+                    var appOpened = false
                     try {
+                        ytIntent.setPackage("app.revanced.android.youtube")
                         activity.startActivity(ytIntent)
+                        appOpened = true
                     } catch (e: Exception) {
+                        try {
+                            ytIntent.setPackage("com.google.android.youtube")
+                            activity.startActivity(ytIntent)
+                            appOpened = true
+                        } catch (e: Exception) {
+                            // Neither app is installed
+                        }
+                    }
+
+                    if (!appOpened) {
                         Toast.makeText(
                             activity,
                             "YouTube app not installed. Opening in browser.",
