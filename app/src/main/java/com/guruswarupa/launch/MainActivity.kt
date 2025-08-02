@@ -636,6 +636,25 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    // Method to launch app with timer check and then lock check
+    internal fun launchAppWithTimerCheck(packageName: String, onTimerSet: () -> Unit) {
+        val appName = try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName
+        }
+
+        appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+            if (timerDuration == AppTimerManager.NO_TIMER) {
+                onTimerSet()
+            } else {
+                appTimerManager.startTimer(packageName, timerDuration)
+                onTimerSet()
+            }
+        }
+    }
+
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {

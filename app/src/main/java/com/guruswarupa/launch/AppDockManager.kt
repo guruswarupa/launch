@@ -373,24 +373,26 @@ class AppDockManager(
         }.toSet()
     }
 
+    fun launchAppWithLockCheck(packageName: String) {
+        (context as MainActivity).launchAppWithTimerCheck(packageName) {
+            if (appLockManager.isAppLocked(packageName)) {
+                appLockManager.verifyPin { isAuthenticated ->
+                    if (isAuthenticated) {
+                        launchApp(packageName)
+                    }
+                }
+            } else {
+                launchApp(packageName)
+            }
+        }
+    }
+
     private fun launchApp(packageName: String) {
         val intent = packageManager.getLaunchIntentForPackage(packageName)
         if (intent != null) {
             context.startActivity(intent)
         } else {
             Toast.makeText(context, "App not found", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun launchAppWithLockCheck(packageName: String) {
-        if (appLockManager.isAppLocked(packageName)) {
-            appLockManager.verifyPin { isAuthenticated ->
-                if (isAuthenticated) {
-                    launchApp(packageName)
-                }
-            }
-        } else {
-            launchApp(packageName)
         }
     }
 
@@ -879,7 +881,8 @@ class AppDockManager(
 
     private fun updateFocusModeIcon() {
         focusModeToggle.setImageResource(
-            if (isFocusMode) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode
+            if (isFocusMode) R.drawable.ic_focus_mode
+            else R.drawable.ic_normal_mode
         )
     }
 
