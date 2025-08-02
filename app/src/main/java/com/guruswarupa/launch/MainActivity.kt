@@ -94,6 +94,8 @@ class MainActivity : FragmentActivity() {
 
     // APK sharing manager
     private lateinit var shareManager: ShareManager
+    internal lateinit var appLockManager: AppLockManager
+    lateinit var appTimerManager: AppTimerManager
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -109,7 +111,6 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        appLockManager = AppLockManager(this)
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
@@ -125,6 +126,8 @@ class MainActivity : FragmentActivity() {
 
         // Initialize APK sharing manager
         shareManager = ShareManager(this)
+        appLockManager = AppLockManager(this)
+        appTimerManager = AppTimerManager(this)
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -376,14 +379,11 @@ class MainActivity : FragmentActivity() {
     private fun sendWhatsAppMessage(phoneNumber: String, message: String) {
         try {
             val formattedPhoneNumber = phoneNumber.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-            if (!formattedPhoneNumber.startsWith("+")) {
-                val fullPhoneNumber = "+91$formattedPhoneNumber" // Adjust the country code as needed
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("https://wa.me/${Uri.encode(fullPhoneNumber)}?text=${Uri.encode(message)}")
-                    setPackage("com.whatsapp")
-                }
-                startActivity(intent)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("https://wa.me/${Uri.encode(formattedPhoneNumber)}?text=${Uri.encode(message)}")
+                setPackage("com.whatsapp")
             }
+            startActivity(intent)
         } catch (e: Exception) {
             Toast.makeText(this, "WhatsApp not installed or failed to open message.", Toast.LENGTH_SHORT).show()
         }
@@ -407,9 +407,7 @@ class MainActivity : FragmentActivity() {
                     .replace("(", "")
                     .replace(")", "")
 
-                if (!phoneNumber.startsWith("+")) {
-                    phoneNumber = "+91$phoneNumber"
-                }
+
 
                 try {
                     val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -635,6 +633,25 @@ class MainActivity : FragmentActivity() {
             }
         } else {
             launchApp(packageName,appName)
+        }
+    }
+
+    // Method to launch app with timer check and then lock check
+    internal fun launchAppWithTimerCheck(packageName: String, onTimerSet: () -> Unit) {
+        val appName = try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName
+        }
+
+        appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+            if (timerDuration == AppTimerManager.NO_TIMER) {
+                onTimerSet()
+            } else {
+                appTimerManager.startTimer(packageName, timerDuration)
+                onTimerSet()
+            }
         }
     }
 
@@ -905,8 +922,6 @@ class MainActivity : FragmentActivity() {
                 .show()
         }
     }
-
-    internal lateinit var appLockManager: AppLockManager
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
