@@ -306,18 +306,25 @@ class AppAdapter(
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
 
-                        if (activity.appLockManager.isAppLocked(packageName)) {
-                            activity.appLockManager.verifyPin { isAuthenticated ->
-                                if (isAuthenticated) {
-                                    activity.startActivity(intent)
+                        val appName = appInfo.loadLabel(activity.packageManager).toString()
+
+                        // Show timer dialog before launching app
+                        activity.appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                            if (activity.appLockManager.isAppLocked(packageName)) {
+                                activity.appLockManager.verifyPin { isAuthenticated ->
+                                    if (isAuthenticated) {
+                                        activity.startActivity(intent)
+                                        activity.appTimerManager.startTimer(packageName, timerDuration)
+                                    }
                                 }
+                            } else {
+                                activity.startActivity(intent)
+                                activity.appTimerManager.startTimer(packageName, timerDuration)
                             }
-                        } else {
-                            activity.startActivity(intent)
-                        }
-                        activity.runOnUiThread {
-                            searchBox.text.clear()
-                            activity.appSearchManager.filterAppsAndContacts("")
+                            activity.runOnUiThread {
+                                searchBox.text.clear()
+                                activity.appSearchManager.filterAppsAndContacts("")
+                            }
                         }
                     } else {
                         Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()

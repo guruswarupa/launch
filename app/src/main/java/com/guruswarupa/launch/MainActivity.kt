@@ -94,6 +94,8 @@ class MainActivity : FragmentActivity() {
 
     // APK sharing manager
     private lateinit var shareManager: ShareManager
+    internal lateinit var appLockManager: AppLockManager
+    lateinit var appTimerManager: AppTimerManager
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -109,7 +111,6 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        appLockManager = AppLockManager(this)
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
@@ -125,6 +126,8 @@ class MainActivity : FragmentActivity() {
 
         // Initialize APK sharing manager
         shareManager = ShareManager(this)
+        appLockManager = AppLockManager(this)
+        appTimerManager = AppTimerManager(this)
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -900,8 +903,6 @@ class MainActivity : FragmentActivity() {
                 .show()
         }
     }
-
-    internal lateinit var appLockManager: AppLockManager
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
