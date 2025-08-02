@@ -376,14 +376,11 @@ class MainActivity : FragmentActivity() {
     private fun sendWhatsAppMessage(phoneNumber: String, message: String) {
         try {
             val formattedPhoneNumber = phoneNumber.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
-            if (!formattedPhoneNumber.startsWith("+")) {
-                val fullPhoneNumber = "+91$formattedPhoneNumber" // Adjust the country code as needed
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("https://wa.me/${Uri.encode(fullPhoneNumber)}?text=${Uri.encode(message)}")
-                    setPackage("com.whatsapp")
-                }
-                startActivity(intent)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("https://wa.me/${Uri.encode(formattedPhoneNumber)}?text=${Uri.encode(message)}")
+                setPackage("com.whatsapp")
             }
+            startActivity(intent)
         } catch (e: Exception) {
             Toast.makeText(this, "WhatsApp not installed or failed to open message.", Toast.LENGTH_SHORT).show()
         }
@@ -407,9 +404,7 @@ class MainActivity : FragmentActivity() {
                     .replace("(", "")
                     .replace(")", "")
 
-                if (!phoneNumber.startsWith("+")) {
-                    phoneNumber = "+91$phoneNumber"
-                }
+
 
                 try {
                     val intent = Intent(Intent.ACTION_VIEW).apply {
