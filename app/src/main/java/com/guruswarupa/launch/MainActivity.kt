@@ -610,7 +610,7 @@ class MainActivity : FragmentActivity() {
         startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
     }
 
-    private fun launchApp(packageName: String, appName: String) {
+    internal fun launchApp(packageName: String, appName: String) {
         try {
             val intent = packageManager.getLaunchIntentForPackage(packageName)
             if (intent != null) {

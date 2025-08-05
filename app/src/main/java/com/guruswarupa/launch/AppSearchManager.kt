@@ -111,6 +111,26 @@ class AppSearchManager(
                         newFilteredList.add(createContactOption(contact))
                     }
 
+                // Auto-open if only one app result found (excluding contacts and browser search)
+                val appResults = sortedExact + sortedPartial
+                if (appResults.size == 1 && query.length >= 3) {
+                    val appInfo = appResults[0]
+                    val packageName = appInfo.activityInfo.packageName
+
+                    // Launch the app directly
+                    (searchBox.context as? MainActivity)?.let { activity ->
+                        val appName = try {
+                            val appInfo = activity.packageManager.getApplicationInfo(packageName, 0)
+                            activity.packageManager.getApplicationLabel(appInfo).toString()
+                        } catch (e: Exception) {
+                            packageName
+                        }
+                        activity.launchApp(packageName, appName)
+                        searchBox.text.clear()
+                    }
+                    return
+                }
+
                 if (newFilteredList.isEmpty()) {
                     // Defer suggestions to avoid blocking main UI
                     handler.postDelayed({
