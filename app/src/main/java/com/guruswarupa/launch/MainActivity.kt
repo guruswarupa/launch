@@ -71,6 +71,7 @@ class MainActivity : FragmentActivity() {
 
     private lateinit var wallpaperBackground: ImageView
     private var currentWallpaperBitmap: Bitmap? = null
+    private lateinit var widgetManager: WidgetManager
 
     lateinit var appSearchManager: AppSearchManager
     internal lateinit var appDockManager: AppDockManager
@@ -285,6 +286,9 @@ class MainActivity : FragmentActivity() {
 
         setupFinanceWidget()
         updateFinanceDisplay()
+
+        // Initialize WidgetManager after all views are set up
+        widgetManager = WidgetManager(this, findViewById(android.R.id.content))
     }
 
     fun refreshAppsForFocusMode() {
@@ -1492,30 +1496,58 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun hideNonEssentialWidgets() {
-        // Hide weather, battery, usage stats, todo, finance widgets
-        findViewById<View>(R.id.weather_widget)?.visibility = View.GONE
-        findViewById<TextView>(R.id.battery_percentage)?.visibility = View.GONE
-        findViewById<TextView>(R.id.screen_time)?.visibility = View.GONE
-        findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.GONE
+        // Use WidgetManager for comprehensive widget management
+        if (::widgetManager.isInitialized) {
+            widgetManager.hideAllWidgets()
+        }
+
+        // Additional specific widgets that might not be caught by WidgetManager
+        val additionalWidgetIds = listOf(
+            R.id.weather_widget,
+            R.id.battery_percentage,
+            R.id.screen_time,
+            R.id.finance_widget,
+            R.id.weekly_usage_widget,
+            R.id.wallpaper_background,
+            R.id.todo_recycler_view,
+            R.id.add_todo_button
+        )
+
+        additionalWidgetIds.forEach { widgetId ->
+            findViewById<View>(widgetId)?.visibility = View.GONE
+        }
+
+        // Handle specialized widgets
         if (::weeklyUsageGraph.isInitialized) {
             weeklyUsageGraph.visibility = View.GONE
         }
-        // Hide the entire weekly usage widget container
-        findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.GONE
 
-        // Hide the wallpaper background in power saver mode
-        findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.GONE
-
-        // Hide the todo widget (the LinearLayout containing todo list)
-        todoRecyclerView.parent?.let { parent ->
-            if (parent is View) {
-                parent.visibility = View.GONE
+        // Hide todo widget container properly
+        if (::todoRecyclerView.isInitialized) {
+            todoRecyclerView.visibility = View.GONE
+            todoRecyclerView.parent?.let { parent ->
+                if (parent is View) {
+                    parent.visibility = View.GONE
+                }
             }
+        }
+
+        // Hide weather icon and text
+        if (::weatherIcon.isInitialized) {
+            weatherIcon.visibility = View.GONE
+        }
+        if (::weatherText.isInitialized) {
+            weatherText.visibility = View.GONE
         }
     }
 
     private fun showNonEssentialWidgets() {
-        // Restore weather, battery, usage stats, todo, finance widgets
+        // Use WidgetManager to restore all widgets
+        if (::widgetManager.isInitialized) {
+            widgetManager.showAllWidgets()
+        }
+
+        // Additional specific widgets restoration
         findViewById<View>(R.id.weather_widget)?.visibility = View.VISIBLE
         findViewById<TextView>(R.id.battery_percentage)?.visibility = View.VISIBLE
         findViewById<TextView>(R.id.screen_time)?.visibility = View.VISIBLE
@@ -1530,10 +1562,21 @@ class MainActivity : FragmentActivity() {
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
 
         // Show the todo widget (the LinearLayout containing todo list)
-        todoRecyclerView.parent?.let { parent ->
-            if (parent is View) {
-                parent.visibility = View.VISIBLE
+        if (::todoRecyclerView.isInitialized) {
+            todoRecyclerView.visibility = View.VISIBLE
+            todoRecyclerView.parent?.let { parent ->
+                if (parent is View) {
+                    parent.visibility = View.VISIBLE
+                }
             }
+        }
+
+        // Show weather icon and text
+        if (::weatherIcon.isInitialized) {
+            weatherIcon.visibility = View.VISIBLE
+        }
+        if (::weatherText.isInitialized) {
+            weatherText.visibility = View.VISIBLE
         }
     }
 
@@ -1558,12 +1601,18 @@ class MainActivity : FragmentActivity() {
                 val distanceX = e2.x - e1.x
                 val distanceY = e2.y - e1.y
 
-                // Check for a left swipe
+                // Check for horizontal swipe with sufficient distance and velocity
                 if (abs(distanceX) > SWIPE_MIN_DISTANCE && abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-                    if (distanceX < 0) { // Left swipe
-                        // Open the drawer
-                        drawerLayout.openDrawer(GravityCompat.START)
-                        return true
+                    if (distanceX < 0) { // Left swipe - open drawer
+                        if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            drawerLayout.openDrawer(GravityCompat.START)
+                            return true
+                        }
+                    } else if (distanceX > 0) { // Right swipe - close drawer
+                        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            drawerLayout.closeDrawer(GravityCompat.START)
+                            return true
+                        }
                     }
                 }
                 return false
