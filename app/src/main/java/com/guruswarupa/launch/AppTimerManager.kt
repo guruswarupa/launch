@@ -44,7 +44,7 @@ class AppTimerManager(private val context: Context) {
         val input = EditText(context)
         input.hint = "Enter minutes"
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Timer")
             .setMessage("Enter time in minutes:")
             .setView(input)

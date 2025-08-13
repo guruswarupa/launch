@@ -47,6 +47,11 @@ import com.guruswarupa.launch.TodoItem
 import com.guruswarupa.launch.TodoAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.core.view.GravityCompat
+import android.view.GestureDetector
+import android.view.MotionEvent
+import kotlin.math.abs
 
 
 class MainActivity : FragmentActivity() {
@@ -97,6 +102,10 @@ class MainActivity : FragmentActivity() {
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
 
+    // Drawer layout and gesture detector
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var gestureDetector: GestureDetector
+
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
         private const val REQUEST_CODE_CALL_PHONE = 200
@@ -105,6 +114,8 @@ class MainActivity : FragmentActivity() {
         private const val VOICE_SEARCH_REQUEST = 500
         private const val USAGE_STATS_REQUEST = 600
         private const val LOCATION_PERMISSION_REQUEST = 700
+        private const val SWIPE_MIN_DISTANCE = 120
+        private const val SWIPE_THRESHOLD_VELOCITY = 200
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -126,8 +137,13 @@ class MainActivity : FragmentActivity() {
 
         // Initialize APK sharing manager
         shareManager = ShareManager(this)
+
+        // Initialize all managers
         appLockManager = AppLockManager(this)
         appTimerManager = AppTimerManager(this)
+
+        // Setup gesture detector for swipe gestures
+        setupGestureDetection()
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -167,6 +183,8 @@ class MainActivity : FragmentActivity() {
         appDock = findViewById(R.id.app_dock)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
         weeklyUsageGraph = findViewById(R.id.weekly_usage_graph)
+        drawerLayout = findViewById(R.id.drawer_layout)
+
         weatherIcon = findViewById(R.id.weather_icon) // Initialize weatherIcon
         weatherText = findViewById(R.id.weather_text) // Initialize weatherText
 
@@ -1525,5 +1543,37 @@ class MainActivity : FragmentActivity() {
 
     fun restoreOriginalBackground() {
         findViewById<android.view.View>(android.R.id.content).setBackgroundResource(R.drawable.wallpaper_background)
+    }
+
+    private fun setupGestureDetection() {
+        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 == null) return false
+
+                val distanceX = e2.x - e1.x
+                val distanceY = e2.y - e1.y
+
+                // Check for a left swipe
+                if (abs(distanceX) > SWIPE_MIN_DISTANCE && abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+                    if (distanceX < 0) { // Left swipe
+                        // Open the drawer
+                        drawerLayout.openDrawer(GravityCompat.START)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+    }
+
+    // Intercept touch events to pass them to the gesture detector
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        gestureDetector.onTouchEvent(event)
+        return super.dispatchTouchEvent(event)
     }
 }

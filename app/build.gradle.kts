@@ -78,5 +78,5 @@ dependencies {
     implementation(libs.joda.time)
     implementation(libs.google.http.client)
     implementation(libs.google.http.client.android)
-
+    implementation(libs.androidx.drawerlayout)
 }
