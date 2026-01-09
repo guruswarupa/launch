@@ -96,6 +96,9 @@ class MainActivity : FragmentActivity() {
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
+    lateinit var appCategoryManager: AppCategoryManager
+    lateinit var favoriteAppManager: FavoriteAppManager
+    internal var isShowAllAppsMode = false
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -128,6 +131,9 @@ class MainActivity : FragmentActivity() {
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
         appTimerManager = AppTimerManager(this)
+        appCategoryManager = AppCategoryManager(packageManager)
+        favoriteAppManager = FavoriteAppManager(sharedPreferences)
+        isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -216,7 +222,7 @@ class MainActivity : FragmentActivity() {
 
         loadTodoItems()
 
-        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager,  appLockManager)
+        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
 
         // Refresh apps after appDockManager is fully initialized
         if (!appDockManager.getCurrentMode()) {
@@ -271,6 +277,46 @@ class MainActivity : FragmentActivity() {
 
     fun refreshAppsForFocusMode() {
         loadApps()
+    }
+    
+    fun refreshAppsForWorkspace() {
+        loadApps()
+    }
+    
+    fun filterAppsWithoutReload() {
+        // Optimized: Filter existing list without reloading from package manager
+        if (fullAppList.isEmpty()) {
+            loadApps()
+            return
+        }
+        
+        Thread {
+            try {
+                // Filter apps based on favorite/show all mode in background
+                val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
+                
+                // Update UI on main thread
+                runOnUiThread {
+                    appList = finalAppList.toMutableList()
+                    adapter.updateAppList(appList)
+                    appDockManager.refreshFavoriteToggle()
+                    
+                    // Update AppSearchManager with new filtered list
+                    appSearchManager = AppSearchManager(
+                        packageManager,
+                        appList,
+                        fullAppList,
+                        adapter,
+                        searchBox,
+                        contactsList
+                    )
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "Error filtering apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }.start()
     }
 
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
@@ -645,13 +691,28 @@ class MainActivity : FragmentActivity() {
             packageName
         }
 
-        appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
-            if (timerDuration == AppTimerManager.NO_TIMER) {
-                onTimerSet()
-            } else {
-                appTimerManager.startTimer(packageName, timerDuration)
-                onTimerSet()
+        // Only show timer dialog for social media and entertainment apps
+        if (appCategoryManager.shouldShowTimer(packageName, appName)) {
+            appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                if (timerDuration == AppTimerManager.NO_TIMER) {
+                    // No timer selected, proceed with normal launch (includes lock check)
+                    onTimerSet()
+                } else {
+                    // Timer selected - handle lock check first, then start timer (which launches app)
+                    if (appLockManager.isAppLocked(packageName)) {
+                        appLockManager.verifyPin { isAuthenticated ->
+                            if (isAuthenticated) {
+                                appTimerManager.startTimer(packageName, timerDuration)
+                            }
+                        }
+                    } else {
+                        appTimerManager.startTimer(packageName, timerDuration)
+                    }
+                }
             }
+        } else {
+            // For productivity and other apps, launch directly without timer (includes lock check)
+            onTimerSet()
         }
     }
 
@@ -661,22 +722,23 @@ class MainActivity : FragmentActivity() {
                 Intent.ACTION_PACKAGE_REMOVED -> {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                         val packageName = intent.data?.encodedSchemeSpecificPart
-                        if (packageName != null) {
-                            appList.removeAll { it.activityInfo.packageName == packageName }
-                            fullAppList.removeAll { it.activityInfo.packageName == packageName }
-                            adapter.appList = appList
-                            adapter.notifyDataSetChanged()
+                        if (packageName != null && context is MainActivity) {
+                            context.runOnUiThread {
+                                context.appList.removeAll { it.activityInfo.packageName == packageName }
+                                context.fullAppList.removeAll { it.activityInfo.packageName == packageName }
+                                if (context::adapter.isInitialized) {
+                                    context.adapter.appList = context.appList
+                                    context.adapter.notifyDataSetChanged()
+                                }
+                            }
                         }
                     }
                 }
                 Intent.ACTION_PACKAGE_ADDED -> {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                        val relaunchIntent = Intent(context, MainActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context?.startActivity(relaunchIntent)
-                        if (context is Activity) {
-                            context.finish()
+                        // Reload apps when a new package is installed
+                        if (context is MainActivity) {
+                            context.loadApps()
                         }
                     }
                 }
@@ -688,7 +750,10 @@ class MainActivity : FragmentActivity() {
         override fun run() {
             updateTime()
             updateDate()
-            checkDateChangeAndRefreshUsage()
+            // Skip usage checks in power saver mode to save battery
+            if (!isInPowerSaverMode) {
+                checkDateChangeAndRefreshUsage()
+            }
             handler.postDelayed(this, 1000)
         }
     }
@@ -724,9 +789,48 @@ class MainActivity : FragmentActivity() {
             }
         }.start()
     }
+    
+    /**
+     * Refresh all usage data in background without blocking UI
+     * Updates app list usage times and weekly graph
+     */
+    private fun refreshUsageDataInBackground() {
+        Thread {
+            try {
+                // Clear adapter cache first to ensure fresh data
+                adapter?.clearUsageCache()
+                
+                // Update weekly usage graph in background
+                if (usageStatsManager.hasUsageStatsPermission()) {
+                    val weeklyData = usageStatsManager.getWeeklyUsageData()
+                    val appUsageData = usageStatsManager.getWeeklyAppUsageData()
+                    
+                    runOnUiThread {
+                        if (::weeklyUsageGraph.isInitialized) {
+                            weeklyUsageGraph.setUsageData(weeklyData)
+                            weeklyUsageGraph.setAppUsageData(appUsageData)
+                        }
+                    }
+                }
+                
+                // Refresh app adapter to show updated usage times
+                // Small delay allows usage queries to complete
+                Thread.sleep(200)
+                runOnUiThread {
+                    adapter?.notifyDataSetChanged()
+                }
+            } catch (e: Exception) {
+                // Silently handle errors to prevent crashes
+                e.printStackTrace()
+            }
+        }.start()
+    }
 
     override fun onResume() {
         super.onResume()
+
+        // Invalidate usage cache to ensure fresh data when app resumes
+        usageStatsManager.invalidateCache()
 
         // Use background thread for heavy operations
         Thread {
@@ -740,11 +844,16 @@ class MainActivity : FragmentActivity() {
             sharedPreferences.edit().putLong("last_weather_update", System.currentTimeMillis()).apply()
         }
 
-        handler.post(updateRunnable)
-
-        // Immediately update battery and usage when app resumes
-        updateBatteryInBackground()
-        updateUsageInBackground()
+        // Start appropriate update runnable based on power saver mode
+        if (isInPowerSaverMode) {
+            handler.post(powerSaverUpdateRunnable)
+        } else {
+            handler.post(updateRunnable)
+            // Immediately update battery and usage when app resumes (all in background)
+            updateBatteryInBackground()
+            updateUsageInBackground()
+            refreshUsageDataInBackground()
+        }
 
         setWallpaperBackground()
         val filter = IntentFilter().apply {
@@ -761,11 +870,15 @@ class MainActivity : FragmentActivity() {
 
         // Reapply focus mode state when returning from apps
         applyFocusMode(appDockManager.getCurrentMode())
+        
+        // Refresh workspace toggle icon
+        appDockManager.refreshWorkspaceToggle()
     }
 
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacks(powerSaverUpdateRunnable)
         try {
             unregisterReceiver(packageReceiver)
             unregisterReceiver(wallpaperChangeReceiver)
@@ -814,33 +927,69 @@ class MainActivity : FragmentActivity() {
                     val filteredApps = unsortedList.parallelStream()
                         .filter { app ->
                             app.activityInfo.packageName != "com.guruswarupa.launch" &&
-                                    (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName))
+                                    (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)) &&
+                                    (!appDockManager.isWorkspaceModeActive() || appDockManager.isAppInActiveWorkspace(app.activityInfo.packageName))
                         }
                         .collect(java.util.stream.Collectors.toList())
 
                     // Sort in parallel for better performance
+                    // Pre-compute labels and usage stats to avoid repeated calls during sorting
+                    val labelCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+                    val usageCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
+                    
+                    // Pre-compute all labels and usage stats in parallel
+                    filteredApps.parallelStream().forEach { app ->
+                        val packageName = app.activityInfo.packageName
+                        labelCache.computeIfAbsent(packageName) {
+                            try {
+                                app.loadLabel(packageManager).toString().lowercase()
+                            } catch (e: Exception) {
+                                packageName.lowercase()
+                            }
+                        }
+                        usageCache.computeIfAbsent(packageName) {
+                            sharedPreferences.getInt("usage_$packageName", 0)
+                        }
+                    }
+                    
+                    // Now sort using cached values
                     val processedAppList = filteredApps.parallelStream()
                         .sorted(
-                            compareByDescending<ResolveInfo> { sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0) }
-                                .thenBy { it.loadLabel(packageManager).toString().lowercase() }
+                            compareByDescending<ResolveInfo> { 
+                                usageCache[it.activityInfo.packageName] ?: 0
+                            }
+                            .thenBy { 
+                                labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
+                            }
                         )
                         .collect(java.util.stream.Collectors.toList())
                         .toMutableList()
 
+                    // Filter apps based on favorite/show all mode
+                    val finalAppList = favoriteAppManager.filterApps(processedAppList, isShowAllAppsMode)
+
                     // Update UI on main thread
                     runOnUiThread {
-                        appList = processedAppList
+                        appList = finalAppList.toMutableList()
                         fullAppList = ArrayList(processedAppList)
 
-                        recyclerView.layoutManager = if (isGridMode) {
-                            GridLayoutManager(this, 4)
+                        // Optimize: Update existing adapter instead of creating new one
+                        if (::adapter.isInitialized) {
+                            adapter.updateAppList(appList)
                         } else {
-                            LinearLayoutManager(this)
+                            recyclerView.layoutManager = if (isGridMode) {
+                                GridLayoutManager(this, 4)
+                            } else {
+                                LinearLayoutManager(this)
+                            }
+                            adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
+                            recyclerView.adapter = adapter
                         }
-
-                        adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
-                        recyclerView.adapter = adapter
+                        
                         recyclerView.visibility = View.VISIBLE
+                        
+                        // Update dock toggle icon
+                        appDockManager.refreshFavoriteToggle()
 
                         // Initialize AppSearchManager
                         appSearchManager = AppSearchManager(
@@ -870,6 +1019,7 @@ class MainActivity : FragmentActivity() {
             voiceSearchButton.visibility = android.view.View.VISIBLE
         }
     }
+    
 
     private fun requestContactsPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
@@ -1072,8 +1222,10 @@ class MainActivity : FragmentActivity() {
     private lateinit var usageStatsTextView: TextView
 
     private fun refreshUsageStats() {
+        // Clear adapter cache to force refresh
+        adapter?.clearUsageCache()
         runOnUiThread {
-            appAdapter.notifyDataSetChanged()
+            adapter?.notifyDataSetChanged()
         }
     }
 
@@ -1388,11 +1540,12 @@ class MainActivity : FragmentActivity() {
         val dialogBuilder = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Transaction History")
 
+        val currencySymbol = financeManager.getCurrency()
         val transactionList = transactions.take(20).map { (type, amount, description) ->
             val typeText = if (type == "income") "Income" else "Expense"
             val symbol = if (type == "income") "+" else "-"
             val descText = if (description.isNotEmpty()) " - $description" else ""
-            "$symbol$amount ($typeText)$descText"
+            "$symbol$currencySymbol${kotlin.math.abs(amount)} ($typeText)$descText"
         }.toTypedArray()
 
         dialogBuilder.setItems(transactionList) { _, _ -> }
@@ -1437,11 +1590,12 @@ class MainActivity : FragmentActivity() {
 
                 updateFinanceDisplay()
 
+                val currencySymbol = financeManager.getCurrency()
                 val action = if (isIncome) "Income" else "Expense"
                 val message = if (description.isNotEmpty()) {
-                    "$action of ₹$amount added: $description"
+                    "$action of $currencySymbol$amount added: $description"
                 } else {
-                    "$action of ₹$amount added"
+                    "$action of $currencySymbol$amount added"
                 }
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             } else {
@@ -1453,8 +1607,9 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun updateFinanceDisplay() {
-        balanceText.text = "Balance: ₹${financeManager.getBalance()}"
-        monthlySpentText.text = "Monthly Spent: ₹${financeManager.getMonthlyExpenses()}"
+        val currencySymbol = financeManager.getCurrency()
+        balanceText.text = "Balance: $currencySymbol${financeManager.getBalance()}"
+        monthlySpentText.text = "Monthly Spent: $currencySymbol${financeManager.getMonthlyExpenses()}"
     }
 
     fun applyPowerSaverMode(isEnabled: Boolean) {
@@ -1463,13 +1618,64 @@ class MainActivity : FragmentActivity() {
         if (isEnabled) {
             setPitchBlackBackground()
             hideNonEssentialWidgets()
-            // Reduce CPU usage by setting a lower priority to the main thread
-            Thread.currentThread().priority = Thread.MIN_PRIORITY
+            
+            // Stop or slow down background updates to save battery
+            stopBackgroundUpdates()
+            
+            // Reduce animation duration (if supported)
+            window?.setWindowAnimations(android.R.style.Animation_Toast)
+            
+            // Disable hardware acceleration for less power consumption (optional)
+            // window?.setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, 0)
+            
         } else {
             restoreOriginalBackground()
             showNonEssentialWidgets()
-            // Restore the priority of the main thread
-            Thread.currentThread().priority = Thread.NORM_PRIORITY
+            
+            // Resume background updates
+            resumeBackgroundUpdates()
+            
+            // Restore normal animations
+            window?.setWindowAnimations(0)
+        }
+        
+        // Refresh adapter to hide/show usage times based on power saver mode
+        if (::adapter.isInitialized) {
+            adapter.notifyDataSetChanged()
+        }
+    }
+    
+    private fun stopBackgroundUpdates() {
+        // Stop the frequent update runnable (time/date updates every second)
+        handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacks(powerSaverUpdateRunnable)
+        
+        // Start a slower update runnable for power saver mode (update every 30 seconds instead of 1 second)
+        handler.post(powerSaverUpdateRunnable)
+    }
+    
+    private fun resumeBackgroundUpdates() {
+        // Stop power saver update runnable
+        handler.removeCallbacks(powerSaverUpdateRunnable)
+        
+        // Resume normal update runnable
+        handler.post(updateRunnable)
+        
+        // Resume battery and usage updates
+        updateBatteryInBackground()
+        updateUsageInBackground()
+    }
+    
+    // Slower update runnable for power saver mode (updates every 30 seconds instead of 1 second)
+    private val powerSaverUpdateRunnable = object : Runnable {
+        override fun run() {
+            if (isInPowerSaverMode) {
+                // Only update time and date, skip usage checks
+                updateTime()
+                updateDate()
+                // Update every 30 seconds instead of 1 second to save battery
+                handler.postDelayed(this, 30000)
+            }
         }
     }
 

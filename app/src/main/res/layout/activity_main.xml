@@ -185,6 +185,7 @@
                         android:layout_marginBottom="20px"/>
                 </HorizontalScrollView>
 
+
                 <!-- App List (RecyclerView) -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/app_list"

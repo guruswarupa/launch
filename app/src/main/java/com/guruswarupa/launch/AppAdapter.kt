@@ -38,8 +38,15 @@ class AppAdapter(
     private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
     private val labelCache = mutableMapOf<String, String>() // packageName to label
     private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
-    private val CACHE_DURATION = 60000L // 1 minute cache
+    private val CACHE_DURATION = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
+    
+    /**
+     * Clear usage cache to force refresh of usage times
+     */
+    fun clearUsageCache() {
+        usageCache.clear()
+    }
 
     companion object {
         private const val VIEW_TYPE_LIST = 0
@@ -72,6 +79,11 @@ class AppAdapter(
     }
 
     private fun getUsageTimeWithCache(packageName: String): Long {
+        // Skip usage queries in power saver mode to save battery
+        if (activity.appDockManager.isPowerSaverActive()) {
+            return 0L
+        }
+        
         val currentTime = System.currentTimeMillis()
         val cached = usageCache[packageName]
 
@@ -101,9 +113,12 @@ class AppAdapter(
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
 
-        // Show usage time only in list mode - defer formatting until needed
-        if (!isGridMode && holder.appUsageTime != null) {
-            // Use cached formatted time if available
+        // Show usage time only in list mode and when power saver is disabled
+        // Hide usage time in power saver mode to save battery (no usage queries)
+        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
+        
+        if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
+            // Use cached usage time (cache lookup is fast, actual query only if cache expired)
             val usageTime = getUsageTimeWithCache(packageName)
             val formattedTime = usageStatsManager.formatUsageTime(usageTime)
             holder.appUsageTime?.text = formattedTime
@@ -308,18 +323,38 @@ class AppAdapter(
 
                         val appName = appInfo.loadLabel(activity.packageManager).toString()
 
-                        // Show timer dialog before launching app
-                        activity.appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                        // Show timer dialog only for social media and entertainment apps
+                        val shouldShowTimer = activity.appCategoryManager.shouldShowTimer(packageName, appName)
+                        
+                        if (shouldShowTimer) {
+                            // Show timer dialog before launching app
+                            activity.appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                                if (activity.appLockManager.isAppLocked(packageName)) {
+                                    activity.appLockManager.verifyPin { isAuthenticated ->
+                                        if (isAuthenticated) {
+                                            activity.startActivity(intent)
+                                            activity.appTimerManager.startTimer(packageName, timerDuration)
+                                        }
+                                    }
+                                } else {
+                                    activity.startActivity(intent)
+                                    activity.appTimerManager.startTimer(packageName, timerDuration)
+                                }
+                                activity.runOnUiThread {
+                                    searchBox.text.clear()
+                                    activity.appSearchManager.filterAppsAndContacts("")
+                                }
+                            }
+                        } else {
+                            // Launch directly without timer for productivity and other apps
                             if (activity.appLockManager.isAppLocked(packageName)) {
                                 activity.appLockManager.verifyPin { isAuthenticated ->
                                     if (isAuthenticated) {
                                         activity.startActivity(intent)
-                                        activity.appTimerManager.startTimer(packageName, timerDuration)
                                     }
                                 }
                             } else {
                                 activity.startActivity(intent)
-                                activity.appTimerManager.startTimer(packageName, timerDuration)
                             }
                             activity.runOnUiThread {
                                 searchBox.text.clear()
@@ -345,6 +380,13 @@ class AppAdapter(
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
         popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
 
+        // Update favorite menu item text
+        val favoriteMenuItem = popupMenu.menu.findItem(R.id.toggle_favorite)
+        if (favoriteMenuItem != null) {
+            val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
+            favoriteMenuItem.title = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+        }
+
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.app_info -> {
@@ -359,8 +401,8 @@ class AppAdapter(
                     uninstallApp(packageName)
                     true
                 }
-                R.id.add_to_dock -> {
-                    addToDock(packageName, appInfo)
+                R.id.toggle_favorite -> {
+                    toggleFavoriteApp(packageName, appInfo)
                     true
                 }
                 else -> false
@@ -390,9 +432,22 @@ class AppAdapter(
         activity.startActivity(intent)
     }
 
-    private fun addToDock(packageName: String, appInfo: ResolveInfo) {
-        activity.appDockManager.addAppToDock(packageName)
-        Toast.makeText(activity, "Added ${appInfo.loadLabel(activity.packageManager)} to dock", Toast.LENGTH_SHORT).show()
+    private fun toggleFavoriteApp(packageName: String, appInfo: ResolveInfo) {
+        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
+        
+        if (isFavorite) {
+            activity.favoriteAppManager.removeFavoriteApp(packageName)
+            Toast.makeText(activity, "Removed $appName from favorites", Toast.LENGTH_SHORT).show()
+        } else {
+            activity.favoriteAppManager.addFavoriteApp(packageName)
+            Toast.makeText(activity, "Added $appName to favorites", Toast.LENGTH_SHORT).show()
+        }
+        
+        // Optimize: Filter existing list instead of reloading everything
+        activity.filterAppsWithoutReload()
+        // Refresh dock toggle icon
+        activity.appDockManager.refreshFavoriteToggle()
     }
 
     fun showCallConfirmationDialog(contactName: String) {
