@@ -79,6 +79,11 @@ class AppAdapter(
     }
 
     private fun getUsageTimeWithCache(packageName: String): Long {
+        // Skip usage queries in power saver mode to save battery
+        if (activity.appDockManager.isPowerSaverActive()) {
+            return 0L
+        }
+        
         val currentTime = System.currentTimeMillis()
         val cached = usageCache[packageName]
 
@@ -108,8 +113,11 @@ class AppAdapter(
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
 
-        // Show usage time only in list mode - defer formatting until needed
-        if (!isGridMode && holder.appUsageTime != null) {
+        // Show usage time only in list mode and when power saver is disabled
+        // Hide usage time in power saver mode to save battery (no usage queries)
+        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
+        
+        if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
             // Use cached usage time (cache lookup is fast, actual query only if cache expired)
             val usageTime = getUsageTimeWithCache(packageName)
             val formattedTime = usageStatsManager.formatUsageTime(usageTime)

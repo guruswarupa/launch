@@ -749,7 +749,10 @@ class MainActivity : FragmentActivity() {
         override fun run() {
             updateTime()
             updateDate()
-            checkDateChangeAndRefreshUsage()
+            // Skip usage checks in power saver mode to save battery
+            if (!isInPowerSaverMode) {
+                checkDateChangeAndRefreshUsage()
+            }
             handler.postDelayed(this, 1000)
         }
     }
@@ -840,12 +843,16 @@ class MainActivity : FragmentActivity() {
             sharedPreferences.edit().putLong("last_weather_update", System.currentTimeMillis()).apply()
         }
 
-        handler.post(updateRunnable)
-
-        // Immediately update battery and usage when app resumes (all in background)
-        updateBatteryInBackground()
-        updateUsageInBackground()
-        refreshUsageDataInBackground()
+        // Start appropriate update runnable based on power saver mode
+        if (isInPowerSaverMode) {
+            handler.post(powerSaverUpdateRunnable)
+        } else {
+            handler.post(updateRunnable)
+            // Immediately update battery and usage when app resumes (all in background)
+            updateBatteryInBackground()
+            updateUsageInBackground()
+            refreshUsageDataInBackground()
+        }
 
         setWallpaperBackground()
         val filter = IntentFilter().apply {
@@ -870,6 +877,7 @@ class MainActivity : FragmentActivity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacks(powerSaverUpdateRunnable)
         try {
             unregisterReceiver(packageReceiver)
             unregisterReceiver(wallpaperChangeReceiver)
@@ -1609,13 +1617,62 @@ class MainActivity : FragmentActivity() {
         if (isEnabled) {
             setPitchBlackBackground()
             hideNonEssentialWidgets()
-            // Reduce CPU usage by setting a lower priority to the main thread
-            Thread.currentThread().priority = Thread.MIN_PRIORITY
+            
+            // Stop or slow down background updates to save battery
+            stopBackgroundUpdates()
+            
+            // Reduce animation duration (if supported)
+            window?.setWindowAnimations(android.R.style.Animation_Toast)
+            
+            // Disable hardware acceleration for less power consumption (optional)
+            // window?.setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, 0)
+            
         } else {
             restoreOriginalBackground()
             showNonEssentialWidgets()
-            // Restore the priority of the main thread
-            Thread.currentThread().priority = Thread.NORM_PRIORITY
+            
+            // Resume background updates
+            resumeBackgroundUpdates()
+            
+            // Restore normal animations
+            window?.setWindowAnimations(0)
+        }
+        
+        // Refresh adapter to hide/show usage times based on power saver mode
+        adapter?.notifyDataSetChanged()
+    }
+    
+    private fun stopBackgroundUpdates() {
+        // Stop the frequent update runnable (time/date updates every second)
+        handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacks(powerSaverUpdateRunnable)
+        
+        // Start a slower update runnable for power saver mode (update every 30 seconds instead of 1 second)
+        handler.post(powerSaverUpdateRunnable)
+    }
+    
+    private fun resumeBackgroundUpdates() {
+        // Stop power saver update runnable
+        handler.removeCallbacks(powerSaverUpdateRunnable)
+        
+        // Resume normal update runnable
+        handler.post(updateRunnable)
+        
+        // Resume battery and usage updates
+        updateBatteryInBackground()
+        updateUsageInBackground()
+    }
+    
+    // Slower update runnable for power saver mode (updates every 30 seconds instead of 1 second)
+    private val powerSaverUpdateRunnable = object : Runnable {
+        override fun run() {
+            if (isInPowerSaverMode) {
+                // Only update time and date, skip usage checks
+                updateTime()
+                updateDate()
+                // Update every 30 seconds instead of 1 second to save battery
+                handler.postDelayed(this, 30000)
+            }
         }
     }
 
