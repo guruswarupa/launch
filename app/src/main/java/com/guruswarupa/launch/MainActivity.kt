@@ -722,22 +722,23 @@ class MainActivity : FragmentActivity() {
                 Intent.ACTION_PACKAGE_REMOVED -> {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                         val packageName = intent.data?.encodedSchemeSpecificPart
-                        if (packageName != null) {
-                            appList.removeAll { it.activityInfo.packageName == packageName }
-                            fullAppList.removeAll { it.activityInfo.packageName == packageName }
-                            adapter.appList = appList
-                            adapter.notifyDataSetChanged()
+                        if (packageName != null && context is MainActivity) {
+                            context.runOnUiThread {
+                                context.appList.removeAll { it.activityInfo.packageName == packageName }
+                                context.fullAppList.removeAll { it.activityInfo.packageName == packageName }
+                                if (context::adapter.isInitialized) {
+                                    context.adapter.appList = context.appList
+                                    context.adapter.notifyDataSetChanged()
+                                }
+                            }
                         }
                     }
                 }
                 Intent.ACTION_PACKAGE_ADDED -> {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                        val relaunchIntent = Intent(context, MainActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context?.startActivity(relaunchIntent)
-                        if (context is Activity) {
-                            context.finish()
+                        // Reload apps when a new package is installed
+                        if (context is MainActivity) {
+                            context.loadApps()
                         }
                     }
                 }
@@ -1639,7 +1640,9 @@ class MainActivity : FragmentActivity() {
         }
         
         // Refresh adapter to hide/show usage times based on power saver mode
-        adapter?.notifyDataSetChanged()
+        if (::adapter.isInitialized) {
+            adapter.notifyDataSetChanged()
+        }
     }
     
     private fun stopBackgroundUpdates() {
