@@ -9,6 +9,47 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     private val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val currentMonth = dateFormat.format(Date())
     private val BALANCE_KEY = "finance_balance"
+    private val CURRENCY_KEY = "finance_currency"
+    
+    companion object {
+        val SUPPORTED_CURRENCIES = mapOf(
+            "USD" to "$",
+            "EUR" to "€",
+            "GBP" to "£",
+            "JPY" to "¥",
+            "INR" to "₹",
+            "CNY" to "¥",
+            "CAD" to "C$",
+            "AUD" to "A$",
+            "CHF" to "CHF",
+            "SEK" to "kr",
+            "NOK" to "kr",
+            "DKK" to "kr",
+            "PLN" to "zł",
+            "RUB" to "₽",
+            "BRL" to "R$",
+            "KRW" to "₩",
+            "MXN" to "$",
+            "SGD" to "S$",
+            "HKD" to "HK$",
+            "NZD" to "NZ$"
+        )
+    }
+    
+    fun getCurrency(): String {
+        val currencyCode = sharedPreferences.getString(CURRENCY_KEY, "USD") ?: "USD"
+        return SUPPORTED_CURRENCIES[currencyCode] ?: "$"
+    }
+    
+    fun getCurrencyCode(): String {
+        return sharedPreferences.getString(CURRENCY_KEY, "USD") ?: "USD"
+    }
+    
+    fun setCurrency(currencyCode: String) {
+        if (SUPPORTED_CURRENCIES.containsKey(currencyCode)) {
+            sharedPreferences.edit().putString(CURRENCY_KEY, currencyCode).apply()
+        }
+    }
 
     fun addIncome(amount: Double, description: String = "") {
         val currentBalance = getBalance()

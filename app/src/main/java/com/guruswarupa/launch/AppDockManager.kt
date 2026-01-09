@@ -43,6 +43,7 @@ class AppDockManager(
     private lateinit var addIcon: ImageView
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
+    private lateinit var workspaceToggle: ImageView
     private lateinit var restartButton: ImageView
     private lateinit var apkShareButton: ImageView
     private lateinit var powerSaverToggle: ImageView
@@ -50,10 +51,12 @@ class AppDockManager(
     private var isPowerSaverMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
+    private lateinit var workspaceManager: WorkspaceManager
 
     init {
         isFocusMode = sharedPreferences.getBoolean(FOCUS_MODE_KEY, false)
         isPowerSaverMode = sharedPreferences.getBoolean(POWER_SAVER_MODE_KEY, false)
+        workspaceManager = WorkspaceManager(sharedPreferences)
 
         if (isPowerSaverMode) {
             (context as MainActivity).applyPowerSaverMode(true)
@@ -72,6 +75,9 @@ class AppDockManager(
 
         // Initialize dock with all components
         refreshDock()
+        
+        // Ensure workspace toggle is added
+        ensureWorkspaceToggle()
 
         // Check if focus mode timer should be restored
         if (isFocusMode) {
@@ -84,293 +90,6 @@ class AppDockManager(
                 disableFocusMode()
             }
         }
-    }
-
-    fun openAppPicker() {
-        val options = arrayOf("Add Single App", "Create Group")
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Add to Dock")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> openSingleAppPicker()
-                    1 -> openMultiAppPickerForGroup()
-                }
-            }
-            .show()
-    }
-
-    private fun openSingleAppPicker() {
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-
-        val apps = packageManager.queryIntentActivities(intent, 0)
-        val sortedApps = apps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-
-        val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
-        val appPackageNames = sortedApps.map { it.activityInfo.packageName }
-
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Choose an app")
-            .setItems(appNames.toTypedArray()) { _, which ->
-                addAppToDock(appPackageNames[which])
-            }
-            .show()
-    }
-
-    private fun openMultiAppPickerForGroup() {
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        val apps = packageManager.queryIntentActivities(intent, 0)
-        val sortedApps = apps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-        val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
-        val appPackageNames = sortedApps.map { it.activityInfo.packageName }
-
-        val selectedPackages = mutableListOf<String>()
-        val checkedItems = BooleanArray(appNames.size) { false }
-
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Select apps for group")
-            .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
-                if (isChecked) {
-                    selectedPackages.add(appPackageNames[which])
-                } else {
-                    selectedPackages.remove(appPackageNames[which])
-                }
-            }
-            .setPositiveButton("Create Group") { _, _ ->
-                if (selectedPackages.size >= 2) {
-                    showGroupNameDialog(selectedPackages)
-                } else {
-                    Toast.makeText(context, "Select at least 2 apps", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    internal fun addAppToDock(packageName: String) {
-        saveDockItem("single:$packageName")
-        refreshDock()
-    }
-
-    private fun addGroupToDock(packageNames: List<String>, groupName: String) {
-        saveDockItem("group:$groupName:${packageNames.joinToString(",")}")
-        refreshDock()
-    }
-
-    fun addAppToDockUI(packageName: String) {
-        try {
-            val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            val appIcon = packageManager.getApplicationIcon(appInfo)
-
-            ImageView(context).apply {
-                setImageDrawable(appIcon)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setMargins(16, 0, 16, 0)
-                }
-
-                setOnClickListener {
-                    launchAppWithLockCheck(packageName)
-                }
-
-                setOnLongClickListener {
-                    showRemoveDockAppDialog("single:$packageName")
-                    true
-                }
-                // Insert app before the add icon
-                val addIconIndex = (0 until appDock.childCount).firstOrNull {
-                    appDock.getChildAt(it).tag == "add_icon"
-                } ?: appDock.childCount
-                appDock.addView(this, addIconIndex)
-            }
-        } catch (e: PackageManager.NameNotFoundException) {
-            Toast.makeText(context, "App not found", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun addGroupToDockUI(packageNames: List<String>, groupName: String) {
-        val squircleSize = context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-        val iconSize = context.resources.getDimensionPixelSize(R.dimen.group_icon_size)
-
-        val groupLayout = FrameLayout(context).apply {
-            layoutParams = LinearLayout.LayoutParams(squircleSize, squircleSize).apply {
-                setMargins(16, 0, 16, 0)
-            }
-            background = createSquircleBackground()
-            clipToOutline = true
-        }
-
-        // Icon container
-        val iconContainer = FrameLayout(context).apply {
-            layoutParams = FrameLayout.LayoutParams(squircleSize, squircleSize)
-        }
-
-        // Add up to 4 app icons
-        packageNames.take(4).forEachIndexed { index, packageName ->
-            try {
-                val appInfo = packageManager.getApplicationInfo(packageName, 0)
-                val appIcon = packageManager.getApplicationIcon(appInfo)
-
-                ImageView(context).apply {
-                    setImageDrawable(appIcon)
-                    layoutParams = FrameLayout.LayoutParams(iconSize, iconSize).apply {
-                        gravity = when(index) {
-                            0 -> Gravity.TOP or Gravity.START
-                            1 -> Gravity.TOP or Gravity.END
-                            2 -> Gravity.BOTTOM or Gravity.START
-                            else -> Gravity.BOTTOM or Gravity.END
-                        }
-                        val margin = squircleSize / 4
-                        setMargins(margin, margin, margin, margin)
-                    }
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                    iconContainer.addView(this)
-                }
-            } catch (e: PackageManager.NameNotFoundException) {
-                // Handle error
-            }
-        }
-
-        groupLayout.addView(iconContainer)
-
-        // Group name overlay
-        TextView(context).apply {
-            text = groupName
-            setTextColor(Color.WHITE)
-            textSize = 10f
-            setBackgroundColor(Color.argb(150, 0, 0, 0))
-            gravity = Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                gravity = Gravity.BOTTOM
-            }
-            groupLayout.addView(this)
-        }
-
-        groupLayout.setOnClickListener {
-            showGroupPopup(groupLayout, packageNames)
-        }
-
-        groupLayout.setOnLongClickListener {
-            showRemoveDockAppDialog("group:$groupName:${packageNames.joinToString(",")}")
-            true
-        }
-
-        // Insert group before the add icon
-        val addIconIndex = (0 until appDock.childCount).firstOrNull {
-            appDock.getChildAt(it).tag == "add_icon"
-        } ?: appDock.childCount
-        appDock.addView(groupLayout, addIconIndex)
-    }
-
-    private fun createSquircleBackground(): Drawable {
-        val radius = context.resources.getDimension(R.dimen.squircle_corner_radius)
-        return GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = radius
-            setColor(Color.argb(150, 255, 255, 255))
-            setStroke(2, Color.WHITE)
-        }
-    }
-
-    private fun showGroupPopup(anchor: View, packageNames: List<String>) {
-        val popupView = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = createPopupBackground()
-            elevation = 8f
-        }
-
-        val grid = GridLayout(context).apply {
-            columnCount = 3
-            rowCount = 3
-            setPadding(
-                context.resources.getDimensionPixelSize(R.dimen.group_popup_padding),
-                context.resources.getDimensionPixelSize(R.dimen.group_popup_padding),
-                context.resources.getDimensionPixelSize(R.dimen.group_popup_padding),
-                context.resources.getDimensionPixelSize(R.dimen.group_popup_padding)
-            )
-        }
-
-        val iconCache = mutableMapOf<String, Drawable>()
-
-        packageNames.forEach { packageName ->
-            try {
-                val appIcon = iconCache.getOrPut(packageName) {
-                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
-                    packageManager.getApplicationIcon(appInfo)
-                }
-
-                ImageView(context).apply {
-                    setImageDrawable(appIcon)
-                    layoutParams = GridLayout.LayoutParams().apply {
-                        width = context.resources.getDimensionPixelSize(R.dimen.group_icon_size) * 2
-                        height = context.resources.getDimensionPixelSize(R.dimen.group_icon_size) * 2
-                        setMargins(8, 8, 8, 8)
-                    }
-                    setOnClickListener {
-                        launchAppWithLockCheck(packageName)
-                        (context as? Activity)?.dismissPopupWindow()
-                    }
-                    grid.addView(this)
-                }
-            } catch (e: PackageManager.NameNotFoundException) {
-                // Handle error
-            }
-        }
-
-        popupView.addView(grid)
-
-        val popupWindow = PopupWindow(
-            popupView,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true
-        ).apply {
-            elevation = 16f
-            isOutsideTouchable = true
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        }
-
-        val location = IntArray(2)
-        anchor.getLocationOnScreen(location)
-        val x = location[0] - (popupView.width - anchor.width) / 2
-        val y = location[1] - popupView.height - anchor.height / 2
-
-        popupWindow.showAtLocation(anchor, Gravity.NO_GRAVITY, x, y)
-    }
-
-    private fun createPopupBackground(): Drawable {
-        val radius = context.resources.getDimension(R.dimen.squircle_corner_radius)
-        return GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = radius
-            setColor(Color.WHITE)
-            setStroke(2, Color.LTGRAY)
-        }
-    }
-
-    private fun migrateLegacyItems(items: Set<String>): Set<String> {
-        return items.map { item ->
-            when {
-                item.startsWith("group:") -> {
-                    val parts = item.split(":", limit = 3)
-                    when (parts.size) {
-                        2 -> "group:Group:${parts[1]}" // Migrate old groups
-                        3 -> item // Correct format
-                        else -> item
-                    }
-                }
-                !item.startsWith("single:") -> "single:$item"
-                else -> item
-            }
-        }.toSet()
     }
 
     fun launchAppWithLockCheck(packageName: String) {
@@ -396,145 +115,6 @@ class AppDockManager(
         }
     }
 
-    private fun saveDockItem(item: String) {
-        val dockItems = sharedPreferences.getStringSet(DOCK_APPS_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-        dockItems.add(item)
-        sharedPreferences.edit().putStringSet(DOCK_APPS_KEY, dockItems).apply()
-    }
-
-    private fun showRemoveDockAppDialog(item: String) {
-        // Options for the dialog
-        val options = if (item.startsWith("group:")) {
-            arrayOf("Remove", "Rename", "Modify Group")
-        } else {
-            arrayOf("Remove")
-        }
-
-        // Create the dialog
-        MaterialAlertDialogBuilder(context, R.style.CustomDialogTheme)
-            .setTitle("Manage Dock Item")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> removeDockItem(item)
-                    1 -> if (item.startsWith("group:")) showRenameGroupDialog(item)
-                    2 -> if (item.startsWith("group:")) showModifyGroupDialog(item)
-                }
-                refreshDock()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .setBackground(ContextCompat.getDrawable(context, R.drawable.dialog_background)) // Custom background
-            .show()
-    }
-
-    private fun showRenameGroupDialog(item: String) {
-        if (!item.startsWith("group:")) return
-
-        val parts = item.split(":", limit = 3)
-        if (parts.size != 3) return
-
-        val currentGroupName = parts[1]
-        val packageNames = parts[2].split(',')
-
-        val inputLayout = TextInputLayout(context).apply {
-            setPadding(32, 32, 32, 0)
-            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
-        }
-
-        val editText = TextInputEditText(context).apply {
-            setText(currentGroupName)
-            inputLayout.addView(this)
-        }
-
-        MaterialAlertDialogBuilder(context)
-            .setTitle("Rename Group")
-            .setView(inputLayout)
-            .setPositiveButton("Rename") { _, _ ->
-                val newName = editText.text.toString().trim()
-                when {
-                    newName.isEmpty() -> Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
-                    newName.contains(":") -> Toast.makeText(context, "Name cannot contain ':'", Toast.LENGTH_SHORT).show()
-                    else -> {
-                        removeDockItem(item)
-                        addGroupToDock(packageNames, newName)
-                        refreshDock()
-                    }
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun showModifyGroupDialog(item: String) {
-        if (!item.startsWith("group:")) return
-
-        val parts = item.split(":", limit = 3)
-        if (parts.size != 3) return
-
-        val groupName = parts[1]
-        val currentPackageNames = parts[2].split(',').toMutableList()
-
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        val apps = packageManager.queryIntentActivities(intent, 0)
-        val sortedApps = apps.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-        val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
-        val appPackageNames = sortedApps.map { it.activityInfo.packageName }
-
-        val checkedItems = BooleanArray(appNames.size) { false }
-        appPackageNames.forEachIndexed { index, packageName ->
-            if (currentPackageNames.contains(packageName)) {
-                checkedItems[index] = true
-            }
-        }
-
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Modify Group: $groupName")
-            .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
-                val packageName = appPackageNames[which]
-                if (isChecked) {
-                    currentPackageNames.add(packageName)
-                } else {
-                    currentPackageNames.remove(packageName)
-                }
-            }
-            .setPositiveButton("Save") { _, _ ->
-                if (currentPackageNames.size >= 2) {
-                    removeDockItem(item)
-                    addGroupToDock(currentPackageNames, groupName)
-                    refreshDock()
-                } else {
-                    Toast.makeText(context, "A group must have at least 2 apps", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun showGroupNameDialog(selectedPackages: List<String>) {
-        val editText = EditText(context)
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Enter group name")
-            .setView(editText)
-            .setPositiveButton("Create") { _, _ ->
-                val name = editText.text.toString().trim()
-                when {
-                    name.isEmpty() -> Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
-                    name.contains(":") -> Toast.makeText(context, "Name cannot contain ':'", Toast.LENGTH_SHORT).show()
-                    else -> addGroupToDock(selectedPackages, name)
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun removeDockItem(item: String) {
-        val dockItems = sharedPreferences.getStringSet(DOCK_APPS_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-        dockItems.remove(item)
-        sharedPreferences.edit().putStringSet(DOCK_APPS_KEY, dockItems).apply()
-    }
 
     private fun ensureApkShareButton() {
         if (appDock.findViewWithTag<ImageView>("apk_share_button") == null) {
@@ -553,11 +133,8 @@ class AppDockManager(
                     true
                 }
             }
-            // Insert after focus mode container
-            val focusContainerIndex = (0 until appDock.childCount).firstOrNull {
-                appDock.getChildAt(it).tag == "focus_mode_container"
-            } ?: 0
-            appDock.addView(apkShareButton, focusContainerIndex + 1)
+            // Add at the end (index 5)
+            appDock.addView(apkShareButton, 5)
         }
     }
 
@@ -582,55 +159,21 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
-        ensureRestartButton()
-        ensureFocusModeToggle()
-        ensurePowerSaverToggle()
-        ensureApkShareButton()
-        ensureAddIcon()
-        loadDockApps()
+        ensureRestartButton()        // 1. Restart
+        ensureSettingsButton()       // 2. Settings
+        ensureWorkspaceToggle()      // 3. Workspace toggle
+        ensureFocusModeToggle()      // 4. Focus mode
+        ensurePowerSaverToggle()     // 5. Battery saver
+        ensureApkShareButton()       // 6. Share APK icon
         updateDockVisibility()
     }
-
-    fun loadDockApps() {
-        val dockItems = migrateLegacyItems(sharedPreferences.getStringSet(DOCK_APPS_KEY, mutableSetOf()) ?: mutableSetOf())
-
-        dockItems.forEach { item ->
-            // In focus mode, skip loading any dock apps or groups
-            if (isFocusMode) return@forEach
-
-            when {
-                item.startsWith("single:") -> {
-                    val packageName = item.substringAfter("single:")
-                    addAppToDockUI(packageName)
-                }
-                item.startsWith("group:") -> {
-                    val parts = item.split(":", limit = 3)
-                    if (parts.size == 3) {
-                        val groupName = parts[1]
-                        val packages = parts[2].split(',')
-                        addGroupToDockUI(packages, groupName)
-                    }
-                }
-            }
+    
+    fun refreshWorkspaceToggle() {
+        if (::workspaceToggle.isInitialized) {
+            updateWorkspaceIcon()
         }
     }
 
-    private fun ensureAddIcon() {
-        if (appDock.findViewWithTag<ImageView>("add_icon") == null) {
-            addIcon = ImageView(context).apply {
-                tag = "add_icon"
-                setImageResource(R.drawable.ic_add)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(24,24,24,24)
-                }
-                setOnClickListener { openAppPicker() }
-            }
-            appDock.addView(addIcon)
-        }
-    }
 
     private fun ensureFocusModeToggle() {
         if (appDock.findViewWithTag<ImageView>("focus_mode_toggle") == null) {
@@ -678,34 +221,100 @@ class AppDockManager(
                 visibility = if (isFocusMode) View.VISIBLE else View.GONE
             }
 
-            // Add settings icon
-            val settingsIcon = ImageView(context).apply {
-                tag = "settings_icon"
-                setImageResource(R.drawable.ic_settings)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(24,24,24,24)
-                    marginStart = 8
-                }
-                setOnClickListener {
-                    val intent = Intent(context, SettingsActivity::class.java)
-                    context.startActivity(intent)
-                }
-            }
-
-            focusContainer.addView(settingsIcon)
             focusContainer.addView(focusModeToggle)
             focusContainer.addView(focusTimerText)
 
-            val insertIndex = if (appDock.childCount > 1) 1 else appDock.childCount
-            appDock.addView(focusContainer, insertIndex)
+            // Add after workspace toggle (index 3)
+            appDock.addView(focusContainer, 3)
 
             if (isFocusMode) {
                 startTimerDisplay()
             }
         }
+    }
+    
+    private fun ensureWorkspaceToggle() {
+        if (appDock.findViewWithTag<ImageView>("workspace_toggle") == null) {
+            val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
+            workspaceToggle = ImageView(context).apply {
+                tag = "workspace_toggle"
+                setImageResource(if (isWorkspaceActive) R.drawable.ic_workspace_active else R.drawable.ic_workspace_inactive)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24, 24, 24, 24)
+                    marginStart = 8
+                }
+                setOnClickListener { toggleWorkspace() }
+                setOnLongClickListener {
+                    showWorkspaceSettings()
+                    true
+                }
+            }
+            // Insert after settings button (index 2)
+            appDock.addView(workspaceToggle, 2)
+        }
+    }
+    
+    private fun toggleWorkspace() {
+        val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
+        if (isWorkspaceActive) {
+            // Disable workspace mode
+            workspaceManager.setActiveWorkspaceId(null)
+            updateWorkspaceIcon()
+            refreshAppsForWorkspace()
+            Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
+        } else {
+            // Show workspace selector
+            showWorkspaceSelector()
+        }
+    }
+    
+    private fun showWorkspaceSelector() {
+        val workspaces = workspaceManager.getAllWorkspaces()
+        if (workspaces.isEmpty()) {
+            Toast.makeText(context, "No workspaces available. Long press to create one.", Toast.LENGTH_SHORT).show()
+            showWorkspaceSettings()
+            return
+        }
+        
+        val workspaceNames = workspaces.map { it.name }.toTypedArray()
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Select Workspace")
+            .setItems(workspaceNames) { _, which ->
+                val selectedWorkspace = workspaces[which]
+                workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
+                updateWorkspaceIcon()
+                refreshAppsForWorkspace()
+                Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun showWorkspaceSettings() {
+        val intent = Intent(context, WorkspaceConfigActivity::class.java)
+        context.startActivity(intent)
+    }
+    
+    private fun updateWorkspaceIcon() {
+        val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
+        workspaceToggle.setImageResource(
+            if (isWorkspaceActive) R.drawable.ic_workspace_active else R.drawable.ic_workspace_inactive
+        )
+    }
+    
+    private fun refreshAppsForWorkspace() {
+        (context as? MainActivity)?.refreshAppsForWorkspace()
+    }
+    
+    fun isWorkspaceModeActive(): Boolean {
+        return workspaceManager.isWorkspaceModeActive()
+    }
+    
+    fun isAppInActiveWorkspace(packageName: String): Boolean {
+        return workspaceManager.isAppInActiveWorkspace(packageName)
     }
 
     private fun ensurePowerSaverToggle() {
@@ -725,11 +334,34 @@ class AppDockManager(
                     true
                 }
             }
-            // Insert after focus mode container
-            val focusContainerIndex = (0 until appDock.childCount).firstOrNull {
-                appDock.getChildAt(it).tag == "focus_mode_container"
-            } ?: 1
-            appDock.addView(powerSaverToggle, focusContainerIndex + 1)
+            // Insert after focus mode container (index 4)
+            appDock.addView(powerSaverToggle, 4)
+        }
+    }
+
+    private fun ensureSettingsButton() {
+        if (appDock.findViewWithTag<ImageView>("settings_button") == null) {
+            val settingsButton = ImageView(context).apply {
+                tag = "settings_button"
+                setImageResource(R.drawable.ic_settings)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24, 24, 24, 24)
+                    marginStart = 8
+                }
+                setOnClickListener {
+                    val intent = Intent(context, SettingsActivity::class.java)
+                    context.startActivity(intent)
+                }
+                setOnLongClickListener {
+                    Toast.makeText(context, "Settings", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            // Add after restart button (index 1)
+            appDock.addView(settingsButton, 1)
         }
     }
 
@@ -750,7 +382,8 @@ class AppDockManager(
                     true
                 }
             }
-            appDock.addView(restartButton)
+            // Add at the beginning (index 0)
+            appDock.addView(restartButton, 0)
         }
     }
 
@@ -891,12 +524,13 @@ class AppDockManager(
     }
 
     private fun updateDockVisibility() {
-        // Hide/show all dock items except the focus mode container, power saver toggle and restart button
+        // Hide/show all dock items except the focus mode container, workspace toggle, power saver toggle and restart button
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
-            when (child.tag) {                "focus_mode_container", "restart_button", "power_saver_toggle" -> {
-                child.visibility = View.VISIBLE
-            }
+            when (child.tag) {
+                "focus_mode_container", "workspace_toggle", "restart_button", "power_saver_toggle" -> {
+                    child.visibility = View.VISIBLE
+                }
                 "add_icon", "apk_share_button" -> {
                     child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
                 }

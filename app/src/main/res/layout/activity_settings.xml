@@ -43,6 +43,24 @@
             android:layout_marginBottom="24dp"
             android:inputType="text" />
 
+        <!-- Currency Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Currency"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text"
+            android:layout_marginBottom="8dp" />
+
+        <Spinner
+            android:id="@+id/currency_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/rounded_background"
+            android:padding="12dp"
+            android:layout_marginBottom="24dp" />
+
         <!-- Display Style Section -->
         <TextView
             android:layout_width="match_parent"

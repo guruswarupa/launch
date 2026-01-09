@@ -96,6 +96,10 @@ class MainActivity : FragmentActivity() {
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
+    lateinit var appCategoryManager: AppCategoryManager
+    lateinit var favoriteAppManager: FavoriteAppManager
+    private lateinit var showAllAppsButton: ImageButton
+    private var isShowAllAppsMode = false
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -128,6 +132,9 @@ class MainActivity : FragmentActivity() {
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
         appTimerManager = AppTimerManager(this)
+        appCategoryManager = AppCategoryManager(packageManager)
+        favoriteAppManager = FavoriteAppManager(sharedPreferences)
+        isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -143,6 +150,26 @@ class MainActivity : FragmentActivity() {
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
         voiceSearchButton = findViewById(R.id.voice_search_button)
+        showAllAppsButton = findViewById(R.id.show_all_apps_button)
+        
+        // Setup show all apps button
+        updateShowAllAppsButton()
+        showAllAppsButton.setOnClickListener {
+            isShowAllAppsMode = !isShowAllAppsMode
+            favoriteAppManager.setShowAllAppsMode(isShowAllAppsMode)
+            updateShowAllAppsButton()
+            loadApps()
+        }
+        showAllAppsButton = findViewById(R.id.show_all_apps_button)
+        
+        // Setup show all apps button
+        updateShowAllAppsButton()
+        showAllAppsButton.setOnClickListener {
+            isShowAllAppsMode = !isShowAllAppsMode
+            favoriteAppManager.setShowAllAppsMode(isShowAllAppsMode)
+            updateShowAllAppsButton()
+            loadApps()
+        }
 
         searchBox.setOnClickListener {
             val currentTime = System.currentTimeMillis()
@@ -270,6 +297,10 @@ class MainActivity : FragmentActivity() {
     }
 
     fun refreshAppsForFocusMode() {
+        loadApps()
+    }
+    
+    fun refreshAppsForWorkspace() {
         loadApps()
     }
 
@@ -645,13 +676,28 @@ class MainActivity : FragmentActivity() {
             packageName
         }
 
-        appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
-            if (timerDuration == AppTimerManager.NO_TIMER) {
-                onTimerSet()
-            } else {
-                appTimerManager.startTimer(packageName, timerDuration)
-                onTimerSet()
+        // Only show timer dialog for social media and entertainment apps
+        if (appCategoryManager.shouldShowTimer(packageName, appName)) {
+            appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                if (timerDuration == AppTimerManager.NO_TIMER) {
+                    // No timer selected, proceed with normal launch (includes lock check)
+                    onTimerSet()
+                } else {
+                    // Timer selected - handle lock check first, then start timer (which launches app)
+                    if (appLockManager.isAppLocked(packageName)) {
+                        appLockManager.verifyPin { isAuthenticated ->
+                            if (isAuthenticated) {
+                                appTimerManager.startTimer(packageName, timerDuration)
+                            }
+                        }
+                    } else {
+                        appTimerManager.startTimer(packageName, timerDuration)
+                    }
+                }
             }
+        } else {
+            // For productivity and other apps, launch directly without timer (includes lock check)
+            onTimerSet()
         }
     }
 
@@ -761,6 +807,9 @@ class MainActivity : FragmentActivity() {
 
         // Reapply focus mode state when returning from apps
         applyFocusMode(appDockManager.getCurrentMode())
+        
+        // Refresh workspace toggle icon
+        appDockManager.refreshWorkspaceToggle()
     }
 
     override fun onPause() {
@@ -814,7 +863,8 @@ class MainActivity : FragmentActivity() {
                     val filteredApps = unsortedList.parallelStream()
                         .filter { app ->
                             app.activityInfo.packageName != "com.guruswarupa.launch" &&
-                                    (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName))
+                                    (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)) &&
+                                    (!appDockManager.isWorkspaceModeActive() || appDockManager.isAppInActiveWorkspace(app.activityInfo.packageName))
                         }
                         .collect(java.util.stream.Collectors.toList())
 
@@ -827,9 +877,12 @@ class MainActivity : FragmentActivity() {
                         .collect(java.util.stream.Collectors.toList())
                         .toMutableList()
 
+                    // Filter apps based on favorite/show all mode
+                    val finalAppList = favoriteAppManager.filterApps(processedAppList, isShowAllAppsMode)
+
                     // Update UI on main thread
                     runOnUiThread {
-                        appList = processedAppList
+                        appList = finalAppList.toMutableList()
                         fullAppList = ArrayList(processedAppList)
 
                         recyclerView.layoutManager = if (isGridMode) {
@@ -841,6 +894,8 @@ class MainActivity : FragmentActivity() {
                         adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
                         recyclerView.adapter = adapter
                         recyclerView.visibility = View.VISIBLE
+                        
+                        updateShowAllAppsButton()
 
                         // Initialize AppSearchManager
                         appSearchManager = AppSearchManager(
@@ -868,6 +923,28 @@ class MainActivity : FragmentActivity() {
         } else {
             searchBox.visibility = android.view.View.VISIBLE
             voiceSearchButton.visibility = android.view.View.VISIBLE
+        }
+    }
+    
+    private fun updateShowAllAppsButton() {
+        val favorites = favoriteAppManager.getFavoriteApps()
+        if (favorites.isEmpty()) {
+            // If no favorites, always show all apps and hide the button
+            showAllAppsButton.visibility = View.GONE
+            isShowAllAppsMode = true
+            favoriteAppManager.setShowAllAppsMode(true)
+        } else {
+            // Show button and update icon/text based on mode
+            showAllAppsButton.visibility = View.VISIBLE
+            if (isShowAllAppsMode) {
+                // Currently showing all apps, button shows star to switch to favorites
+                showAllAppsButton.setImageResource(R.drawable.ic_star)
+                showAllAppsButton.contentDescription = "Show Favorite Apps"
+            } else {
+                // Currently showing favorites, button shows grid to switch to all apps
+                showAllAppsButton.setImageResource(R.drawable.ic_apps_grid)
+                showAllAppsButton.contentDescription = "Show All Apps"
+            }
         }
     }
 
@@ -1388,11 +1465,12 @@ class MainActivity : FragmentActivity() {
         val dialogBuilder = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Transaction History")
 
+        val currencySymbol = financeManager.getCurrency()
         val transactionList = transactions.take(20).map { (type, amount, description) ->
             val typeText = if (type == "income") "Income" else "Expense"
             val symbol = if (type == "income") "+" else "-"
             val descText = if (description.isNotEmpty()) " - $description" else ""
-            "$symbol$amount ($typeText)$descText"
+            "$symbol$currencySymbol${kotlin.math.abs(amount)} ($typeText)$descText"
         }.toTypedArray()
 
         dialogBuilder.setItems(transactionList) { _, _ -> }
@@ -1437,11 +1515,12 @@ class MainActivity : FragmentActivity() {
 
                 updateFinanceDisplay()
 
+                val currencySymbol = financeManager.getCurrency()
                 val action = if (isIncome) "Income" else "Expense"
                 val message = if (description.isNotEmpty()) {
-                    "$action of ₹$amount added: $description"
+                    "$action of $currencySymbol$amount added: $description"
                 } else {
-                    "$action of ₹$amount added"
+                    "$action of $currencySymbol$amount added"
                 }
                 Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             } else {
@@ -1453,8 +1532,9 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun updateFinanceDisplay() {
-        balanceText.text = "Balance: ₹${financeManager.getBalance()}"
-        monthlySpentText.text = "Monthly Spent: ₹${financeManager.getMonthlyExpenses()}"
+        val currencySymbol = financeManager.getCurrency()
+        balanceText.text = "Balance: $currencySymbol${financeManager.getBalance()}"
+        monthlySpentText.text = "Monthly Spent: $currencySymbol${financeManager.getMonthlyExpenses()}"
     }
 
     fun applyPowerSaverMode(isEnabled: Boolean) {

@@ -308,18 +308,38 @@ class AppAdapter(
 
                         val appName = appInfo.loadLabel(activity.packageManager).toString()
 
-                        // Show timer dialog before launching app
-                        activity.appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                        // Show timer dialog only for social media and entertainment apps
+                        val shouldShowTimer = activity.appCategoryManager.shouldShowTimer(packageName, appName)
+                        
+                        if (shouldShowTimer) {
+                            // Show timer dialog before launching app
+                            activity.appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                                if (activity.appLockManager.isAppLocked(packageName)) {
+                                    activity.appLockManager.verifyPin { isAuthenticated ->
+                                        if (isAuthenticated) {
+                                            activity.startActivity(intent)
+                                            activity.appTimerManager.startTimer(packageName, timerDuration)
+                                        }
+                                    }
+                                } else {
+                                    activity.startActivity(intent)
+                                    activity.appTimerManager.startTimer(packageName, timerDuration)
+                                }
+                                activity.runOnUiThread {
+                                    searchBox.text.clear()
+                                    activity.appSearchManager.filterAppsAndContacts("")
+                                }
+                            }
+                        } else {
+                            // Launch directly without timer for productivity and other apps
                             if (activity.appLockManager.isAppLocked(packageName)) {
                                 activity.appLockManager.verifyPin { isAuthenticated ->
                                     if (isAuthenticated) {
                                         activity.startActivity(intent)
-                                        activity.appTimerManager.startTimer(packageName, timerDuration)
                                     }
                                 }
                             } else {
                                 activity.startActivity(intent)
-                                activity.appTimerManager.startTimer(packageName, timerDuration)
                             }
                             activity.runOnUiThread {
                                 searchBox.text.clear()
@@ -345,6 +365,13 @@ class AppAdapter(
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
         popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
 
+        // Update favorite menu item text
+        val favoriteMenuItem = popupMenu.menu.findItem(R.id.toggle_favorite)
+        if (favoriteMenuItem != null) {
+            val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
+            favoriteMenuItem.title = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+        }
+
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.app_info -> {
@@ -359,8 +386,8 @@ class AppAdapter(
                     uninstallApp(packageName)
                     true
                 }
-                R.id.add_to_dock -> {
-                    addToDock(packageName, appInfo)
+                R.id.toggle_favorite -> {
+                    toggleFavoriteApp(packageName, appInfo)
                     true
                 }
                 else -> false
@@ -390,9 +417,20 @@ class AppAdapter(
         activity.startActivity(intent)
     }
 
-    private fun addToDock(packageName: String, appInfo: ResolveInfo) {
-        activity.appDockManager.addAppToDock(packageName)
-        Toast.makeText(activity, "Added ${appInfo.loadLabel(activity.packageManager)} to dock", Toast.LENGTH_SHORT).show()
+    private fun toggleFavoriteApp(packageName: String, appInfo: ResolveInfo) {
+        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
+        
+        if (isFavorite) {
+            activity.favoriteAppManager.removeFavoriteApp(packageName)
+            Toast.makeText(activity, "Removed $appName from favorites", Toast.LENGTH_SHORT).show()
+        } else {
+            activity.favoriteAppManager.addFavoriteApp(packageName)
+            Toast.makeText(activity, "Added $appName to favorites", Toast.LENGTH_SHORT).show()
+        }
+        
+        // Reload apps to reflect changes
+        activity.loadApps()
     }
 
     fun showCallConfirmationDialog(contactName: String) {
