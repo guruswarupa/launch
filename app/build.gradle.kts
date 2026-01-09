@@ -9,7 +9,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.guruswarupa.launch"
+        applicationId = "com.guruswarupa.launchh"
         minSdk = 24
         targetSdk = 35
         versionCode = 4
