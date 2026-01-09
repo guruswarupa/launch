@@ -1,9 +1,11 @@
 package com.guruswarupa.launch
 
+import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.CountDownTimer
 import android.widget.EditText
 import android.widget.Toast
@@ -82,9 +84,9 @@ class AppTimerManager(private val context: Context) {
             }
 
             override fun onFinish() {
-                Toast.makeText(context, "Time's up! Returning to launcher", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Time's up! Closing app and returning to launcher", Toast.LENGTH_SHORT).show()
                 prefs.edit().remove("timer_remaining_$packageName").apply()
-                returnToLauncher()
+                returnToLauncher(packageName)
                 currentTimer = null
                 currentPackageName = null
             }
@@ -106,11 +108,58 @@ class AppTimerManager(private val context: Context) {
         }
     }
 
-    private fun returnToLauncher() {
-        val intent = Intent(Intent.ACTION_MAIN)
-        intent.addCategory(Intent.CATEGORY_HOME)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        context.startActivity(intent)
+    private fun returnToLauncher(packageName: String) {
+        try {
+            // First, bring launcher to foreground with flags that will push other apps to background
+            val intent = Intent(Intent.ACTION_MAIN)
+            intent.addCategory(Intent.CATEGORY_HOME)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                          Intent.FLAG_ACTIVITY_CLEAR_TASK or 
+                          Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+            context.startActivity(intent)
+            
+            // Small delay to ensure launcher is in foreground, then force-close the app
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                forceCloseApp(packageName)
+            }, 500)
+        } catch (e: Exception) {
+            // Fallback: just try to open launcher
+            val intent = Intent(Intent.ACTION_MAIN)
+            intent.addCategory(Intent.CATEGORY_HOME)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            context.startActivity(intent)
+        }
+    }
+    
+    private fun forceCloseApp(packageName: String) {
+        try {
+            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            
+            // Kill all background processes for this package
+            // This will terminate the app once it's moved to background
+            activityManager.killBackgroundProcesses(packageName)
+            
+            // On Android 7.0+, we can also try to finish recent tasks
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                try {
+                    // Try to remove the app from recent tasks
+                    val recentTasks = activityManager.getAppTasks()
+                    for (task in recentTasks) {
+                        val taskInfo = task.taskInfo
+                        if (taskInfo != null && taskInfo.baseActivity?.packageName == packageName) {
+                            task.finishAndRemoveTask()
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore if we can't access recent tasks
+                }
+            }
+        } catch (e: SecurityException) {
+            // If we don't have permission, the app will still be moved to background
+            // when launcher comes to foreground, and Android will eventually kill it
+        } catch (e: Exception) {
+            // Handle any other exceptions
+        }
     }
 
     fun cancelTimer() {

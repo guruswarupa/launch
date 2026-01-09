@@ -98,8 +98,7 @@ class MainActivity : FragmentActivity() {
     lateinit var appTimerManager: AppTimerManager
     lateinit var appCategoryManager: AppCategoryManager
     lateinit var favoriteAppManager: FavoriteAppManager
-    private lateinit var showAllAppsButton: ImageButton
-    private var isShowAllAppsMode = false
+    internal var isShowAllAppsMode = false
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -150,26 +149,6 @@ class MainActivity : FragmentActivity() {
         recyclerView = findViewById(R.id.app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
         voiceSearchButton = findViewById(R.id.voice_search_button)
-        showAllAppsButton = findViewById(R.id.show_all_apps_button)
-        
-        // Setup show all apps button
-        updateShowAllAppsButton()
-        showAllAppsButton.setOnClickListener {
-            isShowAllAppsMode = !isShowAllAppsMode
-            favoriteAppManager.setShowAllAppsMode(isShowAllAppsMode)
-            updateShowAllAppsButton()
-            loadApps()
-        }
-        showAllAppsButton = findViewById(R.id.show_all_apps_button)
-        
-        // Setup show all apps button
-        updateShowAllAppsButton()
-        showAllAppsButton.setOnClickListener {
-            isShowAllAppsMode = !isShowAllAppsMode
-            favoriteAppManager.setShowAllAppsMode(isShowAllAppsMode)
-            updateShowAllAppsButton()
-            loadApps()
-        }
 
         searchBox.setOnClickListener {
             val currentTime = System.currentTimeMillis()
@@ -243,7 +222,7 @@ class MainActivity : FragmentActivity() {
 
         loadTodoItems()
 
-        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager,  appLockManager)
+        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
 
         // Refresh apps after appDockManager is fully initialized
         if (!appDockManager.getCurrentMode()) {
@@ -302,6 +281,42 @@ class MainActivity : FragmentActivity() {
     
     fun refreshAppsForWorkspace() {
         loadApps()
+    }
+    
+    fun filterAppsWithoutReload() {
+        // Optimized: Filter existing list without reloading from package manager
+        if (fullAppList.isEmpty()) {
+            loadApps()
+            return
+        }
+        
+        Thread {
+            try {
+                // Filter apps based on favorite/show all mode in background
+                val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
+                
+                // Update UI on main thread
+                runOnUiThread {
+                    appList = finalAppList.toMutableList()
+                    adapter.updateAppList(appList)
+                    appDockManager.refreshFavoriteToggle()
+                    
+                    // Update AppSearchManager with new filtered list
+                    appSearchManager = AppSearchManager(
+                        packageManager,
+                        appList,
+                        fullAppList,
+                        adapter,
+                        searchBox,
+                        contactsList
+                    )
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "Error filtering apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }.start()
     }
 
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
@@ -869,10 +884,34 @@ class MainActivity : FragmentActivity() {
                         .collect(java.util.stream.Collectors.toList())
 
                     // Sort in parallel for better performance
+                    // Pre-compute labels and usage stats to avoid repeated calls during sorting
+                    val labelCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+                    val usageCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
+                    
+                    // Pre-compute all labels and usage stats in parallel
+                    filteredApps.parallelStream().forEach { app ->
+                        val packageName = app.activityInfo.packageName
+                        labelCache.computeIfAbsent(packageName) {
+                            try {
+                                app.loadLabel(packageManager).toString().lowercase()
+                            } catch (e: Exception) {
+                                packageName.lowercase()
+                            }
+                        }
+                        usageCache.computeIfAbsent(packageName) {
+                            sharedPreferences.getInt("usage_$packageName", 0)
+                        }
+                    }
+                    
+                    // Now sort using cached values
                     val processedAppList = filteredApps.parallelStream()
                         .sorted(
-                            compareByDescending<ResolveInfo> { sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0) }
-                                .thenBy { it.loadLabel(packageManager).toString().lowercase() }
+                            compareByDescending<ResolveInfo> { 
+                                usageCache[it.activityInfo.packageName] ?: 0
+                            }
+                            .thenBy { 
+                                labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
+                            }
                         )
                         .collect(java.util.stream.Collectors.toList())
                         .toMutableList()
@@ -885,17 +924,23 @@ class MainActivity : FragmentActivity() {
                         appList = finalAppList.toMutableList()
                         fullAppList = ArrayList(processedAppList)
 
-                        recyclerView.layoutManager = if (isGridMode) {
-                            GridLayoutManager(this, 4)
+                        // Optimize: Update existing adapter instead of creating new one
+                        if (::adapter.isInitialized) {
+                            adapter.updateAppList(appList)
                         } else {
-                            LinearLayoutManager(this)
+                            recyclerView.layoutManager = if (isGridMode) {
+                                GridLayoutManager(this, 4)
+                            } else {
+                                LinearLayoutManager(this)
+                            }
+                            adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
+                            recyclerView.adapter = adapter
                         }
-
-                        adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
-                        recyclerView.adapter = adapter
+                        
                         recyclerView.visibility = View.VISIBLE
                         
-                        updateShowAllAppsButton()
+                        // Update dock toggle icon
+                        appDockManager.refreshFavoriteToggle()
 
                         // Initialize AppSearchManager
                         appSearchManager = AppSearchManager(
@@ -926,27 +971,6 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    private fun updateShowAllAppsButton() {
-        val favorites = favoriteAppManager.getFavoriteApps()
-        if (favorites.isEmpty()) {
-            // If no favorites, always show all apps and hide the button
-            showAllAppsButton.visibility = View.GONE
-            isShowAllAppsMode = true
-            favoriteAppManager.setShowAllAppsMode(true)
-        } else {
-            // Show button and update icon/text based on mode
-            showAllAppsButton.visibility = View.VISIBLE
-            if (isShowAllAppsMode) {
-                // Currently showing all apps, button shows star to switch to favorites
-                showAllAppsButton.setImageResource(R.drawable.ic_star)
-                showAllAppsButton.contentDescription = "Show Favorite Apps"
-            } else {
-                // Currently showing favorites, button shows grid to switch to all apps
-                showAllAppsButton.setImageResource(R.drawable.ic_apps_grid)
-                showAllAppsButton.contentDescription = "Show All Apps"
-            }
-        }
-    }
 
     private fun requestContactsPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)

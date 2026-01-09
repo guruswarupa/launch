@@ -429,8 +429,10 @@ class AppAdapter(
             Toast.makeText(activity, "Added $appName to favorites", Toast.LENGTH_SHORT).show()
         }
         
-        // Reload apps to reflect changes
-        activity.loadApps()
+        // Optimize: Filter existing list instead of reloading everything
+        activity.filterAppsWithoutReload()
+        // Refresh dock toggle icon
+        activity.appDockManager.refreshFavoriteToggle()
     }
 
     fun showCallConfirmationDialog(contactName: String) {
