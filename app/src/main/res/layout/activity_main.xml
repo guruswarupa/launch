@@ -185,17 +185,6 @@
                         android:layout_marginBottom="20px"/>
                 </HorizontalScrollView>
 
-                <!-- Show All Apps Button -->
-                <ImageButton
-                    android:id="@+id/show_all_apps_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:src="@drawable/ic_apps_grid"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:padding="12dp"
-                    android:layout_marginBottom="8dp"
-                    android:contentDescription="Show All Apps" />
 
                 <!-- App List (RecyclerView) -->
                 <androidx.recyclerview.widget.RecyclerView

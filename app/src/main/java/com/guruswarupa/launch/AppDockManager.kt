@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -31,7 +32,8 @@ class AppDockManager(
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
     private val packageManager: PackageManager,
-    private val appLockManager: AppLockManager
+    private val appLockManager: AppLockManager,
+    private val favoriteAppManager: FavoriteAppManager
 ) {
     private val context: Context = activity
     private val DOCK_APPS_KEY = "dock_apps"
@@ -47,6 +49,7 @@ class AppDockManager(
     private lateinit var restartButton: ImageView
     private lateinit var apkShareButton: ImageView
     private lateinit var powerSaverToggle: ImageView
+    private lateinit var favoriteToggle: ImageView
     private var isFocusMode: Boolean = false
     private var isPowerSaverMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
@@ -133,8 +136,16 @@ class AppDockManager(
                     true
                 }
             }
-            // Add at the end (index 5)
-            appDock.addView(apkShareButton, 5)
+            // Find the position after power saver toggle
+            var insertIndex = appDock.childCount
+            for (i in 0 until appDock.childCount) {
+                val child = appDock.getChildAt(i)
+                if (child.tag == "power_saver_toggle") {
+                    insertIndex = i + 1
+                    break
+                }
+            }
+            appDock.addView(apkShareButton, insertIndex)
         }
     }
 
@@ -159,8 +170,8 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
-        ensureRestartButton()        // 1. Restart
-        ensureSettingsButton()       // 2. Settings
+        ensureSettingsButton()       // 1. Settings
+        ensureFavoriteToggle()      // 2. Favorite/All apps toggle (after settings)
         ensureWorkspaceToggle()      // 3. Workspace toggle
         ensureFocusModeToggle()      // 4. Focus mode
         ensurePowerSaverToggle()     // 5. Battery saver
@@ -171,6 +182,12 @@ class AppDockManager(
     fun refreshWorkspaceToggle() {
         if (::workspaceToggle.isInitialized) {
             updateWorkspaceIcon()
+        }
+    }
+
+    fun refreshFavoriteToggle() {
+        if (::favoriteToggle.isInitialized) {
+            updateFavoriteToggleIcon()
         }
     }
 
@@ -224,8 +241,16 @@ class AppDockManager(
             focusContainer.addView(focusModeToggle)
             focusContainer.addView(focusTimerText)
 
-            // Add after workspace toggle (index 3)
-            appDock.addView(focusContainer, 3)
+            // Find the position after workspace toggle
+            var insertIndex = 3
+            for (i in 0 until appDock.childCount) {
+                val child = appDock.getChildAt(i)
+                if (child.tag == "workspace_toggle") {
+                    insertIndex = i + 1
+                    break
+                }
+            }
+            appDock.addView(focusContainer, insertIndex)
 
             if (isFocusMode) {
                 startTimerDisplay()
@@ -252,8 +277,18 @@ class AppDockManager(
                     true
                 }
             }
-            // Insert after settings button (index 2)
-            appDock.addView(workspaceToggle, 2)
+            // Find the position after favorite toggle (or after settings if no favorite toggle)
+            var insertIndex = 2
+            for (i in 0 until appDock.childCount) {
+                val child = appDock.getChildAt(i)
+                if (child.tag == "favorite_toggle") {
+                    insertIndex = i + 1
+                    break
+                } else if (child.tag == "settings_button") {
+                    insertIndex = i + 1
+                }
+            }
+            appDock.addView(workspaceToggle, insertIndex)
         }
     }
     
@@ -334,8 +369,16 @@ class AppDockManager(
                     true
                 }
             }
-            // Insert after focus mode container (index 4)
-            appDock.addView(powerSaverToggle, 4)
+            // Find the position after focus mode container
+            var insertIndex = 4
+            for (i in 0 until appDock.childCount) {
+                val child = appDock.getChildAt(i)
+                if (child.tag == "focus_mode_container") {
+                    insertIndex = i + 1
+                    break
+                }
+            }
+            appDock.addView(powerSaverToggle, insertIndex)
         }
     }
 
@@ -360,9 +403,88 @@ class AppDockManager(
                     true
                 }
             }
-            // Add after restart button (index 1)
-            appDock.addView(settingsButton, 1)
+            // Add at the beginning (index 0)
+            appDock.addView(settingsButton, 0)
         }
+    }
+
+    private fun ensureFavoriteToggle() {
+        if (appDock.findViewWithTag<ImageView>("favorite_toggle") == null) {
+            favoriteToggle = ImageView(context).apply {
+                tag = "favorite_toggle"
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    setPadding(24, 24, 24, 24)
+                    marginStart = 8
+                }
+                setOnClickListener { toggleFavoriteMode() }
+                setOnLongClickListener {
+                    val mode = if (favoriteAppManager.isShowAllAppsMode()) "All Apps" else "Favorites"
+                    Toast.makeText(context, "Show: $mode", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            updateFavoriteToggleIcon()
+            
+            // Find the index after settings button
+            var insertIndex = 2
+            for (i in 0 until appDock.childCount) {
+                val child = appDock.getChildAt(i)
+                if (child.tag == "settings_button") {
+                    insertIndex = i + 1
+                    break
+                }
+            }
+            appDock.addView(favoriteToggle, insertIndex)
+        }
+    }
+
+    private fun updateFavoriteToggleIcon() {
+        if (!::favoriteToggle.isInitialized) {
+            return
+        }
+        
+        val favorites = favoriteAppManager.getFavoriteApps()
+        if (favorites.isEmpty()) {
+            // Hide toggle if no favorites
+            favoriteToggle.visibility = View.GONE
+            return
+        }
+        
+        favoriteToggle.visibility = View.VISIBLE
+        val isShowAllMode = favoriteAppManager.isShowAllAppsMode()
+        // Show star if favorites are shown (clicking will switch to all apps)
+        // Show grid if all apps are shown (clicking will switch to favorites)
+        favoriteToggle.setImageResource(
+            if (isShowAllMode) R.drawable.ic_apps_grid else R.drawable.ic_star
+        )
+    }
+
+    private fun toggleFavoriteMode() {
+        val favorites = favoriteAppManager.getFavoriteApps()
+        if (favorites.isEmpty()) {
+            Toast.makeText(context, "No favorite apps set", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val currentMode = favoriteAppManager.isShowAllAppsMode()
+        val newMode = !currentMode
+        favoriteAppManager.setShowAllAppsMode(newMode)
+        
+        // Update MainActivity's isShowAllAppsMode variable
+        (context as? MainActivity)?.let { activity ->
+            activity.isShowAllAppsMode = newMode
+        }
+        
+        updateFavoriteToggleIcon()
+        
+        // Optimize: Filter existing list instead of reloading everything
+        (context as? MainActivity)?.filterAppsWithoutReload()
+        
+        val modeText = if (newMode) "All Apps" else "Favorites"
+        Toast.makeText(context, "Showing: $modeText", Toast.LENGTH_SHORT).show()
     }
 
     private fun ensureRestartButton() {
@@ -528,15 +650,20 @@ class AppDockManager(
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
             when (child.tag) {
-                "focus_mode_container", "workspace_toggle", "restart_button", "power_saver_toggle" -> {
+                "focus_mode_container", "workspace_toggle", "power_saver_toggle", "favorite_toggle" -> {
                     child.visibility = View.VISIBLE
                 }
                 "add_icon", "apk_share_button" -> {
                     child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
                 }
                 else -> {
-                    // Hide all dock apps and groups when in focus mode or power saver mode
-                    child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
+                    // Hide other dock items when in focus mode or power saver mode
+                    // But keep settings button visible
+                    if (child.tag == "settings_button") {
+                        child.visibility = View.VISIBLE
+                    } else {
+                        child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
+                    }
                 }
             }
         }
