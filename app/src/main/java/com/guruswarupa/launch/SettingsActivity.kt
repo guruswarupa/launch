@@ -21,6 +21,7 @@ class SettingsActivity : ComponentActivity() {
         setContentView(R.layout.activity_settings)
 
         val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
+        val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
         val displayStyleGroup = findViewById<RadioGroup>(R.id.display_style_group)
         val gridOption = findViewById<RadioButton>(R.id.grid_option)
         val listOption = findViewById<RadioButton>(R.id.list_option)
@@ -33,11 +34,14 @@ class SettingsActivity : ComponentActivity() {
         val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
         val appLockButton = findViewById<Button>(R.id.app_lock_button)
 
+        // Setup currency spinner
+        setupCurrencySpinner(currencySpinner)
+        
         // Load current settings
-        loadCurrentSettings(weatherApiKeyInput, displayStyleGroup, gridOption, listOption)
+        loadCurrentSettings(weatherApiKeyInput, currencySpinner, displayStyleGroup, gridOption, listOption)
 
         saveButton.setOnClickListener {
-            saveSettings(weatherApiKeyInput, displayStyleGroup)
+            saveSettings(weatherApiKeyInput, currencySpinner, displayStyleGroup)
         }
 
         setDefaultLauncherButton.setOnClickListener {
@@ -64,8 +68,19 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
+    private fun setupCurrencySpinner(spinner: Spinner) {
+        val currencies = FinanceManager.SUPPORTED_CURRENCIES.map { (code, symbol) ->
+            "$code ($symbol)"
+        }.toTypedArray()
+        
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, currencies)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = adapter
+    }
+    
     private fun loadCurrentSettings(
         weatherApiKeyInput: EditText,
+        currencySpinner: Spinner,
         displayStyleGroup: RadioGroup,
         gridOption: RadioButton,
         listOption: RadioButton
@@ -73,6 +88,13 @@ class SettingsActivity : ComponentActivity() {
         // Load weather API key
         val currentApiKey = prefs.getString("weather_api_key", "")
         weatherApiKeyInput.setText(currentApiKey)
+
+        // Load currency
+        val currentCurrency = prefs.getString("finance_currency", "USD") ?: "USD"
+        val currencyIndex = FinanceManager.SUPPORTED_CURRENCIES.keys.indexOf(currentCurrency)
+        if (currencyIndex >= 0) {
+            currencySpinner.setSelection(currencyIndex)
+        }
 
         // Load display style
         val currentStyle = prefs.getString("view_preference", "list")
@@ -83,12 +105,19 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun saveSettings(weatherApiKeyInput: EditText, displayStyleGroup: RadioGroup) {
+    private fun saveSettings(weatherApiKeyInput: EditText, currencySpinner: Spinner, displayStyleGroup: RadioGroup) {
         val editor = prefs.edit()
 
         // Save weather API key
         val apiKey = weatherApiKeyInput.text.toString().trim()
         editor.putString("weather_api_key", apiKey)
+
+        // Save currency
+        val selectedCurrencyIndex = currencySpinner.selectedItemPosition
+        val currencyCodes = FinanceManager.SUPPORTED_CURRENCIES.keys.toList()
+        if (selectedCurrencyIndex >= 0 && selectedCurrencyIndex < currencyCodes.size) {
+            editor.putString("finance_currency", currencyCodes[selectedCurrencyIndex])
+        }
 
         // Save display style
         val selectedStyleId = displayStyleGroup.checkedRadioButtonId
@@ -238,10 +267,11 @@ class SettingsActivity : ComponentActivity() {
 
                 // Reload current settings in UI
                 val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
+                val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
                 val displayStyleGroup = findViewById<RadioGroup>(R.id.display_style_group)
                 val gridOption = findViewById<RadioButton>(R.id.grid_option)
                 val listOption = findViewById<RadioButton>(R.id.list_option)
-                loadCurrentSettings(weatherApiKeyInput, displayStyleGroup, gridOption, listOption)
+                loadCurrentSettings(weatherApiKeyInput, currencySpinner, displayStyleGroup, gridOption, listOption)
 
                 Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }

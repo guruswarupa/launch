@@ -15,8 +15,9 @@
         android:title="Uninstall"
         android:icon="@drawable/ic_settings" />
 
+
     <item
-        android:id="@+id/add_to_dock"
-        android:title="Add to Dock"
+        android:id="@+id/toggle_favorite"
+        android:title="Toggle Favorite"
         android:icon="@drawable/ic_add" />
 </menu>
