@@ -785,9 +785,48 @@ class MainActivity : FragmentActivity() {
             }
         }.start()
     }
+    
+    /**
+     * Refresh all usage data in background without blocking UI
+     * Updates app list usage times and weekly graph
+     */
+    private fun refreshUsageDataInBackground() {
+        Thread {
+            try {
+                // Clear adapter cache first to ensure fresh data
+                adapter?.clearUsageCache()
+                
+                // Update weekly usage graph in background
+                if (usageStatsManager.hasUsageStatsPermission()) {
+                    val weeklyData = usageStatsManager.getWeeklyUsageData()
+                    val appUsageData = usageStatsManager.getWeeklyAppUsageData()
+                    
+                    runOnUiThread {
+                        if (::weeklyUsageGraph.isInitialized) {
+                            weeklyUsageGraph.setUsageData(weeklyData)
+                            weeklyUsageGraph.setAppUsageData(appUsageData)
+                        }
+                    }
+                }
+                
+                // Refresh app adapter to show updated usage times
+                // Small delay allows usage queries to complete
+                Thread.sleep(200)
+                runOnUiThread {
+                    adapter?.notifyDataSetChanged()
+                }
+            } catch (e: Exception) {
+                // Silently handle errors to prevent crashes
+                e.printStackTrace()
+            }
+        }.start()
+    }
 
     override fun onResume() {
         super.onResume()
+
+        // Invalidate usage cache to ensure fresh data when app resumes
+        usageStatsManager.invalidateCache()
 
         // Use background thread for heavy operations
         Thread {
@@ -803,9 +842,10 @@ class MainActivity : FragmentActivity() {
 
         handler.post(updateRunnable)
 
-        // Immediately update battery and usage when app resumes
+        // Immediately update battery and usage when app resumes (all in background)
         updateBatteryInBackground()
         updateUsageInBackground()
+        refreshUsageDataInBackground()
 
         setWallpaperBackground()
         val filter = IntentFilter().apply {
@@ -1173,8 +1213,10 @@ class MainActivity : FragmentActivity() {
     private lateinit var usageStatsTextView: TextView
 
     private fun refreshUsageStats() {
+        // Clear adapter cache to force refresh
+        adapter?.clearUsageCache()
         runOnUiThread {
-            appAdapter.notifyDataSetChanged()
+            adapter?.notifyDataSetChanged()
         }
     }
 
