@@ -38,8 +38,15 @@ class AppAdapter(
     private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
     private val labelCache = mutableMapOf<String, String>() // packageName to label
     private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
-    private val CACHE_DURATION = 60000L // 1 minute cache
+    private val CACHE_DURATION = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
+    
+    /**
+     * Clear usage cache to force refresh of usage times
+     */
+    fun clearUsageCache() {
+        usageCache.clear()
+    }
 
     companion object {
         private const val VIEW_TYPE_LIST = 0
@@ -103,7 +110,7 @@ class AppAdapter(
 
         // Show usage time only in list mode - defer formatting until needed
         if (!isGridMode && holder.appUsageTime != null) {
-            // Use cached formatted time if available
+            // Use cached usage time (cache lookup is fast, actual query only if cache expired)
             val usageTime = getUsageTimeWithCache(packageName)
             val formattedTime = usageStatsManager.formatUsageTime(usageTime)
             holder.appUsageTime?.text = formattedTime

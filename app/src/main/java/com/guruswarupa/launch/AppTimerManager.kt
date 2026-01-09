@@ -7,13 +7,18 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
 import android.widget.EditText
 import android.widget.Toast
+import java.util.concurrent.Executors
 
 class AppTimerManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("app_timer_prefs", Context.MODE_PRIVATE)
     private var currentTimer: CountDownTimer? = null
     private var currentPackageName: String? = null
+    private val backgroundExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     companion object {
         const val TIMER_1_MIN = 60000L
@@ -80,15 +85,25 @@ class AppTimerManager(private val context: Context) {
 
         currentTimer = object : CountDownTimer(duration, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                prefs.edit().putLong("timer_remaining_$packageName", millisUntilFinished).apply()
+                // Write to SharedPreferences in background to prevent UI freezing
+                backgroundExecutor.execute {
+                    prefs.edit().putLong("timer_remaining_$packageName", millisUntilFinished).apply()
+                }
             }
 
             override fun onFinish() {
-                Toast.makeText(context, "Time's up! Closing app and returning to launcher", Toast.LENGTH_SHORT).show()
-                prefs.edit().remove("timer_remaining_$packageName").apply()
-                returnToLauncher(packageName)
-                currentTimer = null
-                currentPackageName = null
+                // Clean up timer state
+                backgroundExecutor.execute {
+                    prefs.edit().remove("timer_remaining_$packageName").apply()
+                }
+                
+                // Return to launcher and close app on main thread
+                mainHandler.post {
+                    Toast.makeText(context, "Time's up! Closing app and returning to launcher", Toast.LENGTH_SHORT).show()
+                    returnToLauncher(packageName)
+                    currentTimer = null
+                    currentPackageName = null
+                }
             }
         }.start()
 
@@ -110,55 +125,121 @@ class AppTimerManager(private val context: Context) {
 
     private fun returnToLauncher(packageName: String) {
         try {
-            // First, bring launcher to foreground with flags that will push other apps to background
+            // Get the launcher's package name (this app)
+            val launcherPackageName = context.packageName
+            
+            // Try to directly launch the launcher's MainActivity
+            try {
+                val launcherIntent = context.packageManager.getLaunchIntentForPackage(launcherPackageName)
+                if (launcherIntent != null) {
+                    launcherIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                                          Intent.FLAG_ACTIVITY_CLEAR_TASK or 
+                                          Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                                          Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                          Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    context.startActivity(launcherIntent)
+                    
+                    // Wait for launcher to come to foreground, then kill the app
+                    mainHandler.postDelayed({
+                        forceCloseApp(packageName)
+                    }, 800)
+                    return
+                }
+            } catch (e: Exception) {
+                // Fall through to HOME intent
+            }
+            
+            // Fallback: Use HOME intent
             val intent = Intent(Intent.ACTION_MAIN)
             intent.addCategory(Intent.CATEGORY_HOME)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
                           Intent.FLAG_ACTIVITY_CLEAR_TASK or 
-                          Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                          Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                          Intent.FLAG_ACTIVITY_CLEAR_TOP
             context.startActivity(intent)
             
-            // Small delay to ensure launcher is in foreground, then force-close the app
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            // Wait for launcher to come to foreground, then kill the app
+            mainHandler.postDelayed({
                 forceCloseApp(packageName)
-            }, 500)
+            }, 800)
         } catch (e: Exception) {
-            // Fallback: just try to open launcher
-            val intent = Intent(Intent.ACTION_MAIN)
-            intent.addCategory(Intent.CATEGORY_HOME)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            context.startActivity(intent)
+            // Last resort: simpler HOME intent
+            try {
+                val intent = Intent(Intent.ACTION_MAIN)
+                intent.addCategory(Intent.CATEGORY_HOME)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                
+                mainHandler.postDelayed({
+                    forceCloseApp(packageName)
+                }, 800)
+            } catch (e2: Exception) {
+                e2.printStackTrace()
+            }
         }
     }
     
     private fun forceCloseApp(packageName: String) {
-        try {
-            val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            
-            // Kill all background processes for this package
-            // This will terminate the app once it's moved to background
-            activityManager.killBackgroundProcesses(packageName)
-            
-            // On Android 7.0+, we can also try to finish recent tasks
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                try {
-                    // Try to remove the app from recent tasks
-                    val recentTasks = activityManager.getAppTasks()
-                    for (task in recentTasks) {
-                        val taskInfo = task.taskInfo
-                        if (taskInfo != null && taskInfo.baseActivity?.packageName == packageName) {
-                            task.finishAndRemoveTask()
-                        }
+        // Run in background thread to avoid blocking
+        backgroundExecutor.execute {
+            try {
+                val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                
+                // Kill all background processes for this package
+                // Since we've already brought launcher to foreground, the app should be in background
+                activityManager.killBackgroundProcesses(packageName)
+                
+                // Try multiple times to ensure it's killed
+                mainHandler.postDelayed({
+                    try {
+                        activityManager.killBackgroundProcesses(packageName)
+                    } catch (e: Exception) {
+                        // Ignore
                     }
-                } catch (e: Exception) {
-                    // Ignore if we can't access recent tasks
+                }, 500)
+                
+                // Try to remove from recent tasks if possible
+                // Note: This requires special permissions on newer Android versions
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                    try {
+                        // Try using getRecentTasks (may require special permission)
+                        @Suppress("DEPRECATION")
+                        val recentTasks = activityManager.getRecentTasks(50, ActivityManager.RECENT_WITH_EXCLUDED)
+                        for (taskInfo in recentTasks) {
+                            val baseIntent = taskInfo.baseIntent
+                            if (baseIntent != null && baseIntent.component != null) {
+                                if (baseIntent.component!!.packageName == packageName) {
+                                    // Try to remove this task
+                                    try {
+                                        // Kill processes first
+                                        activityManager.killBackgroundProcesses(packageName)
+                                    } catch (e: Exception) {
+                                        // Ignore - we don't have permission to manipulate tasks
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: SecurityException) {
+                        // getRecentTasks requires special permission, that's okay
+                        // killBackgroundProcesses should still work
+                    } catch (e: Exception) {
+                        // Ignore other exceptions
+                    }
                 }
+                
+            } catch (e: SecurityException) {
+                // If we don't have permission, at least the app is in background
+                // Android will manage it
+                try {
+                    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                    activityManager.killBackgroundProcesses(packageName)
+                } catch (e2: Exception) {
+                    // Ignore
+                }
+            } catch (e: Exception) {
+                // Handle any other exceptions
+                e.printStackTrace()
             }
-        } catch (e: SecurityException) {
-            // If we don't have permission, the app will still be moved to background
-            // when launcher comes to foreground, and Android will eventually kill it
-        } catch (e: Exception) {
-            // Handle any other exceptions
         }
     }
 
@@ -166,7 +247,10 @@ class AppTimerManager(private val context: Context) {
         currentTimer?.cancel()
         currentTimer = null
         currentPackageName?.let { packageName ->
-            prefs.edit().remove("timer_remaining_$packageName").apply()
+            // Clean up in background
+            backgroundExecutor.execute {
+                prefs.edit().remove("timer_remaining_$packageName").apply()
+            }
         }
         currentPackageName = null
     }
