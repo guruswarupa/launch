@@ -46,6 +46,7 @@ import android.view.ViewGroup
 import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
+import android.widget.FrameLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import com.guruswarupa.launch.TodoItem
@@ -106,6 +107,7 @@ class MainActivity : FragmentActivity() {
     lateinit var favoriteAppManager: FavoriteAppManager
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
+    private lateinit var mediaPlayerWidgetManager: MediaPlayerWidgetManager
     private var isApplyingFocusMode = false // Guard to prevent concurrent applyFocusMode calls
     private var appsLoaded = false // Track if apps have been loaded initially
     private var contactsLoaded = false // Track if contacts have been loaded initially
@@ -120,6 +122,8 @@ class MainActivity : FragmentActivity() {
         private const val LOCATION_PERMISSION_REQUEST = 700
         private const val REQUEST_PICK_WIDGET = 800
         private const val REQUEST_CONFIGURE_WIDGET = 801
+        private const val REQUEST_PICK_MEDIA_WIDGET = 802
+        private const val REQUEST_CONFIGURE_MEDIA_WIDGET = 803
         private const val NOTIFICATION_PERMISSION_REQUEST = 900
     }
 
@@ -325,6 +329,16 @@ class MainActivity : FragmentActivity() {
             widgetManager.requestPickWidget(this, REQUEST_PICK_WIDGET)
         }
 
+        // Initialize MediaPlayerWidgetManager
+        val mediaPlayerWidgetContainer = findViewById<FrameLayout>(R.id.media_player_widget_container)
+        val addMediaPlayerWidgetButton = findViewById<ImageButton>(R.id.add_media_player_widget_button)
+        mediaPlayerWidgetManager = MediaPlayerWidgetManager(this, mediaPlayerWidgetContainer, addMediaPlayerWidgetButton)
+        
+        // Setup add media player widget button
+        addMediaPlayerWidgetButton.setOnClickListener {
+            mediaPlayerWidgetManager.requestPickWidget(this, REQUEST_PICK_MEDIA_WIDGET)
+        }
+
         setWallpaperBackground()
 
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
@@ -524,10 +538,19 @@ class MainActivity : FragmentActivity() {
         if (requestCode == REQUEST_PICK_WIDGET && resultCode == RESULT_OK) {
             widgetManager.handleWidgetPicked(this, data, REQUEST_PICK_WIDGET)
         }
+        // Handle media player widget picking
+        if (requestCode == REQUEST_PICK_MEDIA_WIDGET && resultCode == RESULT_OK) {
+            mediaPlayerWidgetManager.handleWidgetPicked(this, data, REQUEST_PICK_MEDIA_WIDGET)
+        }
         // Handle widget configuration
         if (requestCode == REQUEST_CONFIGURE_WIDGET && resultCode == RESULT_OK) {
             val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
             widgetManager.handleWidgetConfigured(this, appWidgetId)
+        }
+        // Handle media player widget configuration
+        if (requestCode == REQUEST_CONFIGURE_MEDIA_WIDGET && resultCode == RESULT_OK) {
+            val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
+            mediaPlayerWidgetManager.handleWidgetConfigured(this, appWidgetId)
         }
     }
 
@@ -769,6 +792,9 @@ class MainActivity : FragmentActivity() {
         // Destroy widget manager
         if (::widgetManager.isInitialized) {
             widgetManager.onDestroy()
+        }
+        if (::mediaPlayerWidgetManager.isInitialized) {
+            mediaPlayerWidgetManager.onDestroy()
         }
     }
 
@@ -1087,6 +1113,9 @@ class MainActivity : FragmentActivity() {
         if (::widgetManager.isInitialized) {
             widgetManager.onStart()
         }
+        if (::mediaPlayerWidgetManager.isInitialized) {
+            mediaPlayerWidgetManager.onStart()
+        }
     }
 
     override fun onPause() {
@@ -1105,6 +1134,9 @@ class MainActivity : FragmentActivity() {
         // Stop widget manager listening
         if (::widgetManager.isInitialized) {
             widgetManager.onStop()
+        }
+        if (::mediaPlayerWidgetManager.isInitialized) {
+            mediaPlayerWidgetManager.onStop()
         }
     }
 
