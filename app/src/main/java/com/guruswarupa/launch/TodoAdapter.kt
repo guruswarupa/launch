@@ -10,6 +10,7 @@ import android.widget.CheckBox
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Calendar
 
@@ -51,8 +52,13 @@ class TodoAdapter(
 
         holder.todoCheckBox.isChecked = todoItem.isChecked
 
-        // Set priority indicator color
-        holder.priorityIndicator.setBackgroundColor(Color.parseColor(todoItem.priority.color))
+        // Set priority indicator drawable
+        val priorityDrawable = when (todoItem.priority) {
+            TodoItem.Priority.HIGH -> ContextCompat.getDrawable(holder.itemView.context, R.drawable.priority_high)
+            TodoItem.Priority.MEDIUM -> ContextCompat.getDrawable(holder.itemView.context, R.drawable.priority_medium)
+            TodoItem.Priority.LOW -> ContextCompat.getDrawable(holder.itemView.context, R.drawable.priority_low)
+        }
+        holder.priorityIndicator.background = priorityDrawable
 
         // Show task text with strikethrough if completed
         holder.todoText.text = todoItem.text
@@ -62,8 +68,13 @@ class TodoAdapter(
             holder.todoText.paintFlags = holder.todoText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
         }
 
-        // Show category
-        holder.categoryText.text = todoItem.category
+        // Show category with better formatting
+        if (todoItem.category.isNotEmpty() && todoItem.category != "General") {
+            holder.categoryText.text = todoItem.category
+            holder.categoryText.visibility = View.VISIBLE
+        } else {
+            holder.categoryText.visibility = View.GONE
+        }
 
         // Show due time if set
         if (todoItem.dueTime != null) {
@@ -97,18 +108,18 @@ class TodoAdapter(
             holder.intervalText.visibility = View.GONE
         }
 
-        // Show days of week for recurring tasks
+        // Show days of week for recurring tasks with cleaner styling
         if (todoItem.isRecurring && todoItem.selectedDays.isNotEmpty()) {
             holder.daysContainer.visibility = View.VISIBLE
 
             holder.dayViews.forEachIndexed { index, dayView ->
                 val dayOfWeek = index + 1 // 1=Sunday, 2=Monday, etc.
                 if (todoItem.selectedDays.contains(dayOfWeek)) {
-                    dayView.setBackgroundColor(Color.parseColor("#4CAF50"))
-                    dayView.setTextColor(Color.WHITE)
+                    dayView.setBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.nord8))
+                    dayView.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.white))
                 } else {
-                    dayView.setBackgroundColor(Color.parseColor("#424242"))
-                    dayView.setTextColor(Color.parseColor("#757575"))
+                    dayView.setBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.nord2))
+                    dayView.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.text_secondary))
                 }
             }
         } else {

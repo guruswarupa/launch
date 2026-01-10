@@ -3,9 +3,11 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp"
-    android:background="@drawable/card_background"
-    android:layout_marginBottom="4dp">
+    android:padding="14dp"
+    android:background="@drawable/todo_item_ripple"
+    android:layout_marginBottom="8dp"
+    android:clickable="true"
+    android:focusable="true">
 
     <!-- Main row with checkbox, text, and delete button -->
     <LinearLayout
@@ -17,17 +19,18 @@
         <!-- Priority indicator -->
         <View
             android:id="@+id/priority_indicator"
-            android:layout_width="4dp"
-            android:layout_height="32dp"
-            android:layout_marginEnd="8dp"
-            android:background="@color/white" />
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:layout_marginEnd="12dp"
+            android:minHeight="40dp"
+            android:background="@color/text_secondary" />
 
         <CheckBox
             android:id="@+id/todo_checkbox"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:buttonTint="@color/white"
-            android:layout_marginEnd="8dp" />
+            android:buttonTint="@color/nord8"
+            android:layout_marginEnd="12dp" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -41,36 +44,41 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/white"
-                android:textSize="14sp" />
+                android:textSize="15sp"
+                android:lineSpacingExtra="2dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="4dp">
+                android:layout_marginTop="6dp"
+                android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/category_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/gray"
-                    android:textSize="10sp"
-                    android:layout_marginEnd="8dp" />
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:background="@drawable/input_field_background"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="2dp"
+                    android:layout_marginEnd="6dp" />
 
                 <TextView
                     android:id="@+id/due_time_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/gray"
-                    android:textSize="10sp"
-                    android:layout_marginEnd="8dp" />
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginEnd="6dp" />
 
                 <TextView
                     android:id="@+id/interval_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/gray"
-                    android:textSize="10sp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
                     android:visibility="gone" />
 
             </LinearLayout>
@@ -79,11 +87,13 @@
 
         <ImageButton
             android:id="@+id/delete_todo_button"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_delete"
-            android:contentDescription="Delete todo item" />
+            android:tint="@color/text_secondary"
+            android:contentDescription="Delete todo item"
+            android:padding="6dp" />
 
     </LinearLayout>
 
@@ -93,8 +103,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="4dp"
-        android:layout_marginStart="36dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="47dp"
         android:visibility="gone">
 
         <TextView
