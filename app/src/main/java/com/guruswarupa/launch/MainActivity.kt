@@ -37,9 +37,12 @@ import java.util.Locale
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.os.Build
+import android.util.Log
 import android.widget.Button
+import androidx.annotation.RequiresApi
 import java.util.Calendar
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -99,6 +102,7 @@ class MainActivity : FragmentActivity() {
     lateinit var appCategoryManager: AppCategoryManager
     lateinit var favoriteAppManager: FavoriteAppManager
     internal var isShowAllAppsMode = false
+    private lateinit var widgetManager: WidgetManager
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -108,6 +112,8 @@ class MainActivity : FragmentActivity() {
         private const val VOICE_SEARCH_REQUEST = 500
         private const val USAGE_STATS_REQUEST = 600
         private const val LOCATION_PERMISSION_REQUEST = 700
+        private const val REQUEST_PICK_WIDGET = 800
+        private const val REQUEST_CONFIGURE_WIDGET = 801
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -254,6 +260,15 @@ class MainActivity : FragmentActivity() {
             searchBox = searchBox,
             contactsList = contactsList
         )
+
+        // Initialize WidgetManager
+        val widgetContainer = findViewById<LinearLayout>(R.id.widget_container)
+        widgetManager = WidgetManager(this, widgetContainer)
+        
+        // Setup add widget button
+        findViewById<Button>(R.id.add_widget_button).setOnClickListener {
+            widgetManager.requestPickWidget(this, REQUEST_PICK_WIDGET)
+        }
 
         setWallpaperBackground()
 
@@ -419,6 +434,15 @@ class MainActivity : FragmentActivity() {
         }
         if (requestCode == ShareManager.FILE_PICKER_REQUEST_CODE && resultCode == RESULT_OK) {
             shareManager.handleFilePickerResult(data?.data)
+        }
+        // Handle widget picking
+        if (requestCode == REQUEST_PICK_WIDGET && resultCode == RESULT_OK) {
+            widgetManager.handleWidgetPicked(this, data, REQUEST_PICK_WIDGET)
+        }
+        // Handle widget configuration
+        if (requestCode == REQUEST_CONFIGURE_WIDGET && resultCode == RESULT_OK) {
+            val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
+            widgetManager.handleWidgetConfigured(this, appWidgetId)
         }
     }
 
@@ -635,6 +659,11 @@ class MainActivity : FragmentActivity() {
         super.onDestroy()
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
+        
+        // Destroy widget manager
+        if (::widgetManager.isInitialized) {
+            widgetManager.onDestroy()
+        }
     }
 
     private val wallpaperChangeReceiver = object : BroadcastReceiver() {
@@ -873,6 +902,11 @@ class MainActivity : FragmentActivity() {
         
         // Refresh workspace toggle icon
         appDockManager.refreshWorkspaceToggle()
+        
+        // Start widget manager listening
+        if (::widgetManager.isInitialized) {
+            widgetManager.onStart()
+        }
     }
 
     override fun onPause() {
@@ -887,6 +921,11 @@ class MainActivity : FragmentActivity() {
             // Receiver was not registered
         }
         saveTodoItems()
+        
+        // Stop widget manager listening
+        if (::widgetManager.isInitialized) {
+            widgetManager.onStop()
+        }
     }
 
     private fun updateTime() {
