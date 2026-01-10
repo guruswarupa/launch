@@ -1770,28 +1770,49 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun showTransactionHistory() {
-        val transactions = financeManager.getTransactionHistory()
+        val allPrefs = sharedPreferences.all
+        val currencySymbol = financeManager.getCurrency()
+        
+        // Parse transactions with timestamps from SharedPreferences
+        val transactionList = mutableListOf<Transaction>()
+        allPrefs.keys.filter { it.startsWith("transaction_") }.forEach { key ->
+            val transactionData = sharedPreferences.getString(key, "") ?: ""
+            val parts = transactionData.split(":")
+            if (parts.size >= 3) {
+                val type = parts[0]
+                val amount = parts[1].toDoubleOrNull() ?: 0.0
+                val timestamp = key.substringAfter("transaction_").toLongOrNull() ?: 0L
+                val description = if (parts.size > 3) parts[3] else ""
+                transactionList.add(Transaction(type, amount, description, timestamp))
+            }
+        }
+        
+        // Sort by timestamp descending (newest first)
+        val sortedTransactions = transactionList.sortedByDescending { it.timestamp }
 
-        if (transactions.isEmpty()) {
+        if (sortedTransactions.isEmpty()) {
             Toast.makeText(this, "No transactions found", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val dialogBuilder = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
-        dialogBuilder.setTitle("Transaction History")
+        // Create custom dialog
+        val dialogView = layoutInflater.inflate(R.layout.dialog_transaction_history, null)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.transaction_recycler_view)
+        val closeButton = dialogView.findViewById<Button>(R.id.close_button)
+        
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        val adapter = TransactionAdapter(sortedTransactions, currencySymbol)
+        recyclerView.adapter = adapter
 
-        val currencySymbol = financeManager.getCurrency()
-        val transactionList = transactions.take(20).map { (type, amount, description) ->
-            val typeText = if (type == "income") "Income" else "Expense"
-            val symbol = if (type == "income") "+" else "-"
-            val descText = if (description.isNotEmpty()) " - $description" else ""
-            "$symbol$currencySymbol${kotlin.math.abs(amount)} ($typeText)$descText"
-        }.toTypedArray()
+        val dialog = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setView(dialogView)
+            .create()
 
-        dialogBuilder.setItems(transactionList) { _, _ -> }
-        dialogBuilder.setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
+        closeButton.setOnClickListener {
+            dialog.dismiss()
+        }
 
-        dialogBuilder.create().show()
+        dialog.show()
     }
 
     private fun setupFinanceWidget() {
@@ -1803,10 +1824,14 @@ class MainActivity : FragmentActivity() {
             addTransaction(false)
         }
 
-        // Long press on balance text to show transaction history
-        balanceText.setOnLongClickListener {
+        // Click on balance text or card to show transaction history
+        balanceText.setOnClickListener {
             showTransactionHistory()
-            true
+        }
+        
+        // Also make the balance card clickable
+        findViewById<LinearLayout>(R.id.balance_card)?.setOnClickListener {
+            showTransactionHistory()
         }
     }
 
@@ -1848,8 +1873,22 @@ class MainActivity : FragmentActivity() {
 
     private fun updateFinanceDisplay() {
         val currencySymbol = financeManager.getCurrency()
-        balanceText.text = "Balance: $currencySymbol${financeManager.getBalance()}"
-        monthlySpentText.text = "Monthly Spent: $currencySymbol${financeManager.getMonthlyExpenses()}"
+        val balance = financeManager.getBalance()
+        val monthlyExpenses = financeManager.getMonthlyExpenses()
+        val monthlyIncome = financeManager.getMonthlyIncome()
+        val netSavings = monthlyIncome - monthlyExpenses
+        
+        // Format balance with 2 decimal places
+        balanceText.text = String.format("%s%.2f", currencySymbol, balance)
+        
+        // Show net savings for the month (income - expenses) with neutral color
+        val netText = if (netSavings >= 0) {
+            "This Month: +$currencySymbol${String.format("%.2f", netSavings)}"
+        } else {
+            "This Month: -$currencySymbol${String.format("%.2f", kotlin.math.abs(netSavings))}"
+        }
+        monthlySpentText.text = netText
+        monthlySpentText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
     }
 
     fun applyPowerSaverMode(isEnabled: Boolean) {
