@@ -1,0 +1,148 @@
+Productivity & Organization
+Notifications Widget
+Show unread notification count
+Quick access to recent notifications
+Swipe to dismiss from launcher
+Calendar Events Widget
+Upcoming events for today/tomorrow
+Tap to open calendar app
+Visual indicator for events
+Quick Notes/Sticky Notes
+Simple note-taking widget
+Pin notes to home screen
+Sync with existing notes app (optional)
+App Folders/Groups on Home Screen
+Create custom folders for apps
+Drag-and-drop organization
+Works with existing categories
+Recent Apps History
+Recently used apps section
+Quick access to last 5-10 apps
+Configurable history length
+Digital Wellness & Control
+Daily Screen Time Limits per App
+Set daily limits (complements app timers)
+Visual progress indicator
+Lock app when limit reached
+App Usage Insights Dashboard
+Daily/weekly/monthly breakdowns
+Most used apps by category
+Usage trends over time
+Export reports
+Scheduled Focus Mode
+Auto-enable Focus Mode at set times
+Daily/weekly schedules
+Customizable allowed apps per schedule
+App Hiding
+Hide apps from main list
+Access via search or settings
+Useful for sensitive apps
+Customization & Personalization
+Theme Customization
+Light/Dark/Auto toggle
+Accent color picker
+Custom wallpaper per theme
+Icon Pack Support
+Support third-party icon packs
+Custom icon per app
+Icon shape options (circle, rounded square, etc.)
+Font Size & Style Customization
+Adjustable font sizes
+Font family options
+Better accessibility
+Widget Resizing
+Resize widgets (weather, finance, todos)
+Compact/expanded views
+Hide/show widgets
+Multiple Home Screen Pages
+Swipe between pages
+Different apps/widgets per page
+Page indicators
+Quick Actions & Convenience
+Quick Settings Panel
+Swipe down for quick settings
+WiFi, Bluetooth, Brightness toggles
+Do Not Disturb, Flashlight
+Music Player Controls Widget
+Show current track
+Play/pause/skip controls
+Works with Spotify, YouTube Music, etc.
+Battery Optimization Suggestions
+Identify battery-draining apps
+Suggestions based on usage
+Quick access to battery settings
+Smart App Suggestions
+Suggest apps based on time/location
+Context-aware recommendations
+Learn from usage patterns
+Search & Discovery
+Advanced Search Filters
+Filter by category, usage, install date
+Search by app description/keywords
+Recent searches history
+App Shortcuts Integration
+Long-press app icons for shortcuts
+Quick actions (e.g., "New Note" for Notes app)
+Android App Shortcuts API
+Data & Backup
+Cloud Backup Integration
+Backup to Google Drive/Dropbox
+Auto-backup schedule
+Restore from cloud
+Export Usage Reports
+Export usage stats as CSV/PDF
+Share reports
+Weekly/monthly summaries
+Accessibility & Usibility
+Gesture Navigation
+Swipe gestures for common actions
+Customizable gesture shortcuts
+Double-tap to sleep
+Voice Assistant Integration
+Quick access to Google Assistant
+Voice commands for app launch
+Expand existing voice search
+One-Handed Mode
+Compact layout option
+Reachability mode
+Bottom-aligned dock
+Integration & Connectivity
+Smart Home Controls Widget
+Quick controls for smart devices
+Integration with Home Assistant/Google Home
+Scene shortcuts
+Weather Alerts
+Severe weather notifications
+Daily weather summary
+Location-based alerts
+Reminder Widget
+Set reminders from launcher
+Visual countdown
+Integration with calendar
+Privacy & Security
+App Usage Privacy
+Hide usage stats for specific apps
+Private mode for sensitive apps
+Usage data encryption
+Guest Mode
+Temporary restricted mode
+Hide sensitive apps/data
+Quick toggle
+Recommended Priority Order
+High Priority (Quick Wins):
+Notifications Widget (#1)
+Calendar Events Widget (#2)
+Theme Customization (#10)
+App Hiding (#9)
+Quick Settings Panel (#15)
+Medium Priority (Enhancement):
+Daily Screen Time Limits (#6)
+App Folders (#4)
+Recent Apps History (#5)
+Advanced Search Filters (#19)
+Music Player Controls (#16)
+Lower Priority (Nice to Have):
+Multiple Home Screen Pages (#14)
+Cloud Backup (#21)
+Smart Home Controls (#26)
+Guest Mode (#30)
