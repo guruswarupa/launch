@@ -62,7 +62,16 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/gray"
-                    android:textSize="10sp" />
+                    android:textSize="10sp"
+                    android:layout_marginEnd="8dp" />
+
+                <TextView
+                    android:id="@+id/interval_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/gray"
+                    android:textSize="10sp"
+                    android:visibility="gone" />
 
             </LinearLayout>
 

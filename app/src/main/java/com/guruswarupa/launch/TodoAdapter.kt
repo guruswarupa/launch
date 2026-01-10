@@ -26,6 +26,7 @@ class TodoAdapter(
         val priorityIndicator: View = view.findViewById(R.id.priority_indicator)
         val categoryText: TextView = view.findViewById(R.id.category_text)
         val dueTimeText: TextView = view.findViewById(R.id.due_time_text)
+        val intervalText: TextView = view.findViewById(R.id.interval_text)
         val daysContainer: LinearLayout = view.findViewById(R.id.days_container)
 
         val dayViews = listOf(
@@ -72,6 +73,30 @@ class TodoAdapter(
             holder.dueTimeText.visibility = View.GONE
         }
 
+        // Show interval info if interval-based
+        if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
+            val intervalText = when (todoItem.recurrenceInterval) {
+                30 -> "Every 30 min"
+                60 -> "Every 1 hr"
+                120 -> "Every 2 hrs"
+                180 -> "Every 3 hrs"
+                240 -> "Every 4 hrs"
+                360 -> "Every 6 hrs"
+                480 -> "Every 8 hrs"
+                720 -> "Every 12 hrs"
+                else -> "Every ${todoItem.recurrenceInterval} min"
+            }
+            val startTimeText = if (todoItem.intervalStartTime != null) {
+                " from ${todoItem.intervalStartTime}"
+            } else {
+                ""
+            }
+            holder.intervalText.text = "$intervalText$startTimeText"
+            holder.intervalText.visibility = View.VISIBLE
+        } else {
+            holder.intervalText.visibility = View.GONE
+        }
+
         // Show days of week for recurring tasks
         if (todoItem.isRecurring && todoItem.selectedDays.isNotEmpty()) {
             holder.daysContainer.visibility = View.VISIBLE
@@ -95,7 +120,16 @@ class TodoAdapter(
             todoItem.isChecked = isChecked
 
             if (isChecked && todoItem.isRecurring) {
-                todoItem.lastCompletedDate = getCurrentDateString()
+                if (todoItem.isIntervalBased()) {
+                    // For interval-based, store timestamp
+                    todoItem.lastCompletedDate = System.currentTimeMillis().toString()
+                } else {
+                    // For day-based, store date string
+                    todoItem.lastCompletedDate = getCurrentDateString()
+                }
+            } else if (!isChecked && todoItem.isRecurring && todoItem.isIntervalBased()) {
+                // Reset timestamp when unchecked for interval-based tasks
+                todoItem.lastCompletedDate = null
             }
 
             // Update strike-through text immediately
