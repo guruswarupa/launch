@@ -61,19 +61,41 @@ class AppAdapter(
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
         executor.execute {
-            val newItems = mutableListOf<ResolveInfo>()
-
-            // Create a copy of the list to avoid concurrent modification
-            val safeCopy = ArrayList(newAppList)
-            for (app in safeCopy) {
-                newItems.add(app)
+            // Pre-cache labels and icons for first 20 items in background for faster initial display
+            val itemsToPreCache = newAppList.take(20)
+            itemsToPreCache.forEach { app ->
+                val packageName = app.activityInfo.packageName
+                // Pre-cache labels
+                labelCache.getOrPut(packageName) {
+                    try {
+                        app.loadLabel((context as? Activity)?.packageManager ?: return@forEach)?.toString()
+                            ?: packageName
+                    } catch (e: Exception) {
+                        packageName
+                    }
+                }
+                // Pre-cache icons (only if not already cached)
+                if (!iconCache.containsKey(packageName)) {
+                    try {
+                        iconCache[packageName] = app.loadIcon((context as? Activity)?.packageManager ?: return@forEach)
+                    } catch (e: Exception) {
+                        // Icon will be loaded on demand
+                    }
+                }
             }
 
             // Update UI on main thread
             (context as? Activity)?.runOnUiThread {
+                val oldSize = appList.size
                 appList.clear()
-                appList.addAll(newItems)
-                notifyDataSetChanged()
+                appList.addAll(newAppList)
+                
+                // Use more efficient notification if size didn't change
+                if (oldSize == newAppList.size) {
+                    notifyItemRangeChanged(0, newAppList.size)
+                } else {
+                    notifyDataSetChanged()
+                }
             }
         }
     }
