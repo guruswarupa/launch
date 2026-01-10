@@ -200,6 +200,11 @@ class MainActivity : FragmentActivity() {
 
         // Load weekly usage data
         loadWeeklyUsageData()
+        
+        // Setup weekly usage graph callback
+        weeklyUsageGraph.onDaySelected = { day, appUsages ->
+            showDailyUsageDialog(day, appUsages)
+        }
 
         if (isGridMode) {
             recyclerView.layoutManager = GridLayoutManager(this, 4)
@@ -1296,6 +1301,62 @@ class MainActivity : FragmentActivity() {
 
             val appUsageData = usageStatsManager.getWeeklyAppUsageData()
             weeklyUsageGraph.setAppUsageData(appUsageData)
+        }
+    }
+    
+    private fun showDailyUsageDialog(day: String, appUsages: Map<String, Long>) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_daily_usage, null)
+        val dayTitle = dialogView.findViewById<TextView>(R.id.day_title)
+        val totalTime = dialogView.findViewById<TextView>(R.id.total_time)
+        val pieChart = dialogView.findViewById<DailyUsagePieView>(R.id.daily_pie_chart)
+        val appUsageList = dialogView.findViewById<RecyclerView>(R.id.app_usage_list)
+        val closeButton = dialogView.findViewById<Button>(R.id.close_button)
+        
+        // Set day title
+        dayTitle.text = day
+        
+        // Calculate and display total time
+        val totalUsage = appUsages.values.sum()
+        val totalTimeText = formatUsageTimeForDialog(totalUsage)
+        totalTime.text = "Total: $totalTimeText"
+        
+        // Set pie chart data
+        pieChart.setAppUsageData(appUsages)
+        
+        // Setup RecyclerView with app usage list
+        val sortedApps = appUsages.toList().sortedByDescending { it.second }
+        val totalUsageFloat = totalUsage.toFloat()
+        val appUsageItems = sortedApps.mapIndexed { index, (appName, usage) ->
+            val percentage = if (totalUsageFloat > 0) (usage.toFloat() / totalUsageFloat * 100f) else 0f
+            val color = pieChart.getColorForApp(index)
+            AppUsageItem(appName, usage, percentage, color)
+        }
+        
+        appUsageList.layoutManager = LinearLayoutManager(this)
+        appUsageList.adapter = AppUsageAdapter(appUsageItems)
+        
+        // Create and show dialog
+        val dialog = android.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setView(dialogView)
+            .create()
+        
+        closeButton.setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    private fun formatUsageTimeForDialog(timeInMillis: Long): String {
+        if (timeInMillis <= 0) return "0m"
+
+        val minutes = timeInMillis / (1000 * 60)
+        val hours = minutes / 60
+
+        return when {
+            hours > 0 -> "${hours}h ${minutes % 60}m"
+            minutes > 0 -> "${minutes}m"
+            else -> "<1m"
         }
     }
 
