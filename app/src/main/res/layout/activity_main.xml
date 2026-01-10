@@ -288,113 +288,132 @@
                     android:layout_marginVertical="16dp"
                     android:background="@drawable/widget_background"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="20dp">
 
+                    <!-- Header -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Finance Tracker"
                         android:textColor="@color/white"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="20dp" />
 
+                    <!-- Balance Card -->
                     <LinearLayout
+                        android:id="@+id/balance_card"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="horizontal">
+                        android:background="@drawable/balance_card_ripple"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:layout_marginBottom="20dp"
+                        android:clickable="true"
+                        android:focusable="true">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Total Balance"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:layout_marginBottom="4dp" />
 
                         <TextView
                             android:id="@+id/balance_text"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Balance: $0.00"
-                            android:textColor="@color/white"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/monthly_spent_text"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="This Month: -$0.00"
-                            android:textColor="@color/red"
-                            android:textSize="12sp" />
+                            android:text="$0.00"
+                            android:textColor="@color/white"
+                            android:textSize="28sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp" />
 
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/monthly_spent_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="This Month: -$0.00"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
                     </LinearLayout>
 
+                    <!-- Input Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="16dp">
+
+                        <EditText
+                            android:id="@+id/amount_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:background="@drawable/input_field_background"
+                            android:hint="Enter amount"
+                            android:inputType="numberDecimal"
+                            android:paddingStart="18dp"
+                            android:paddingEnd="18dp"
+                            android:textColor="@color/white"
+                            android:textColorHint="@color/gray_light"
+                            android:textSize="16sp"
+                            android:layout_marginBottom="12dp" />
+
+                        <EditText
+                            android:id="@+id/description_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:background="@drawable/input_field_background"
+                            android:hint="Description (optional)"
+                            android:inputType="text"
+                            android:paddingStart="18dp"
+                            android:paddingEnd="18dp"
+                            android:textColor="@color/white"
+                            android:textColorHint="@color/gray_light"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <!-- Action Buttons -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="12dp"
-                        android:gravity="center_vertical">
+                        android:gravity="center"
+                        android:weightSum="2">
 
-                        <!-- Input Fields (Vertical) -->
-                        <LinearLayout
+                        <Button
+                            android:id="@+id/add_income_btn"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="56dp"
                             android:layout_weight="1"
-                            android:orientation="vertical">
+                            android:layout_marginEnd="8dp"
+                            android:background="@drawable/button_neutral_ripple"
+                            android:text="Add Income"
+                            android:textColor="@color/white"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:elevation="4dp" />
 
-                            <EditText
-                                android:id="@+id/amount_input"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:background="@drawable/search_box_transparent_bg"
-                                android:hint="Amount"
-                                android:inputType="numberDecimal"
-                                android:paddingStart="16dp"
-                                android:paddingEnd="16dp"
-                                android:textColor="@color/white"
-                                android:textColorHint="@color/gray_light"
-                                android:textSize="14sp" />
-
-                            <EditText
-                                android:id="@+id/description_input"
-                                android:layout_width="match_parent"
-                                android:layout_height="48dp"
-                                android:layout_marginTop="8dp"
-                                android:background="@drawable/search_box_transparent_bg"
-                                android:hint="Description (optional)"
-                                android:inputType="text"
-                                android:paddingStart="16dp"
-                                android:paddingEnd="16dp"
-                                android:textColor="@color/white"
-                                android:textColorHint="@color/gray_light"
-                                android:textSize="14sp" />
-                        </LinearLayout>
-
-                        <!-- Buttons (+ and - stacked vertically) -->
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:layout_marginStart="12dp">
-
-                            <Button
-                                android:id="@+id/add_income_btn"
-                                android:layout_width="wrap_content"
-                                android:layout_height="48dp"
-                                android:background="@drawable/button_background"
-                                android:paddingHorizontal="16dp"
-                                android:text="+"
-                                android:textColor="@color/white"
-                                android:textSize="16sp" />
-
-                            <Button
-                                android:id="@+id/add_expense_btn"
-                                android:layout_width="wrap_content"
-                                android:layout_height="48dp"
-                                android:layout_marginTop="8dp"
-                                android:background="@drawable/button_background"
-                                android:paddingHorizontal="16dp"
-                                android:text="-"
-                                android:textColor="@color/white"
-                                android:textSize="16sp" />
-                        </LinearLayout>
-
+                        <Button
+                            android:id="@+id/add_expense_btn"
+                            android:layout_width="0dp"
+                            android:layout_height="56dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/button_neutral_ripple"
+                            android:text="Add Expense"
+                            android:textColor="@color/white"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:elevation="4dp" />
                     </LinearLayout>
 
                 </LinearLayout>
