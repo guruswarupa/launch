@@ -184,6 +184,10 @@ class MainActivity : FragmentActivity() {
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
+        // Set callback for location permission requests
+        weatherManager.onLocationPermissionNeeded = {
+            requestLocationPermissionForWeather()
+        }
 
         // Request necessary permissions
         requestContactsPermission()
@@ -1098,6 +1102,23 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    // Request location permission for weather
+    private fun requestLocationPermissionForWeather() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+                LOCATION_PERMISSION_REQUEST
+            )
+        } else {
+            // Permission already granted, force refresh to get location
+            if (::weatherManager.isInitialized && ::weatherIcon.isInitialized && ::weatherText.isInitialized) {
+                weatherManager.updateWeather(weatherIcon, weatherText, forceRefreshLocation = true)
+            }
+        }
+    }
+
     // Request usage stats permission
     private fun requestUsageStatsPermission() {
         if (!usageStatsManager.hasUsageStatsPermission()) {
@@ -1144,6 +1165,14 @@ class MainActivity : FragmentActivity() {
             VOICE_SEARCH_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                     startVoiceSearch()
+                }
+            }
+            LOCATION_PERMISSION_REQUEST -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Location permission granted, force refresh to get new location and store it
+                    if (::weatherManager.isInitialized && ::weatherIcon.isInitialized && ::weatherText.isInitialized) {
+                        weatherManager.updateWeather(weatherIcon, weatherText, forceRefreshLocation = true)
+                    }
                 }
             }
         }
@@ -1272,17 +1301,8 @@ class MainActivity : FragmentActivity() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)
 
-        // Check for location permissions
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-                LOCATION_PERMISSION_REQUEST
-            )
-        }
-
+        // Don't request permissions automatically - only when user taps weather widget
+        // Just update weather with existing stored location or show unavailable
         weatherManager.updateWeather(weatherIcon, weatherText)
     }
 
