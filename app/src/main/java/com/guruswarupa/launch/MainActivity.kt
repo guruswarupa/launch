@@ -46,6 +46,8 @@ import android.view.ViewGroup
 import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import com.guruswarupa.launch.TodoItem
 import com.guruswarupa.launch.TodoAdapter
 import androidx.appcompat.app.AppCompatActivity
@@ -87,6 +89,7 @@ class MainActivity : FragmentActivity() {
     private var todoItems: MutableList<TodoItem> = mutableListOf()
     private lateinit var voiceSearchButton: ImageButton
     private var isInPowerSaverMode = false
+    private lateinit var todoAlarmManager: TodoAlarmManager
 
     // Finance widget variables
     private lateinit var financeManager: FinanceManager
@@ -114,6 +117,7 @@ class MainActivity : FragmentActivity() {
         private const val LOCATION_PERMISSION_REQUEST = 700
         private const val REQUEST_PICK_WIDGET = 800
         private const val REQUEST_CONFIGURE_WIDGET = 801
+        private const val NOTIFICATION_PERMISSION_REQUEST = 900
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -217,12 +221,22 @@ class MainActivity : FragmentActivity() {
         // Initialize todo widget
         setupTodoWidget()
 
+        // Initialize todo alarm manager
+        todoAlarmManager = TodoAlarmManager(this)
+        
+        // Request notification permission
+        requestNotificationPermission()
+
         todoRecyclerView = findViewById(R.id.todo_recycler_view)
         addTodoButton = findViewById(R.id.add_todo_button)
 
         todoRecyclerView.layoutManager = LinearLayoutManager(this)
         todoAdapter = TodoAdapter(todoItems, { todoItem ->
             removeTodoItem(todoItem)
+        }, {
+            // onTaskStateChanged callback - save and reschedule alarms when task state changes
+            saveTodoItems()
+            rescheduleTodoAlarms()
         })
         todoRecyclerView.adapter = todoAdapter
 
@@ -231,6 +245,8 @@ class MainActivity : FragmentActivity() {
         }
 
         loadTodoItems()
+        // Reschedule alarms after loading todos
+        rescheduleTodoAlarms()
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
 
@@ -889,6 +905,12 @@ class MainActivity : FragmentActivity() {
         }
 
         setWallpaperBackground()
+        
+        // Reschedule todo alarms in case device was rebooted or alarms were cleared
+        if (::todoAlarmManager.isInitialized) {
+            rescheduleTodoAlarms()
+        }
+        
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -1175,6 +1197,14 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
+            NOTIFICATION_PERMISSION_REQUEST -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Notification permission granted, reschedule alarms
+                    if (::todoAlarmManager.isInitialized) {
+                        rescheduleTodoAlarms()
+                    }
+                }
+            }
         }
     }
     private fun loadContacts() {
@@ -1334,6 +1364,31 @@ class MainActivity : FragmentActivity() {
         //Initialization logic for the todo widget
     }
 
+    /**
+     * Request notification permission (Android 13+)
+     */
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    NOTIFICATION_PERMISSION_REQUEST
+                )
+            }
+        }
+    }
+
+    /**
+     * Reschedule all todo alarms
+     */
+    private fun rescheduleTodoAlarms() {
+        if (::todoAlarmManager.isInitialized) {
+            todoAlarmManager.rescheduleAllAlarms(todoItems)
+        }
+    }
+
     private fun showWeatherSettings() {
         val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
         val currentApiKey = prefs.getString("weather_api_key", "")
@@ -1377,7 +1432,13 @@ class MainActivity : FragmentActivity() {
         val enableTimeCheckbox = dialogView.findViewById<CheckBox>(R.id.enable_time_checkbox)
         val timePicker = dialogView.findViewById<android.widget.TimePicker>(R.id.time_picker)
         val recurringCheckbox = dialogView.findViewById<CheckBox>(R.id.recurring_checkbox)
+        val recurrenceTypeGroup = dialogView.findViewById<RadioGroup>(R.id.recurrence_type_group)
+        val recurrenceDays = dialogView.findViewById<RadioButton>(R.id.recurrence_days)
+        val recurrenceIntervalRadio = dialogView.findViewById<RadioButton>(R.id.recurrence_interval)
         val daysContainer = dialogView.findViewById<LinearLayout>(R.id.days_selection_container)
+        val intervalContainer = dialogView.findViewById<LinearLayout>(R.id.interval_selection_container)
+        val intervalSpinner = dialogView.findViewById<Spinner>(R.id.interval_spinner)
+        val intervalStartTimePicker = dialogView.findViewById<android.widget.TimePicker>(R.id.interval_start_time_picker)
 
         // Day checkboxes
         val dayCheckboxes = listOf(
@@ -1399,6 +1460,20 @@ class MainActivity : FragmentActivity() {
         prioritySpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, priorities)
         prioritySpinner.setSelection(1) // Default to Medium
 
+        // Setup interval spinner
+        val intervals = arrayOf(
+            "30 minutes",
+            "1 hour",
+            "2 hours",
+            "3 hours",
+            "4 hours",
+            "6 hours",
+            "8 hours",
+            "12 hours"
+        )
+        val intervalValues = arrayOf(30, 60, 120, 180, 240, 360, 480, 720)
+        intervalSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, intervals)
+
         // Handle time picker checkbox
         enableTimeCheckbox.setOnCheckedChangeListener { _, isChecked ->
             timePicker.visibility = if (isChecked) View.VISIBLE else View.GONE
@@ -1406,7 +1481,31 @@ class MainActivity : FragmentActivity() {
 
         // Handle recurring checkbox
         recurringCheckbox.setOnCheckedChangeListener { _, isChecked ->
-            daysContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
+            if (isChecked) {
+                recurrenceTypeGroup.visibility = View.VISIBLE
+                if (recurrenceDays.isChecked) {
+                    daysContainer.visibility = View.VISIBLE
+                    intervalContainer.visibility = View.GONE
+                } else {
+                    daysContainer.visibility = View.GONE
+                    intervalContainer.visibility = View.VISIBLE
+                }
+            } else {
+                recurrenceTypeGroup.visibility = View.GONE
+                daysContainer.visibility = View.GONE
+                intervalContainer.visibility = View.GONE
+            }
+        }
+
+        // Handle recurrence type change
+        recurrenceTypeGroup.setOnCheckedChangeListener { _, checkedId ->
+            if (checkedId == R.id.recurrence_days) {
+                daysContainer.visibility = View.VISIBLE
+                intervalContainer.visibility = View.GONE
+            } else {
+                daysContainer.visibility = View.GONE
+                intervalContainer.visibility = View.VISIBLE
+            }
         }
 
         dialogBuilder.setView(dialogView)
@@ -1415,12 +1514,36 @@ class MainActivity : FragmentActivity() {
             val todoText = taskInput.text.toString().trim()
             if (todoText.isNotEmpty()) {
                 val isRecurring = recurringCheckbox.isChecked
-                val selectedDays = if (isRecurring) {
+                val selectedDays = if (isRecurring && recurrenceDays.isChecked) {
                     dayCheckboxes.mapIndexedNotNull { index, checkbox ->
                         if (checkbox.isChecked) index + 1 else null // 1=Sunday, 2=Monday, etc.
                     }.toSet()
                 } else {
                     emptySet()
+                }
+                
+                val recurrenceInterval = if (isRecurring && recurrenceIntervalRadio.isChecked) {
+                    intervalValues[intervalSpinner.selectedItemPosition]
+                } else {
+                    null
+                }
+                
+                val intervalStartTime = if (isRecurring && recurrenceIntervalRadio.isChecked && recurrenceInterval != null) {
+                    val hour = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        intervalStartTimePicker.hour
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intervalStartTimePicker.currentHour
+                    }
+                    val minute = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        intervalStartTimePicker.minute
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intervalStartTimePicker.currentMinute
+                    }
+                    String.format("%02d:%02d", hour, minute)
+                } else {
+                    null
                 }
 
                 val category = categories[categorySpinner.selectedItemPosition]
@@ -1443,7 +1566,7 @@ class MainActivity : FragmentActivity() {
                     null
                 }
 
-                addTodoItem(todoText, isRecurring, selectedDays, priority, category, dueTime)
+                addTodoItem(todoText, isRecurring, selectedDays, priority, category, dueTime, recurrenceInterval, intervalStartTime)
             }
         }
 
@@ -1461,16 +1584,33 @@ class MainActivity : FragmentActivity() {
         selectedDays: Set<Int> = emptySet(),
         priority: TodoItem.Priority = TodoItem.Priority.MEDIUM,
         category: String = "General",
-        dueTime: String? = null
+        dueTime: String? = null,
+        recurrenceInterval: Int? = null,
+        intervalStartTime: String? = null
     ) {
-        todoItems.add(TodoItem(text, false, isRecurring, null, selectedDays, priority, category, dueTime))
-        todoAdapter.notifyItemInserted(todoItems.size - 1)
+        val newTodo = TodoItem(text, false, isRecurring, null, selectedDays, priority, category, dueTime, recurrenceInterval, intervalStartTime)
+        val index = todoItems.size
+        todoItems.add(newTodo)
+        todoAdapter.notifyItemInserted(index)
         saveTodoItems()
+        
+        // Schedule alarm if due time is set or if it's interval-based
+        if (::todoAlarmManager.isInitialized) {
+            if (dueTime != null || (newTodo.isIntervalBased() && newTodo.intervalStartTime != null)) {
+                val requestCode = todoAlarmManager.getRequestCode(newTodo, index)
+                todoAlarmManager.scheduleAlarm(newTodo, requestCode)
+            }
+        }
     }
 
     private fun removeTodoItem(todoItem: TodoItem) {
         val index = todoItems.indexOf(todoItem)
         if (index != -1) {
+            // Cancel alarm before removing
+            if (::todoAlarmManager.isInitialized && todoItem.dueTime != null) {
+                val requestCode = todoAlarmManager.getRequestCode(todoItem, index)
+                todoAlarmManager.cancelAlarm(todoItem, requestCode)
+            }
             todoItems.removeAt(index)
             todoAdapter.notifyItemRemoved(index)
             saveTodoItems()
@@ -1492,7 +1632,7 @@ class MainActivity : FragmentActivity() {
                         val isRecurring = parts[2].toBoolean()
                         val lastCompletedDate = if (parts[3].isNotEmpty()) parts[3] else null
                         val selectedDays = if (parts[4].isNotEmpty()) {
-                            parts[4].split(",").map { it.toInt() }.toSet()
+                            parts[4].split(",").mapNotNull { it.toIntOrNull() }.toSet()
                         } else {
                             emptySet()
                         }
@@ -1503,8 +1643,18 @@ class MainActivity : FragmentActivity() {
                         }
                         val category = parts[6]
                         val dueTime = if (parts.size > 7 && parts[7].isNotEmpty()) parts[7] else null
+                        val recurrenceInterval = if (parts.size > 8 && parts[8].isNotEmpty()) {
+                            parts[8].toIntOrNull()
+                        } else {
+                            null
+                        }
+                        val intervalStartTime = if (parts.size > 9 && parts[9].isNotEmpty()) {
+                            parts[9]
+                        } else {
+                            null
+                        }
 
-                        todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate, selectedDays, priority, category, dueTime))
+                        todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate, selectedDays, priority, category, dueTime, recurrenceInterval, intervalStartTime))
                     } else if (parts.size >= 3) {
                         // Legacy format support
                         val text = parts[0]
@@ -1522,13 +1672,18 @@ class MainActivity : FragmentActivity() {
             }
             checkRecurringTasks()
             todoAdapter.notifyDataSetChanged()
+            
+            // Reschedule alarms after loading
+            if (::todoAlarmManager.isInitialized) {
+                rescheduleTodoAlarms()
+            }
         }
     }
 
     private fun saveTodoItems() {
         val todoString = todoItems.joinToString("|") {
             val selectedDaysString = it.selectedDays.joinToString(",")
-            "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}:${selectedDaysString}:${it.priority.name}:${it.category}:${it.dueTime ?: ""}"
+            "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}:${selectedDaysString}:${it.priority.name}:${it.category}:${it.dueTime ?: ""}:${it.recurrenceInterval ?: ""}:${it.intervalStartTime ?: ""}"
         }
         sharedPreferences.edit().putString("todo_items", todoString).apply()
     }
@@ -1540,19 +1695,45 @@ class MainActivity : FragmentActivity() {
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
         val currentMinute = calendar.get(Calendar.MINUTE)
         val currentTimeInMinutes = currentHour * 60 + currentMinute
+        val currentTimeMillis = System.currentTimeMillis()
 
         val itemsToRemove = mutableListOf<TodoItem>()
 
         for (todoItem in todoItems) {
-            if (todoItem.isRecurring && todoItem.lastCompletedDate != currentDate) {
-                if (todoItem.selectedDays.isEmpty()) {
-                    // Daily recurring (legacy behavior)
-                    todoItem.isChecked = false
-                } else {
-                    // Weekly recurring - only reset if today is one of the selected days
+            if (todoItem.isRecurring) {
+                if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
+                    // Interval-based recurrence (Pomodoro-style)
+                    if (todoItem.lastCompletedDate != null) {
+                        try {
+                            // Parse last completed timestamp
+                            val lastCompletedMillis = todoItem.lastCompletedDate!!.toLongOrNull()
+                            if (lastCompletedMillis != null) {
+                                val elapsedMinutes = (currentTimeMillis - lastCompletedMillis) / (1000 * 60)
+                                if (elapsedMinutes >= todoItem.recurrenceInterval) {
+                                    // Interval has passed, reset task
+                                    todoItem.isChecked = false
+                                    todoItem.lastCompletedDate = null
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // If parsing fails, treat as date string (legacy format)
+                            if (todoItem.lastCompletedDate != currentDate) {
+                                todoItem.isChecked = false
+                                todoItem.lastCompletedDate = null
+                            }
+                        }
+                    } else if (todoItem.isChecked) {
+                        // Task was just completed, set timestamp
+                        todoItem.lastCompletedDate = currentTimeMillis.toString()
+                    }
+                } else if (todoItem.isDayBased() && todoItem.lastCompletedDate != currentDate) {
+                    // Day-based recurrence - only reset if today is one of the selected days
                     if (todoItem.selectedDays.contains(currentDayOfWeek)) {
                         todoItem.isChecked = false
                     }
+                } else if (!todoItem.isDayBased() && todoItem.lastCompletedDate != currentDate) {
+                    // Daily recurring (legacy behavior)
+                    todoItem.isChecked = false
                 }
             } else if (!todoItem.isRecurring && todoItem.dueTime != null) {
                 // Check if non-recurring task with due time is overdue
