@@ -62,15 +62,6 @@ class AppSearchManager(
     fun filterAppsAndContacts(query: String) {
         val queryLower = query.lowercase().trim()
 
-        // Use cached results for repeated queries
-        val cachedResult = searchCache[queryLower]
-        if (cachedResult != null) {
-            appList.clear()
-            appList.addAll(cachedResult)
-            adapter.notifyDataSetChanged()
-            return
-        }
-
         val newFilteredList = ArrayList<ResolveInfo>()
         val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
 
@@ -98,10 +89,11 @@ class AppSearchManager(
                     prefs.getInt("usage_${it.activityInfo.packageName}", 0)
                 }
 
+                // 1. Add apps first
                 newFilteredList.addAll(sortedExact)
                 newFilteredList.addAll(sortedPartial)
 
-                // Optimize contact filtering
+                // 2. Add contacts second
                 contactsList.asSequence()
                     .filter { it.contains(query, ignoreCase = true) }
                     .take(5) // Limit contact results
@@ -111,21 +103,11 @@ class AppSearchManager(
                         newFilteredList.add(createContactOption(contact))
                     }
 
-                if (newFilteredList.isEmpty()) {
-                    // Defer suggestions to avoid blocking main UI
-                    handler.postDelayed({
-                        val suggestions = ArrayList<ResolveInfo>().apply {
-                            add(createPlayStoreSearchOption(query))
-                            add(createGoogleMapsSearchOption(query))
-                            add(createYoutubeSearchOption(query))
-                            add(createBrowserSearchOption(query))
-                        }
-                        appList.clear()
-                        appList.addAll(suggestions)
-                        adapter.notifyDataSetChanged()
-                    }, 50)
-                    return
-                }
+                // 3. Always add search options at the end (Play Store, Maps, YouTube, Browser)
+                newFilteredList.add(createPlayStoreSearchOption(query))
+                newFilteredList.add(createGoogleMapsSearchOption(query))
+                newFilteredList.add(createYoutubeSearchOption(query))
+                newFilteredList.add(createBrowserSearchOption(query))
             }
         } else {
             // Cache sorted app list for empty queries
@@ -145,9 +127,6 @@ class AppSearchManager(
                 searchCache[emptyQueryKey] = ArrayList(sorted)
             }
         }
-
-        // Cache the result for future use
-        searchCache[queryLower] = ArrayList(newFilteredList)
 
         // Use more efficient adapter update method
         adapter.updateAppList(newFilteredList)
