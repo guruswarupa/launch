@@ -16,6 +16,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -179,28 +180,11 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             // Set widget properties on the view
             widgetView.setAppWidget(appWidgetId, appWidgetInfo)
             
-            // Set default size if not specified
+            // Get widget dimensions
             val minWidth = appWidgetInfo.minWidth
             val minHeight = appWidgetInfo.minHeight
             
-            // Convert from density-independent pixels to actual pixels
-            val displayMetrics = context.resources.displayMetrics
-            val widthPx = (minWidth * displayMetrics.density).toInt()
-            val heightPx = (minHeight * displayMetrics.density).toInt()
-            
-            // Set layout parameters for the widget view
-            widgetView.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-            
-            // Create container for widget with delete button
-            val widgetContainerView = createWidgetContainer(widgetView, appWidgetId, appWidgetInfo)
-            
-            // Add to layout
-            widgetContainer.addView(widgetContainerView)
-            
-            // Save widget info
+            // Save widget info first (needed for button visibility calculation)
             val widgetInfo = WidgetInfo(
                 appWidgetId = appWidgetId,
                 providerPackage = appWidgetInfo.provider.packageName,
@@ -209,6 +193,13 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 minHeight = minHeight
             )
             widgets.add(widgetInfo)
+            
+            // Create container for widget with controls
+            val widgetContainerView = createWidgetContainer(widgetView, appWidgetId, appWidgetInfo)
+            
+            // Add to layout
+            widgetContainer.addView(widgetContainerView)
+            
             saveWidgets()
             
             Toast.makeText(context, "Widget added successfully", Toast.LENGTH_SHORT).show()
@@ -224,29 +215,113 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         appWidgetId: Int,
         appWidgetInfo: AppWidgetProviderInfo
     ): View {
-        // Simple container with no background, just the widget view
+        // Simple container with no background - just the widget view
         val containerLayout = FrameLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, 16, 0, 16)
+                setMargins(0, 12, 0, 12)
             }
             // No background - transparent
             background = null
             tag = appWidgetId
             
-            // Long press to remove widget
+            // Long press to show options menu
             setOnLongClickListener {
-                showRemoveWidgetDialog(appWidgetId, appWidgetInfo.loadLabel(context.packageManager))
+                showWidgetOptionsMenu(appWidgetId, appWidgetInfo)
                 true
             }
         }
         
+        // Add widget view to container - full size
+        widgetView.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        )
         containerLayout.addView(widgetView)
         
         return containerLayout
     }
+    
+    private fun showWidgetOptionsMenu(appWidgetId: Int, appWidgetInfo: AppWidgetProviderInfo) {
+        val currentIndex = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
+        val widgetName = appWidgetInfo.loadLabel(context.packageManager)
+        
+        val options = mutableListOf<String>()
+        
+        if (currentIndex > 0) {
+            options.add("Move Up")
+        }
+        if (currentIndex < widgets.size - 1) {
+            options.add("Move Down")
+        }
+        options.add("Delete")
+        
+        if (options.isEmpty()) return
+        
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle(widgetName)
+            .setItems(options.toTypedArray()) { _, which ->
+                val selectedOption = options[which]
+                when (selectedOption) {
+                    "Move Up" -> moveWidgetUp(appWidgetId)
+                    "Move Down" -> moveWidgetDown(appWidgetId)
+                    "Delete" -> showRemoveWidgetDialog(appWidgetId, widgetName)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    fun moveWidgetUp(appWidgetId: Int) {
+        val currentIndex = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
+        if (currentIndex > 0 && currentIndex < widgetContainer.childCount) {
+            // Swap widgets in list
+            val widget = widgets.removeAt(currentIndex)
+            widgets.add(currentIndex - 1, widget)
+            
+            // Swap views in container
+            // Get references to both views before removing
+            val viewToMove = widgetContainer.getChildAt(currentIndex)
+            val viewToSwapWith = widgetContainer.getChildAt(currentIndex - 1)
+            
+            // Remove both views (remove higher index first to avoid index shift)
+            widgetContainer.removeView(viewToMove)
+            widgetContainer.removeView(viewToSwapWith)
+            
+            // Add them back in swapped order at the correct position
+            widgetContainer.addView(viewToSwapWith, currentIndex - 1)
+            widgetContainer.addView(viewToMove, currentIndex - 1)
+            
+            saveWidgets()
+        }
+    }
+    
+    fun moveWidgetDown(appWidgetId: Int) {
+        val currentIndex = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
+        if (currentIndex < widgets.size - 1 && currentIndex < widgetContainer.childCount - 1) {
+            // Swap widgets in list
+            val widget = widgets.removeAt(currentIndex)
+            widgets.add(currentIndex + 1, widget)
+            
+            // Swap views in container
+            // Get references to both views before removing
+            val viewToMove = widgetContainer.getChildAt(currentIndex)
+            val viewToSwapWith = widgetContainer.getChildAt(currentIndex + 1)
+            
+            // Remove both views (remove higher index first to avoid index shift)
+            widgetContainer.removeView(viewToSwapWith)
+            widgetContainer.removeView(viewToMove)
+            
+            // Add them back in swapped order at the correct position
+            widgetContainer.addView(viewToSwapWith, currentIndex)
+            widgetContainer.addView(viewToMove, currentIndex + 1)
+            
+            saveWidgets()
+        }
+    }
+    
     
     private fun showRemoveWidgetDialog(appWidgetId: Int, widgetName: String) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
