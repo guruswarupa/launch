@@ -393,11 +393,18 @@ class AppUsageStatsManager(private val context: Context) {
                     }
             }
 
-            // Sort by usage and take top 5 apps for each day
-            val topApps = appUsageMap.toList()
+            // Sort by usage and return all apps (or top 15 to avoid clutter)
+            val sortedApps = appUsageMap.toList()
                 .sortedByDescending { it.second }
-                .take(5)
+                .take(15) // Show top 15 apps, group rest as "Others"
                 .toMap()
+            
+            // Calculate "Others" usage
+            val othersUsage = appUsageMap.values.sum() - sortedApps.values.sum()
+            val finalApps = sortedApps.toMutableMap()
+            if (othersUsage > 0) {
+                finalApps["Others"] = othersUsage
+            }
 
             // Format day label
             val dayFormat = when (i) {
@@ -410,7 +417,7 @@ class AppUsageStatsManager(private val context: Context) {
                 }
             }
 
-            weeklyData.add(dayFormat to topApps)
+            weeklyData.add(dayFormat to finalApps)
         }
 
         return weeklyData

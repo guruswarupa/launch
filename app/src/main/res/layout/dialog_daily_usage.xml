@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/day_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Today"
+        android:textColor="@color/white"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/total_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Total: 0h 0m"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp" />
+
+    <com.guruswarupa.launch.DailyUsagePieView
+        android:id="@+id/daily_pie_chart"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_marginBottom="24dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/app_usage_list"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:background="@drawable/input_field_background"
+        android:padding="12dp" />
+
+    <Button
+        android:id="@+id/close_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/button_neutral_ripple"
+        android:text="Close"
+        android:textColor="@color/white"
+        android:paddingHorizontal="32dp"
+        android:paddingVertical="12dp"
+        android:textSize="14sp" />
+
+</LinearLayout>
