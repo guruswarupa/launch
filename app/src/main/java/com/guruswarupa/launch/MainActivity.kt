@@ -108,9 +108,6 @@ class MainActivity : FragmentActivity() {
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
     private lateinit var mediaPlayerWidgetManager: MediaPlayerWidgetManager
-    private var isApplyingFocusMode = false // Guard to prevent concurrent applyFocusMode calls
-    private var appsLoaded = false // Track if apps have been loaded initially
-    private var contactsLoaded = false // Track if contacts have been loaded initially
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -200,25 +197,15 @@ class MainActivity : FragmentActivity() {
             requestLocationPermissionForWeather()
         }
 
-        // Request necessary permissions (non-blocking)
+        // Request necessary permissions
         requestContactsPermission()
         requestSmsPermission()
         requestUsageStatsPermission()
-        
-        // Register contacts observer for incremental updates (if permission already granted)
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            contentResolver.registerContentObserver(
-                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                true,
-                contactsObserver
-            )
-            // Defer contact loading to background thread
-            Thread {
-                loadContacts(forceReload = true)
-            }.start()
-        }
 
-        // Setup weekly usage graph callback (defer data loading to onResume)
+        // Load weekly usage data
+        loadWeeklyUsageData()
+        
+        // Setup weekly usage graph callback
         weeklyUsageGraph.onDaySelected = { day, appUsages ->
             showDailyUsageDialog(day, appUsages)
         }
@@ -228,32 +215,25 @@ class MainActivity : FragmentActivity() {
         } else {
             recyclerView.layoutManager = LinearLayoutManager(this)
         }
-        
-        // Optimize RecyclerView performance
-        recyclerView.setHasFixedSize(true)
-        recyclerView.setItemViewCacheSize(20) // Cache more views for smoother scrolling
-        recyclerView.setDrawingCacheEnabled(true)
 
         timeTextView = findViewById(R.id.time_widget)
         dateTextView = findViewById(R.id.date_widget)
         appDock = findViewById(R.id.app_dock)
 
-        // Update time/date immediately (lightweight)
         updateTime()
         updateDate()
-        
-        // Defer heavy operations to onResume or background threads
-        // setupWeather() - deferred to onResume
-        // setupBatteryAndUsage() - deferred to onResume
-        // loadWeeklyUsageData() - deferred to onResume
+        setupWeather()
 
-        // Initialize todo widget (lightweight setup only)
+        // Initialize battery and phone usage widgets
+        setupBatteryAndUsage()
+
+        // Initialize todo widget
         setupTodoWidget()
 
         // Initialize todo alarm manager
         todoAlarmManager = TodoAlarmManager(this)
         
-        // Request notification permission (non-blocking)
+        // Request notification permission
         requestNotificationPermission()
 
         todoRecyclerView = findViewById(R.id.todo_recycler_view)
@@ -273,12 +253,9 @@ class MainActivity : FragmentActivity() {
             showAddTodoDialog()
         }
 
-        // Defer todo loading to background thread (non-critical for initial display)
-        Thread {
-            loadTodoItems()
-            // Reschedule alarms after loading todos
-            rescheduleTodoAlarms()
-        }.start()
+        loadTodoItems()
+        // Reschedule alarms after loading todos
+        rescheduleTodoAlarms()
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
 
@@ -300,17 +277,10 @@ class MainActivity : FragmentActivity() {
         appList = mutableListOf()
         fullAppList = mutableListOf()
 
-        // Create adapter immediately with empty list for instant UI
+        loadApps()
         adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
         recyclerView.adapter = adapter
 
-        // Load apps only if not already loaded (this will update adapter when done)
-        if (!appsLoaded) {
-            loadApps(forceReload = true)
-        }
-        
-        // Initialize AppSearchManager after adapter is created
-        // Will be updated when apps are loaded
         appSearchManager = AppSearchManager(
             packageManager = packageManager,
             appList = appList,
@@ -360,43 +330,24 @@ class MainActivity : FragmentActivity() {
     }
 
     fun refreshAppsForFocusMode() {
-        // Only reload if apps haven't been loaded yet
-        if (!appsLoaded) {
-            loadApps(forceReload = true)
-        } else {
-            // Just reapply filters on existing list
-            filterAppsWithoutReload()
-        }
+        loadApps()
     }
     
     fun refreshAppsForWorkspace() {
-        // Only reload if apps haven't been loaded yet
-        if (!appsLoaded) {
-            loadApps(forceReload = true)
-        } else {
-            // Just reapply filters on existing list
-            filterAppsWithoutReload()
-        }
+        loadApps()
     }
     
     fun filterAppsWithoutReload() {
         // Optimized: Filter existing list without reloading from package manager
-        if (fullAppList.isEmpty() && !appsLoaded) {
-            loadApps(forceReload = true)
+        if (fullAppList.isEmpty()) {
+            loadApps()
             return
         }
         
         Thread {
             try {
-                // First apply workspace and focus mode filters (same as loadApps does)
-                val workspaceAndFocusFiltered = fullAppList.filter { app ->
-                    app.activityInfo.packageName != "com.guruswarupa.launch" &&
-                            (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)) &&
-                            (!appDockManager.isWorkspaceModeActive() || appDockManager.isAppInActiveWorkspace(app.activityInfo.packageName))
-                }
-                
-                // Then filter apps based on favorite/show all mode
-                val finalAppList = favoriteAppManager.filterApps(workspaceAndFocusFiltered, isShowAllAppsMode)
+                // Filter apps based on favorite/show all mode in background
+                val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
                 
                 // Update UI on main thread
                 runOnUiThread {
@@ -404,21 +355,15 @@ class MainActivity : FragmentActivity() {
                     adapter.updateAppList(appList)
                     appDockManager.refreshFavoriteToggle()
                     
-                    // Update AppSearchManager with new filtered list (only if initialized)
-                    if (::appSearchManager.isInitialized) {
-                        // AppSearchManager uses fullAppList reference, so it will see updates
-                        // Just update contacts list to refresh search cache
-                        appSearchManager.updateContactsList(contactsList)
-                    } else {
-                        appSearchManager = AppSearchManager(
-                            packageManager,
-                            appList,
-                            fullAppList,
-                            adapter,
-                            searchBox,
-                            contactsList
-                        )
-                    }
+                    // Update AppSearchManager with new filtered list
+                    appSearchManager = AppSearchManager(
+                        packageManager,
+                        appList,
+                        fullAppList,
+                        adapter,
+                        searchBox,
+                        contactsList
+                    )
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -431,12 +376,7 @@ class MainActivity : FragmentActivity() {
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
-                // Only reload if apps haven't been loaded, otherwise just refresh filters
-                if (!appsLoaded) {
-                    loadApps(forceReload = true)
-                } else {
-                    filterAppsWithoutReload()
-                }
+                loadApps() // Refresh apps with new settings
                 updateFinanceDisplay() // Refresh finance display after reset
             }
         }
@@ -747,47 +687,26 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun setWallpaperBackground() {
-        // Load wallpaper on background thread to avoid blocking main thread
-        Thread {
-            try {
-                val wallpaperManager = WallpaperManager.getInstance(this)
-                val bitmap = wallpaperManager.drawable.let {
-                    if (it is BitmapDrawable) it.bitmap else null
-                }
-                runOnUiThread {
-                    if (bitmap != null) {
-                        wallpaperBackground.setImageBitmap(bitmap)
-                    } else {
-                        wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                runOnUiThread {
-                    wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-                }
+        val wallpaperManager = WallpaperManager.getInstance(this)
+        try {
+            val bitmap = wallpaperManager.drawable.let {
+                if (it is BitmapDrawable) it.bitmap else null
             }
-        }.start()
+            if (bitmap != null) {
+                wallpaperBackground.setImageBitmap(bitmap)
+            } else {
+                wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
-        
-        // Unregister settings update receiver
-        try {
-            unregisterReceiver(settingsUpdateReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver was not registered
-        }
-        
-        // Unregister contacts observer
-        try {
-            contentResolver.unregisterContentObserver(contactsObserver)
-        } catch (e: Exception) {
-            // Observer was not registered
-        }
         
         // Destroy widget manager
         if (::widgetManager.isInitialized) {
@@ -885,12 +804,11 @@ class MainActivity : FragmentActivity() {
                         val packageName = intent.data?.encodedSchemeSpecificPart
                         if (packageName != null && context is MainActivity) {
                             context.runOnUiThread {
-                                // Incrementally remove app from lists
-                                val removedFromAppList = context.appList.removeAll { it.activityInfo.packageName == packageName }
-                                val removedFromFullList = context.fullAppList.removeAll { it.activityInfo.packageName == packageName }
-                                
-                                if ((removedFromAppList || removedFromFullList) && context::adapter.isInitialized) {
-                                    context.adapter.updateAppList(context.appList)
+                                context.appList.removeAll { it.activityInfo.packageName == packageName }
+                                context.fullAppList.removeAll { it.activityInfo.packageName == packageName }
+                                if (context::adapter.isInitialized) {
+                                    context.adapter.appList = context.appList
+                                    context.adapter.notifyDataSetChanged()
                                 }
                             }
                         }
@@ -898,66 +816,14 @@ class MainActivity : FragmentActivity() {
                 }
                 Intent.ACTION_PACKAGE_ADDED -> {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                        // Incrementally add new app instead of full reload
-                        val packageName = intent.data?.encodedSchemeSpecificPart
-                        if (packageName != null && context is MainActivity && context.appsLoaded) {
-                            context.addAppIncrementally(packageName)
-                        } else if (context is MainActivity) {
-                            // If apps haven't been loaded yet, do a full load
-                            context.loadApps(forceReload = true)
+                        // Reload apps when a new package is installed
+                        if (context is MainActivity) {
+                            context.loadApps()
                         }
                     }
                 }
             }
         }
-    }
-    
-    /**
-     * Incrementally add a single app to the list without full reload
-     */
-    private fun addAppIncrementally(packageName: String) {
-        Thread {
-            try {
-                val mainIntent = Intent(Intent.ACTION_MAIN, null)
-                mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-                mainIntent.setPackage(packageName)
-                
-                val newApps = packageManager.queryIntentActivities(mainIntent, 0)
-                if (newApps.isNotEmpty()) {
-                    val newApp = newApps[0]
-                    
-                    // Check if app should be included based on filters
-                    val shouldInclude = newApp.activityInfo.packageName != "com.guruswarupa.launch" &&
-                            (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(newApp.activityInfo.packageName)) &&
-                            (!appDockManager.isWorkspaceModeActive() || appDockManager.isAppInActiveWorkspace(newApp.activityInfo.packageName))
-                    
-                    if (shouldInclude && !fullAppList.any { it.activityInfo.packageName == packageName }) {
-                        // Add to fullAppList
-                        fullAppList.add(newApp)
-                        
-                        // Check if it should be in filtered appList
-                        val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
-                        
-                        runOnUiThread {
-                            appList.clear()
-                            appList.addAll(finalAppList)
-                            
-                            if (::adapter.isInitialized) {
-                                adapter.updateAppList(appList)
-                            }
-                            
-                            // Update AppSearchManager if initialized
-                            if (::appSearchManager.isInitialized) {
-                                // AppSearchManager uses fullAppList reference, so it will see the update
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                // Silently handle errors - app might not be launchable
-                e.printStackTrace()
-            }
-        }.start()
     }
 
     private val updateRunnable = object : Runnable {
@@ -1051,21 +917,11 @@ class MainActivity : FragmentActivity() {
             checkDateChangeAndRefreshUsage()
         }.start()
 
-        // Load deferred heavy operations on resume (non-blocking for initial load)
-        // Load weekly usage data (deferred from onCreate) - handles threading internally
-        loadWeeklyUsageData()
-        
-        // Setup battery and usage (deferred from onCreate)
-        setupBatteryAndUsage()
-
         // Only update weather if it's been more than 10 minutes
         val lastWeatherUpdate = sharedPreferences.getLong("last_weather_update", 0)
         if (System.currentTimeMillis() - lastWeatherUpdate > 600000) { // 10 minutes
             setupWeather()
             sharedPreferences.edit().putLong("last_weather_update", System.currentTimeMillis()).apply()
-        } else if (!::weatherManager.isInitialized) {
-            // If weather wasn't set up yet, do it now
-            setupWeather()
         }
 
         // Start appropriate update runnable based on power saver mode
@@ -1098,13 +954,8 @@ class MainActivity : FragmentActivity() {
         val batteryFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         registerReceiver(batteryChangeReceiver, batteryFilter)
 
-        // Reapply focus mode state when returning from apps (on background thread to avoid blocking)
-        Thread {
-            val isFocusMode = appDockManager.getCurrentMode()
-            runOnUiThread {
-                applyFocusMode(isFocusMode)
-            }
-        }.start()
+        // Reapply focus mode state when returning from apps
+        applyFocusMode(appDockManager.getCurrentMode())
         
         // Refresh workspace toggle icon
         appDockManager.refreshWorkspaceToggle()
@@ -1158,16 +1009,7 @@ class MainActivity : FragmentActivity() {
         dateTextView.text = currentTime
     }
 
-    /**
-     * Load apps from package manager
-     * @param forceReload If true, forces a full reload even if apps are already loaded
-     */
-    fun loadApps(forceReload: Boolean = false) {
-        // Skip if already loaded and not forcing reload
-        if (appsLoaded && !forceReload) {
-            return
-        }
-        
+    fun loadApps() {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
@@ -1228,14 +1070,13 @@ class MainActivity : FragmentActivity() {
                     // Filter apps based on favorite/show all mode
                     val finalAppList = favoriteAppManager.filterApps(processedAppList, isShowAllAppsMode)
 
-                    // Update UI on main thread - show apps immediately
+                    // Update UI on main thread
                     runOnUiThread {
                         appList = finalAppList.toMutableList()
                         fullAppList = ArrayList(processedAppList)
 
                         // Optimize: Update existing adapter instead of creating new one
                         if (::adapter.isInitialized) {
-                            // Use efficient update method
                             adapter.updateAppList(appList)
                         } else {
                             recyclerView.layoutManager = if (isGridMode) {
@@ -1249,27 +1090,18 @@ class MainActivity : FragmentActivity() {
                         
                         recyclerView.visibility = View.VISIBLE
                         
-                        // Update dock toggle icon (lightweight)
+                        // Update dock toggle icon
                         appDockManager.refreshFavoriteToggle()
 
-                        // Update AppSearchManager if initialized, otherwise create it
-                        if (::appSearchManager.isInitialized) {
-                            // AppSearchManager uses references, so it will see updates
-                            // Just refresh the app list mapping
-                            appSearchManager.updateContactsList(contactsList)
-                        } else {
-                            appSearchManager = AppSearchManager(
-                                packageManager,
-                                appList,
-                                fullAppList,
-                                adapter,
-                                searchBox,
-                                contactsList
-                            )
-                        }
-                        
-                        // Mark apps as loaded
-                        appsLoaded = true
+                        // Initialize AppSearchManager
+                        appSearchManager = AppSearchManager(
+                            packageManager,
+                            appList,
+                            fullAppList,
+                            adapter,
+                            searchBox,
+                            contactsList
+                        )
                     }
                 }
             } catch (e: Exception) {
@@ -1301,13 +1133,7 @@ class MainActivity : FragmentActivity() {
                 CONTACTS_PERMISSION_REQUEST
             )
         } else {
-            loadContacts(forceReload = true)
-            // Register contacts observer for incremental updates
-            contentResolver.registerContentObserver(
-                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                true,
-                contactsObserver
-            )
+            loadContacts()
         }
     }
 
@@ -1377,13 +1203,7 @@ class MainActivity : FragmentActivity() {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Permission granted, load contacts
-                    loadContacts(forceReload = true)
-                    // Register contacts observer for incremental updates
-                    contentResolver.registerContentObserver(
-                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                        true,
-                        contactsObserver
-                    )
+                    loadContacts()
                 } else {
                 }
             }
@@ -1424,16 +1244,7 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
-    /**
-     * Load contacts from content provider
-     * @param forceReload If true, forces a full reload even if contacts are already loaded
-     */
-    private fun loadContacts(forceReload: Boolean = false) {
-        // Skip if already loaded and not forcing reload
-        if (contactsLoaded && !forceReload) {
-            return
-        }
-        
+    private fun loadContacts() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
             Thread {
                 try {
@@ -1464,9 +1275,6 @@ class MainActivity : FragmentActivity() {
                         if (::appSearchManager.isInitialized) {
                             appSearchManager.updateContactsList(contactsList)
                         }
-                        
-                        // Mark contacts as loaded
-                        contactsLoaded = true
                     }
                 } catch (e: Exception) {
                     // Handle error silently or log
@@ -1474,143 +1282,58 @@ class MainActivity : FragmentActivity() {
             }.start()
         }
     }
-    
-    /**
-     * ContentObserver to monitor contact changes for incremental updates
-     */
-    private val contactsObserver = object : android.database.ContentObserver(Handler()) {
-        override fun onChange(selfChange: Boolean) {
-            super.onChange(selfChange)
-            // Reload contacts when changes are detected
-            if (contactsLoaded) {
-                loadContacts(forceReload = true)
-            }
-        }
-    }
 
     fun applyFocusMode(isFocusMode: Boolean) {
-        // Prevent concurrent calls
-        if (isApplyingFocusMode) {
-            return
+        if (isFocusMode) {
+            // Filter out hidden apps
+            val filteredApps = fullAppList.filter { app ->
+                !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+            }.toMutableList()
+
+            appList.clear()
+            appList.addAll(filteredApps)
+
+            searchBox.visibility = android.view.View.GONE
+            voiceSearchButton.visibility = android.view.View.GONE
+
+        } else {
+            // Restore all apps and sort by usage then alphabetically
+            val prefs = getSharedPreferences("app_usage", Context.MODE_PRIVATE)
+            val sortedApps = fullAppList.sortedWith(
+                compareByDescending<ResolveInfo> {
+                    sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0)
+                }.thenBy {
+                    it.loadLabel(packageManager).toString().lowercase()
+                }
+            )
+            appList.clear()
+            appList.addAll(sortedApps)
+
+            searchBox.visibility = android.view.View.VISIBLE
+            voiceSearchButton.visibility = android.view.View.VISIBLE
         }
-        isApplyingFocusMode = true
-        
-        // Move all heavy operations to background thread
-        Thread {
-            try {
-                if (isFocusMode) {
-                    // Filter out hidden apps and apply workspace filtering on background thread
-                    val filteredApps = fullAppList.filter { app ->
-                        app.activityInfo.packageName != "com.guruswarupa.launch" &&
-                                !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName) &&
-                                (!appDockManager.isWorkspaceModeActive() || appDockManager.isAppInActiveWorkspace(app.activityInfo.packageName))
-                    }.toMutableList()
 
-                    runOnUiThread {
-                        appList.clear()
-                        appList.addAll(filteredApps)
+        adapter.notifyDataSetChanged()
 
-                        searchBox.visibility = android.view.View.GONE
-                        voiceSearchButton.visibility = android.view.View.GONE
-                        
-                        // Use adapter's updateAppList which handles updates efficiently
-                        adapter.updateAppList(filteredApps)
-
-                        // Don't recreate AppSearchManager - it uses fullAppList which hasn't changed
-                        // Just ensure it's initialized
-                        if (!::appSearchManager.isInitialized) {
-                            appSearchManager = AppSearchManager(
-                                packageManager,
-                                appList,
-                                fullAppList,
-                                adapter,
-                                searchBox,
-                                contactsList
-                            )
-                        }
-                        
-                        isApplyingFocusMode = false
-                    }
-                } else {
-                    // Restore all apps and sort by usage then alphabetically
-                    // First apply workspace filtering (same as loadApps does)
-                    val workspaceFiltered = fullAppList.filter { app ->
-                        app.activityInfo.packageName != "com.guruswarupa.launch" &&
-                                (!appDockManager.isWorkspaceModeActive() || appDockManager.isAppInActiveWorkspace(app.activityInfo.packageName))
-                    }
-                    
-                    // Pre-compute labels to avoid repeated calls during sorting
-                    val labelCache = mutableMapOf<String, String>()
-                    workspaceFiltered.forEach { app ->
-                        val packageName = app.activityInfo.packageName
-                        if (!labelCache.containsKey(packageName)) {
-                            try {
-                                labelCache[packageName] = app.loadLabel(packageManager).toString().lowercase()
-                            } catch (e: Exception) {
-                                labelCache[packageName] = packageName.lowercase()
-                            }
-                        }
-                    }
-                    
-                    val sortedApps = workspaceFiltered.sortedWith(
-                        compareByDescending<ResolveInfo> {
-                            sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0)
-                        }.thenBy {
-                            labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
-                        }
-                    )
-                    
-                    runOnUiThread {
-                        val oldSize = appList.size
-                        appList.clear()
-                        appList.addAll(sortedApps)
-
-                        searchBox.visibility = android.view.View.VISIBLE
-                        voiceSearchButton.visibility = android.view.View.VISIBLE
-                        
-                        // Use adapter's updateAppList which handles updates efficiently
-                        adapter.updateAppList(sortedApps)
-
-                        // Don't recreate AppSearchManager - it uses fullAppList which hasn't changed
-                        // Just ensure it's initialized
-                        if (!::appSearchManager.isInitialized) {
-                            appSearchManager = AppSearchManager(
-                                packageManager,
-                                appList,
-                                fullAppList,
-                                adapter,
-                                searchBox,
-                                contactsList
-                            )
-                        }
-                        
-                        isApplyingFocusMode = false
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    isApplyingFocusMode = false
-                }
-            }
-        }.start()
+        // Update search manager with new app list
+        appSearchManager = AppSearchManager(
+            packageManager,
+            appList,
+            fullAppList,
+            adapter,
+            searchBox,
+            contactsList
+        )
     }
 
     private fun loadWeeklyUsageData() {
-        // Load data in background thread, update UI on main thread
-        Thread {
-            if (usageStatsManager.hasUsageStatsPermission()) {
-                val weeklyData = usageStatsManager.getWeeklyUsageData()
-                val appUsageData = usageStatsManager.getWeeklyAppUsageData()
-                
-                // Update UI on main thread
-                runOnUiThread {
-                    if (::weeklyUsageGraph.isInitialized) {
-                        weeklyUsageGraph.setUsageData(weeklyData)
-                        weeklyUsageGraph.setAppUsageData(appUsageData)
-                    }
-                }
-            }
-        }.start()
+        if (usageStatsManager.hasUsageStatsPermission()) {
+            val weeklyData = usageStatsManager.getWeeklyUsageData()
+            weeklyUsageGraph.setUsageData(weeklyData)
+
+            val appUsageData = usageStatsManager.getWeeklyAppUsageData()
+            weeklyUsageGraph.setAppUsageData(appUsageData)
+        }
     }
     
     private fun showDailyUsageDialog(day: String, appUsages: Map<String, Long>) {
