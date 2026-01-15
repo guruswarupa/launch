@@ -17,6 +17,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.provider.ContactsContract
 import android.speech.RecognizerIntent
 import android.widget.EditText
@@ -68,7 +69,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var searchBox: EditText
     private lateinit var appDock: LinearLayout
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
-    private val handler = Handler()
+    private val handler = Handler(Looper.getMainLooper())
 
     private lateinit var wallpaperBackground: ImageView
     private var currentWallpaperBitmap: Bitmap? = null
@@ -991,6 +992,18 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        // Avoid modifying view visibility during stop to prevent WindowManager warnings
+        // For HOME launcher activities, the system manages window lifecycle
+        // and we should avoid interfering with that process
+    }
+    
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Save state without modifying views to prevent window management issues
+    }
+
     private fun updateTime() {
         val sdf = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
         val currentTime = sdf.format(Date())
@@ -1113,12 +1126,15 @@ class MainActivity : FragmentActivity() {
         }.start()
 
         // Set visibility of search bar and voice search button based on focus mode
-        if (appDockManager.getCurrentMode()) {
-            searchBox.visibility = android.view.View.GONE
-            voiceSearchButton.visibility = android.view.View.GONE
-        } else {
-            searchBox.visibility = android.view.View.VISIBLE
-            voiceSearchButton.visibility = android.view.View.VISIBLE
+        // Only modify if activity is not finishing
+        if (!isFinishing && !isDestroyed && ::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
+            if (appDockManager.getCurrentMode()) {
+                searchBox.visibility = android.view.View.GONE
+                voiceSearchButton.visibility = android.view.View.GONE
+            } else {
+                searchBox.visibility = android.view.View.VISIBLE
+                voiceSearchButton.visibility = android.view.View.VISIBLE
+            }
         }
     }
     
@@ -1284,6 +1300,11 @@ class MainActivity : FragmentActivity() {
     }
 
     fun applyFocusMode(isFocusMode: Boolean) {
+        // Don't modify views if activity is finishing or stopped
+        if (isFinishing || isDestroyed) {
+            return
+        }
+        
         if (isFocusMode) {
             // Filter out hidden apps
             val filteredApps = fullAppList.filter { app ->
@@ -1293,8 +1314,10 @@ class MainActivity : FragmentActivity() {
             appList.clear()
             appList.addAll(filteredApps)
 
-            searchBox.visibility = android.view.View.GONE
-            voiceSearchButton.visibility = android.view.View.GONE
+            if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
+                searchBox.visibility = android.view.View.GONE
+                voiceSearchButton.visibility = android.view.View.GONE
+            }
 
         } else {
             // Restore all apps and sort by usage then alphabetically
@@ -1309,21 +1332,27 @@ class MainActivity : FragmentActivity() {
             appList.clear()
             appList.addAll(sortedApps)
 
-            searchBox.visibility = android.view.View.VISIBLE
-            voiceSearchButton.visibility = android.view.View.VISIBLE
+            if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
+                searchBox.visibility = android.view.View.VISIBLE
+                voiceSearchButton.visibility = android.view.View.VISIBLE
+            }
         }
 
-        adapter.notifyDataSetChanged()
+        if (::adapter.isInitialized) {
+            adapter.notifyDataSetChanged()
+        }
 
         // Update search manager with new app list
-        appSearchManager = AppSearchManager(
-            packageManager,
-            appList,
-            fullAppList,
-            adapter,
-            searchBox,
-            contactsList
-        )
+        if (::appSearchManager.isInitialized || !isFinishing) {
+            appSearchManager = AppSearchManager(
+                packageManager,
+                appList,
+                fullAppList,
+                adapter,
+                searchBox,
+                contactsList
+            )
+        }
     }
 
     private fun loadWeeklyUsageData() {
@@ -1796,10 +1825,11 @@ class MainActivity : FragmentActivity() {
             if (todoItem.isRecurring) {
                 if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
                     // Interval-based recurrence (Pomodoro-style)
-                    if (todoItem.lastCompletedDate != null) {
+                    val lastCompletedDate = todoItem.lastCompletedDate
+                    if (lastCompletedDate != null) {
                         try {
                             // Parse last completed timestamp
-                            val lastCompletedMillis = todoItem.lastCompletedDate!!.toLongOrNull()
+                            val lastCompletedMillis = lastCompletedDate.toLongOrNull()
                             if (lastCompletedMillis != null) {
                                 val elapsedMinutes = (currentTimeMillis - lastCompletedMillis) / (1000 * 60)
                                 if (elapsedMinutes >= todoItem.recurrenceInterval) {
@@ -2052,6 +2082,11 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun hideNonEssentialWidgets() {
+        // Don't modify views if activity is finishing or stopped
+        if (isFinishing || isDestroyed) {
+            return
+        }
+        
         // Hide weather, battery, usage stats, todo, finance widgets
         findViewById<View>(R.id.weather_widget)?.visibility = View.GONE
         findViewById<TextView>(R.id.battery_percentage)?.visibility = View.GONE
@@ -2067,14 +2102,21 @@ class MainActivity : FragmentActivity() {
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.GONE
 
         // Hide the todo widget (the LinearLayout containing todo list)
-        todoRecyclerView.parent?.let { parent ->
-            if (parent is View) {
-                parent.visibility = View.GONE
+        if (::todoRecyclerView.isInitialized) {
+            todoRecyclerView.parent?.let { parent ->
+                if (parent is View) {
+                    parent.visibility = View.GONE
+                }
             }
         }
     }
 
     private fun showNonEssentialWidgets() {
+        // Don't modify views if activity is finishing or stopped
+        if (isFinishing || isDestroyed) {
+            return
+        }
+        
         // Restore weather, battery, usage stats, todo, finance widgets
         findViewById<View>(R.id.weather_widget)?.visibility = View.VISIBLE
         findViewById<TextView>(R.id.battery_percentage)?.visibility = View.VISIBLE
@@ -2090,18 +2132,28 @@ class MainActivity : FragmentActivity() {
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
 
         // Show the todo widget (the LinearLayout containing todo list)
-        todoRecyclerView.parent?.let { parent ->
-            if (parent is View) {
-                parent.visibility = View.VISIBLE
+        if (::todoRecyclerView.isInitialized) {
+            todoRecyclerView.parent?.let { parent ->
+                if (parent is View) {
+                    parent.visibility = View.VISIBLE
+                }
             }
         }
     }
 
     fun setPitchBlackBackground() {
-        findViewById<android.view.View>(android.R.id.content).setBackgroundColor(android.graphics.Color.BLACK)
+        // Don't modify root view if activity is finishing or destroyed
+        if (isFinishing || isDestroyed) {
+            return
+        }
+        findViewById<android.view.View>(android.R.id.content)?.setBackgroundColor(android.graphics.Color.BLACK)
     }
 
     fun restoreOriginalBackground() {
-        findViewById<android.view.View>(android.R.id.content).setBackgroundResource(R.drawable.wallpaper_background)
+        // Don't modify root view if activity is finishing or destroyed
+        if (isFinishing || isDestroyed) {
+            return
+        }
+        findViewById<android.view.View>(android.R.id.content)?.setBackgroundResource(R.drawable.wallpaper_background)
     }
 }

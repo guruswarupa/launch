@@ -23,7 +23,7 @@ class WeatherManager(private val context: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
-    private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+    private val locationManager: LocationManager? = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
     var onLocationPermissionNeeded: (() -> Unit)? = null // Callback for requesting location permission
 
     private fun getApiKey(): String? {
@@ -174,12 +174,12 @@ class WeatherManager(private val context: Context) {
         }
 
         // If we don't have a stored location or forcing refresh, check permissions
-        if (hasLocationPermission()) {
+        if (hasLocationPermission() && locationManager != null) {
             // Need to get new location (either no stored location or forcing refresh)
             try {
                 val locationListener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
-                        locationManager.removeUpdates(this)
+                        locationManager?.removeUpdates(this)
                         // Save the location for future use
                         saveLocation(location.latitude, location.longitude)
                         fetchWeatherData(weatherIcon, weatherText, location.latitude, location.longitude, apiKey)
@@ -203,7 +203,7 @@ class WeatherManager(private val context: Context) {
 
                     // Fallback timeout - if no location after 5 seconds, use stored location if available, otherwise default
                     handler.postDelayed({
-                        locationManager.removeUpdates(locationListener)
+                        locationManager?.removeUpdates(locationListener)
                         val fallbackLocation = getStoredLocation()
                         if (fallbackLocation != null) {
                             fetchWeatherData(weatherIcon, weatherText, fallbackLocation.first, fallbackLocation.second, apiKey)
