@@ -1452,53 +1452,91 @@ class MainActivity : FragmentActivity() {
             return
         }
         
-        if (isFocusMode) {
-            // Filter out hidden apps
-            val filteredApps = fullAppList.filter { app ->
-                !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
-            }.toMutableList()
-
-            appList.clear()
-            appList.addAll(filteredApps)
-
-            if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
-                searchBox.visibility = android.view.View.GONE
-                voiceSearchButton.visibility = android.view.View.GONE
-            }
-
-        } else {
-            // Restore all apps and sort by usage then alphabetically
-            val prefs = getSharedPreferences("app_usage", Context.MODE_PRIVATE)
-            val sortedApps = fullAppList.sortedWith(
-                compareByDescending<ResolveInfo> {
-                    sharedPreferences.getInt("usage_${it.activityInfo.packageName}", 0)
-                }.thenBy {
-                    it.loadLabel(packageManager).toString().lowercase()
+        // Run filtering/sorting in background thread
+        backgroundExecutor.execute {
+            try {
+                val filteredOrSortedApps: MutableList<ResolveInfo>
+                
+                if (isFocusMode) {
+                    // Filter out hidden apps (fast operation, no sorting needed)
+                    filteredOrSortedApps = fullAppList.filter { app ->
+                        !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)
+                    }.toMutableList()
+                } else {
+                    // Restore all apps and sort by usage then alphabetically (expensive operation)
+                    // Pre-load all usage values at once
+                    val allPrefs = sharedPreferences.all
+                    val usageCache = mutableMapOf<String, Int>()
+                    for ((key, value) in allPrefs) {
+                        if (key.startsWith("usage_") && value is Int) {
+                            val packageName = key.removePrefix("usage_")
+                            usageCache[packageName] = value
+                        }
+                    }
+                    
+                    // Build label cache in background
+                    val labelCache = mutableMapOf<String, String>()
+                    fullAppList.forEach { app ->
+                        val packageName = app.activityInfo.packageName
+                        if (!labelCache.containsKey(packageName)) {
+                            try {
+                                labelCache[packageName] = app.loadLabel(packageManager).toString().lowercase()
+                            } catch (e: Exception) {
+                                labelCache[packageName] = packageName.lowercase()
+                            }
+                        }
+                    }
+                    
+                    filteredOrSortedApps = fullAppList.sortedWith(
+                        compareByDescending<ResolveInfo> {
+                            usageCache[it.activityInfo.packageName] ?: 0
+                        }.thenBy {
+                            labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
+                        }
+                    ).toMutableList()
                 }
-            )
-            appList.clear()
-            appList.addAll(sortedApps)
 
-            if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
-                searchBox.visibility = android.view.View.VISIBLE
-                voiceSearchButton.visibility = android.view.View.VISIBLE
+                // Update UI on main thread
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    
+                    appList.clear()
+                    appList.addAll(filteredOrSortedApps)
+
+                    if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
+                        if (isFocusMode) {
+                            searchBox.visibility = android.view.View.GONE
+                            voiceSearchButton.visibility = android.view.View.GONE
+                        } else {
+                            searchBox.visibility = android.view.View.VISIBLE
+                            voiceSearchButton.visibility = android.view.View.VISIBLE
+                        }
+                    }
+
+                    if (::adapter.isInitialized) {
+                        adapter.updateAppList(appList)
+                    }
+
+                    // Update search manager with new app list
+                    if (::appSearchManager.isInitialized || !isFinishing) {
+                        appSearchManager = AppSearchManager(
+                            packageManager,
+                            appList,
+                            fullAppList,
+                            adapter,
+                            searchBox,
+                            contactsList
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error applying focus mode", e)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
+                        adapter.notifyDataSetChanged()
+                    }
+                }
             }
-        }
-
-        if (::adapter.isInitialized) {
-            adapter.notifyDataSetChanged()
-        }
-
-        // Update search manager with new app list
-        if (::appSearchManager.isInitialized || !isFinishing) {
-            appSearchManager = AppSearchManager(
-                packageManager,
-                appList,
-                fullAppList,
-                adapter,
-                searchBox,
-                contactsList
-            )
         }
     }
 
@@ -2182,6 +2220,7 @@ class MainActivity : FragmentActivity() {
         isInPowerSaverMode = isEnabled // Track the state
 
         if (isEnabled) {
+            // Fast operations first - update UI immediately
             setPitchBlackBackground()
             hideNonEssentialWidgets()
             
@@ -2191,23 +2230,56 @@ class MainActivity : FragmentActivity() {
             // Reduce animation duration (if supported)
             window?.setWindowAnimations(android.R.style.Animation_Toast)
             
-            // Disable hardware acceleration for less power consumption (optional)
-            // window?.setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, 0)
+            // Refresh adapter efficiently (only visible items)
+            if (::adapter.isInitialized) {
+                // Use efficient update that only refreshes visible items
+                handler.post {
+                    val layoutManager = recyclerView.layoutManager
+                    if (layoutManager is LinearLayoutManager) {
+                        val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                        val lastVisible = layoutManager.findLastVisibleItemPosition()
+                        if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
+                            adapter.notifyItemRangeChanged(firstVisible, lastVisible - firstVisible + 1)
+                        }
+                    }
+                }
+            }
             
         } else {
-            restoreOriginalBackground()
+            // Fast operations first - show widgets immediately
             showNonEssentialWidgets()
             
-            // Resume background updates
+            // Restore background and reload wallpaper asynchronously (non-blocking)
+            handler.post {
+                restoreOriginalBackground()
+                // Reload wallpaper in background to avoid blocking
+                setWallpaperBackground()
+            }
+            
+            // Resume background updates (already non-blocking)
             resumeBackgroundUpdates()
             
             // Restore normal animations
             window?.setWindowAnimations(0)
-        }
-        
-        // Refresh adapter to hide/show usage times based on power saver mode
-        if (::adapter.isInitialized) {
-            adapter.notifyDataSetChanged()
+            
+            // Refresh adapter efficiently with small delay to let UI render first
+            if (::adapter.isInitialized) {
+                handler.postDelayed({
+                    val layoutManager = recyclerView.layoutManager
+                    if (layoutManager is LinearLayoutManager) {
+                        val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                        val lastVisible = layoutManager.findLastVisibleItemPosition()
+                        if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
+                            adapter.notifyItemRangeChanged(firstVisible, lastVisible - firstVisible + 1)
+                        } else {
+                            // Fallback to full update if positions not available
+                            adapter.notifyDataSetChanged()
+                        }
+                    } else {
+                        adapter.notifyDataSetChanged()
+                    }
+                }, 100) // Small delay to ensure UI is responsive
+            }
         }
     }
     
@@ -2282,20 +2354,25 @@ class MainActivity : FragmentActivity() {
             return
         }
         
-        // Restore weather, battery, usage stats, todo, finance widgets
+        // Fast operations - show widgets immediately (non-blocking)
         findViewById<View>(R.id.weather_widget)?.visibility = View.VISIBLE
         findViewById<TextView>(R.id.battery_percentage)?.visibility = View.VISIBLE
         findViewById<TextView>(R.id.screen_time)?.visibility = View.VISIBLE
         findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.VISIBLE
         if (::weeklyUsageGraph.isInitialized) {
             weeklyUsageGraph.visibility = View.VISIBLE
-            // Load weekly usage data when graph becomes visible (lazy loading)
-            loadWeeklyUsageGraphData()
+            // Defer loading expensive weekly usage data - load it asynchronously after UI is shown
+            handler.postDelayed({
+                if (!isFinishing && !isDestroyed && ::weeklyUsageGraph.isInitialized && weeklyUsageGraph.visibility == View.VISIBLE) {
+                    loadWeeklyUsageGraphData()
+                }
+            }, 300) // Small delay to let UI render first
         }
         // Show the entire weekly usage widget container
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.VISIBLE
 
         // Show the wallpaper background when power saver mode is disabled
+        // (Wallpaper will be reloaded asynchronously by setWallpaperBackground() called from applyPowerSaverMode)
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
         findViewById<ImageView>(R.id.drawer_wallpaper_background)?.visibility = View.VISIBLE
 

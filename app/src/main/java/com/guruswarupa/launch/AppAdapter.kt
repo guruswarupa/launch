@@ -39,6 +39,7 @@ class AppAdapter(
     private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
     private val labelCache = mutableMapOf<String, String>() // packageName to label
     private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
+    private val specialAppIconCache = mutableMapOf<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
     private val CACHE_DURATION = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
     private var itemsRendered = 0 // Track how many items have been rendered
@@ -260,11 +261,25 @@ class AppAdapter(
 
             "play_store_search" -> {
                 // Display Play Store search option
-                try {
-                    holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
-                } catch (e: Exception) {
-                    // Use a default icon if Play Store is not installed
+                val cachedIcon = specialAppIconCache["com.android.vending"]
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Load icon asynchronously to avoid blocking
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    executor.execute {
+                        try {
+                            val icon = activity.packageManager.getApplicationIcon("com.android.vending")
+                            specialAppIconCache["com.android.vending"] = icon
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(icon)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Icon already set to default, no need to update
+                        }
+                    }
                 }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} on Play Store"
                 holder.itemView.setOnClickListener {
@@ -281,11 +296,25 @@ class AppAdapter(
 
             "maps_search" -> {
                 // Set the Google Maps icon with error handling
-                try {
-                    holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
-                } catch (e: Exception) {
-                    // Use a default icon if Google Maps is not installed
+                val cachedIcon = specialAppIconCache["com.google.android.apps.maps"]
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Load icon asynchronously to avoid blocking
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    executor.execute {
+                        try {
+                            val icon = activity.packageManager.getApplicationIcon("com.google.android.apps.maps")
+                            specialAppIconCache["com.google.android.apps.maps"] = icon
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(icon)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Icon already set to default, no need to update
+                        }
+                    }
                 }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} in Google Maps"
                 holder.itemView.setOnClickListener {
@@ -306,17 +335,44 @@ class AppAdapter(
 
             "yt_search" -> {
                 // Set the YouTube icon with error handling (prefer Revanced, then regular YouTube)
-                try {
-                    // Try Revanced first
-                    try {
-                        holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("app.revanced.android.youtube"))
-                    } catch (e: Exception) {
-                        // Fall back to regular YouTube
-                        holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
-                    }
-                } catch (e: Exception) {
-                    // Use a default icon if neither is installed
+                val cachedRevanced = specialAppIconCache["app.revanced.android.youtube"]
+                val cachedYouTube = specialAppIconCache["com.google.android.youtube"]
+                val cachedIcon = cachedRevanced ?: cachedYouTube
+                
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Load icon asynchronously to avoid blocking
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    executor.execute {
+                        try {
+                            // Try Revanced first
+                            try {
+                                val icon = activity.packageManager.getApplicationIcon("app.revanced.android.youtube")
+                                specialAppIconCache["app.revanced.android.youtube"] = icon
+                                (context as? Activity)?.runOnUiThread {
+                                    if (holder.bindingAdapterPosition == position) {
+                                        holder.appIcon.setImageDrawable(icon)
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // Fall back to regular YouTube
+                                try {
+                                    val icon = activity.packageManager.getApplicationIcon("com.google.android.youtube")
+                                    specialAppIconCache["com.google.android.youtube"] = icon
+                                    (context as? Activity)?.runOnUiThread {
+                                        if (holder.bindingAdapterPosition == position) {
+                                            holder.appIcon.setImageDrawable(icon)
+                                        }
+                                    }
+                                } catch (e2: Exception) {
+                                    // Icon already set to default, no need to update
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Icon already set to default, no need to update
+                        }
+                    }
                 }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} on YouTube"
                 holder.itemView.setOnClickListener {
@@ -385,35 +441,74 @@ class AppAdapter(
                     appInfo.activityInfo?.applicationInfo != null
                 }
 
-                // Use cached label or load and cache it
-                val label = labelCache.getOrPut(packageName) {
-                    try {
-                        if (isValidApp) {
-                            appInfo.loadLabel(activity.packageManager)?.toString()
-                                ?: appInfo.activityInfo.packageName
-                        } else {
-                            // For custom ResolveInfo objects, use the name directly
-                            appInfo.activityInfo?.name ?: "Unknown"
+                // Use cached label first (fast path)
+                val cachedLabel = labelCache[packageName]
+                if (cachedLabel != null) {
+                    holder.appName?.text = cachedLabel
+                } else {
+                    // Show placeholder immediately
+                    holder.appName?.text = appInfo.activityInfo?.packageName ?: "Loading..."
+                    // Load label asynchronously in background
+                    executor.execute {
+                        try {
+                            val label = if (isValidApp) {
+                                appInfo.loadLabel(activity.packageManager)?.toString()
+                                    ?: appInfo.activityInfo.packageName
+                            } else {
+                                appInfo.activityInfo?.name ?: "Unknown"
+                            }
+                            labelCache[packageName] = label
+                            // Update UI on main thread
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appName?.text = label
+                                }
+                            }
+                        } catch (e: Exception) {
+                            val fallbackLabel = appInfo.activityInfo?.packageName ?: "Unknown"
+                            labelCache[packageName] = fallbackLabel
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appName?.text = fallbackLabel
+                                }
+                            }
                         }
-                    } catch (e: Exception) {
-                        appInfo.activityInfo?.packageName ?: "Unknown"
                     }
                 }
-                holder.appName?.text = label
 
-                // Use cached icon or load and cache it
-                val icon = iconCache.getOrPut(packageName) {
-                    try {
-                        if (isValidApp) {
-                            appInfo.loadIcon(activity.packageManager)
-                        } else {
-                            activity.getDrawable(R.drawable.ic_default_app_icon)
+                // Use cached icon first (fast path)
+                val cachedIcon = iconCache[packageName]
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Show placeholder immediately
+                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    // Load icon asynchronously in background
+                    iconPreloadExecutor.execute {
+                        try {
+                            val icon = if (isValidApp) {
+                                appInfo.loadIcon(activity.packageManager)
+                            } else {
+                                activity.getDrawable(R.drawable.ic_default_app_icon)
+                            } as? Drawable ?: activity.getDrawable(R.drawable.ic_default_app_icon)!!
+                            iconCache[packageName] = icon
+                            // Update UI on main thread
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(icon)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            val fallbackIcon = activity.getDrawable(R.drawable.ic_default_app_icon)!!
+                            iconCache[packageName] = fallbackIcon
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(fallbackIcon)
+                                }
+                            }
                         }
-                    } catch (e: Exception) {
-                        activity.getDrawable(R.drawable.ic_default_app_icon)
-                    } as Drawable
+                    }
                 }
-                holder.appIcon.setImageDrawable(icon)
 
                 holder.itemView.setOnClickListener {
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
@@ -422,7 +517,8 @@ class AppAdapter(
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
 
-                        val appName = appInfo.loadLabel(activity.packageManager).toString()
+                        // Use cached label or fallback to package name (avoid blocking loadLabel call)
+                        val appName = labelCache[packageName] ?: appInfo.activityInfo?.packageName ?: packageName
 
                         // Show timer dialog only for social media and entertainment apps
                         val shouldShowTimer = activity.appCategoryManager.shouldShowTimer(packageName, appName)
@@ -521,7 +617,14 @@ class AppAdapter(
     }
 
     private fun shareApp(packageName: String, appInfo: ResolveInfo) {
-        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        // Use cached label or load async to avoid blocking
+        val appName = labelCache[packageName] ?: run {
+            try {
+                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
+            } catch (e: Exception) {
+                packageName
+            }
+        }
         val shareManager = ShareManager(activity)
         shareManager.shareApk(packageName, appName)
     }
@@ -534,7 +637,14 @@ class AppAdapter(
     }
 
     private fun toggleFavoriteApp(packageName: String, appInfo: ResolveInfo) {
-        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        // Use cached label or fallback to avoid blocking
+        val appName = labelCache[packageName] ?: run {
+            try {
+                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
+            } catch (e: Exception) {
+                packageName
+            }
+        }
         val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
         
         if (isFavorite) {
