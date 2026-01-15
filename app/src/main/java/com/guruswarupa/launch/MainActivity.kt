@@ -44,6 +44,7 @@ import androidx.annotation.RequiresApi
 import java.util.Calendar
 import android.view.View
 import android.view.ViewGroup
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
@@ -107,6 +108,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var voiceSearchButton: ImageButton
     private var isInPowerSaverMode = false
     private lateinit var todoAlarmManager: TodoAlarmManager
+    private lateinit var calculatorWidget: CalculatorWidget
 
     // Finance widget variables
     private lateinit var financeManager: FinanceManager
@@ -246,6 +248,12 @@ class MainActivity : FragmentActivity() {
 
         // Initialize battery and phone usage widgets
         setupBatteryAndUsage()
+
+        // Initialize calculator widget
+        val calculatorContainer = findViewById<ViewGroup>(R.id.calculator_widget_container)
+        val calculatorView = LayoutInflater.from(this).inflate(R.layout.calculator_widget, calculatorContainer, false)
+        calculatorContainer.addView(calculatorView)
+        calculatorWidget = CalculatorWidget(calculatorView)
 
         // Initialize todo widget
         setupTodoWidget()
