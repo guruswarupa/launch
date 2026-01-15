@@ -44,6 +44,11 @@ import androidx.annotation.RequiresApi
 import java.util.Calendar
 import android.view.View
 import android.view.ViewGroup
+import android.view.MotionEvent
+import android.view.GestureDetector
+import android.view.GestureDetector.SimpleOnGestureListener
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.core.view.GravityCompat
 import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -119,6 +124,8 @@ class MainActivity : FragmentActivity() {
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
     private lateinit var mediaPlayerWidgetManager: MediaPlayerWidgetManager
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var gestureDetector: GestureDetector
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -306,6 +313,57 @@ class MainActivity : FragmentActivity() {
             contactsList = contactsList
         )
 
+        // Initialize DrawerLayout
+        drawerLayout = findViewById(R.id.drawer_layout)
+        
+        // Set drawer to full width - use post to ensure view is laid out
+        drawerLayout.post {
+            val displayMetrics = resources.displayMetrics
+            val drawerWidth = displayMetrics.widthPixels
+            val drawerView = findViewById<FrameLayout>(R.id.widgets_drawer)
+            drawerView?.let {
+                val params = it.layoutParams as DrawerLayout.LayoutParams
+                params.width = drawerWidth
+                it.layoutParams = params
+            }
+        }
+        
+        // Enable edge swipe for DrawerLayout (this is the default, but making it explicit)
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)
+        
+        // DrawerLayout already handles edge swipes automatically, but we can add additional
+        // gesture detection for more responsive swipes from the left corner
+        gestureDetector = GestureDetector(this, object : SimpleOnGestureListener() {
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 != null) {
+                    val deltaX = e2.x - e1.x
+                    val deltaY = e2.y - e1.y
+                    // Check if swipe is from left edge (start x < 100px) and rightward
+                    if (e1.x < 100 && deltaX > 200 && Math.abs(deltaY) < Math.abs(deltaX) * 0.8) {
+                        if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                            drawerLayout.openDrawer(GravityCompat.START)
+                        }
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+        
+        // Setup touch listener on main content to detect swipes from left edge
+        // This works alongside DrawerLayout's built-in edge swipe detection
+        val mainContent = findViewById<FrameLayout>(R.id.main_content)
+        mainContent.setOnTouchListener { _, event ->
+            // Process gesture but don't consume event - let DrawerLayout handle it too
+            gestureDetector.onTouchEvent(event)
+            false
+        }
+        
         // Initialize WidgetManager
         val widgetContainer = findViewById<LinearLayout>(R.id.widget_container)
         widgetManager = WidgetManager(this, widgetContainer)
@@ -713,14 +771,18 @@ class MainActivity : FragmentActivity() {
                 runOnUiThread {
                     if (bitmap != null) {
                         wallpaperBackground.setImageBitmap(bitmap)
+                        // Also set wallpaper for drawer background
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
                     } else {
                         wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 runOnUiThread {
                     wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                    findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
                 }
             }
         }
@@ -2233,6 +2295,7 @@ class MainActivity : FragmentActivity() {
 
         // Hide the wallpaper background in power saver mode
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.GONE
+        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.visibility = View.GONE
 
         // Hide the todo widget (the LinearLayout containing todo list)
         if (::todoRecyclerView.isInitialized) {
@@ -2265,6 +2328,7 @@ class MainActivity : FragmentActivity() {
 
         // Show the wallpaper background when power saver mode is disabled
         findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
+        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.visibility = View.VISIBLE
 
         // Show the todo widget (the LinearLayout containing todo list)
         if (::todoRecyclerView.isInitialized) {
@@ -2290,5 +2354,14 @@ class MainActivity : FragmentActivity() {
             return
         }
         findViewById<android.view.View>(android.R.id.content)?.setBackgroundResource(R.drawable.wallpaper_background)
+    }
+
+    override fun onBackPressed() {
+        // Close drawer if it's open, otherwise handle back button normally
+        if (::drawerLayout.isInitialized && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START)
+        } else {
+            super.onBackPressed()
+        }
     }
 }

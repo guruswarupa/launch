@@ -1,12 +1,13 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/root_layout"
+    android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/background">
 
+    <!-- Main Content -->
     <FrameLayout
+        android:id="@+id/main_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -213,267 +214,299 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false"/>
-
-                <!-- Android Widgets Section -->
-                <LinearLayout
-                    android:id="@+id/widgets_section"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/widget_background"
-                    android:padding="20dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="16dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Android Widgets"
-                            android:textColor="@color/white"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
-
-                        <Button
-                            android:id="@+id/add_widget_button"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Add Widget"
-                            android:textSize="14sp"
-                            android:paddingHorizontal="20dp"
-                            android:paddingVertical="10dp"
-                            android:background="@drawable/button_neutral_ripple"
-                            android:textColor="@color/white" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/widget_container"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-                </LinearLayout>
-
-                <!-- To Do Widget -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:background="@drawable/widget_background"
-                    android:padding="20dp"
-                    android:layout_marginVertical="16dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="16dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Todo List"
-                            android:textColor="@color/white"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
-
-                        <ImageButton
-                            android:id="@+id/add_todo_button"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="@drawable/button_neutral_ripple"
-                            android:src="@drawable/ic_add"
-                            android:tint="@color/white"
-                            android:contentDescription="Add todo item"
-                            android:padding="8dp" />
-
-                    </LinearLayout>
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/todo_recycler_view"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:maxHeight="300dp"
-                        android:clipToPadding="false"
-                        android:paddingTop="4dp"
-                        android:paddingBottom="4dp" />
-
-                </LinearLayout>
-
-                <!-- Finance Widget -->
-                <LinearLayout
-                    android:id="@+id/finance_widget"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginVertical="16dp"
-                    android:background="@drawable/widget_background"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <!-- Header -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Finance Tracker"
-                        android:textColor="@color/white"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="20dp" />
-
-                    <!-- Balance Card -->
-                    <LinearLayout
-                        android:id="@+id/balance_card"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/balance_card_ripple"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:layout_marginBottom="20dp"
-                        android:clickable="true"
-                        android:focusable="true">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Total Balance"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp"
-                            android:layout_marginBottom="4dp" />
-
-                        <TextView
-                            android:id="@+id/balance_text"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="$0.00"
-                            android:textColor="@color/white"
-                            android:textSize="28sp"
-                            android:textStyle="bold"
-                            android:layout_marginBottom="12dp" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/monthly_spent_text"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="This Month: -$0.00"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="13sp" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <!-- Input Section -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:layout_marginBottom="16dp">
-
-                        <EditText
-                            android:id="@+id/amount_input"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:background="@drawable/input_field_background"
-                            android:hint="Enter amount"
-                            android:inputType="numberDecimal"
-                            android:paddingStart="18dp"
-                            android:paddingEnd="18dp"
-                            android:textColor="@color/white"
-                            android:textColorHint="@color/gray_light"
-                            android:textSize="16sp"
-                            android:layout_marginBottom="12dp" />
-
-                        <EditText
-                            android:id="@+id/description_input"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:background="@drawable/input_field_background"
-                            android:hint="Description (optional)"
-                            android:inputType="text"
-                            android:paddingStart="18dp"
-                            android:paddingEnd="18dp"
-                            android:textColor="@color/white"
-                            android:textColorHint="@color/gray_light"
-                            android:textSize="14sp" />
-                    </LinearLayout>
-
-                    <!-- Action Buttons -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center"
-                        android:weightSum="2">
-
-                        <Button
-                            android:id="@+id/add_income_btn"
-                            android:layout_width="0dp"
-                            android:layout_height="56dp"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="8dp"
-                            android:background="@drawable/button_neutral_ripple"
-                            android:text="Add Income"
-                            android:textColor="@color/white"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:elevation="4dp" />
-
-                        <Button
-                            android:id="@+id/add_expense_btn"
-                            android:layout_width="0dp"
-                            android:layout_height="56dp"
-                            android:layout_weight="1"
-                            android:layout_marginStart="8dp"
-                            android:background="@drawable/button_neutral_ripple"
-                            android:text="Add Expense"
-                            android:textColor="@color/white"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:elevation="4dp" />
-                    </LinearLayout>
-
-                </LinearLayout>
-
-                <!-- Weekly Usage Graph -->
-                <LinearLayout
-                    android:id="@+id/weekly_usage_widget"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginVertical="16dp"
-                    android:background="@drawable/widget_background"
-                    android:padding="20dp"
-                    android:paddingTop="16dp"
-                    android:paddingBottom="12dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Weekly Usage"
-                        android:textSize="18sp"
-                        android:textColor="@color/white"
-                        android:textStyle="bold"
-                        android:gravity="start"
-                        android:layout_marginBottom="16dp"/>
-
-                    <com.guruswarupa.launch.WeeklyUsageGraphView
-                        android:id="@+id/weekly_usage_graph"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"/>
-                </LinearLayout>
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </FrameLayout>
-</LinearLayout>
+
+    <!-- Sidebar Drawer for Widgets -->
+    <FrameLayout
+        android:id="@+id/widgets_drawer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="@color/background">
+
+        <!-- Wallpaper Background for Drawer -->
+        <ImageView
+            android:id="@+id/drawer_wallpaper_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:layout_gravity="center"/>
+
+        <!-- Scrollable Content -->
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+            <!-- Android Widgets Section -->
+            <LinearLayout
+                android:id="@+id/widgets_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/widget_background"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Android Widgets"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/add_widget_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Add Widget"
+                        android:textSize="14sp"
+                        android:paddingHorizontal="20dp"
+                        android:paddingVertical="10dp"
+                        android:background="@drawable/button_neutral_ripple"
+                        android:textColor="@color/white" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/widget_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <!-- To Do Widget -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:layout_marginVertical="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Todo List"
+                        android:textColor="@color/white"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <ImageButton
+                        android:id="@+id/add_todo_button"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/button_neutral_ripple"
+                        android:src="@drawable/ic_add"
+                        android:tint="@color/white"
+                        android:contentDescription="Add todo item"
+                        android:padding="8dp" />
+
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/todo_recycler_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxHeight="300dp"
+                    android:clipToPadding="false"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp" />
+
+            </LinearLayout>
+
+            <!-- Finance Widget -->
+            <LinearLayout
+                android:id="@+id/finance_widget"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="16dp"
+                android:background="@drawable/widget_background"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <!-- Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Finance Tracker"
+                    android:textColor="@color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="20dp" />
+
+                <!-- Balance Card -->
+                <LinearLayout
+                    android:id="@+id/balance_card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/balance_card_ripple"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:layout_marginBottom="20dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Total Balance"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:id="@+id/balance_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="$0.00"
+                        android:textColor="@color/white"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="12dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/monthly_spent_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="This Month: -$0.00"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Input Section -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <EditText
+                        android:id="@+id/amount_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/input_field_background"
+                        android:hint="Enter amount"
+                        android:inputType="numberDecimal"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/gray_light"
+                        android:textSize="16sp"
+                        android:layout_marginBottom="12dp" />
+
+                    <EditText
+                        android:id="@+id/description_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/input_field_background"
+                        android:hint="Description (optional)"
+                        android:inputType="text"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/gray_light"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <!-- Action Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:weightSum="2">
+
+                    <Button
+                        android:id="@+id/add_income_btn"
+                        android:layout_width="0dp"
+                        android:layout_height="56dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/button_neutral_ripple"
+                        android:text="Add Income"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:elevation="4dp" />
+
+                    <Button
+                        android:id="@+id/add_expense_btn"
+                        android:layout_width="0dp"
+                        android:layout_height="56dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/button_neutral_ripple"
+                        android:text="Add Expense"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:elevation="4dp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Weekly Usage Graph -->
+            <LinearLayout
+                android:id="@+id/weekly_usage_widget"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="16dp"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Weekly Usage"
+                    android:textSize="18sp"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:gravity="start"
+                    android:layout_marginBottom="16dp"/>
+
+                <com.guruswarupa.launch.WeeklyUsageGraphView
+                    android:id="@+id/weekly_usage_graph"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+        </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
+
+</androidx.drawerlayout.widget.DrawerLayout>
