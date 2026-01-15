@@ -293,17 +293,8 @@ class AppDockManager(
     }
     
     private fun toggleWorkspace() {
-        val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
-        if (isWorkspaceActive) {
-            // Disable workspace mode
-            workspaceManager.setActiveWorkspaceId(null)
-            updateWorkspaceIcon()
-            refreshAppsForWorkspace()
-            Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
-        } else {
-            // Show workspace selector
-            showWorkspaceSelector()
-        }
+        // Always show workspace selector to allow switching or turning off
+        showWorkspaceSelector()
     }
     
     private fun showWorkspaceSelector() {
@@ -314,15 +305,36 @@ class AppDockManager(
             return
         }
         
-        val workspaceNames = workspaces.map { it.name }.toTypedArray()
+        val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
+        
+        // Build workspace names list
+        val workspaceNames = workspaces.map { it.name }.toMutableList()
+        
+        // Add "Turn Off" option if a workspace is currently active
+        if (isWorkspaceActive) {
+            workspaceNames.add("Turn Off")
+        }
+        
+        val itemsArray = workspaceNames.toTypedArray()
+        
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Select Workspace")
-            .setItems(workspaceNames) { _, which ->
-                val selectedWorkspace = workspaces[which]
-                workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
-                updateWorkspaceIcon()
-                refreshAppsForWorkspace()
-                Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
+            .setTitle(if (isWorkspaceActive) "Switch Workspace" else "Select Workspace")
+            .setItems(itemsArray) { _, which ->
+                // Check if "Turn Off" was selected (last item when workspace is active)
+                if (isWorkspaceActive && which == itemsArray.size - 1) {
+                    // Turn off workspace mode
+                    workspaceManager.setActiveWorkspaceId(null)
+                    updateWorkspaceIcon()
+                    refreshAppsForWorkspace()
+                    Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Select a workspace
+                    val selectedWorkspace = workspaces[which]
+                    workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
+                    updateWorkspaceIcon()
+                    refreshAppsForWorkspace()
+                    Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()
