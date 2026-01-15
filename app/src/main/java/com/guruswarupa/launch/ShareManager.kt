@@ -1,172 +1,295 @@
 package com.guruswarupa.launch
 
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
+import java.util.concurrent.Executors
 
+/**
+ * Data class representing an installed app that can be shared
+ */
+data class ShareableApp(
+    val name: String,
+    val packageName: String
+)
+
+/**
+ * Manages sharing of APK files and general files.
+ * Handles file operations in background threads to avoid blocking UI.
+ */
 class ShareManager(private val context: Context) {
+    private val executor = Executors.newSingleThreadExecutor()
+    private val handler = Handler(Looper.getMainLooper())
+    
+    companion object {
+        private const val TAG = "ShareManager"
+        const val FILE_PICKER_REQUEST_CODE = 1001
+        
+        private const val DIALOG_OPTION_SHARE_APK = 0
+        private const val DIALOG_OPTION_SHARE_FILE = 1
+    }
 
+    /**
+     * Shows a dialog to choose between sharing an APK or a file
+     */
     fun showApkSharingDialog() {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("What would you like to share?")
-            .setItems(arrayOf("Share an App (APK)", "Share a File")) { _, which ->
+            .setTitle(context.getString(R.string.share_dialog_title))
+            .setItems(arrayOf(
+                context.getString(R.string.share_app_apk),
+                context.getString(R.string.share_file)
+            )) { _, which ->
                 when (which) {
-                    0 -> showAppSharingDialog()
-                    1 -> showFileSharingDialog()
+                    DIALOG_OPTION_SHARE_APK -> showAppSharingDialog()
+                    DIALOG_OPTION_SHARE_FILE -> showFileSharingDialog()
+                    else -> { /* Invalid option */ }
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(context.getString(android.R.string.cancel), null)
             .show()
     }
 
+    /**
+     * Shows a dialog listing all shareable apps
+     */
     private fun showAppSharingDialog() {
         val installedApps = getInstalledApps()
         if (installedApps.isEmpty()) {
-            Toast.makeText(context, "No apps available to share", Toast.LENGTH_SHORT).show()
+            showToast(context.getString(R.string.no_apps_available_to_share))
             return
         }
 
-        val appNames = installedApps.map { it.first }.toTypedArray()
+        val appNames = installedApps.map { it.name }.toTypedArray()
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Select App to Share")
+            .setTitle(context.getString(R.string.select_app_to_share))
             .setItems(appNames) { _, which ->
-                val selectedApp = installedApps[which]
-                shareApk(selectedApp.second, selectedApp.first)
+                if (which in appNames.indices) {
+                    val selectedApp = installedApps[which]
+                    shareApk(selectedApp.packageName, selectedApp.name)
+                }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(context.getString(android.R.string.cancel), null)
             .show()
     }
 
+    /**
+     * Shows file picker dialog to select a file for sharing
+     */
     private fun showFileSharingDialog() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "*/*"
+            type = Constants.MIME_TYPE_ALL
             addCategory(Intent.CATEGORY_OPENABLE)
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
         }
 
         try {
-            val activity = context as? MainActivity
+            val activity = context as? Activity
             if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
                 activity.startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
             } else {
-                Toast.makeText(context, "Activity not available", Toast.LENGTH_SHORT).show()
+                showToast(context.getString(R.string.activity_not_available))
             }
+        } catch (e: ActivityNotFoundException) {
+            Log.e(TAG, "File manager not available", e)
+            showToast(context.getString(R.string.no_file_manager_available))
         } catch (e: Exception) {
-            Toast.makeText(context, "No file manager available", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Error showing file picker", e)
+            showToast(context.getString(R.string.no_file_manager_available))
         }
     }
 
+    /**
+     * Handles the result from file picker
+     */
     fun handleFilePickerResult(uri: Uri?) {
         if (uri != null) {
             shareFile(uri)
         } else {
-            Toast.makeText(context, "No file selected", Toast.LENGTH_SHORT).show()
+            showToast(context.getString(R.string.no_file_selected))
         }
     }
 
+    /**
+     * Shares a file using Android's share intent
+     */
     private fun shareFile(uri: Uri) {
         try {
+            val mimeType = context.contentResolver.getType(uri) ?: Constants.MIME_TYPE_ALL
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = context.contentResolver.getType(uri) ?: "*/*"
+                type = mimeType
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "Sharing file")
+                putExtra(Intent.EXTRA_TEXT, context.getString(R.string.sharing_file))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            val chooser = Intent.createChooser(shareIntent, "Share file")
+            val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_file))
             context.startActivity(chooser)
         } catch (e: Exception) {
-            Toast.makeText(context, "Error sharing file: ${e.message}", Toast.LENGTH_LONG).show()
+            Log.e(TAG, "Error sharing file", e)
+            showToast(context.getString(R.string.error_sharing_file, e.message ?: ""))
+        }
+    }
+    
+    /**
+     * Helper method to show toast messages on main thread
+     */
+    private fun showToast(message: String) {
+        handler.post {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
-    companion object {
-        const val FILE_PICKER_REQUEST_CODE = 1001
-    }
-
-    private fun getInstalledApps(): List<Pair<String, String>> {
+    /**
+     * Gets list of installed apps that can be shared (user-installed and updated system apps)
+     * @return List of ShareableApp objects sorted by name
+     */
+    private fun getInstalledApps(): List<ShareableApp> {
         val packageManager = context.packageManager
-        val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-
-        return installedApps
-            .filter { app ->
-                // Include user-installed apps and updated system apps
-                (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 ||
-                        (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
-            }
-            .mapNotNull { app ->
-                try {
-                    val appName = packageManager.getApplicationLabel(app).toString()
-                    Pair(appName, app.packageName)
-                } catch (e: Exception) {
-                    null
+        return try {
+            val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+            installedApps
+                .filter { app ->
+                    // Include user-installed apps and updated system apps
+                    (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 ||
+                            (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
                 }
-            }
-            .sortedBy { it.first }
+                .mapNotNull { app ->
+                    try {
+                        val appName = packageManager.getApplicationLabel(app).toString()
+                        ShareableApp(appName, app.packageName)
+                    } catch (e: PackageManager.NameNotFoundException) {
+                        Log.w(TAG, "Package not found: ${app.packageName}", e)
+                        null
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error getting app label for ${app.packageName}", e)
+                        null
+                    }
+                }
+                .sortedBy { it.name }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting installed apps", e)
+            emptyList()
+        }
     }
 
-     fun shareApk(packageName: String, appName: String) {
-        try {
-            val packageManager = context.packageManager
-            val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
-            val sourceApk = File(applicationInfo.sourceDir)
-
-            if (!sourceApk.exists()) {
-                Toast.makeText(context, "APK file not found", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            // Copy APK to cache directory
-            val cacheDir = File(context.cacheDir, "shared_apks")
-            if (!cacheDir.exists()) {
-                cacheDir.mkdirs()
-            }
-
-            val sanitizedAppName = appName.replace("[^a-zA-Z0-9.-]".toRegex(), "_")
-            val copiedApk = File(cacheDir, "${sanitizedAppName}.apk")
-
-            // Copy the APK file
-            FileInputStream(sourceApk).use { input ->
-                FileOutputStream(copiedApk).use { output ->
-                    input.copyTo(output)
+    /**
+     * Shares an APK file by copying it to cache and creating a share intent
+     * @param packageName The package name of the app to share
+     * @param appName The display name of the app
+     */
+    fun shareApk(packageName: String, appName: String) {
+        showToast(context.getString(R.string.preparing_apk_for_sharing))
+        
+        executor.execute {
+            try {
+                val apkUri = prepareApkForSharing(packageName, appName)
+                apkUri?.let { uri ->
+                    handler.post {
+                        launchShareIntent(uri, appName)
+                    }
                 }
+            } catch (e: PackageManager.NameNotFoundException) {
+                Log.e(TAG, "Package not found: $packageName", e)
+                showToast(context.getString(R.string.apk_file_not_found))
+            } catch (e: IOException) {
+                Log.e(TAG, "IO error copying APK", e)
+                showToast(context.getString(R.string.error_copying_apk))
+            } catch (e: Exception) {
+                Log.e(TAG, "Error sharing APK", e)
+                showToast(context.getString(R.string.error_sharing_apk, e.message ?: ""))
             }
+        }
+    }
+    
+    /**
+     * Prepares APK file for sharing by copying it to cache directory
+     * @return URI of the copied APK file, or null if preparation failed
+     */
+    private fun prepareApkForSharing(packageName: String, appName: String): Uri? {
+        val packageManager = context.packageManager
+        val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+        val sourceApk = File(applicationInfo.sourceDir)
 
-            // Create URI for sharing
-            val apkUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    copiedApk
-                )
-            } else {
-                Uri.fromFile(copiedApk)
+        if (!sourceApk.exists()) {
+            showToast(context.getString(R.string.apk_file_not_found))
+            return null
+        }
+
+        // Create cache directory if it doesn't exist
+        val cacheDir = File(context.cacheDir, Constants.SHARED_APKS_DIR)
+        if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+            Log.e(TAG, "Failed to create cache directory")
+            showToast(context.getString(R.string.error_creating_cache_directory))
+            return null
+        }
+
+        // Sanitize app name for filename
+        val sanitizedAppName = appName.replace(
+            Constants.APP_NAME_SANITIZE_REGEX.toRegex(),
+            Constants.APP_NAME_SANITIZE_REPLACEMENT
+        )
+        val copiedApk = File(cacheDir, "$sanitizedAppName${Constants.APK_EXTENSION}")
+
+        // Copy the APK file
+        FileInputStream(sourceApk).use { input ->
+            FileOutputStream(copiedApk).use { output ->
+                input.copyTo(output)
             }
+        }
 
-            // Create sharing intent
+        // Create URI for sharing
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}${Constants.FILE_PROVIDER_AUTHORITY_SUFFIX}",
+                copiedApk
+            )
+        } else {
+            Uri.fromFile(copiedApk)
+        }
+    }
+    
+    /**
+     * Launches the share intent chooser
+     */
+    private fun launchShareIntent(apkUri: Uri, appName: String) {
+        try {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/vnd.android.package-archive"
+                type = Constants.MIME_TYPE_APK
                 putExtra(Intent.EXTRA_STREAM, apkUri)
-                putExtra(Intent.EXTRA_TEXT, "Sharing $appName APK")
+                putExtra(Intent.EXTRA_TEXT, context.getString(R.string.sharing_apk, appName))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            // Create chooser
-            val chooser = Intent.createChooser(shareIntent, "Share $appName APK")
+            val chooserTitle = context.getString(R.string.share_apk_title, appName)
+            val chooser = Intent.createChooser(shareIntent, chooserTitle)
             context.startActivity(chooser)
-
         } catch (e: Exception) {
-            Toast.makeText(context, "Error sharing APK: ${e.message}", Toast.LENGTH_LONG).show()
+            Log.e(TAG, "Error launching share intent", e)
+            showToast(context.getString(R.string.error_sharing_apk, e.message ?: ""))
         }
+    }
+    
+    /**
+     * Cleans up resources. Should be called when the manager is no longer needed.
+     */
+    fun cleanup() {
+        executor.shutdown()
     }
 }

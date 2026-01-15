@@ -54,6 +54,7 @@ import com.guruswarupa.launch.TodoItem
 import com.guruswarupa.launch.TodoAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
+import java.util.concurrent.Executors
 
 
 class MainActivity : FragmentActivity() {
@@ -70,6 +71,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var appDock: LinearLayout
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
     private val handler = Handler(Looper.getMainLooper())
+    private val backgroundExecutor = Executors.newFixedThreadPool(4) // Reusable thread pool
 
     private lateinit var wallpaperBackground: ImageView
     private var currentWallpaperBitmap: Bitmap? = null
@@ -82,6 +84,11 @@ class MainActivity : FragmentActivity() {
     private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
     private var lastUpdateDate: String = ""
+    private var lastWeatherUpdateTime = 0L
+    private val WEATHER_UPDATE_INTERVAL = 30 * 60 * 1000L // 30 minutes in milliseconds
+    // Cache SimpleDateFormat instances to avoid repeated creation
+    private val timeFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
     private lateinit var weatherManager: WeatherManager // Add this line
     private lateinit var weatherIcon: ImageView
     private lateinit var weatherText: TextView
@@ -345,7 +352,7 @@ class MainActivity : FragmentActivity() {
             return
         }
         
-        Thread {
+        backgroundExecutor.execute {
             try {
                 // Filter apps based on favorite/show all mode in background
                 val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
@@ -371,7 +378,7 @@ class MainActivity : FragmentActivity() {
                     Toast.makeText(this, "Error filtering apps: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
-        }.start()
+        }
     }
 
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
@@ -709,6 +716,14 @@ class MainActivity : FragmentActivity() {
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
         
+        // Shutdown executor to prevent memory leaks
+        backgroundExecutor.shutdown()
+        
+        // Cleanup managers
+        if (::shareManager.isInitialized) {
+            shareManager.cleanup()
+        }
+        
         // Destroy widget manager
         if (::widgetManager.isInitialized) {
             widgetManager.onDestroy()
@@ -840,18 +855,18 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun updateBatteryInBackground() {
-        Thread {
+        backgroundExecutor.execute {
             val batteryManager = BatteryManager(this)
 
             runOnUiThread {
                 val batteryPercentageTextView = findViewById<TextView>(R.id.battery_percentage)
                 batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
             }
-        }.start()
+        }
     }
 
     private fun updateUsageInBackground() {
-        Thread {
+        backgroundExecutor.execute {
             // Get screen time usage for today
             val calendar = Calendar.getInstance()
             calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -868,7 +883,7 @@ class MainActivity : FragmentActivity() {
                 val screenTimeTextView = findViewById<TextView>(R.id.screen_time)
                 screenTimeTextView?.text = "Screen Time: $formattedTime"
             }
-        }.start()
+        }
     }
     
     /**
@@ -876,7 +891,7 @@ class MainActivity : FragmentActivity() {
      * Updates app list usage times and weekly graph
      */
     private fun refreshUsageDataInBackground() {
-        Thread {
+        backgroundExecutor.execute {
             try {
                 // Clear adapter cache first to ensure fresh data
                 adapter?.clearUsageCache()
@@ -904,7 +919,7 @@ class MainActivity : FragmentActivity() {
                 // Silently handle errors to prevent crashes
                 e.printStackTrace()
             }
-        }.start()
+        }
     }
 
     override fun onResume() {
@@ -914,15 +929,19 @@ class MainActivity : FragmentActivity() {
         usageStatsManager.invalidateCache()
 
         // Use background thread for heavy operations
-        Thread {
+        backgroundExecutor.execute {
             checkDateChangeAndRefreshUsage()
-        }.start()
+        }
 
         // Only update weather if it's been more than 10 minutes
         val lastWeatherUpdate = sharedPreferences.getLong("last_weather_update", 0)
-        if (System.currentTimeMillis() - lastWeatherUpdate > 600000) { // 10 minutes
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastWeatherUpdate > 600000) { // 10 minutes
+            lastWeatherUpdateTime = currentTime
             setupWeather()
-            sharedPreferences.edit().putLong("last_weather_update", System.currentTimeMillis()).apply()
+            sharedPreferences.edit().putLong("last_weather_update", currentTime).apply()
+        } else {
+            lastWeatherUpdateTime = lastWeatherUpdate
         }
 
         // Start appropriate update runnable based on power saver mode
@@ -1005,20 +1024,19 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun updateTime() {
-        val sdf = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
-        val currentTime = sdf.format(Date())
+        val currentTime = timeFormat.format(Date())
         timeTextView.text = currentTime
 
-        // Update weather every 30 minutes (1800000 milliseconds)
+        // Update weather every 30 minutes (efficient check)
         val currentTimeMillis = System.currentTimeMillis()
-        if (currentTimeMillis % 1800000 < 1000) {
+        if (currentTimeMillis - lastWeatherUpdateTime >= WEATHER_UPDATE_INTERVAL) {
+            lastWeatherUpdateTime = currentTimeMillis
             updateWeather()
         }
     }
 
     private fun updateDate() {
-        val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
-        val currentTime = sdf.format(Date())
+        val currentTime = dateFormat.format(Date())
         dateTextView.text = currentTime
     }
 
@@ -1026,7 +1044,7 @@ class MainActivity : FragmentActivity() {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
-        Thread {
+        backgroundExecutor.execute {
             try {
                 val mainIntent = Intent(Intent.ACTION_MAIN, null)
                 mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
@@ -1038,37 +1056,34 @@ class MainActivity : FragmentActivity() {
                         recyclerView.visibility = View.VISIBLE
                     }
                 } else {
-                    // Use concurrent filtering for better performance
-                    val filteredApps = unsortedList.parallelStream()
-                        .filter { app ->
-                            app.activityInfo.packageName != "com.guruswarupa.launch" &&
-                                    (!appDockManager.getCurrentMode() || !appDockManager.isAppHiddenInFocusMode(app.activityInfo.packageName)) &&
-                                    (!appDockManager.isWorkspaceModeActive() || appDockManager.isAppInActiveWorkspace(app.activityInfo.packageName))
-                        }
-                        .collect(java.util.stream.Collectors.toList())
-
-                    // Sort in parallel for better performance
-                    // Pre-compute labels and usage stats to avoid repeated calls during sorting
+                    // Use concurrent filtering and caching in a single pass for better performance
                     val labelCache = java.util.concurrent.ConcurrentHashMap<String, String>()
                     val usageCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
+                    val focusMode = appDockManager.getCurrentMode()
+                    val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
-                    // Pre-compute all labels and usage stats in parallel
-                    filteredApps.parallelStream().forEach { app ->
-                        val packageName = app.activityInfo.packageName
-                        labelCache.computeIfAbsent(packageName) {
-                            try {
-                                app.loadLabel(packageManager).toString().lowercase()
-                            } catch (e: Exception) {
-                                packageName.lowercase()
+                    // Filter, cache labels/usage, and collect in a single parallel stream pass
+                    val filteredApps = unsortedList.parallelStream()
+                        .filter { app ->
+                            val packageName = app.activityInfo.packageName
+                            packageName != "com.guruswarupa.launch" &&
+                                    (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
+                                    (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
+                        }
+                        .peek { app ->
+                            // Pre-compute labels and usage stats while filtering
+                            val packageName = app.activityInfo.packageName
+                            labelCache.computeIfAbsent(packageName) {
+                                try {
+                                    app.loadLabel(packageManager).toString().lowercase()
+                                } catch (e: Exception) {
+                                    packageName.lowercase()
+                                }
+                            }
+                            usageCache.computeIfAbsent(packageName) {
+                                sharedPreferences.getInt("usage_$packageName", 0)
                             }
                         }
-                        usageCache.computeIfAbsent(packageName) {
-                            sharedPreferences.getInt("usage_$packageName", 0)
-                        }
-                    }
-                    
-                    // Now sort using cached values
-                    val processedAppList = filteredApps.parallelStream()
                         .sorted(
                             compareByDescending<ResolveInfo> { 
                                 usageCache[it.activityInfo.packageName] ?: 0
@@ -1079,6 +1094,8 @@ class MainActivity : FragmentActivity() {
                         )
                         .collect(java.util.stream.Collectors.toList())
                         .toMutableList()
+                    
+                    val processedAppList = filteredApps
 
                     // Filter apps based on favorite/show all mode
                     val finalAppList = favoriteAppManager.filterApps(processedAppList, isShowAllAppsMode)
@@ -1123,7 +1140,7 @@ class MainActivity : FragmentActivity() {
                     recyclerView.visibility = View.VISIBLE
                 }
             }
-        }.start()
+        }
 
         // Set visibility of search bar and voice search button based on focus mode
         // Only modify if activity is not finishing
@@ -1262,7 +1279,7 @@ class MainActivity : FragmentActivity() {
     }
     private fun loadContacts() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            Thread {
+            backgroundExecutor.execute {
                 try {
                     val tempContactsList = mutableListOf<String>()
                     val cursor = contentResolver.query(
@@ -1295,7 +1312,7 @@ class MainActivity : FragmentActivity() {
                 } catch (e: Exception) {
                     // Handle error silently or log
                 }
-            }.start()
+            }
         }
     }
 

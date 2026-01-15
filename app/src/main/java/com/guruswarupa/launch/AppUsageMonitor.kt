@@ -30,7 +30,7 @@ class AppUsageMonitor : Service() {
         monitoringRunnable = object : Runnable {
             override fun run() {
                 checkForegroundApp()
-                handler.postDelayed(this, 1000) // Check every second
+                handler.postDelayed(this, 5000) // Check every 5 seconds (reduced frequency for better battery life)
             }
         }
         handler.post(monitoringRunnable!!)
