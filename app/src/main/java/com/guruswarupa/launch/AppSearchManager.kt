@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.EditText
 import net.objecthunter.exp4j.ExpressionBuilder
+import java.util.concurrent.Executors
 
 class AppSearchManager(
     private val packageManager: PackageManager,
@@ -18,8 +19,13 @@ class AppSearchManager(
     private val contactsList: List<String>
 ) {
     private val handler = Handler(Looper.getMainLooper())
+    private val searchExecutor = Executors.newSingleThreadExecutor() // Background thread for search operations
     private val debounceRunnable = Runnable {
-        filterAppsAndContacts(searchBox.text.toString())
+        // Run search on background thread
+        val query = searchBox.text.toString()
+        searchExecutor.execute {
+            filterAppsAndContacts(query)
+        }
     }
 
     private val appLabelCache = mutableMapOf<String, String>()
@@ -32,7 +38,10 @@ class AppSearchManager(
     private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
 
     init {
-        refreshAppList()
+        // Load labels in background thread
+        searchExecutor.execute {
+            refreshAppList()
+        }
         searchBox.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
@@ -48,22 +57,41 @@ class AppSearchManager(
     fun updateContactsList(newContactsList: List<String>) {
         // Update contacts list and clear search cache
         searchCache.clear()
+        // Refresh app list in background
+        searchExecutor.execute {
+            refreshAppList()
+        }
     }
 
     private fun refreshAppList() {
         appLabelMap = fullAppList.associateWith { resolveInfo ->
             appLabelCache.getOrPut(resolveInfo.activityInfo.packageName) {
-                resolveInfo.loadLabel(packageManager).toString().lowercase()
+                try {
+                    resolveInfo.loadLabel(packageManager).toString().lowercase()
+                } catch (e: Exception) {
+                    resolveInfo.activityInfo.packageName.lowercase()
+                }
             }
         }
         searchCache.clear()
     }
 
     fun filterAppsAndContacts(query: String) {
+        // This method is already called from background thread (searchExecutor)
         val queryLower = query.lowercase().trim()
 
         val newFilteredList = ArrayList<ResolveInfo>()
+        
+        // Pre-load all SharedPreferences values in one call for better performance
         val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        val allPrefs = prefs.all
+        val usageCache = mutableMapOf<String, Int>()
+        for ((key, value) in allPrefs) {
+            if (key.startsWith("usage_") && value is Int) {
+                val packageName = key.removePrefix("usage_")
+                usageCache[packageName] = value
+            }
+        }
 
         if (queryLower.isNotEmpty()) {
             evaluateMathExpression(query)?.let { result ->
@@ -81,12 +109,12 @@ class AppSearchManager(
                     }
                 }
 
-                // Sort by usage count only for matches found
+                // Sort by usage count only for matches found (using pre-loaded cache)
                 val sortedExact = exactMatches.sortedByDescending {
-                    prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                    usageCache[it.activityInfo.packageName] ?: 0
                 }
                 val sortedPartial = partialMatches.sortedByDescending {
-                    prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                    usageCache[it.activityInfo.packageName] ?: 0
                 }
 
                 // 1. Add apps first
@@ -116,11 +144,25 @@ class AppSearchManager(
             if (cachedEmpty != null) {
                 newFilteredList.addAll(cachedEmpty)
             } else {
+                // Ensure appLabelMap is ready before sorting
+                if (appLabelMap.isEmpty() && fullAppList.isNotEmpty()) {
+                    refreshAppList()
+                }
+                
                 val sorted = fullAppList.sortedWith(
                     compareByDescending<ResolveInfo> {
-                        prefs.getInt("usage_${it.activityInfo.packageName}", 0)
+                        usageCache[it.activityInfo.packageName] ?: 0
                     }.thenBy {
-                        appLabelMap[it]?.lowercase() ?: it.loadLabel(packageManager).toString().lowercase()
+                        appLabelMap[it]?.lowercase() ?: run {
+                            // Fallback: load label only if not in cache
+                            try {
+                                appLabelCache.getOrPut(it.activityInfo.packageName) {
+                                    it.loadLabel(packageManager).toString().lowercase()
+                                }.lowercase()
+                            } catch (e: Exception) {
+                                it.activityInfo.packageName.lowercase()
+                            }
+                        }
                     }
                 )
                 newFilteredList.addAll(sorted)
@@ -128,8 +170,10 @@ class AppSearchManager(
             }
         }
 
-        // Use more efficient adapter update method
-        adapter.updateAppList(newFilteredList)
+        // Update adapter on main thread
+        handler.post {
+            adapter.updateAppList(newFilteredList)
+        }
     }
 
     private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()
@@ -229,5 +273,12 @@ class AppSearchManager(
                 }
             }
         }
+    }
+    
+    /**
+     * Cleanup method to shutdown executor when done
+     */
+    fun cleanup() {
+        searchExecutor.shutdown()
     }
 }
