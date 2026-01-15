@@ -70,6 +70,9 @@ class MainActivity : FragmentActivity() {
     private lateinit var searchBox: EditText
     private lateinit var appDock: LinearLayout
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
+    private var cachedUnsortedList: List<ResolveInfo>? = null // Cache the raw app list
+    private var lastCacheTime = 0L
+    private val CACHE_DURATION = 60000L // Cache for 1 minute
     private val handler = Handler(Looper.getMainLooper())
     private val backgroundExecutor = Executors.newFixedThreadPool(4) // Reusable thread pool
 
@@ -210,13 +213,18 @@ class MainActivity : FragmentActivity() {
         requestSmsPermission()
         requestUsageStatsPermission()
 
-        // Load weekly usage data
-        loadWeeklyUsageData()
-        
         // Setup weekly usage graph callback
         weeklyUsageGraph.onDaySelected = { day, appUsages ->
             showDailyUsageDialog(day, appUsages)
         }
+        
+        // Load weekly usage data lazily (only when graph is visible)
+        // Defer to avoid blocking initial load
+        handler.postDelayed({
+            if (::weeklyUsageGraph.isInitialized && weeklyUsageGraph.visibility == View.VISIBLE) {
+                loadWeeklyUsageData()
+            }
+        }, 300)
 
         if (isGridMode) {
             recyclerView.layoutManager = GridLayoutManager(this, 4)
@@ -695,19 +703,26 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun setWallpaperBackground() {
-        val wallpaperManager = WallpaperManager.getInstance(this)
-        try {
-            val bitmap = wallpaperManager.drawable.let {
-                if (it is BitmapDrawable) it.bitmap else null
+        // Load wallpaper asynchronously to avoid blocking UI
+        backgroundExecutor.execute {
+            try {
+                val wallpaperManager = WallpaperManager.getInstance(this)
+                val bitmap = wallpaperManager.drawable.let {
+                    if (it is BitmapDrawable) it.bitmap else null
+                }
+                runOnUiThread {
+                    if (bitmap != null) {
+                        wallpaperBackground.setImageBitmap(bitmap)
+                    } else {
+                        wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                }
             }
-            if (bitmap != null) {
-                wallpaperBackground.setImageBitmap(bitmap)
-            } else {
-                wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
         }
     }
 
@@ -832,9 +847,10 @@ class MainActivity : FragmentActivity() {
                 }
                 Intent.ACTION_PACKAGE_ADDED -> {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                        // Reload apps when a new package is installed
+                        // Reload apps when a new package is installed (force refresh to clear cache)
                         if (context is MainActivity) {
-                            context.loadApps()
+                            context.cachedUnsortedList = null // Clear cache
+                            context.loadApps(forceRefresh = true)
                         }
                     }
                 }
@@ -889,15 +905,18 @@ class MainActivity : FragmentActivity() {
     /**
      * Refresh all usage data in background without blocking UI
      * Updates app list usage times and weekly graph
+     * Optimized: Defer expensive operations until after UI is shown
      */
-    private fun refreshUsageDataInBackground() {
+    private fun refreshUsageDataInBackground(deferExpensive: Boolean = false) {
         backgroundExecutor.execute {
             try {
                 // Clear adapter cache first to ensure fresh data
                 adapter?.clearUsageCache()
                 
-                // Update weekly usage graph in background
-                if (usageStatsManager.hasUsageStatsPermission()) {
+                // Only refresh visible items first for fast UI response
+                // Defer expensive weekly usage graph data until after UI is shown
+                if (!deferExpensive && usageStatsManager.hasUsageStatsPermission()) {
+                    // Load weekly data only if not deferring (e.g., user interaction)
                     val weeklyData = usageStatsManager.getWeeklyUsageData()
                     val appUsageData = usageStatsManager.getWeeklyAppUsageData()
                     
@@ -909,14 +928,39 @@ class MainActivity : FragmentActivity() {
                     }
                 }
                 
-                // Refresh app adapter to show updated usage times
-                // Small delay allows usage queries to complete
-                Thread.sleep(200)
-                runOnUiThread {
-                    adapter?.notifyDataSetChanged()
-                }
+                // Refresh only visible items in adapter (much faster than full refresh)
+                // Use handler.postDelayed to allow UI to render first
+                handler.postDelayed({
+                    // Only refresh visible items, not entire list
+                    val layoutManager = recyclerView.layoutManager
+                    if (layoutManager is LinearLayoutManager) {
+                        val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                        val lastVisible = layoutManager.findLastVisibleItemPosition()
+                        if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
+                            adapter?.notifyItemRangeChanged(firstVisible, lastVisible - firstVisible + 1)
+                        } else {
+                            adapter?.notifyDataSetChanged()
+                        }
+                    } else {
+                        adapter?.notifyDataSetChanged()
+                    }
+                }, 100) // Small delay to let UI render first
             } catch (e: Exception) {
                 // Silently handle errors to prevent crashes
+                e.printStackTrace()
+            }
+        }
+    }
+    
+    /**
+     * Load expensive weekly usage graph data (called lazily when needed)
+     * This is the async version of loadWeeklyUsageData()
+     */
+    private fun loadWeeklyUsageGraphData() {
+        backgroundExecutor.execute {
+            try {
+                loadWeeklyUsageData()
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
@@ -925,43 +969,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
 
-        // Invalidate usage cache to ensure fresh data when app resumes
-        usageStatsManager.invalidateCache()
-
-        // Use background thread for heavy operations
-        backgroundExecutor.execute {
-            checkDateChangeAndRefreshUsage()
-        }
-
-        // Only update weather if it's been more than 10 minutes
-        val lastWeatherUpdate = sharedPreferences.getLong("last_weather_update", 0)
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastWeatherUpdate > 600000) { // 10 minutes
-            lastWeatherUpdateTime = currentTime
-            setupWeather()
-            sharedPreferences.edit().putLong("last_weather_update", currentTime).apply()
-        } else {
-            lastWeatherUpdateTime = lastWeatherUpdate
-        }
-
-        // Start appropriate update runnable based on power saver mode
-        if (isInPowerSaverMode) {
-            handler.post(powerSaverUpdateRunnable)
-        } else {
-            handler.post(updateRunnable)
-            // Immediately update battery and usage when app resumes (all in background)
-            updateBatteryInBackground()
-            updateUsageInBackground()
-            refreshUsageDataInBackground()
-        }
-
-        setWallpaperBackground()
-        
-        // Reschedule todo alarms in case device was rebooted or alarms were cleared
-        if (::todoAlarmManager.isInitialized) {
-            rescheduleTodoAlarms()
-        }
-        
+        // PRIORITY 1: Show UI immediately - register receivers and update visible elements first
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -969,23 +977,74 @@ class MainActivity : FragmentActivity() {
         }
         registerReceiver(packageReceiver, filter)
         registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
-
-        // Register battery change receiver
         val batteryFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         registerReceiver(batteryChangeReceiver, batteryFilter)
 
-        // Reapply focus mode state when returning from apps
+        // Reapply focus mode state when returning from apps (fast operation)
         applyFocusMode(appDockManager.getCurrentMode())
-        
-        // Refresh workspace toggle icon
         appDockManager.refreshWorkspaceToggle()
-        
-        // Start widget manager listening
+
+        // Start widget managers (fast operations)
         if (::widgetManager.isInitialized) {
             widgetManager.onStart()
         }
         if (::mediaPlayerWidgetManager.isInitialized) {
             mediaPlayerWidgetManager.onStart()
+        }
+
+        // PRIORITY 2: Load lightweight data in background (non-blocking)
+        // Invalidate cache but don't refresh immediately
+        usageStatsManager.invalidateCache()
+        
+        // Start update runnable immediately for time/date
+        if (isInPowerSaverMode) {
+            handler.post(powerSaverUpdateRunnable)
+        } else {
+            handler.post(updateRunnable)
+        }
+
+        // PRIORITY 3: Defer expensive operations until after UI is shown
+        // Use handler.postDelayed to let UI render first
+        handler.postDelayed({
+            // Load wallpaper asynchronously (non-blocking)
+            setWallpaperBackground()
+            
+            // Update battery and usage (lightweight operations)
+            updateBatteryInBackground()
+            updateUsageInBackground()
+            
+            // Refresh usage data but defer expensive weekly graph loading
+            refreshUsageDataInBackground(deferExpensive = true)
+            
+            // Check date change in background
+            backgroundExecutor.execute {
+                checkDateChangeAndRefreshUsage()
+            }
+            
+            // Load expensive weekly usage graph data after a delay (only if visible)
+            handler.postDelayed({
+                if (::weeklyUsageGraph.isInitialized && weeklyUsageGraph.visibility == View.VISIBLE) {
+                    loadWeeklyUsageGraphData()
+                }
+            }, 500) // Load after 500ms delay
+            
+            // Reschedule todo alarms (non-critical, can wait)
+            if (::todoAlarmManager.isInitialized) {
+                rescheduleTodoAlarms()
+            }
+        }, 50) // Small delay to let UI render first
+
+        // Only update weather if it's been more than 10 minutes (defer this too)
+        val lastWeatherUpdate = sharedPreferences.getLong("last_weather_update", 0)
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastWeatherUpdate > 600000) { // 10 minutes
+            lastWeatherUpdateTime = currentTime
+            handler.postDelayed({
+                setupWeather()
+                sharedPreferences.edit().putLong("last_weather_update", currentTime).apply()
+            }, 200) // Defer weather update
+        } else {
+            lastWeatherUpdateTime = lastWeatherUpdate
         }
     }
 
@@ -1040,15 +1099,27 @@ class MainActivity : FragmentActivity() {
         dateTextView.text = currentTime
     }
 
-    fun loadApps() {
+    fun loadApps(forceRefresh: Boolean = false) {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
         backgroundExecutor.execute {
             try {
-                val mainIntent = Intent(Intent.ACTION_MAIN, null)
-                mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-                val unsortedList = packageManager.queryIntentActivities(mainIntent, 0)
+                // Use cached list if available and not forcing refresh
+                val currentTime = System.currentTimeMillis()
+                val unsortedList = if (!forceRefresh && 
+                    cachedUnsortedList != null && 
+                    (currentTime - lastCacheTime) < CACHE_DURATION) {
+                    cachedUnsortedList!!
+                } else {
+                    // Reload from package manager only when needed
+                    val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                    mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                    val list = packageManager.queryIntentActivities(mainIntent, 0)
+                    cachedUnsortedList = list
+                    lastCacheTime = currentTime
+                    list
+                }
 
                 if (unsortedList.isEmpty()) {
                     runOnUiThread {
@@ -1056,54 +1127,24 @@ class MainActivity : FragmentActivity() {
                         recyclerView.visibility = View.VISIBLE
                     }
                 } else {
-                    // Use concurrent filtering and caching in a single pass for better performance
-                    val labelCache = java.util.concurrent.ConcurrentHashMap<String, String>()
-                    val usageCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
-                    // Filter, cache labels/usage, and collect in a single parallel stream pass
-                    val filteredApps = unsortedList.parallelStream()
-                        .filter { app ->
-                            val packageName = app.activityInfo.packageName
-                            packageName != "com.guruswarupa.launch" &&
-                                    (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
-                                    (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
-                        }
-                        .peek { app ->
-                            // Pre-compute labels and usage stats while filtering
-                            val packageName = app.activityInfo.packageName
-                            labelCache.computeIfAbsent(packageName) {
-                                try {
-                                    app.loadLabel(packageManager).toString().lowercase()
-                                } catch (e: Exception) {
-                                    packageName.lowercase()
-                                }
-                            }
-                            usageCache.computeIfAbsent(packageName) {
-                                sharedPreferences.getInt("usage_$packageName", 0)
-                            }
-                        }
-                        .sorted(
-                            compareByDescending<ResolveInfo> { 
-                                usageCache[it.activityInfo.packageName] ?: 0
-                            }
-                            .thenBy { 
-                                labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
-                            }
-                        )
-                        .collect(java.util.stream.Collectors.toList())
-                        .toMutableList()
+                    // STEP 1: Fast filtering without expensive operations - show list immediately
+                    val filteredApps = unsortedList.filter { app ->
+                        val packageName = app.activityInfo.packageName
+                        packageName != "com.guruswarupa.launch" &&
+                                (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
+                                (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
+                    }.toMutableList()
                     
-                    val processedAppList = filteredApps
-
                     // Filter apps based on favorite/show all mode
-                    val finalAppList = favoriteAppManager.filterApps(processedAppList, isShowAllAppsMode)
+                    val finalAppList = favoriteAppManager.filterApps(filteredApps, isShowAllAppsMode)
 
-                    // Update UI on main thread
+                    // STEP 2: Show list immediately without sorting/labels (fast initial render)
                     runOnUiThread {
                         appList = finalAppList.toMutableList()
-                        fullAppList = ArrayList(processedAppList)
+                        fullAppList = ArrayList(filteredApps)
 
                         // Optimize: Update existing adapter instead of creating new one
                         if (::adapter.isInitialized) {
@@ -1124,14 +1165,72 @@ class MainActivity : FragmentActivity() {
                         appDockManager.refreshFavoriteToggle()
 
                         // Initialize AppSearchManager
-                        appSearchManager = AppSearchManager(
-                            packageManager,
-                            appList,
-                            fullAppList,
-                            adapter,
-                            searchBox,
-                            contactsList
-                        )
+                        if (!::appSearchManager.isInitialized) {
+                            appSearchManager = AppSearchManager(
+                                packageManager,
+                                appList,
+                                fullAppList,
+                                adapter,
+                                searchBox,
+                                contactsList
+                            )
+                        }
+                    }
+                    
+                    // STEP 3: Load labels, usage stats, and sort in background (after UI is shown)
+                    backgroundExecutor.execute {
+                        try {
+                            // Batch read all usage stats at once (much faster than individual reads)
+                            val allPrefs = sharedPreferences.all
+                            val usageCache = mutableMapOf<String, Int>()
+                            for ((key, value) in allPrefs) {
+                                if (key.startsWith("usage_") && value is Int) {
+                                    val packageName = key.removePrefix("usage_")
+                                    usageCache[packageName] = value
+                                }
+                            }
+                            
+                            // Load labels and create sorted list
+                            val labelCache = mutableMapOf<String, String>()
+                            val sortedApps = filteredApps.sortedWith(
+                                compareByDescending<ResolveInfo> { 
+                                    usageCache[it.activityInfo.packageName] ?: 0
+                                }
+                                .thenBy { app ->
+                                    val packageName = app.activityInfo.packageName
+                                    labelCache.getOrPut(packageName) {
+                                        try {
+                                            app.loadLabel(packageManager).toString().lowercase()
+                                        } catch (e: Exception) {
+                                            packageName.lowercase()
+                                        }
+                                    }
+                                }
+                            )
+                            
+                            // Update with sorted list
+                            val sortedFinalList = favoriteAppManager.filterApps(sortedApps, isShowAllAppsMode)
+                            
+                            runOnUiThread {
+                                appList = sortedFinalList.toMutableList()
+                                fullAppList = ArrayList(sortedApps)
+                                adapter.updateAppList(appList)
+                                
+                                // Update AppSearchManager with sorted list
+                                if (::appSearchManager.isInitialized) {
+                                    appSearchManager = AppSearchManager(
+                                        packageManager,
+                                        appList,
+                                        fullAppList,
+                                        adapter,
+                                        searchBox,
+                                        contactsList
+                                    )
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "Error sorting apps", e)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -1373,12 +1472,17 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun loadWeeklyUsageData() {
+        // This function is already called from background threads, but ensure UI updates are on main thread
         if (usageStatsManager.hasUsageStatsPermission()) {
             val weeklyData = usageStatsManager.getWeeklyUsageData()
-            weeklyUsageGraph.setUsageData(weeklyData)
-
             val appUsageData = usageStatsManager.getWeeklyAppUsageData()
-            weeklyUsageGraph.setAppUsageData(appUsageData)
+            
+            runOnUiThread {
+                if (::weeklyUsageGraph.isInitialized) {
+                    weeklyUsageGraph.setUsageData(weeklyData)
+                    weeklyUsageGraph.setAppUsageData(appUsageData)
+                }
+            }
         }
     }
     
@@ -1461,9 +1565,21 @@ class MainActivity : FragmentActivity() {
     private fun refreshUsageStats() {
         // Clear adapter cache to force refresh
         adapter?.clearUsageCache()
-        runOnUiThread {
-            adapter?.notifyDataSetChanged()
-        }
+        // Only refresh visible items for better performance
+        handler.postDelayed({
+            val layoutManager = recyclerView.layoutManager
+            if (layoutManager is LinearLayoutManager) {
+                val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
+                if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
+                    adapter?.notifyItemRangeChanged(firstVisible, lastVisible - firstVisible + 1)
+                } else {
+                    adapter?.notifyDataSetChanged()
+                }
+            } else {
+                adapter?.notifyDataSetChanged()
+            }
+        }, 100)
     }
 
     private fun setupWeather() {
@@ -2141,6 +2257,8 @@ class MainActivity : FragmentActivity() {
         findViewById<LinearLayout>(R.id.finance_widget)?.visibility = View.VISIBLE
         if (::weeklyUsageGraph.isInitialized) {
             weeklyUsageGraph.visibility = View.VISIBLE
+            // Load weekly usage data when graph becomes visible (lazy loading)
+            loadWeeklyUsageGraphData()
         }
         // Show the entire weekly usage widget container
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.VISIBLE

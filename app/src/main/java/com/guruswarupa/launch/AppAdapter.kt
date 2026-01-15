@@ -12,6 +12,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.DiffUtil
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
@@ -40,6 +41,8 @@ class AppAdapter(
     private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
     private val CACHE_DURATION = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
+    private var itemsRendered = 0 // Track how many items have been rendered
+    private val iconPreloadExecutor = Executors.newFixedThreadPool(2) // Separate thread pool for icon preloading
     
     /**
      * Clear usage cache to force refresh of usage times
@@ -61,19 +64,98 @@ class AppAdapter(
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
         executor.execute {
-            val newItems = mutableListOf<ResolveInfo>()
+            val newItems = ArrayList(newAppList)
+            val isFirstLoad = itemsRendered == 0
 
-            // Create a copy of the list to avoid concurrent modification
-            val safeCopy = ArrayList(newAppList)
-            for (app in safeCopy) {
-                newItems.add(app)
-            }
-
-            // Update UI on main thread
+            // Update UI on main thread with DiffUtil for efficient updates
             (context as? Activity)?.runOnUiThread {
+                val diffCallback = AppListDiffCallback(appList, newItems)
+                val diffResult = DiffUtil.calculateDiff(diffCallback)
+                
                 appList.clear()
                 appList.addAll(newItems)
-                notifyDataSetChanged()
+                diffResult.dispatchUpdatesTo(this)
+                
+                // Pre-load icons asynchronously after initial render (only on first load)
+                if (isFirstLoad && newItems.isNotEmpty()) {
+                    itemsRendered = newItems.size
+                    preloadIcons(newItems)
+                }
+            }
+        }
+    }
+    
+    /**
+     * DiffUtil callback for efficient RecyclerView updates
+     */
+    private class AppListDiffCallback(
+        private val oldList: List<ResolveInfo>,
+        private val newList: List<ResolveInfo>
+    ) : DiffUtil.Callback() {
+        override fun getOldListSize(): Int = oldList.size
+        
+        override fun getNewListSize(): Int = newList.size
+        
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            val oldPackage = oldList[oldItemPosition].activityInfo.packageName
+            val newPackage = newList[newItemPosition].activityInfo.packageName
+            return oldPackage == newPackage
+        }
+        
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            val oldItem = oldList[oldItemPosition]
+            val newItem = newList[newItemPosition]
+            return oldItem.activityInfo.packageName == newItem.activityInfo.packageName &&
+                   oldItem.activityInfo.name == newItem.activityInfo.name
+        }
+    }
+    
+    /**
+     * Pre-loads icons in background to improve scroll performance
+     */
+    private fun preloadIcons(apps: List<ResolveInfo>) {
+        iconPreloadExecutor.execute {
+            for (app in apps) {
+                val packageName = app.activityInfo.packageName
+                
+                // Skip special entries
+                if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
+                        "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                    continue
+                }
+                
+                // Pre-load icon if not cached
+                if (!iconCache.containsKey(packageName)) {
+                    try {
+                        val isValidApp = packageValidityCache.getOrPut(packageName) {
+                            app.activityInfo?.applicationInfo != null
+                        }
+                        
+                        if (isValidApp) {
+                            val icon = app.loadIcon(activity.packageManager)
+                            iconCache[packageName] = icon
+                        }
+                    } catch (e: Exception) {
+                        // Ignore errors during pre-loading
+                    }
+                }
+                
+                // Pre-load label if not cached
+                if (!labelCache.containsKey(packageName)) {
+                    try {
+                        val isValidApp = packageValidityCache.getOrPut(packageName) {
+                            app.activityInfo?.applicationInfo != null
+                        }
+                        
+                        if (isValidApp) {
+                            val label = app.loadLabel(activity.packageManager)?.toString()
+                                ?: app.activityInfo.packageName
+                            labelCache[packageName] = label
+                        }
+                    } catch (e: Exception) {
+                        // Ignore errors during pre-loading
+                    }
+                }
             }
         }
     }
@@ -115,14 +197,33 @@ class AppAdapter(
 
         // Show usage time only in list mode and when power saver is disabled
         // Hide usage time in power saver mode to save battery (no usage queries)
+        // Defer usage stats loading on initial render for better performance
         val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
         
         if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
-            // Use cached usage time (cache lookup is fast, actual query only if cache expired)
-            val usageTime = getUsageTimeWithCache(packageName)
-            val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-            holder.appUsageTime?.text = formattedTime
-            holder.appUsageTime?.visibility = View.VISIBLE
+            // On first 20 items, defer usage stats to improve initial render speed
+            // After that, load immediately for better UX
+            if (position < 20 && itemsRendered < 20) {
+                holder.appUsageTime?.text = ""
+                holder.appUsageTime?.visibility = View.VISIBLE
+                // Load usage time asynchronously after initial render
+                executor.execute {
+                    val usageTime = getUsageTimeWithCache(packageName)
+                    val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+                    (context as? Activity)?.runOnUiThread {
+                        // Only update if this holder still shows the same app
+                        if (holder.bindingAdapterPosition == position) {
+                            holder.appUsageTime?.text = formattedTime
+                        }
+                    }
+                }
+            } else {
+                // Use cached usage time (cache lookup is fast, actual query only if cache expired)
+                val usageTime = getUsageTimeWithCache(packageName)
+                val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+                holder.appUsageTime?.text = formattedTime
+                holder.appUsageTime?.visibility = View.VISIBLE
+            }
         } else {
             holder.appUsageTime?.visibility = View.GONE
         }
