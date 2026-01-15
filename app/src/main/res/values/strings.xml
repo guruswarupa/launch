@@ -2,4 +2,23 @@
     <string name="app_name">Launch</string>
     <string name="settings_app_name">Launch Settings</string>
     <string name="search_text"> Search...</string>
+    
+    <!-- Share Manager strings -->
+    <string name="share_dialog_title">What would you like to share?</string>
+    <string name="share_app_apk">Share an App (APK)</string>
+    <string name="share_file">Share a File</string>
+    <string name="select_app_to_share">Select App to Share</string>
+    <string name="no_apps_available_to_share">No apps available to share</string>
+    <string name="activity_not_available">Activity not available</string>
+    <string name="no_file_manager_available">No file manager available</string>
+    <string name="no_file_selected">No file selected</string>
+    <string name="sharing_file">Sharing file</string>
+    <string name="error_sharing_file">Error sharing file: %1$s</string>
+    <string name="preparing_apk_for_sharing">Preparing APK for sharing…</string>
+    <string name="apk_file_not_found">APK file not found</string>
+    <string name="error_copying_apk">Error copying APK file</string>
+    <string name="error_sharing_apk">Error sharing APK: %1$s</string>
+    <string name="error_creating_cache_directory">Error creating cache directory</string>
+    <string name="sharing_apk">Sharing %1$s APK</string>
+    <string name="share_apk_title">Share %1$s APK</string>
 </resources>

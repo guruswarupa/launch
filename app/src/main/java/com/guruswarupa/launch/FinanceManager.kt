@@ -145,18 +145,22 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     }
 
     private fun cleanupOldTransactions() {
+        // Use getAll() only once and filter efficiently
         val allPrefs = sharedPreferences.all
         val transactionKeys = allPrefs.keys.filter { it.startsWith("transaction_") }
 
         if (transactionKeys.size > 100) {
-            val sortedKeys = transactionKeys.sortedByDescending {
-                it.substringAfter("transaction_").toLongOrNull() ?: 0L
+            // Sort keys by timestamp (descending) - more efficient parsing
+            val sortedKeys = transactionKeys.sortedByDescending { key ->
+                key.substringAfter("transaction_").toLongOrNull() ?: 0L
             }
 
-            // Remove oldest transactions
+            // Batch remove operations for better performance
+            val editor = sharedPreferences.edit()
             sortedKeys.drop(100).forEach { key ->
-                sharedPreferences.edit().remove(key).apply()
+                editor.remove(key)
             }
+            editor.apply() // Single apply() call instead of multiple
         }
     }
 }
