@@ -138,28 +138,6 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Media Player Widget Section -->
-                <FrameLayout
-                    android:id="@+id/media_player_widget_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:layout_marginBottom="16dp"
-                    android:minHeight="80dp"
-                    android:gravity="center">
-
-                    <ImageButton
-                        android:id="@+id/add_media_player_widget_button"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_gravity="center"
-                        android:background="@drawable/button_neutral_ripple"
-                        android:src="@drawable/ic_add"
-                        android:tint="@color/white"
-                        android:contentDescription="Add media player widget"
-                        android:padding="8dp" />
-                </FrameLayout>
-
                 <!-- Search Box -->
                 <LinearLayout
                     android:layout_width="match_parent"

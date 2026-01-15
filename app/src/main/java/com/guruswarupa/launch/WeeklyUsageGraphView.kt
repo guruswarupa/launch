@@ -183,12 +183,6 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         
         instructionPaint.textSize = 12f
         instructionPaint.textAlign = Paint.Align.CENTER
-        canvas.drawText(
-            "Tap a day card to see detailed usage",
-            width / 2f,
-            lastCardBottom,
-            instructionPaint
-        )
     }
     
     override fun onTouchEvent(event: MotionEvent): Boolean {
