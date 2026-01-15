@@ -48,8 +48,10 @@ class TodoAlarmManager(private val context: Context) {
      * Schedule interval-based alarm (Pomodoro-style)
      */
     private fun scheduleIntervalAlarm(todoItem: TodoItem, requestCode: Int) {
-        val (startHour, startMinute) = parseTime(todoItem.intervalStartTime!!) ?: return
-        val intervalMinutes = todoItem.recurrenceInterval!!
+        val intervalStartTime = todoItem.intervalStartTime ?: return
+        val recurrenceInterval = todoItem.recurrenceInterval ?: return
+        val (startHour, startMinute) = parseTime(intervalStartTime) ?: return
+        val intervalMinutes = recurrenceInterval
 
         val calendar = Calendar.getInstance()
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)

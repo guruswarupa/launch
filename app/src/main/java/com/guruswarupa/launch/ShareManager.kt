@@ -55,7 +55,12 @@ class ShareManager(private val context: Context) {
         }
 
         try {
-            (context as MainActivity).startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
+            val activity = context as? MainActivity
+            if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
+                activity.startActivityForResult(intent, FILE_PICKER_REQUEST_CODE)
+            } else {
+                Toast.makeText(context, "Activity not available", Toast.LENGTH_SHORT).show()
+            }
         } catch (e: Exception) {
             Toast.makeText(context, "No file manager available", Toast.LENGTH_SHORT).show()
         }
