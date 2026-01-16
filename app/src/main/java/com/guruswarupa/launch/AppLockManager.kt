@@ -198,7 +198,7 @@ class AppLockManager(private val context: Context) {
 
     // Check if PIN is set
     fun isPinSet(): Boolean {
-        return sharedPreferences.getString(PREF_PIN_HASH, "")!!.isNotEmpty()
+        return sharedPreferences.getString(PREF_PIN_HASH, null)?.isNotEmpty() == true
     }
 
     // Check if fingerprint authentication is available on the device

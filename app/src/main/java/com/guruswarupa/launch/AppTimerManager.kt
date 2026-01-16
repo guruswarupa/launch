@@ -51,7 +51,7 @@ class AppTimerManager(private val context: Context) {
         val input = EditText(context)
         input.hint = "Enter minutes"
 
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Timer")
             .setMessage("Enter time in minutes:")
             .setView(input)
@@ -183,7 +183,10 @@ class AppTimerManager(private val context: Context) {
         // Run in background thread to avoid blocking
         backgroundExecutor.execute {
             try {
-                val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                if (activityManager == null) {
+                    return@execute
+                }
                 
                 // Kill all background processes for this package
                 // Since we've already brought launcher to foreground, the app should be in background
@@ -207,15 +210,14 @@ class AppTimerManager(private val context: Context) {
                         val recentTasks = activityManager.getRecentTasks(50, ActivityManager.RECENT_WITH_EXCLUDED)
                         for (taskInfo in recentTasks) {
                             val baseIntent = taskInfo.baseIntent
-                            if (baseIntent != null && baseIntent.component != null) {
-                                if (baseIntent.component!!.packageName == packageName) {
-                                    // Try to remove this task
-                                    try {
-                                        // Kill processes first
-                                        activityManager.killBackgroundProcesses(packageName)
-                                    } catch (e: Exception) {
-                                        // Ignore - we don't have permission to manipulate tasks
-                                    }
+                            val component = baseIntent?.component
+                            if (component != null && component.packageName == packageName) {
+                                // Try to remove this task
+                                try {
+                                    // Kill processes first
+                                    activityManager.killBackgroundProcesses(packageName)
+                                } catch (e: Exception) {
+                                    // Ignore - we don't have permission to manipulate tasks
                                 }
                             }
                         }
@@ -231,8 +233,8 @@ class AppTimerManager(private val context: Context) {
                 // If we don't have permission, at least the app is in background
                 // Android will manage it
                 try {
-                    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-                    activityManager.killBackgroundProcesses(packageName)
+                    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                    activityManager?.killBackgroundProcesses(packageName)
                 } catch (e2: Exception) {
                     // Ignore
                 }

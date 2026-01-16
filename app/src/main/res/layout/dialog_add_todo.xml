@@ -82,7 +82,74 @@
             android:text="Recurring Task"
             android:textColor="@color/white"
             android:buttonTint="@color/white"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="8dp" />
+
+        <!-- Recurrence Type Selection -->
+        <RadioGroup
+            android:id="@+id/recurrence_type_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            android:layout_marginBottom="8dp">
+
+            <RadioButton
+                android:id="@+id/recurrence_days"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Days"
+                android:textColor="@color/white"
+                android:buttonTint="@color/white"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/recurrence_interval"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Interval"
+                android:textColor="@color/white"
+                android:buttonTint="@color/white" />
+
+        </RadioGroup>
+
+        <!-- Interval Selection Container -->
+        <LinearLayout
+            android:id="@+id/interval_selection_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Repeat Every:"
+                android:textColor="@color/white"
+                android:layout_marginBottom="8dp" />
+
+            <Spinner
+                android:id="@+id/interval_spinner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Start Time:"
+                android:textColor="@color/white"
+                android:layout_marginBottom="8dp" />
+
+            <TimePicker
+                android:id="@+id/interval_start_time_picker"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:timePickerMode="spinner" />
+
+        </LinearLayout>
 
         <!-- Days Selection Container -->
         <LinearLayout

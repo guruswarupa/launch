@@ -65,13 +65,14 @@
         <item name="rippleColor">@color/nord7</item>
     </style>
     <style name="DayBadge">
-        <item name="android:layout_width">16dp</item>
-        <item name="android:layout_height">16dp</item>
-        <item name="android:layout_marginEnd">2dp</item>
-        <item name="android:background">@drawable/circular_background</item>
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:layout_marginEnd">3dp</item>
+        <item name="android:background">@drawable/day_badge_background</item>
         <item name="android:gravity">center</item>
-        <item name="android:textSize">8sp</item>
-        <item name="android:textColor">@color/gray</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
 </resources>

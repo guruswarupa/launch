@@ -12,6 +12,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.DiffUtil
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
@@ -38,8 +39,11 @@ class AppAdapter(
     private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
     private val labelCache = mutableMapOf<String, String>() // packageName to label
     private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
+    private val specialAppIconCache = mutableMapOf<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
     private val CACHE_DURATION = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
+    private var itemsRendered = 0 // Track how many items have been rendered
+    private val iconPreloadExecutor = Executors.newFixedThreadPool(2) // Separate thread pool for icon preloading
     
     /**
      * Clear usage cache to force refresh of usage times
@@ -61,19 +65,98 @@ class AppAdapter(
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
         executor.execute {
-            val newItems = mutableListOf<ResolveInfo>()
+            val newItems = ArrayList(newAppList)
+            val isFirstLoad = itemsRendered == 0
 
-            // Create a copy of the list to avoid concurrent modification
-            val safeCopy = ArrayList(newAppList)
-            for (app in safeCopy) {
-                newItems.add(app)
-            }
-
-            // Update UI on main thread
+            // Update UI on main thread with DiffUtil for efficient updates
             (context as? Activity)?.runOnUiThread {
+                val diffCallback = AppListDiffCallback(appList, newItems)
+                val diffResult = DiffUtil.calculateDiff(diffCallback)
+                
                 appList.clear()
                 appList.addAll(newItems)
-                notifyDataSetChanged()
+                diffResult.dispatchUpdatesTo(this)
+                
+                // Pre-load icons asynchronously after initial render (only on first load)
+                if (isFirstLoad && newItems.isNotEmpty()) {
+                    itemsRendered = newItems.size
+                    preloadIcons(newItems)
+                }
+            }
+        }
+    }
+    
+    /**
+     * DiffUtil callback for efficient RecyclerView updates
+     */
+    private class AppListDiffCallback(
+        private val oldList: List<ResolveInfo>,
+        private val newList: List<ResolveInfo>
+    ) : DiffUtil.Callback() {
+        override fun getOldListSize(): Int = oldList.size
+        
+        override fun getNewListSize(): Int = newList.size
+        
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            val oldPackage = oldList[oldItemPosition].activityInfo.packageName
+            val newPackage = newList[newItemPosition].activityInfo.packageName
+            return oldPackage == newPackage
+        }
+        
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            val oldItem = oldList[oldItemPosition]
+            val newItem = newList[newItemPosition]
+            return oldItem.activityInfo.packageName == newItem.activityInfo.packageName &&
+                   oldItem.activityInfo.name == newItem.activityInfo.name
+        }
+    }
+    
+    /**
+     * Pre-loads icons in background to improve scroll performance
+     */
+    private fun preloadIcons(apps: List<ResolveInfo>) {
+        iconPreloadExecutor.execute {
+            for (app in apps) {
+                val packageName = app.activityInfo.packageName
+                
+                // Skip special entries
+                if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
+                        "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                    continue
+                }
+                
+                // Pre-load icon if not cached
+                if (!iconCache.containsKey(packageName)) {
+                    try {
+                        val isValidApp = packageValidityCache.getOrPut(packageName) {
+                            app.activityInfo?.applicationInfo != null
+                        }
+                        
+                        if (isValidApp) {
+                            val icon = app.loadIcon(activity.packageManager)
+                            iconCache[packageName] = icon
+                        }
+                    } catch (e: Exception) {
+                        // Ignore errors during pre-loading
+                    }
+                }
+                
+                // Pre-load label if not cached
+                if (!labelCache.containsKey(packageName)) {
+                    try {
+                        val isValidApp = packageValidityCache.getOrPut(packageName) {
+                            app.activityInfo?.applicationInfo != null
+                        }
+                        
+                        if (isValidApp) {
+                            val label = app.loadLabel(activity.packageManager)?.toString()
+                                ?: app.activityInfo.packageName
+                            labelCache[packageName] = label
+                        }
+                    } catch (e: Exception) {
+                        // Ignore errors during pre-loading
+                    }
+                }
             }
         }
     }
@@ -115,14 +198,33 @@ class AppAdapter(
 
         // Show usage time only in list mode and when power saver is disabled
         // Hide usage time in power saver mode to save battery (no usage queries)
+        // Defer usage stats loading on initial render for better performance
         val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
         
         if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
-            // Use cached usage time (cache lookup is fast, actual query only if cache expired)
-            val usageTime = getUsageTimeWithCache(packageName)
-            val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-            holder.appUsageTime?.text = formattedTime
-            holder.appUsageTime?.visibility = View.VISIBLE
+            // On first 20 items, defer usage stats to improve initial render speed
+            // After that, load immediately for better UX
+            if (position < 20 && itemsRendered < 20) {
+                holder.appUsageTime?.text = ""
+                holder.appUsageTime?.visibility = View.VISIBLE
+                // Load usage time asynchronously after initial render
+                executor.execute {
+                    val usageTime = getUsageTimeWithCache(packageName)
+                    val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+                    (context as? Activity)?.runOnUiThread {
+                        // Only update if this holder still shows the same app
+                        if (holder.bindingAdapterPosition == position) {
+                            holder.appUsageTime?.text = formattedTime
+                        }
+                    }
+                }
+            } else {
+                // Use cached usage time (cache lookup is fast, actual query only if cache expired)
+                val usageTime = getUsageTimeWithCache(packageName)
+                val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+                holder.appUsageTime?.text = formattedTime
+                holder.appUsageTime?.visibility = View.VISIBLE
+            }
         } else {
             holder.appUsageTime?.visibility = View.GONE
         }
@@ -159,11 +261,25 @@ class AppAdapter(
 
             "play_store_search" -> {
                 // Display Play Store search option
-                try {
-                    holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
-                } catch (e: Exception) {
-                    // Use a default icon if Play Store is not installed
+                val cachedIcon = specialAppIconCache["com.android.vending"]
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Load icon asynchronously to avoid blocking
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    executor.execute {
+                        try {
+                            val icon = activity.packageManager.getApplicationIcon("com.android.vending")
+                            specialAppIconCache["com.android.vending"] = icon
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(icon)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Icon already set to default, no need to update
+                        }
+                    }
                 }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} on Play Store"
                 holder.itemView.setOnClickListener {
@@ -180,11 +296,25 @@ class AppAdapter(
 
             "maps_search" -> {
                 // Set the Google Maps icon with error handling
-                try {
-                    holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
-                } catch (e: Exception) {
-                    // Use a default icon if Google Maps is not installed
+                val cachedIcon = specialAppIconCache["com.google.android.apps.maps"]
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Load icon asynchronously to avoid blocking
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    executor.execute {
+                        try {
+                            val icon = activity.packageManager.getApplicationIcon("com.google.android.apps.maps")
+                            specialAppIconCache["com.google.android.apps.maps"] = icon
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(icon)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Icon already set to default, no need to update
+                        }
+                    }
                 }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} in Google Maps"
                 holder.itemView.setOnClickListener {
@@ -205,17 +335,44 @@ class AppAdapter(
 
             "yt_search" -> {
                 // Set the YouTube icon with error handling (prefer Revanced, then regular YouTube)
-                try {
-                    // Try Revanced first
-                    try {
-                        holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("app.revanced.android.youtube"))
-                    } catch (e: Exception) {
-                        // Fall back to regular YouTube
-                        holder.appIcon.setImageDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
-                    }
-                } catch (e: Exception) {
-                    // Use a default icon if neither is installed
+                val cachedRevanced = specialAppIconCache["app.revanced.android.youtube"]
+                val cachedYouTube = specialAppIconCache["com.google.android.youtube"]
+                val cachedIcon = cachedRevanced ?: cachedYouTube
+                
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Load icon asynchronously to avoid blocking
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    executor.execute {
+                        try {
+                            // Try Revanced first
+                            try {
+                                val icon = activity.packageManager.getApplicationIcon("app.revanced.android.youtube")
+                                specialAppIconCache["app.revanced.android.youtube"] = icon
+                                (context as? Activity)?.runOnUiThread {
+                                    if (holder.bindingAdapterPosition == position) {
+                                        holder.appIcon.setImageDrawable(icon)
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // Fall back to regular YouTube
+                                try {
+                                    val icon = activity.packageManager.getApplicationIcon("com.google.android.youtube")
+                                    specialAppIconCache["com.google.android.youtube"] = icon
+                                    (context as? Activity)?.runOnUiThread {
+                                        if (holder.bindingAdapterPosition == position) {
+                                            holder.appIcon.setImageDrawable(icon)
+                                        }
+                                    }
+                                } catch (e2: Exception) {
+                                    // Icon already set to default, no need to update
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Icon already set to default, no need to update
+                        }
+                    }
                 }
                 holder.appName?.text = "Search ${appInfo.activityInfo.name} on YouTube"
                 holder.itemView.setOnClickListener {
@@ -284,35 +441,74 @@ class AppAdapter(
                     appInfo.activityInfo?.applicationInfo != null
                 }
 
-                // Use cached label or load and cache it
-                val label = labelCache.getOrPut(packageName) {
-                    try {
-                        if (isValidApp) {
-                            appInfo.loadLabel(activity.packageManager)?.toString()
-                                ?: appInfo.activityInfo.packageName
-                        } else {
-                            // For custom ResolveInfo objects, use the name directly
-                            appInfo.activityInfo?.name ?: "Unknown"
+                // Use cached label first (fast path)
+                val cachedLabel = labelCache[packageName]
+                if (cachedLabel != null) {
+                    holder.appName?.text = cachedLabel
+                } else {
+                    // Show placeholder immediately
+                    holder.appName?.text = appInfo.activityInfo?.packageName ?: "Loading..."
+                    // Load label asynchronously in background
+                    executor.execute {
+                        try {
+                            val label = if (isValidApp) {
+                                appInfo.loadLabel(activity.packageManager)?.toString()
+                                    ?: appInfo.activityInfo.packageName
+                            } else {
+                                appInfo.activityInfo?.name ?: "Unknown"
+                            }
+                            labelCache[packageName] = label
+                            // Update UI on main thread
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appName?.text = label
+                                }
+                            }
+                        } catch (e: Exception) {
+                            val fallbackLabel = appInfo.activityInfo?.packageName ?: "Unknown"
+                            labelCache[packageName] = fallbackLabel
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appName?.text = fallbackLabel
+                                }
+                            }
                         }
-                    } catch (e: Exception) {
-                        appInfo.activityInfo?.packageName ?: "Unknown"
                     }
                 }
-                holder.appName?.text = label
 
-                // Use cached icon or load and cache it
-                val icon = iconCache.getOrPut(packageName) {
-                    try {
-                        if (isValidApp) {
-                            appInfo.loadIcon(activity.packageManager)
-                        } else {
-                            activity.getDrawable(R.drawable.ic_default_app_icon)
+                // Use cached icon first (fast path)
+                val cachedIcon = iconCache[packageName]
+                if (cachedIcon != null) {
+                    holder.appIcon.setImageDrawable(cachedIcon)
+                } else {
+                    // Show placeholder immediately
+                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    // Load icon asynchronously in background
+                    iconPreloadExecutor.execute {
+                        try {
+                            val icon = if (isValidApp) {
+                                appInfo.loadIcon(activity.packageManager)
+                            } else {
+                                activity.getDrawable(R.drawable.ic_default_app_icon)
+                            } as? Drawable ?: activity.getDrawable(R.drawable.ic_default_app_icon)!!
+                            iconCache[packageName] = icon
+                            // Update UI on main thread
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(icon)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            val fallbackIcon = activity.getDrawable(R.drawable.ic_default_app_icon)!!
+                            iconCache[packageName] = fallbackIcon
+                            (context as? Activity)?.runOnUiThread {
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon.setImageDrawable(fallbackIcon)
+                                }
+                            }
                         }
-                    } catch (e: Exception) {
-                        activity.getDrawable(R.drawable.ic_default_app_icon)
-                    } as Drawable
+                    }
                 }
-                holder.appIcon.setImageDrawable(icon)
 
                 holder.itemView.setOnClickListener {
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
@@ -321,7 +517,8 @@ class AppAdapter(
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
 
-                        val appName = appInfo.loadLabel(activity.packageManager).toString()
+                        // Use cached label or fallback to package name (avoid blocking loadLabel call)
+                        val appName = labelCache[packageName] ?: appInfo.activityInfo?.packageName ?: packageName
 
                         // Show timer dialog only for social media and entertainment apps
                         val shouldShowTimer = activity.appCategoryManager.shouldShowTimer(packageName, appName)
@@ -420,7 +617,14 @@ class AppAdapter(
     }
 
     private fun shareApp(packageName: String, appInfo: ResolveInfo) {
-        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        // Use cached label or load async to avoid blocking
+        val appName = labelCache[packageName] ?: run {
+            try {
+                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
+            } catch (e: Exception) {
+                packageName
+            }
+        }
         val shareManager = ShareManager(activity)
         shareManager.shareApk(packageName, appName)
     }
@@ -433,7 +637,14 @@ class AppAdapter(
     }
 
     private fun toggleFavoriteApp(packageName: String, appInfo: ResolveInfo) {
-        val appName = appInfo.loadLabel(activity.packageManager).toString()
+        // Use cached label or fallback to avoid blocking
+        val appName = labelCache[packageName] ?: run {
+            try {
+                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
+            } catch (e: Exception) {
+                packageName
+            }
+        }
         val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
         
         if (isFavorite) {

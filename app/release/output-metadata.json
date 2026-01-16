@@ -4,15 +4,15 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.guruswarupa.launch",
+  "applicationId": "com.guruswarupa.launchh",
   "variantName": "release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 1,
-      "versionName": "4.5",
+      "versionCode": 5,
+      "versionName": "4.9",
       "outputFile": "app-release.apk"
     }
   ],

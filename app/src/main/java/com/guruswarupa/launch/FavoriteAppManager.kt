@@ -15,7 +15,7 @@ class FavoriteAppManager(private val sharedPreferences: SharedPreferences) {
             favoritesCache = sharedPreferences.getStringSet(FAVORITE_APPS_KEY, emptySet()) ?: emptySet()
             cacheValid = true
         }
-        return favoritesCache!!
+        return favoritesCache ?: emptySet()
     }
     
     private fun invalidateCache() {
