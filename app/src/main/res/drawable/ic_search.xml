@@ -8,7 +8,7 @@
     <!-- Main search circle -->
     <path
         android:pathData="M9.5,3A6.5,6.5 0,0 1,16 9.5c0,1.61 -0.59,3.09 -1.56,4.23l0.27,0.27h0.79l5,5 -1.5,1.5 -5,-5v-0.79l-0.27,-0.27A6.5,6.5 0,1 1,9.5 3m0,2A4.5,4.5 0,1 0,14 9.5,4.5 4.5,0 0,0 9.5,5Z"
-        android:fillColor="#e8eaed"/>
+        android:fillColor="#FFFFFF"/>
 
     <!-- Gradient effect -->
     <path

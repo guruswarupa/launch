@@ -48,6 +48,8 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.core.view.GravityCompat
 import android.widget.Spinner
@@ -146,6 +148,11 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        
+        // Make status bar and navigation bar transparent (after setContentView, post to ensure window is ready)
+        window.decorView.post {
+            makeSystemBarsTransparent()
+        }
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
@@ -1038,6 +1045,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Ensure system bars stay transparent
+        makeSystemBarsTransparent()
         // Update notifications widget when activity resumes
         if (::notificationsWidget.isInitialized) {
             notificationsWidget.updateNotifications()
@@ -2437,6 +2446,81 @@ class MainActivity : FragmentActivity() {
             return
         }
         findViewById<android.view.View>(android.R.id.content)?.setBackgroundResource(R.drawable.wallpaper_background)
+    }
+    
+    /**
+     * Make status bar and navigation bar transparent
+     */
+    private fun makeSystemBarsTransparent() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ (API 30+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.setDecorFitsSystemWindows(false)
+                
+                // Use decorView to get insetsController safely
+                val decorView = window.decorView
+                if (decorView != null) {
+                    val insetsController = decorView.windowInsetsController
+                    if (insetsController != null) {
+                        // Check if we're in light mode (night mode not active)
+                        val isLightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) != android.content.res.Configuration.UI_MODE_NIGHT_YES
+                        
+                        if (isLightMode) {
+                            // Light mode: dark icons on transparent background
+                            insetsController.setSystemBarsAppearance(
+                                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                            )
+                        } else {
+                            // Dark mode: light icons on transparent background
+                            insetsController.setSystemBarsAppearance(
+                                0,
+                                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                            )
+                        }
+                    }
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // Android 5.0+ (API 21+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val decorView = window.decorView
+                    if (decorView != null) {
+                        var flags = decorView.systemUiVisibility
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        
+                        // Check if we're in light mode
+                        val isLightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) != android.content.res.Configuration.UI_MODE_NIGHT_YES
+                        if (isLightMode) {
+                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                        }
+                        
+                        decorView.systemUiVisibility = flags
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // If anything fails, at least try to set the colors
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                }
+            } catch (ex: Exception) {
+                // Ignore if window is not ready
+            }
+        }
     }
 
     override fun onBackPressed() {

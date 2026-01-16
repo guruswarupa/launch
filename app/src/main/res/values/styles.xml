@@ -7,7 +7,39 @@
         <item name="colorPrimary">@color/nord7</item> <!-- Button color -->
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item> <!-- Rounded corners -->
+        
+        <!-- Explicit text colors for latest Android compatibility -->
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white</item>
+        <item name="android:textColor">@color/white</item>
     </style>
+    
+    <style name="CustomDialogTitleStyle" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    
+    <style name="CustomDialogBodyStyle" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+    
+    <style name="CustomDialogPositiveButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/nord7</item>
+        <item name="rippleColor">@color/nord7</item>
+    </style>
+    
+    <style name="CustomDialogNegativeButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/white</item>
+        <item name="rippleColor">@color/white</item>
+    </style>
+    
+    <style name="CustomDialogNeutralButton" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/white</item>
+        <item name="rippleColor">@color/white</item>
+    </style>
+    
     <style name="TextAppearance.Dialog.Title" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="android:textSize">18sp</item>
         <item name="android:textColor">@color/white</item>
