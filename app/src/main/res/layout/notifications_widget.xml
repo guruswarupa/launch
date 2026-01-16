@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_notifications"
+            android:tint="@color/white"
+            android:layout_marginEnd="8dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Notifications"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/notification_count_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="24dp"
+            android:minHeight="24dp"
+            android:background="@drawable/notification_badge_background"
+            android:text="0"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingHorizontal="6dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Notification List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/notifications_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="300dp"
+        android:clipToPadding="false"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp" />
+
+    <!-- Empty State / Permission Prompt -->
+    <LinearLayout
+        android:id="@+id/notifications_empty_state"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/notification_permission_prompt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enable notification access in settings"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackground" />
+    </LinearLayout>
+
+</LinearLayout>
