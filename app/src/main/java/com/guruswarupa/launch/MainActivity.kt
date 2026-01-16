@@ -109,6 +109,7 @@ class MainActivity : FragmentActivity() {
     private var isInPowerSaverMode = false
     private lateinit var todoAlarmManager: TodoAlarmManager
     private lateinit var calculatorWidget: CalculatorWidget
+    private lateinit var notificationsWidget: NotificationsWidget
 
     // Finance widget variables
     private lateinit var financeManager: FinanceManager
@@ -249,6 +250,20 @@ class MainActivity : FragmentActivity() {
         // Initialize battery and phone usage widgets
         setupBatteryAndUsage()
 
+        // Initialize notifications widget
+        val notificationsContainer = findViewById<ViewGroup>(R.id.notifications_widget_container)
+        val notificationsView = LayoutInflater.from(this).inflate(R.layout.notifications_widget, notificationsContainer, false)
+        notificationsContainer.addView(notificationsView)
+        notificationsWidget = NotificationsWidget(notificationsView)
+        
+        // Register broadcast receiver for notification updates
+        val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(notificationUpdateReceiver, notificationFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(notificationUpdateReceiver, notificationFilter)
+        }
+        
         // Initialize calculator widget
         val calculatorContainer = findViewById<ViewGroup>(R.id.calculator_widget_container)
         val calculatorView = LayoutInflater.from(this).inflate(R.layout.calculator_widget, calculatorContainer, false)
@@ -447,6 +462,16 @@ class MainActivity : FragmentActivity() {
             if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
                 loadApps() // Refresh apps with new settings
                 updateFinanceDisplay() // Refresh finance display after reset
+            }
+        }
+    }
+    
+    private val notificationUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.guruswarupa.launch.NOTIFICATIONS_UPDATED") {
+                if (::notificationsWidget.isInitialized) {
+                    notificationsWidget.updateNotifications()
+                }
             }
         }
     }
@@ -1013,6 +1038,10 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Update notifications widget when activity resumes
+        if (::notificationsWidget.isInitialized) {
+            notificationsWidget.updateNotifications()
+        }
 
         // PRIORITY 1: Show UI immediately - register receivers and update visible elements first
         val filter = IntentFilter().apply {
