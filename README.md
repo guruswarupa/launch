@@ -10,6 +10,17 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 
 ---
 
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Getting Started](#-getting-started)
+- [Development](#-development)
+- [Contributing](#-contributing)
+- [Privacy & Permissions](#-privacy--permissions)
+- [License](#-license)
+
+---
+
 ## ✨ Features
 
 ### 🔍 Smart App Management
@@ -36,12 +47,11 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - **Weather Widget**:
   - Shows real-time weather and forecast
   - Change API key via Settings
+- **Battery Widget**:
+  - Real-time battery percentage display
+  - Charging status indicator
+  - Always visible on home screen
 
-### 🧩 Dock Customization
-- Add and organize favorite apps
-- Create and manage dock app groups
-- Rename or remove dock items via long-press
-- Customize number of dock apps and layout
 
 ### 🔕 Focus Mode
 - Long press focus icon to configure apps allowed during Focus Mode
@@ -72,6 +82,57 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - Tap "Add Todo" to schedule tasks with advanced options  
 - Persistent task tracking with clean UI  
 
+### 🔔 Notifications Widget
+- View unread notification count badge
+- Quick access to recent notifications on home screen
+- Swipe to dismiss notifications directly from launcher
+- Tap notifications to open the related app
+- Requires notification access permission
+
+### 🧮 Calculator Widget
+- Full-featured calculator directly on home screen
+- **Basic Mode**: Standard arithmetic operations
+- **Scientific Mode**: Advanced functions (sin, cos, log, etc.)
+- **Converter Mode**: Unit conversions and base conversions
+- Calculation history with easy access
+- Toggle between radians and degrees
+
+### ⏱️ App Timer Manager
+- Set usage timers for individual apps
+- Quick presets: 1 minute, 5 minutes, 10 minutes
+- Custom timer duration support
+- Automatic app closure when timer expires
+- Helps manage screen time and app usage
+
+### 📱 App Categories & Organization
+- Organize apps by type (Social, Productivity, Games, etc.)
+- Filter apps by category
+- Smart grouping of rarely used apps
+
+### ⭐ Favorite Apps & Show All Mode
+- Mark apps as favorites for quick access
+- Toggle between "Favorites Only" and "Show All Apps" modes
+- Customize which apps appear in main list
+- Quick access to your most-used apps
+
+### 📦 APK Sharing
+- Share APK files of installed apps
+- Access from app context menu or dock
+- Share via any installed app (Bluetooth, email, messaging, etc.)
+- Useful for backing up apps or sharing with others
+
+### 🎨 Third-Party Widget Support
+- Add Android widgets from other apps
+- Full widget management system
+- Configure and customize widgets on home screen
+- Support for all standard Android widgets
+
+### 🎯 Onboarding Experience
+- First-run setup wizard
+- Guided introduction to key features
+- Permission requests with explanations
+- Quick start guide for new users
+
 ---
 
 ## 💰 Finance Tracker
@@ -89,6 +150,10 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - **Reset App Usage Stats**: Start fresh any time
 - **Change Display Style**: Toggle between grid and list view easily
 - **Update Weather API Key**: Use your personal API key from openweathermap.org
+- **Manage App Locks**: Configure PIN and fingerprint authentication
+- **App Timer Settings**: Configure default timer durations
+- **Widget Management**: Add, remove, and configure widgets
+- **Workspace Configuration**: Customize workspace layouts
 
 ---
 
@@ -105,6 +170,7 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 | **Type in Search Bar**      | Instant calculator                          |
 | **Long Press Focus Icon**   | Enter Focus Mode setup                      |
 | **Long Press Balance**      | View transaction history                    |
+| **Swipe Notification**      | Dismiss notification from widget            |
 
 ---
 
@@ -130,10 +196,16 @@ Use voice in the search bar for fast interactions.
 ## 🔐 Privacy & Permissions
 
 Launch requires **minimal permissions**:
-- Contacts → for contact search
-- SMS → to send messages
-- Phone → to make calls
-- Storage → for notes, wallpapers, and backups
+- **Contacts** → for contact search and quick actions
+- **SMS** → to send messages
+- **Phone** → to make calls
+- **Storage** → for notes, wallpapers, and backups
+- **Usage Stats** → for app usage tracking and sorting (optional)
+- **Notification Access** → for notifications widget (optional)
+- **Location** → for weather widget location-based forecasts (optional)
+- **Audio** → for voice search functionality (optional)
+
+All permissions are optional except for core launcher functionality. You can use the launcher with minimal permissions and enable additional features as needed.
 
 ---
 
@@ -148,12 +220,100 @@ Launch requires **minimal permissions**:
 
 ---
 
-## 🛠️ Contributing
+## 🛠️ Development
 
-Want to improve Launch? Submit issues or pull requests — all contributions are welcome!
+### Prerequisites
+
+- **Android Studio** (Hedgehog or later recommended)
+- **JDK 11** or higher
+- **Android SDK** with API level 24+ (minimum) and API level 35 (target)
+- **Gradle** 8.8.0+ (included via wrapper)
+
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/guruswarupa/launch.git
+   cd launch
+   ```
+
+2. Open the project in Android Studio
+
+3. Sync Gradle files and wait for dependencies to download
+
+4. Build the project:
+   ```bash
+   ./gradlew build
+   ```
+
+5. Run on an emulator or device:
+   ```bash
+   ./gradlew installDebug
+   ```
+
+For detailed development setup instructions, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
+### Project Structure
+
+```
+launch/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/com/guruswarupa/launch/  # Main source code
+│   │   │   ├── res/                          # Resources (layouts, drawables, etc.)
+│   │   │   └── AndroidManifest.xml
+│   │   ├── androidTest/                      # Instrumented tests
+│   │   └── test/                             # Unit tests
+│   └── build.gradle.kts                      # App-level build config
+├── gradle/
+│   └── libs.versions.toml                    # Dependency versions
+└── build.gradle.kts                           # Project-level build config
+```
+
+### Key Technologies
+
+- **Kotlin** - Primary programming language
+- **Jetpack Compose** - Modern UI toolkit
+- **AndroidX** - Android support libraries
+- **Room** - Local database
+- **Material Design 3** - UI components
+
+### Building for Release
+
+```bash
+./gradlew assembleRelease
+```
+
+The APK will be generated at `app/build/outputs/apk/release/app-release.apk`
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
+
+- How to report bugs
+- How to suggest features
+- How to submit pull requests
+- Code style and standards
+- Development workflow
+
+### Quick Start for Contributors
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Commit your changes (`git commit -m 'Add some amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
+
+For more details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
 ## 📄 License
 
-Licensed under the terms specified in the `LICENSE` file.
+This project is licensed under the MIT License with additional restrictions. See the [LICENSE](LICENSE) file for details.
+
+**Note**: This software may not be sold, rebranded, or used for commercial purposes without explicit permission.
