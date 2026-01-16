@@ -44,7 +44,7 @@
             android:id="@+id/permission_info"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="This app requires permissions for core functionality. No data is collected or stored."
+            android:text="We'll guide you through each permission request and explain why it's needed. You can skip any permission and grant it later if needed."
             android:textSize="14sp"
             android:textColor="@android:color/white"
             android:gravity="center"

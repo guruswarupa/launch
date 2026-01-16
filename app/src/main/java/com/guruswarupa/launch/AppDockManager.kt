@@ -300,7 +300,7 @@ class AppDockManager(
     private fun showWorkspaceSelector() {
         val workspaces = workspaceManager.getAllWorkspaces()
         if (workspaces.isEmpty()) {
-            Toast.makeText(context, "No workspaces available. Long press to create one.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "No workspaces available. create one.", Toast.LENGTH_SHORT).show()
             showWorkspaceSettings()
             return
         }
@@ -417,6 +417,7 @@ class AppDockManager(
             }
             // Add at the beginning (index 0)
             appDock.addView(settingsButton, 0)
+        } else {
         }
     }
 
