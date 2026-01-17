@@ -433,14 +433,31 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     }
     
     fun onStop() {
-        appWidgetHost.stopListening()
+        try {
+            appWidgetHost.stopListening()
+        } catch (e: Exception) {
+            // Handle case where stopListening fails due to stale widget references
+            // This can happen when widget providers are uninstalled or become invalid
+            Log.w(TAG, "Error stopping widget host listening", e)
+        }
     }
     
     fun onStart() {
-        appWidgetHost.startListening()
+        try {
+            appWidgetHost.startListening()
+        } catch (e: Exception) {
+            // Handle case where startListening fails
+            Log.w(TAG, "Error starting widget host listening", e)
+        }
     }
     
     fun onDestroy() {
-        appWidgetHost.stopListening()
+        try {
+            appWidgetHost.stopListening()
+        } catch (e: Exception) {
+            // Handle case where stopListening fails due to stale widget references
+            // This can happen when widget providers are uninstalled or become invalid
+            Log.w(TAG, "Error stopping widget host listening in destroy", e)
+        }
     }
 }
