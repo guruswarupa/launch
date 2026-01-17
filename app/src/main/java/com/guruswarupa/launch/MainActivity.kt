@@ -811,6 +811,18 @@ class MainActivity : FragmentActivity() {
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
         
+        // Unregister receivers to prevent leaks
+        try {
+            unregisterReceiver(settingsUpdateReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered
+        }
+        try {
+            unregisterReceiver(notificationUpdateReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered
+        }
+        
         // Shutdown executor to prevent memory leaks
         backgroundExecutor.shutdown()
         
