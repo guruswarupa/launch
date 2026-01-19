@@ -50,31 +50,33 @@
             android:name=".OnboardingActivity"
             android:exported="true"
             android:theme="@style/Theme.Launch"
-            android:screenOrientation="portrait"/>
+            android:screenOrientation="portrait"
+            android:excludeFromRecents="true"/>
 
         <activity
             android:name=".FocusModeConfigActivity"
             android:exported="false"
-            android:theme="@style/Theme.Launch" />
+            android:theme="@style/Theme.Launch"
+            android:excludeFromRecents="true" />
 
         <activity
             android:name=".WorkspaceConfigActivity"
             android:exported="false"
-            android:theme="@style/Theme.Launch" />
+            android:theme="@style/Theme.Launch"
+            android:excludeFromRecents="true" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:alwaysRetainTaskState="true"
             android:stateNotNeeded="true"
             android:theme="@style/Theme.Launch"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:excludeFromRecents="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
@@ -82,7 +84,8 @@
             android:name=".SettingsActivity"
             android:exported="true"
             android:theme="@style/Theme.Launch"
-            android:label="@string/settings_app_name">
+            android:label="@string/settings_app_name"
+            android:excludeFromRecents="true">
         </activity>
 
         <service
@@ -118,7 +121,8 @@
         <activity
             android:name=".AppLockSettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.Launch" />
+            android:theme="@style/Theme.Launch"
+            android:excludeFromRecents="true" />
 
     </application>
 
