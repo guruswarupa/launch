@@ -484,8 +484,42 @@ class MainActivity : FragmentActivity() {
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
-                loadApps() // Refresh apps with new settings
-                updateFinanceDisplay() // Refresh finance display after reset
+                // Run on UI thread to update views
+                runOnUiThread {
+                    // Update display style if changed
+                    val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"
+                    val newIsGridMode = viewPreference == "grid"
+                    val currentIsGridMode = recyclerView.layoutManager is GridLayoutManager
+                    
+                    if (newIsGridMode != currentIsGridMode && ::adapter.isInitialized) {
+                        // Update layout manager
+                        recyclerView.layoutManager = if (newIsGridMode) {
+                            GridLayoutManager(this@MainActivity, 4)
+                        } else {
+                            LinearLayoutManager(this@MainActivity)
+                        }
+                        
+                        // Recreate adapter with new mode
+                        adapter = AppAdapter(this@MainActivity, appList, searchBox, newIsGridMode, this@MainActivity)
+                        recyclerView.adapter = adapter
+                        
+                        // Update app search manager with new adapter
+                        if (::appSearchManager.isInitialized) {
+                            appSearchManager = AppSearchManager(
+                                packageManager = packageManager,
+                                appList = appList,
+                                fullAppList = fullAppList,
+                                adapter = adapter,
+                                searchBox = searchBox,
+                                contactsList = contactsList
+                            )
+                        }
+                    }
+                    
+                    // Always refresh apps to ensure latest data
+                    loadApps()
+                    updateFinanceDisplay() // Refresh finance display after reset
+                }
             }
         }
     }
