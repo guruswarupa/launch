@@ -25,6 +25,7 @@ import android.view.Gravity
 import android.widget.PopupMenu
 import java.util.concurrent.Executors
 import android.app.Activity
+import androidx.core.content.ContextCompat
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -606,7 +607,87 @@ class AppAdapter(
             }
         }
 
+        // Show the menu and then fix text colors
         popupMenu.show()
+        
+        // Fix text colors after menu is shown using reflection
+        fixPopupMenuTextColors(popupMenu)
+    }
+    
+    private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
+        try {
+            val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+            
+            // Try to get the ListView from the popup menu using reflection
+            val popupField = popupMenu.javaClass.getDeclaredField("mPopup")
+            popupField.isAccessible = true
+            val menuPopupHelper = popupField.get(popupMenu)
+            val menuPopupHelperClass = menuPopupHelper?.javaClass
+            
+            // Try different field names for different Android versions
+            val listViewFieldNames = arrayOf("mDropDownList", "mPopup")
+            var listView: android.widget.ListView? = null
+            
+            for (fieldName in listViewFieldNames) {
+                try {
+                    val listViewField = menuPopupHelperClass?.getDeclaredField(fieldName)
+                    listViewField?.isAccessible = true
+                    val result = listViewField?.get(menuPopupHelper)
+                    if (result is android.widget.ListView) {
+                        listView = result
+                        break
+                    }
+                } catch (e: NoSuchFieldException) {
+                    // Try next field name
+                }
+            }
+            
+            // If we got the ListView, fix text colors
+            listView?.post {
+                try {
+                    for (i in 0 until listView.childCount) {
+                        val itemView = listView.getChildAt(i)
+                        if (itemView is TextView) {
+                            itemView.setTextColor(whiteColor)
+                        } else if (itemView is ViewGroup) {
+                            findTextViewsAndSetColor(itemView, whiteColor)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            
+            // Also try after a small delay in case items load asynchronously
+            listView?.postDelayed({
+                try {
+                    for (i in 0 until listView.childCount) {
+                        val itemView = listView.getChildAt(i)
+                        if (itemView is TextView) {
+                            itemView.setTextColor(whiteColor)
+                        } else if (itemView is ViewGroup) {
+                            findTextViewsAndSetColor(itemView, whiteColor)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }, 50)
+        } catch (e: Exception) {
+            // If reflection fails, the style should still apply
+            e.printStackTrace()
+        }
+    }
+    
+    private fun findTextViewsAndSetColor(viewGroup: ViewGroup, color: Int) {
+        for (i in 0 until viewGroup.childCount) {
+            val child = viewGroup.getChildAt(i)
+            if (child is TextView) {
+                child.setTextColor(color)
+            } else if (child is ViewGroup) {
+                findTextViewsAndSetColor(child, color)
+            }
+        }
     }
 
     private fun showAppInfo(packageName: String) {

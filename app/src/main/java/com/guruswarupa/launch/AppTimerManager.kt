@@ -9,8 +9,13 @@ import android.os.Build
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
+import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
+import android.widget.ListView
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import java.util.concurrent.Executors
 
 class AppTimerManager(private val context: Context) {
@@ -30,7 +35,7 @@ class AppTimerManager(private val context: Context) {
     fun showTimerDialog(packageName: String, appName: String, onTimerSet: (Long) -> Unit) {
         val options = arrayOf("1 minute", "5 minutes", "10 minutes", "Custom", "No timer")
 
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Set timer for $appName")
             .setItems(options) { _, which ->
                 when (which) {
@@ -45,11 +50,72 @@ class AppTimerManager(private val context: Context) {
                 dialog.dismiss()
             }
             .show()
+        
+        // Fix dialog items text color to white
+        fixDialogItemsTextColor(dialog)
+    }
+    
+    private fun fixDialogItemsTextColor(dialog: AlertDialog) {
+        try {
+            val whiteColor = ContextCompat.getColor(context, android.R.color.white)
+            val listView = dialog.listView
+            if (listView != null) {
+                // Post on main thread after dialog is shown to ensure views are inflated
+                listView.post {
+                    try {
+                        // Fix all existing items
+                        for (i in 0 until listView.childCount) {
+                            val itemView = listView.getChildAt(i)
+                            if (itemView is TextView) {
+                                itemView.setTextColor(whiteColor)
+                            } else if (itemView is ViewGroup) {
+                                // Search for TextView in the view hierarchy
+                                findTextViewsAndSetColor(itemView, whiteColor)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                
+                // Also try after a small delay in case items load asynchronously
+                mainHandler.postDelayed({
+                    try {
+                        for (i in 0 until listView.childCount) {
+                            val itemView = listView.getChildAt(i)
+                            if (itemView is TextView) {
+                                itemView.setTextColor(whiteColor)
+                            } else if (itemView is ViewGroup) {
+                                findTextViewsAndSetColor(itemView, whiteColor)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }, 100)
+            }
+        } catch (e: Exception) {
+            // If we can't fix it, that's okay - at least try
+            e.printStackTrace()
+        }
+    }
+    
+    private fun findTextViewsAndSetColor(viewGroup: ViewGroup, color: Int) {
+        for (i in 0 until viewGroup.childCount) {
+            val child = viewGroup.getChildAt(i)
+            if (child is TextView) {
+                child.setTextColor(color)
+            } else if (child is ViewGroup) {
+                findTextViewsAndSetColor(child, color)
+            }
+        }
     }
 
     private fun showCustomTimerDialog(onTimerSet: (Long) -> Unit) {
         val input = EditText(context)
         input.hint = "Enter minutes"
+        input.setTextColor(ContextCompat.getColor(context, android.R.color.white))
+        input.setHintTextColor(ContextCompat.getColor(context, android.R.color.white))
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Timer")

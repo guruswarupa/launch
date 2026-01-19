@@ -2476,22 +2476,11 @@ class MainActivity : FragmentActivity() {
                 if (decorView != null) {
                     val insetsController = decorView.windowInsetsController
                     if (insetsController != null) {
-                        // Check if we're in light mode (night mode not active)
-                        val isLightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) != android.content.res.Configuration.UI_MODE_NIGHT_YES
-                        
-                        if (isLightMode) {
-                            // Light mode: dark icons on transparent background
-                            insetsController.setSystemBarsAppearance(
-                                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
-                                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                            )
-                        } else {
-                            // Dark mode: light icons on transparent background
-                            insetsController.setSystemBarsAppearance(
-                                0,
-                                WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                            )
-                        }
+                        // Always use white/light icons regardless of mode
+                        insetsController.setSystemBarsAppearance(
+                            0,
+                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                        )
                     }
                 }
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -2511,12 +2500,8 @@ class MainActivity : FragmentActivity() {
                         flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                         
-                        // Check if we're in light mode
-                        val isLightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) != android.content.res.Configuration.UI_MODE_NIGHT_YES
-                        if (isLightMode) {
-                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                        }
+                        // Always use white/light icons regardless of mode (don't set LIGHT_STATUS_BAR flag)
+                        // When LIGHT_STATUS_BAR is NOT set, icons are light/white
                         
                         decorView.systemUiVisibility = flags
                     }
