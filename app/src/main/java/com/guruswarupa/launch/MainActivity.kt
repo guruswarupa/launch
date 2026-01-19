@@ -868,13 +868,21 @@ class MainActivity : FragmentActivity() {
             
             if (drawable != null && drawable is BitmapDrawable) {
                 // BitmapDrawable is fast to load - do it synchronously for instant display
-                val bitmap = drawable.bitmap
-                if (bitmap != null && !bitmap.isRecycled) {
-                    currentWallpaperBitmap?.recycle()
-                    currentWallpaperBitmap = bitmap
-                    wallpaperBackground.setImageBitmap(bitmap)
-                    findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
-                    return // Success - we're done!
+                val sourceBitmap = drawable.bitmap
+                if (sourceBitmap != null && !sourceBitmap.isRecycled) {
+                    // Create a copy of the bitmap so we own it and can safely recycle it
+                    val bitmap = sourceBitmap.copy(sourceBitmap.config ?: Bitmap.Config.ARGB_8888, false)
+                    if (bitmap != null) {
+                        // Clear ImageView before recycling old bitmap to prevent crash
+                        val oldBitmap = currentWallpaperBitmap
+                        wallpaperBackground.setImageDrawable(null)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageDrawable(null)
+                        oldBitmap?.recycle()
+                        currentWallpaperBitmap = bitmap
+                        wallpaperBackground.setImageBitmap(bitmap)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
+                        return // Success - we're done!
+                    }
                 }
             }
         } catch (e: SecurityException) {
@@ -904,7 +912,13 @@ class MainActivity : FragmentActivity() {
                 }
                 
                 val bitmap = if (drawable is BitmapDrawable) {
-                    drawable.bitmap
+                    // Create a copy of the bitmap so we own it and can safely recycle it
+                    val sourceBitmap = drawable.bitmap
+                    if (sourceBitmap != null && !sourceBitmap.isRecycled) {
+                        sourceBitmap.copy(sourceBitmap.config ?: Bitmap.Config.ARGB_8888, false)
+                    } else {
+                        null
+                    }
                 } else {
                     // Get screen dimensions directly (resources is available in background thread)
                     val screenWidth = resources.displayMetrics.widthPixels
@@ -924,10 +938,15 @@ class MainActivity : FragmentActivity() {
                 
                 // Cache the bitmap for future use (only if valid)
                 if (bitmap != null && !bitmap.isRecycled) {
-                    currentWallpaperBitmap?.recycle()
+                    val oldBitmap = currentWallpaperBitmap
                     currentWallpaperBitmap = bitmap
                     
                     runOnUiThread {
+                        // Clear ImageView before setting new bitmap to prevent crash
+                        wallpaperBackground.setImageDrawable(null)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageDrawable(null)
+                        // Now safe to recycle old bitmap
+                        oldBitmap?.recycle()
                         wallpaperBackground.setImageBitmap(bitmap)
                         findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
                     }
@@ -955,6 +974,11 @@ class MainActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Clear ImageView before recycling to prevent crash
+        if (::wallpaperBackground.isInitialized) {
+            wallpaperBackground.setImageDrawable(null)
+        }
+        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageDrawable(null)
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
         
