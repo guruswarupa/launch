@@ -16,96 +16,472 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#80000000"/> <!-- Black overlay with transparency -->
+        android:background="#80000000"/>
 
     <!-- Content Container -->
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="24dp"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="@android:color/transparent">
+        android:fillViewport="true">
 
-        <!-- Welcome Text -->
-        <TextView
-            android:id="@+id/feature_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Welcome to Launch!"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/white"
-            android:gravity="center"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Permission Disclaimer -->
-        <TextView
-            android:id="@+id/permission_info"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="We'll guide you through each permission request and explain why it's needed. You can skip any permission and grant it later if needed."
-            android:textSize="14sp"
-            android:textColor="@android:color/white"
-            android:gravity="center"
-            android:padding="8dp"
-            android:layout_marginBottom="16dp"/>
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:gravity="center_horizontal">
 
-        <!-- Grant Permissions Button -->
-        <Button
-            android:id="@+id/permission_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Grant Permissions"
-            android:textAllCaps="false"
-            android:background="@drawable/button_background"
-            android:textColor="@android:color/white"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp"/>
+            <!-- Progress Indicator -->
+            <LinearLayout
+                android:id="@+id/progress_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="32dp">
 
-        <!-- Set as Default Launcher Button -->
-        <Button
-            android:id="@+id/set_default_launcher_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Set as Default Home Launcher"
-            android:textAllCaps="false"
-            android:background="@drawable/button_background"
-            android:textColor="@android:color/white"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp"/>
+                <!-- Step 1 Indicator -->
+                <View
+                    android:id="@+id/step1_indicator"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/circular_indicator"/>
+                <View
+                    android:id="@+id/step1_connector"
+                    android:layout_width="24dp"
+                    android:layout_height="3dp"
+                    android:background="@color/nord3"
+                    android:layout_marginHorizontal="3dp"/>
 
-        <Button
-            android:id="@+id/set_display_style"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Set Display Style"
-            android:textAllCaps="false"
-            android:background="@drawable/button_background"
-            android:textColor="@android:color/white"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp"/>
+                <!-- Step 2 Indicator -->
+                <View
+                    android:id="@+id/step2_indicator"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/circular_indicator"/>
+                <View
+                    android:id="@+id/step2_connector"
+                    android:layout_width="24dp"
+                    android:layout_height="3dp"
+                    android:background="@color/nord3"
+                    android:layout_marginHorizontal="3dp"/>
 
-        <!-- Continue Button -->
-        <Button
-            android:id="@+id/continue_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Continue"
-            android:textAllCaps="false"
-            android:background="@drawable/button_background"
-            android:textColor="@android:color/white"
-            android:padding="12dp"/>
+                <!-- Step 3 Indicator -->
+                <View
+                    android:id="@+id/step3_indicator"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/circular_indicator"/>
+                <View
+                    android:id="@+id/step3_connector"
+                    android:layout_width="24dp"
+                    android:layout_height="3dp"
+                    android:background="@color/nord3"
+                    android:layout_marginHorizontal="3dp"/>
 
-        <!-- Developer Credit -->
-        <TextView
-            android:id="@+id/developer_credit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Developed by Guru Swarupa"
-            android:textSize="12sp"
-            android:textColor="@android:color/white"
-            android:gravity="center"
-            android:layout_marginTop="16dp"/>
-    </LinearLayout>
+                <!-- Step 4 Indicator -->
+                <View
+                    android:id="@+id/step4_indicator"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/circular_indicator"/>
+                <View
+                    android:id="@+id/step4_connector"
+                    android:layout_width="24dp"
+                    android:layout_height="3dp"
+                    android:background="@color/nord3"
+                    android:layout_marginHorizontal="3dp"/>
+
+                <!-- Step 5 Indicator -->
+                <View
+                    android:id="@+id/step5_indicator"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/circular_indicator"/>
+
+            </LinearLayout>
+
+            <!-- Step Content Container -->
+            <FrameLayout
+                android:id="@+id/step_content_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="400dp">
+
+                <!-- Welcome Step -->
+                <LinearLayout
+                    android:id="@+id/welcome_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="visible">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Welcome to Launch!"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Your powerful, customizable launcher is ready to transform your home screen experience."
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="48dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Let's set it up in just a few simple steps:"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.8"
+                        android:layout_marginBottom="24dp"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="start"
+                        android:layout_marginBottom="24dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="✓ Grant necessary permissions"
+                            android:textSize="14sp"
+                            android:textColor="@android:color/white"
+                            android:alpha="0.9"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="✓ Set as default launcher"
+                            android:textSize="14sp"
+                            android:textColor="@android:color/white"
+                            android:alpha="0.9"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="✓ Choose your display style"
+                            android:textSize="14sp"
+                            android:textColor="@android:color/white"
+                            android:alpha="0.9"/>
+
+                    </LinearLayout>
+
+                    <!-- Privacy Notice -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Privacy Notice: All permissions are used solely for app functionality. We do NOT collect, store, or transmit any of your data. This is an open-source project - you can verify our codebase anytime."
+                        android:textSize="12sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.8"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Your privacy is our priority. All data stays on your device."
+                        android:textSize="11sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.7"
+                        android:fontStyle="italic"/>
+
+                </LinearLayout>
+
+                <!-- Permissions Step -->
+                <LinearLayout
+                    android:id="@+id/permissions_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Permissions"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="We'll guide you through each permission request and explain why it's needed. You can skip any permission and grant it later if needed."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="32dp"/>
+
+                </LinearLayout>
+
+                <!-- Default Launcher Step -->
+                <LinearLayout
+                    android:id="@+id/default_launcher_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Set as Default Launcher"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="To use this launcher as your home screen, you need to set it as the default launcher. This allows you to access your apps, widgets, and shortcuts directly from the home screen."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="32dp"/>
+
+                </LinearLayout>
+
+                <!-- Display Style Step -->
+                <LinearLayout
+                    android:id="@+id/display_style_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Choose Display Style"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="How would you like to view your apps?"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:layout_marginBottom="32dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp">
+
+                        <Button
+                            android:id="@+id/grid_style_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="8dp"
+                            android:text="Grid View"
+                            android:textAllCaps="false"
+                            android:background="@drawable/button_background"
+                            android:textColor="@android:color/white"
+                            android:padding="16dp"/>
+
+                        <Button
+                            android:id="@+id/list_style_button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="List View"
+                            android:textAllCaps="false"
+                            android:background="@drawable/button_background"
+                            android:textColor="@android:color/white"
+                            android:padding="16dp"/>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Weather API Key Step -->
+                <LinearLayout
+                    android:id="@+id/weather_api_key_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Weather API Key (Optional)"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Enter your OpenWeatherMap API key to enable weather information on your home screen. You can skip this and add it later in Settings."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="24dp"/>
+
+                    <EditText
+                        android:id="@+id/weather_api_key_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter OpenWeatherMap API Key"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="@android:color/white"
+                        android:alpha="0.7"
+                        android:background="@drawable/rounded_background"
+                        android:padding="16dp"
+                        android:layout_marginHorizontal="24dp"
+                        android:layout_marginBottom="16dp"
+                        android:inputType="text"
+                        android:singleLine="true"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Get a free API key at: openweathermap.org/api"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.7"
+                        android:layout_marginBottom="32dp"/>
+
+                </LinearLayout>
+
+                <!-- Complete Step -->
+                <LinearLayout
+                    android:id="@+id/complete_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="All Set!"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Your launcher is ready to use. Enjoy your new home screen experience!"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="48dp"/>
+
+                </LinearLayout>
+
+            </FrameLayout>
+
+            <!-- Action Buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginTop="24dp">
+
+                <Button
+                    android:id="@+id/back_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    android:text="Back"
+                    android:textAllCaps="false"
+                    android:background="@drawable/button_background"
+                    android:textColor="@android:color/white"
+                    android:padding="16dp"
+                    android:visibility="gone"/>
+
+                <Button
+                    android:id="@+id/next_button"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="Next"
+                    android:textAllCaps="false"
+                    android:background="@drawable/button_background"
+                    android:textColor="@android:color/white"
+                    android:padding="16dp"/>
+
+            </LinearLayout>
+
+            <!-- Developer Credit -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Developed by Guru Swarupa"
+                android:textSize="12sp"
+                android:textColor="@android:color/white"
+                android:alpha="0.6"
+                android:gravity="center"
+                android:layout_marginTop="24dp"/>
+
+        </LinearLayout>
+
+    </ScrollView>
+
 </FrameLayout>

@@ -143,6 +143,14 @@ class MainActivity : FragmentActivity() {
         private const val REQUEST_CONFIGURE_WIDGET = 801
         private const val NOTIFICATION_PERMISSION_REQUEST = 900
     }
+    
+    private fun isDefaultLauncher(): Boolean {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName == packageName
+    }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,16 +164,25 @@ class MainActivity : FragmentActivity() {
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
+        val isFirstTime = sharedPreferences.getBoolean("isFirstTime", true)
 
-        if (isFirstRun) {
-            sharedPreferences.edit().putBoolean("isFirstRun", false).apply()
-
-            startActivity(Intent(this, OnboardingActivity::class.java))
+        // Check if onboarding is complete - if not, redirect to onboarding
+        if (isFirstRun || isFirstTime) {
+            if (isFirstRun) {
+                sharedPreferences.edit().putBoolean("isFirstRun", false).apply()
+            }
+            
+            // Start onboarding - if we're here because launcher was set as default, continue from default launcher step
+            val intent = Intent(this, OnboardingActivity::class.java)
+            if (isDefaultLauncher() && !isFirstRun) {
+                // Launcher is set as default but onboarding not complete - continue from default launcher step
+                intent.putExtra("continueFromDefaultLauncher", true)
+            }
+            startActivity(intent)
             finish()
-        } else {
-            setContentView(R.layout.activity_main)
+            return
         }
-
+        
         // Initialize APK sharing manager
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
@@ -1076,8 +1093,11 @@ class MainActivity : FragmentActivity() {
         registerReceiver(batteryChangeReceiver, batteryFilter)
 
         // Reapply focus mode state when returning from apps (fast operation)
-        applyFocusMode(appDockManager.getCurrentMode())
-        appDockManager.refreshWorkspaceToggle()
+        // Check if appDockManager is initialized (might not be if we redirected to onboarding)
+        if (::appDockManager.isInitialized) {
+            applyFocusMode(appDockManager.getCurrentMode())
+            appDockManager.refreshWorkspaceToggle()
+        }
 
         // Start widget managers (fast operations)
         if (::widgetManager.isInitialized) {
@@ -1086,7 +1106,10 @@ class MainActivity : FragmentActivity() {
 
         // PRIORITY 2: Load lightweight data in background (non-blocking)
         // Invalidate cache but don't refresh immediately
-        usageStatsManager.invalidateCache()
+        // Check if usageStatsManager is initialized (might not be if we redirected to onboarding)
+        if (::usageStatsManager.isInitialized) {
+            usageStatsManager.invalidateCache()
+        }
         
         // Start update runnable immediately for time/date
         if (isInPowerSaverMode) {
@@ -1348,11 +1371,15 @@ class MainActivity : FragmentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.READ_CONTACTS),
-                CONTACTS_PERMISSION_REQUEST
-            )
+            // Only request if we haven't been permanently denied (user can still grant it)
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS) ||
+                !sharedPreferences.getBoolean("contacts_permission_denied", false)) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_CONTACTS),
+                    CONTACTS_PERMISSION_REQUEST
+                )
+            }
         } else {
             loadContacts()
         }
@@ -1374,11 +1401,15 @@ class MainActivity : FragmentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.SEND_SMS),
-                SMS_PERMISSION_REQUEST
-            )
+            // Only request if we haven't been permanently denied (user can still grant it)
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.SEND_SMS) ||
+                !sharedPreferences.getBoolean("sms_permission_denied", false)) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.SEND_SMS),
+                    SMS_PERMISSION_REQUEST
+                )
+            }
         }
     }
 
@@ -1402,14 +1433,20 @@ class MainActivity : FragmentActivity() {
     // Request usage stats permission
     private fun requestUsageStatsPermission() {
         if (!usageStatsManager.hasUsageStatsPermission()) {
-            AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                .setTitle("Usage Stats Permission")
-                .setMessage("To show app usage time, please grant usage access permission in the next screen.")
-                .setPositiveButton("Grant") { _, _ ->
-                    startActivityForResult(usageStatsManager.requestUsageStatsPermission(), USAGE_STATS_REQUEST)
-                }
-                .setNegativeButton("Skip", null)
-                .show()
+            // Only show dialog if user hasn't previously skipped/denied it
+            if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
+                AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                    .setTitle("Usage Stats Permission")
+                    .setMessage("To show app usage time, please grant usage access permission in the next screen.")
+                    .setPositiveButton("Grant") { _, _ ->
+                        startActivityForResult(usageStatsManager.requestUsageStatsPermission(), USAGE_STATS_REQUEST)
+                    }
+                    .setNegativeButton("Skip") { _, _ ->
+                        // Mark as denied so we don't ask again
+                        sharedPreferences.edit().putBoolean("usage_stats_permission_denied", true).apply()
+                    }
+                    .show()
+            }
         }
     }
 
@@ -1423,9 +1460,15 @@ class MainActivity : FragmentActivity() {
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, load contacts
+                    // Permission granted, clear denied flag and load contacts
+                    sharedPreferences.edit().putBoolean("contacts_permission_denied", false).apply()
                     loadContacts()
                 } else {
+                    // Permission denied, mark it so we don't ask again
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS)) {
+                        // Permanently denied (user selected "Don't ask again")
+                        sharedPreferences.edit().putBoolean("contacts_permission_denied", true).apply()
+                    }
                 }
             }
 
@@ -1438,8 +1481,14 @@ class MainActivity : FragmentActivity() {
 
             SMS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, proceed with SMS functionality
+                    // Permission granted, clear denied flag
+                    sharedPreferences.edit().putBoolean("sms_permission_denied", false).apply()
                 } else {
+                    // Permission denied, mark it so we don't ask again
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.SEND_SMS)) {
+                        // Permanently denied (user selected "Don't ask again")
+                        sharedPreferences.edit().putBoolean("sms_permission_denied", true).apply()
+                    }
                 }
             }
             VOICE_SEARCH_REQUEST -> {
