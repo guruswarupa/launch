@@ -338,6 +338,13 @@ class AppLockManager(private val context: Context) {
             .remove(PREF_FINGERPRINT_ENABLED)
             .apply()
     }
+    
+    // Clear authentication timeout - forces re-authentication on next verifyPin call
+    fun clearAuthTimeout() {
+        sharedPreferences.edit()
+            .remove(PREF_LAST_AUTH_TIME)
+            .apply()
+    }
 
 
     // Show app lock management dialog

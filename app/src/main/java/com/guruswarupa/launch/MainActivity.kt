@@ -1110,6 +1110,13 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         // Ensure system bars stay transparent
         makeSystemBarsTransparent()
+        
+        // Clear app lock authentication timeout when returning to launcher
+        // This ensures locked apps always prompt for authentication
+        if (::appLockManager.isInitialized) {
+            appLockManager.clearAuthTimeout()
+        }
+        
         // Update notifications widget when activity resumes
         if (::notificationsWidget.isInitialized) {
             notificationsWidget.updateNotifications()
