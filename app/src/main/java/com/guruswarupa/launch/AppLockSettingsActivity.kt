@@ -2,188 +2,227 @@ package com.guruswarupa.launch
 
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.fragment.app.FragmentActivity
 
-class AppLockSettingsActivity : FragmentActivity() {
+class AppLockSettingsActivity : ComponentActivity() {
 
     private lateinit var appLockManager: AppLockManager
     private lateinit var appsRecyclerView: RecyclerView
     private lateinit var enableAppLockSwitch: Switch
+    private lateinit var fingerprintSwitch: Switch
+    private lateinit var fingerprintLayout: LinearLayout
     private lateinit var changePinButton: Button
     private lateinit var resetAppLockButton: Button
     private var isPinVerifiedForThisSession = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_app_lock_settings)
+        
+        // Make status bar and navigation bar transparent
+        window.decorView.post {
+            makeSystemBarsTransparent()
+        }
 
         appLockManager = AppLockManager(this)
 
-        // Create layout programmatically
-        val mainLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(32, 32, 32, 32)
-        }
+        // Initialize views
+        enableAppLockSwitch = findViewById(R.id.enable_app_lock_switch)
+        fingerprintSwitch = findViewById(R.id.fingerprint_switch)
+        fingerprintLayout = findViewById(R.id.fingerprint_layout)
+        changePinButton = findViewById(R.id.change_pin_button)
+        resetAppLockButton = findViewById(R.id.reset_app_lock_button)
+        appsRecyclerView = findViewById(R.id.apps_recycler_view)
 
-        // Title
-        val titleText = TextView(this).apply {
-            text = "App Lock Settings"
-            textSize = 24f
-            setPadding(0, 0, 0, 32)
-        }
-        mainLayout.addView(titleText)
+        // Setup expandable sections
+        setupExpandableSections()
 
-        // Enable/Disable App Lock
-        val switchLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-
-        val switchLabel = TextView(this).apply {
-            text = "Enable App Lock"
-            textSize = 18f
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-
-        enableAppLockSwitch = Switch(this).apply {
-            isChecked = appLockManager.isAppLockEnabled()
-            setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked && !appLockManager.isPinSet()) {
-                    // Enabling app lock - set up PIN
-                    appLockManager.setupPin { success ->
-                        if (!success) {
-                            this.isChecked = false
-                        }
+        // Setup switches
+        enableAppLockSwitch.isChecked = appLockManager.isAppLockEnabled()
+        enableAppLockSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !appLockManager.isPinSet()) {
+                // Enabling app lock - set up PIN
+                appLockManager.setupPin { success ->
+                    if (!success) {
+                        enableAppLockSwitch.isChecked = false
+                    } else {
+                        changePinButton.text = "Change PIN"
                     }
-                } else if (!isChecked && appLockManager.isPinSet()) {
-                    // Disabling app lock - verify PIN first
-                    appLockManager.verifyPin { isAuthenticated ->
-                        if (isAuthenticated) {
-                            appLockManager.setAppLockEnabled(false)
-                            Toast.makeText(this@AppLockSettingsActivity, "App Lock disabled", Toast.LENGTH_SHORT).show()
-                        } else {
-                            // Revert switch back to enabled state if PIN verification failed
-                            this.isChecked = true
-                        }
-                    }
-                } else {
-                    // Direct enable/disable when no PIN is set
-                    appLockManager.setAppLockEnabled(isChecked)
                 }
+            } else if (!isChecked && appLockManager.isPinSet()) {
+                // Disabling app lock - verify PIN first
+                appLockManager.verifyPin { isAuthenticated ->
+                    if (isAuthenticated) {
+                        appLockManager.setAppLockEnabled(false)
+                        Toast.makeText(this, "App Lock disabled", Toast.LENGTH_SHORT).show()
+                    } else {
+                        // Revert switch back to enabled state if PIN verification failed
+                        enableAppLockSwitch.isChecked = true
+                    }
+                }
+            } else {
+                // Direct enable/disable when no PIN is set
+                appLockManager.setAppLockEnabled(isChecked)
             }
         }
-
-        switchLayout.addView(switchLabel)
-        switchLayout.addView(enableAppLockSwitch)
-        mainLayout.addView(switchLayout)
 
         // Fingerprint authentication switch (only show if available)
         if (appLockManager.isFingerprintAvailable()) {
-            val fingerprintSwitchLayout = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, 16, 0, 0)
-            }
-
-            val fingerprintSwitchLabel = TextView(this).apply {
-                text = "Enable Fingerprint"
-                textSize = 18f
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            }
-
-            val fingerprintSwitch = Switch(this).apply {
-                isChecked = appLockManager.isFingerprintEnabled()
-                setOnCheckedChangeListener { _, isChecked ->
-                    if (appLockManager.isPinSet()) {
-                        appLockManager.setFingerprintEnabled(isChecked)
-                        Toast.makeText(
-                            this@AppLockSettingsActivity,
-                            if (isChecked) "Fingerprint enabled" else "Fingerprint disabled",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        this.isChecked = false
-                        Toast.makeText(this@AppLockSettingsActivity, "Please set up a PIN first", Toast.LENGTH_SHORT).show()
-                    }
+            fingerprintLayout.visibility = View.VISIBLE
+            fingerprintSwitch.isChecked = appLockManager.isFingerprintEnabled()
+            fingerprintSwitch.setOnCheckedChangeListener { _, isChecked ->
+                if (appLockManager.isPinSet()) {
+                    appLockManager.setFingerprintEnabled(isChecked)
+                    Toast.makeText(
+                        this,
+                        if (isChecked) "Fingerprint enabled" else "Fingerprint disabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    fingerprintSwitch.isChecked = false
+                    Toast.makeText(this, "Please set up a PIN first", Toast.LENGTH_SHORT).show()
                 }
             }
-
-            fingerprintSwitchLayout.addView(fingerprintSwitchLabel)
-            fingerprintSwitchLayout.addView(fingerprintSwitch)
-            mainLayout.addView(fingerprintSwitchLayout)
+        } else {
+            fingerprintLayout.visibility = View.GONE
         }
 
         // Change PIN button
-        changePinButton = Button(this).apply {
-            text = if (appLockManager.isPinSet()) "Change PIN" else "Set PIN"
-            setOnClickListener {
-                if (appLockManager.isPinSet()) {
-                    appLockManager.changePin { success ->
-                        if (success) {
-                            text = "Change PIN"
-                        }
+        changePinButton.text = if (appLockManager.isPinSet()) "Change PIN" else "Set PIN"
+        changePinButton.setOnClickListener {
+            if (appLockManager.isPinSet()) {
+                appLockManager.changePin { success ->
+                    if (success) {
+                        changePinButton.text = "Change PIN"
                     }
-                } else {
-                    appLockManager.setupPin { success ->
-                        if (success) {
-                            text = "Change PIN"
-                            enableAppLockSwitch.isChecked = true
-                        }
+                }
+            } else {
+                appLockManager.setupPin { success ->
+                    if (success) {
+                        changePinButton.text = "Change PIN"
+                        enableAppLockSwitch.isChecked = true
                     }
                 }
             }
         }
-        mainLayout.addView(changePinButton)
 
         // Reset App Lock button
-        resetAppLockButton = Button(this).apply {
-            text = "Reset App Lock"
-            setOnClickListener {
-                androidx.appcompat.app.AlertDialog.Builder(this@AppLockSettingsActivity)
-                    .setTitle("Reset App Lock")
-                    .setMessage("This will remove the PIN and unlock all apps. Are you sure?")
-                    .setPositiveButton("Reset") { _, _ ->
-                        appLockManager.resetAppLock { success ->
-                            if (success) {
-                                enableAppLockSwitch.isChecked = false
-                                changePinButton.text = "Set PIN"
-                                recreateAppsList()
-                            }
+        resetAppLockButton.setOnClickListener {
+            androidx.appcompat.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                .setTitle("Reset App Lock")
+                .setMessage("This will remove the PIN and unlock all apps. Are you sure?")
+                .setPositiveButton("Reset") { _, _ ->
+                    appLockManager.resetAppLock { success ->
+                        if (success) {
+                            enableAppLockSwitch.isChecked = false
+                            fingerprintSwitch.isChecked = false
+                            changePinButton.text = "Set PIN"
+                            recreateAppsList()
                         }
                     }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
-        mainLayout.addView(resetAppLockButton)
 
-        // Apps list title
-        val appsTitle = TextView(this).apply {
-            text = "Select Apps to Lock"
-            textSize = 20f
-            setPadding(0, 32, 0, 16)
-        }
-        mainLayout.addView(appsTitle)
-
-        // Apps RecyclerView
-        appsRecyclerView = RecyclerView(this).apply {
-            layoutManager = LinearLayoutManager(this@AppLockSettingsActivity)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        }
-        mainLayout.addView(appsRecyclerView)
-
-        setContentView(mainLayout)
+        // Setup RecyclerView
+        appsRecyclerView.layoutManager = LinearLayoutManager(this)
 
         recreateAppsList()
+    }
+    
+    private fun setupExpandableSections() {
+        // App Lock Settings Section
+        val appLockSettingsHeader = findViewById<LinearLayout>(R.id.app_lock_settings_header)
+        val appLockSettingsContent = findViewById<LinearLayout>(R.id.app_lock_settings_content)
+        val appLockSettingsArrow = findViewById<TextView>(R.id.app_lock_settings_arrow)
+        setupSectionToggle(appLockSettingsHeader, appLockSettingsContent, appLockSettingsArrow)
+        
+        // Apps List Section
+        val appsListHeader = findViewById<LinearLayout>(R.id.apps_list_header)
+        val appsListContent = appsRecyclerView
+        val appsListArrow = findViewById<TextView>(R.id.apps_list_arrow)
+        setupSectionToggle(appsListHeader, appsListContent, appsListArrow)
+    }
+    
+    private fun setupSectionToggle(header: LinearLayout, content: View, arrow: TextView) {
+        header.setOnClickListener {
+            val isExpanded = content.visibility == View.VISIBLE
+            if (isExpanded) {
+                content.visibility = View.GONE
+                arrow.text = "▼"
+            } else {
+                content.visibility = View.VISIBLE
+                arrow.text = "▲"
+            }
+        }
+    }
+    
+    private fun makeSystemBarsTransparent() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ (API 30+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.setDecorFitsSystemWindows(false)
+                
+                // Use decorView to get insetsController safely
+                val decorView = window.decorView
+                if (decorView != null) {
+                    val insetsController = decorView.windowInsetsController
+                    if (insetsController != null) {
+                        // Always use white/light icons regardless of mode
+                        insetsController.setSystemBarsAppearance(
+                            0,
+                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                        )
+                    }
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // Android 5.0+ (API 21+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val decorView = window.decorView
+                    if (decorView != null) {
+                        var flags = decorView.systemUiVisibility
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        
+                        // Always use white/light icons regardless of mode (don't set LIGHT_STATUS_BAR flag)
+                        // When LIGHT_STATUS_BAR is NOT set, icons are light/white
+                        
+                        decorView.systemUiVisibility = flags
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // If anything fails, at least try to set the colors
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                }
+            } catch (ex: Exception) {
+                // Ignore if even this fails
+            }
+        }
     }
 
     private fun recreateAppsList() {
@@ -241,42 +280,15 @@ class AppLockSettingsActivity : FragmentActivity() {
     ) : RecyclerView.Adapter<AppLockAdapter.ViewHolder>() {
 
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val icon: ImageView = view.findViewById(android.R.id.icon)
-            val name: TextView = view.findViewById(android.R.id.text1)
-            val lockSwitch: Switch = view.findViewById(android.R.id.toggle)
+            val icon: ImageView = view.findViewById(R.id.app_icon)
+            val name: TextView = view.findViewById(R.id.app_name)
+            val lockSwitch: Switch = view.findViewById(R.id.lock_switch)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val layout = LinearLayout(parent.context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(16, 16, 16, 16)
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            }
-
-            val icon = ImageView(parent.context).apply {
-                id = android.R.id.icon
-                layoutParams = LinearLayout.LayoutParams(72, 72)
-                setPadding(0, 0, 16, 0)
-            }
-
-            val name = TextView(parent.context).apply {
-                id = android.R.id.text1
-                textSize = 16f
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            }
-
-            val toggle = Switch(parent.context).apply {
-                id = android.R.id.toggle
-            }
-
-            layout.addView(icon)
-            layout.addView(name)
-            layout.addView(toggle)
-
-            return ViewHolder(layout)
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_app_lock, parent, false)
+            return ViewHolder(view)
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
