@@ -255,12 +255,12 @@
                         android:id="@+id/add_widget_button"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Add Widget"
-                        android:textSize="14sp"
+                        android:background="@drawable/button_neutral_ripple"
                         android:paddingHorizontal="20dp"
                         android:paddingVertical="10dp"
-                        android:background="@drawable/button_neutral_ripple"
-                        android:textColor="@color/white" />
+                        android:text="Add Widget"
+                        android:textColor="@color/white"
+                        android:textSize="14sp" />
                 </LinearLayout>
 
                 <LinearLayout
