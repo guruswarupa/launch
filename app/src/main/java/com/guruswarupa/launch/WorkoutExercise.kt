@@ -83,6 +83,25 @@ data class WorkoutExercise(
     }
     
     fun resetToday() {
+        val today = getCurrentDate()
+        val todayCountValue = todayCount
+        
+        // Subtract today's count from total
+        totalCount -= todayCountValue
+        
+        // Remove today from dailyCounts
+        dailyCounts = dailyCounts - today
+        
+        // If today's count was the best day, recalculate bestDay from remaining daily counts
+        if (todayCountValue == bestDay && todayCountValue > 0) {
+            bestDay = if (dailyCounts.isNotEmpty()) {
+                dailyCounts.values.maxOrNull() ?: 0
+            } else {
+                0
+            }
+        }
+        
+        // Reset today's count
         todayCount = 0
     }
     
