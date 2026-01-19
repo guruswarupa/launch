@@ -114,10 +114,13 @@ class AppAdapter(
     
     /**
      * Pre-loads icons in background to improve scroll performance
+     * Optimized to preload visible items first, then next batch
      */
     private fun preloadIcons(apps: List<ResolveInfo>) {
         iconPreloadExecutor.execute {
-            for (app in apps) {
+            // Pre-load first 30 icons immediately (visible + near-visible)
+            val immediateLoad = apps.take(30)
+            for (app in immediateLoad) {
                 val packageName = app.activityInfo.packageName
                 
                 // Skip special entries
@@ -156,6 +159,64 @@ class AppAdapter(
                         }
                     } catch (e: Exception) {
                         // Ignore errors during pre-loading
+                    }
+                }
+            }
+            
+            // Pre-load remaining icons in batches
+            val remainingApps = apps.drop(30)
+            for (batch in remainingApps.chunked(20)) {
+                for (app in batch) {
+                    val packageName = app.activityInfo.packageName
+                    
+                    if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
+                            "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                        continue
+                    }
+                    
+                    if (!iconCache.containsKey(packageName)) {
+                        try {
+                            val isValidApp = packageValidityCache.getOrPut(packageName) {
+                                app.activityInfo?.applicationInfo != null
+                            }
+                            
+                            if (isValidApp) {
+                                val icon = app.loadIcon(activity.packageManager)
+                                iconCache[packageName] = icon
+                            }
+                        } catch (e: Exception) {
+                            // Ignore errors
+                        }
+                    }
+                }
+                // Small delay between batches to avoid blocking
+                Thread.sleep(10)
+            }
+        }
+    }
+    
+    /**
+     * Pre-load next N icons starting from position
+     */
+    private fun preloadNextIcons(startPosition: Int, endPosition: Int) {
+        if (startPosition >= appList.size) return
+        
+        iconPreloadExecutor.execute {
+            val appsToPreload = appList.subList(startPosition, minOf(endPosition, appList.size))
+            for (app in appsToPreload) {
+                val packageName = app.activityInfo.packageName
+                
+                if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
+                        "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                    continue
+                }
+                
+                if (!iconCache.containsKey(packageName)) {
+                    try {
+                        val icon = app.loadIcon(activity.packageManager)
+                        iconCache[packageName] = icon
+                    } catch (e: Exception) {
+                        // Ignore errors
                     }
                 }
             }
@@ -509,6 +570,11 @@ class AppAdapter(
                             }
                         }
                     }
+                }
+                
+                // Pre-load next 10 icons for smooth scrolling
+                if (position < appList.size - 1 && position % 5 == 0) {
+                    preloadNextIcons(position + 1, minOf(position + 11, appList.size))
                 }
 
                 // Debounce clicks to prevent double-tap issues

@@ -63,6 +63,14 @@ import com.guruswarupa.launch.TodoAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import java.util.concurrent.Executors
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
+import android.content.pm.ApplicationInfo
+import android.content.pm.ActivityInfo
 
 
 class MainActivity : FragmentActivity() {
@@ -80,7 +88,18 @@ class MainActivity : FragmentActivity() {
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
     private var cachedUnsortedList: List<ResolveInfo>? = null // Cache the raw app list
     private var lastCacheTime = 0L
-    private val CACHE_DURATION = 60000L // Cache for 1 minute
+    private val CACHE_DURATION = 300000L // Cache for 5 minutes (increased from 1 minute)
+    
+    // Persistent cache files
+    private lateinit var appListCacheFile: File
+    private lateinit var appListCacheTimeFile: File
+    private lateinit var appMetadataCacheFile: File
+    private lateinit var appListVersionFile: File
+    
+    // App metadata cache
+    private val appMetadataCache = mutableMapOf<String, AppMetadata>()
+    private var usageStatsCache = mutableMapOf<String, Int>()
+    private var cachedAppListVersion: String? = null
     private val handler = Handler(Looper.getMainLooper())
     private val backgroundExecutor = Executors.newFixedThreadPool(4) // Reusable thread pool
 
@@ -143,6 +162,18 @@ class MainActivity : FragmentActivity() {
         private const val NOTIFICATION_PERMISSION_REQUEST = 900
     }
     
+    // Data class for app metadata caching
+    data class AppMetadata(
+        val packageName: String,
+        val activityName: String,
+        val label: String,
+        val lastUpdated: Long
+    ) : Serializable {
+        companion object {
+            // Make it accessible from other classes
+        }
+    }
+    
     private fun isDefaultLauncher(): Boolean {
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
@@ -162,6 +193,13 @@ class MainActivity : FragmentActivity() {
         }
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        
+        // Initialize cache files
+        initializeCacheFiles()
+        
+        // Load usage stats cache immediately
+        loadUsageStatsCache()
+        
         val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
         val isFirstTime = sharedPreferences.getBoolean("isFirstTime", true)
 
@@ -369,7 +407,8 @@ class MainActivity : FragmentActivity() {
                     fullAppList = fullAppList,
                     adapter = adapter,
                     searchBox = searchBox,
-                    contactsList = contactsList
+                    contactsList = contactsList,
+                    appMetadataCache = appMetadataCache
                 )
             }
         }, 150)
@@ -1094,9 +1133,26 @@ class MainActivity : FragmentActivity() {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                         val packageName = intent.data?.encodedSchemeSpecificPart
                         if (packageName != null && context is MainActivity) {
+                            // Clear caches for removed package
+                            context.appMetadataCache.remove(packageName)
+                            context.usageStatsCache.remove(packageName)
+                            
+                            // Clear persistent cache files to force refresh
+                            try {
+                                if (context::appListCacheFile.isInitialized && context.appListCacheFile.exists()) {
+                                    context.appListCacheFile.delete()
+                                }
+                                if (context::appListVersionFile.isInitialized && context.appListVersionFile.exists()) {
+                                    context.appListVersionFile.delete()
+                                }
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error clearing cache", e)
+                            }
+                            
                             context.runOnUiThread {
                                 context.appList.removeAll { it.activityInfo.packageName == packageName }
                                 context.fullAppList.removeAll { it.activityInfo.packageName == packageName }
+                                context.cachedUnsortedList = null // Clear in-memory cache
                                 if (context::adapter.isInitialized) {
                                     context.adapter.appList = context.appList
                                     context.adapter.notifyDataSetChanged()
@@ -1109,9 +1165,27 @@ class MainActivity : FragmentActivity() {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                         // Reload apps when a new package is installed (force refresh to clear cache)
                         if (context is MainActivity) {
-                            context.cachedUnsortedList = null // Clear cache
+                            context.cachedUnsortedList = null // Clear in-memory cache
+                            // Clear persistent cache
+                            try {
+                                if (context::appListCacheFile.isInitialized && context.appListCacheFile.exists()) {
+                                    context.appListCacheFile.delete()
+                                }
+                                if (context::appListVersionFile.isInitialized && context.appListVersionFile.exists()) {
+                                    context.appListVersionFile.delete()
+                                }
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error clearing cache", e)
+                            }
                             context.loadApps(forceRefresh = true)
                         }
+                    }
+                }
+                Intent.ACTION_PACKAGE_REPLACED -> {
+                    // Package updated - refresh cache
+                    if (context is MainActivity) {
+                        context.cachedUnsortedList = null
+                        context.loadApps(forceRefresh = true)
                     }
                 }
             }
@@ -1376,8 +1450,93 @@ class MainActivity : FragmentActivity() {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
-        // STEP 0: Show cached app list immediately if available (instant UI)
+        // STEP 0: Check persistent cache first (highest priority for instant loading)
         val currentTime = System.currentTimeMillis()
+        if (!forceRefresh && appListCacheFile.exists()) {
+            val cacheAge = try {
+                val cachedTime = appListCacheTimeFile.readText().toLongOrNull() ?: 0L
+                currentTime - cachedTime
+            } catch (e: Exception) {
+                Long.MAX_VALUE
+            }
+            
+            // Check version match
+            val currentVersion = getAppListVersion()
+            val cachedVersion = try {
+                if (appListVersionFile.exists()) {
+                    appListVersionFile.readText().trim()
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+            
+            if (cacheAge < CACHE_DURATION && currentVersion == cachedVersion) {
+                val cachedApps = loadAppListFromCache()
+                if (cachedApps.isNotEmpty()) {
+                    // Load metadata cache
+                    loadAppMetadataFromCache()
+                    
+                    // Show cached list immediately
+                    try {
+                        val focusMode = appDockManager.getCurrentMode()
+                        val workspaceMode = appDockManager.isWorkspaceModeActive()
+                        
+                        val cachedFiltered = cachedApps.filter { app ->
+                            val packageName = app.activityInfo.packageName
+                            packageName != "com.guruswarupa.launch" &&
+                                    (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
+                                    (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
+                        }
+                        
+                        val cachedFinalList = favoriteAppManager.filterApps(cachedFiltered, isShowAllAppsMode)
+                        
+                        if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
+                            // Sort immediately using cached metadata and usage stats
+                            val sorted = cachedFinalList.sortedWith(
+                                compareByDescending<ResolveInfo> {
+                                    usageStatsCache[it.activityInfo.packageName] ?: 0
+                                }.thenBy {
+                                    appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                                        ?: it.activityInfo.packageName.lowercase()
+                                }
+                            )
+                            
+                            handler.post {
+                                if (!isFinishing && !isDestroyed) {
+                                    appList = sorted.toMutableList()
+                                    fullAppList = ArrayList(cachedFiltered)
+                                    adapter.updateAppList(appList)
+                                    recyclerView.visibility = View.VISIBLE
+                                    
+                                    // Update AppSearchManager immediately with cached data
+                                    if (::appSearchManager.isInitialized) {
+                                        appSearchManager = AppSearchManager(
+                                            packageManager,
+                                            appList,
+                                            fullAppList,
+                                            adapter,
+                                            searchBox,
+                                            contactsList,
+                                            appMetadataCache
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Refresh in background without blocking
+                            backgroundExecutor.execute {
+                                refreshAppListFromPackageManager()
+                            }
+                            return
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error showing cached app list", e)
+                    }
+                }
+            }
+        }
+        
+        // STEP 0.5: Show in-memory cached app list if available (fallback)
         if (!forceRefresh && cachedUnsortedList != null && 
             (currentTime - lastCacheTime) < CACHE_DURATION && 
             fullAppList.isNotEmpty() && ::appDockManager.isInitialized) {
@@ -1426,6 +1585,13 @@ class MainActivity : FragmentActivity() {
                     val list = packageManager.queryIntentActivities(mainIntent, 0)
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
+                    
+                    // Save to persistent cache
+                    saveAppListToCache(list)
+                    
+                    // Pre-load metadata in background
+                    preloadAppMetadata(list)
+                    
                     list
                 }
 
@@ -1512,37 +1678,51 @@ class MainActivity : FragmentActivity() {
                     }, 50) // Small delay to let UI render first
                     
                     // STEP 3: Load labels, usage stats, and sort in background (after UI is shown)
-                    // Defer this expensive operation to avoid blocking initial render
+                    // Use cached metadata if available, otherwise load on-demand
                     handler.postDelayed({
                         backgroundExecutor.execute {
                             try {
-                                // Batch read all usage stats at once (much faster than individual reads)
-                                val allPrefs = sharedPreferences.all
-                                val usageCache = mutableMapOf<String, Int>()
-                                for ((key, value) in allPrefs) {
-                                    if (key.startsWith("usage_") && value is Int) {
-                                        val packageName = key.removePrefix("usage_")
-                                        usageCache[packageName] = value
+                                // Use pre-loaded usage stats cache (already loaded in onCreate)
+                                // Reload if cache is empty
+                                if (usageStatsCache.isEmpty()) {
+                                    loadUsageStatsCache()
+                                }
+                                
+                                // Use cached metadata, load missing ones on-demand
+                                val labelCache = mutableMapOf<String, String>()
+                                filteredApps.forEach { app ->
+                                    val packageName = app.activityInfo.packageName
+                                    val cached = appMetadataCache[packageName]
+                                    if (cached != null) {
+                                        labelCache[packageName] = cached.label.lowercase()
+                                    } else {
+                                        // Load on-demand and cache
+                                        try {
+                                            val label = app.loadLabel(packageManager).toString().lowercase()
+                                            labelCache[packageName] = label
+                                            appMetadataCache[packageName] = AppMetadata(
+                                                packageName = packageName,
+                                                activityName = app.activityInfo.name,
+                                                label = label,
+                                                lastUpdated = System.currentTimeMillis()
+                                            )
+                                        } catch (e: Exception) {
+                                            labelCache[packageName] = packageName.lowercase()
+                                        }
                                     }
                                 }
                                 
-                                // Load labels in batches to avoid blocking
-                                val labelCache = mutableMapOf<String, String>()
                                 val sortedApps = filteredApps.sortedWith(
                                     compareByDescending<ResolveInfo> { 
-                                        usageCache[it.activityInfo.packageName] ?: 0
+                                        usageStatsCache[it.activityInfo.packageName] ?: 0
                                     }
                                     .thenBy { app ->
-                                        val packageName = app.activityInfo.packageName
-                                        labelCache.getOrPut(packageName) {
-                                            try {
-                                                app.loadLabel(packageManager).toString().lowercase()
-                                            } catch (e: Exception) {
-                                                packageName.lowercase()
-                                            }
-                                        }
+                                        labelCache[app.activityInfo.packageName] ?: app.activityInfo.packageName.lowercase()
                                     }
                                 )
+                                
+                                // Save updated metadata cache
+                                saveAppMetadataToCache(appMetadataCache)
                                 
                                 // Update with sorted list
                                 val sortedFinalList = favoriteAppManager.filterApps(sortedApps, isShowAllAppsMode)
@@ -1610,6 +1790,252 @@ class MainActivity : FragmentActivity() {
             } else {
                 searchBox.visibility = android.view.View.VISIBLE
                 voiceSearchButton.visibility = android.view.View.VISIBLE
+            }
+        }
+    }
+    
+    // ========== CACHE OPTIMIZATION METHODS ==========
+    
+    /**
+     * Initialize cache file paths
+     */
+    private fun initializeCacheFiles() {
+        appListCacheFile = File(cacheDir, "app_list_cache.dat")
+        appListCacheTimeFile = File(cacheDir, "app_list_cache_time.txt")
+        appMetadataCacheFile = File(cacheDir, "app_metadata_cache.dat")
+        appListVersionFile = File(cacheDir, "app_list_version.txt")
+    }
+    
+    /**
+     * Load usage stats cache from SharedPreferences (batch read)
+     */
+    private fun loadUsageStatsCache() {
+        backgroundExecutor.execute {
+            try {
+                val allPrefs = sharedPreferences.all
+                usageStatsCache.clear()
+                for ((key, value) in allPrefs) {
+                    if (key.startsWith("usage_") && value is Int) {
+                        val packageName = key.removePrefix("usage_")
+                        usageStatsCache[packageName] = value
+                    }
+                }
+                Log.d("MainActivity", "Loaded ${usageStatsCache.size} usage stats into cache")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error loading usage stats cache", e)
+            }
+        }
+    }
+    
+    /**
+     * Get app list version based on installed packages
+     */
+    private fun getAppListVersion(): String {
+        return try {
+            val packages = packageManager.getInstalledPackages(0)
+                .map { it.packageName }
+                .sorted()
+                .joinToString("")
+            packages.hashCode().toString()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error getting app list version", e)
+            System.currentTimeMillis().toString()
+        }
+    }
+    
+    /**
+     * Save app list to persistent cache
+     */
+    private fun saveAppListToCache(apps: List<ResolveInfo>) {
+        backgroundExecutor.execute {
+            try {
+                val cacheData = apps.map { 
+                    "${it.activityInfo.packageName}|${it.activityInfo.name}" 
+                }
+                appListCacheFile.writeText(cacheData.joinToString("\n"))
+                appListCacheTimeFile.writeText(System.currentTimeMillis().toString())
+                
+                // Save version
+                val version = getAppListVersion()
+                appListVersionFile.writeText(version)
+                cachedAppListVersion = version
+                
+                Log.d("MainActivity", "Saved ${apps.size} apps to cache")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error saving app list cache", e)
+            }
+        }
+    }
+    
+    /**
+     * Load app list from persistent cache
+     */
+    private fun loadAppListFromCache(): List<ResolveInfo> {
+        return try {
+            if (!appListCacheFile.exists()) return emptyList()
+            
+            val cacheData = appListCacheFile.readText().lines()
+            val apps = mutableListOf<ResolveInfo>()
+            
+            for (line in cacheData) {
+                if (line.isBlank()) continue
+                val parts = line.split("|")
+                if (parts.size == 2) {
+                    val packageName = parts[0]
+                    val activityName = parts[1]
+                    
+                    try {
+                        // Try to get ResolveInfo from PackageManager
+                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_LAUNCHER)
+                            setPackage(packageName)
+                            setClassName(packageName, activityName)
+                        }
+                        val resolveInfo = packageManager.resolveActivity(intent, 0)
+                        if (resolveInfo != null) {
+                            apps.add(resolveInfo)
+                        }
+                    } catch (e: Exception) {
+                        // App may have been uninstalled, skip
+                    }
+                }
+            }
+            
+            Log.d("MainActivity", "Loaded ${apps.size} apps from cache")
+            apps
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error loading app list cache", e)
+            emptyList()
+        }
+    }
+    
+    /**
+     * Save app metadata to persistent cache
+     */
+    private fun saveAppMetadataToCache(metadata: Map<String, AppMetadata>) {
+        backgroundExecutor.execute {
+            try {
+                val outputStream = FileOutputStream(appMetadataCacheFile)
+                val objectOutputStream = ObjectOutputStream(outputStream)
+                objectOutputStream.writeObject(metadata)
+                objectOutputStream.close()
+                outputStream.close()
+                Log.d("MainActivity", "Saved ${metadata.size} app metadata entries to cache")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error saving app metadata cache", e)
+            }
+        }
+    }
+    
+    /**
+     * Load app metadata from persistent cache
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun loadAppMetadataFromCache(): Map<String, AppMetadata> {
+        return try {
+            if (!appMetadataCacheFile.exists()) return emptyMap()
+            
+            val inputStream = FileInputStream(appMetadataCacheFile)
+            val objectInputStream = ObjectInputStream(inputStream)
+            val metadata = objectInputStream.readObject() as? Map<String, AppMetadata> ?: emptyMap()
+            objectInputStream.close()
+            inputStream.close()
+            
+            appMetadataCache.clear()
+            appMetadataCache.putAll(metadata)
+            
+            Log.d("MainActivity", "Loaded ${metadata.size} app metadata entries from cache")
+            metadata
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error loading app metadata cache", e)
+            emptyMap()
+        }
+    }
+    
+    /**
+     * Pre-load app metadata (labels and icons) in background
+     */
+    private fun preloadAppMetadata(apps: List<ResolveInfo>) {
+        backgroundExecutor.execute {
+            try {
+                val metadata = mutableMapOf<String, AppMetadata>()
+                val currentTime = System.currentTimeMillis()
+                
+                apps.forEach { app ->
+                    val packageName = app.activityInfo.packageName
+                    try {
+                        // Check if metadata is already cached and recent
+                        val cached = appMetadataCache[packageName]
+                        if (cached != null) {
+                            val lastUpdated = cached.lastUpdated
+                            if ((currentTime - lastUpdated) < CACHE_DURATION) {
+                                metadata[packageName] = cached
+                            } else {
+                                // Cache expired, reload
+                                val label = app.loadLabel(packageManager).toString()
+                                metadata[packageName] = AppMetadata(
+                                    packageName = packageName,
+                                    activityName = app.activityInfo.name,
+                                    label = label,
+                                    lastUpdated = currentTime
+                                )
+                            }
+                        } else {
+                            // Load label
+                            val label = app.loadLabel(packageManager).toString()
+                            metadata[packageName] = AppMetadata(
+                                packageName = packageName,
+                                activityName = app.activityInfo.name,
+                                label = label,
+                                lastUpdated = currentTime
+                            )
+                        }
+                    } catch (e: Exception) {
+                        // Handle errors silently
+                    }
+                }
+                
+                // Update cache
+                appMetadataCache.putAll(metadata)
+                saveAppMetadataToCache(appMetadataCache)
+                
+                Log.d("MainActivity", "Pre-loaded metadata for ${metadata.size} apps")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error preloading app metadata", e)
+            }
+        }
+    }
+    
+    /**
+     * Refresh app list from PackageManager in background (non-blocking)
+     */
+    private fun refreshAppListFromPackageManager() {
+        backgroundExecutor.execute {
+            try {
+                val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                val list = packageManager.queryIntentActivities(mainIntent, 0)
+                
+                cachedUnsortedList = list
+                lastCacheTime = System.currentTimeMillis()
+                
+                // Save to persistent cache
+                saveAppListToCache(list)
+                
+                // Pre-load metadata
+                preloadAppMetadata(list)
+                
+                // Update UI if needed (only if list changed significantly)
+                val currentVersion = getAppListVersion()
+                if (currentVersion != cachedAppListVersion) {
+                    handler.post {
+                        if (!isFinishing && !isDestroyed) {
+                            loadApps(forceRefresh = false)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error refreshing app list", e)
             }
         }
     }
