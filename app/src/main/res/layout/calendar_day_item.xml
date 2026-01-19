@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="48dp"
+    android:padding="4dp">
+
+    <TextView
+        android:id="@+id/calendar_day_text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:text="1"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:background="@drawable/widget_background" />
+
+    <View
+        android:id="@+id/workout_indicator"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/workout_indicator_background"
+        android:visibility="gone" />
+
+</FrameLayout>
