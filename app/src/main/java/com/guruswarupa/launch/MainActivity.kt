@@ -95,8 +95,6 @@ class MainActivity : FragmentActivity() {
     private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
     private var lastUpdateDate: String = ""
-    private var lastWeatherUpdateTime = 0L
-    private val WEATHER_UPDATE_INTERVAL = 30 * 60 * 1000L // 30 minutes in milliseconds
     // Cache SimpleDateFormat instances to avoid repeated creation
     private val timeFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
@@ -272,64 +270,67 @@ class MainActivity : FragmentActivity() {
         updateDate()
         setupWeather()
 
-        // Initialize battery and phone usage widgets
-        setupBatteryAndUsage()
+        // Defer expensive widget initialization to avoid blocking UI
+        handler.postDelayed({
+            // Initialize battery and phone usage widgets
+            setupBatteryAndUsage()
 
-        // Initialize notifications widget
-        val notificationsContainer = findViewById<ViewGroup>(R.id.notifications_widget_container)
-        val notificationsView = LayoutInflater.from(this).inflate(R.layout.notifications_widget, notificationsContainer, false)
-        notificationsContainer.addView(notificationsView)
-        notificationsWidget = NotificationsWidget(notificationsView)
-        
-        // Register broadcast receiver for notification updates
-        val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(notificationUpdateReceiver, notificationFilter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(notificationUpdateReceiver, notificationFilter)
-        }
-        
-        // Initialize calculator widget
-        val calculatorContainer = findViewById<ViewGroup>(R.id.calculator_widget_container)
-        val calculatorView = LayoutInflater.from(this).inflate(R.layout.calculator_widget, calculatorContainer, false)
-        calculatorContainer.addView(calculatorView)
-        calculatorWidget = CalculatorWidget(calculatorView)
+            // Initialize notifications widget
+            val notificationsContainer = findViewById<ViewGroup>(R.id.notifications_widget_container)
+            val notificationsView = LayoutInflater.from(this).inflate(R.layout.notifications_widget, notificationsContainer, false)
+            notificationsContainer.addView(notificationsView)
+            notificationsWidget = NotificationsWidget(notificationsView)
+            
+            // Register broadcast receiver for notification updates
+            val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(notificationUpdateReceiver, notificationFilter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(notificationUpdateReceiver, notificationFilter)
+            }
 
-        // Initialize workout widget
-        val workoutContainer = findViewById<ViewGroup>(R.id.workout_widget_container)
-        val workoutView = LayoutInflater.from(this).inflate(R.layout.workout_widget, workoutContainer, false)
-        workoutContainer.addView(workoutView)
-        workoutWidget = WorkoutWidget(workoutView)
+            // Initialize calculator widget
+            val calculatorContainer = findViewById<ViewGroup>(R.id.calculator_widget_container)
+            val calculatorView = LayoutInflater.from(this).inflate(R.layout.calculator_widget, calculatorContainer, false)
+            calculatorContainer.addView(calculatorView)
+            calculatorWidget = CalculatorWidget(calculatorView)
 
-        // Initialize todo widget
-        setupTodoWidget()
+            // Initialize workout widget
+            val workoutContainer = findViewById<ViewGroup>(R.id.workout_widget_container)
+            val workoutView = LayoutInflater.from(this).inflate(R.layout.workout_widget, workoutContainer, false)
+            workoutContainer.addView(workoutView)
+            workoutWidget = WorkoutWidget(workoutView)
 
-        // Initialize todo alarm manager
-        todoAlarmManager = TodoAlarmManager(this)
-        
-        // Request notification permission
-        requestNotificationPermission()
+            // Initialize todo widget
+            setupTodoWidget()
 
-        todoRecyclerView = findViewById(R.id.todo_recycler_view)
-        addTodoButton = findViewById(R.id.add_todo_button)
+            // Initialize todo alarm manager
+            todoAlarmManager = TodoAlarmManager(this)
+            
+            // Request notification permission
+            requestNotificationPermission()
 
-        todoRecyclerView.layoutManager = LinearLayoutManager(this)
-        todoAdapter = TodoAdapter(todoItems, { todoItem ->
-            removeTodoItem(todoItem)
-        }, {
-            // onTaskStateChanged callback - save and reschedule alarms when task state changes
-            saveTodoItems()
+            todoRecyclerView = findViewById(R.id.todo_recycler_view)
+            addTodoButton = findViewById(R.id.add_todo_button)
+
+            todoRecyclerView.layoutManager = LinearLayoutManager(this)
+            todoAdapter = TodoAdapter(todoItems, { todoItem ->
+                removeTodoItem(todoItem)
+            }, {
+                // onTaskStateChanged callback - save and reschedule alarms when task state changes
+                saveTodoItems()
+                rescheduleTodoAlarms()
+            })
+            todoRecyclerView.adapter = todoAdapter
+
+            addTodoButton.setOnClickListener {
+                showAddTodoDialog()
+            }
+
+            loadTodoItems()
+            // Reschedule alarms after loading todos
             rescheduleTodoAlarms()
-        })
-        todoRecyclerView.adapter = todoAdapter
-
-        addTodoButton.setOnClickListener {
-            showAddTodoDialog()
-        }
-
-        loadTodoItems()
-        // Reschedule alarms after loading todos
-        rescheduleTodoAlarms()
+        }, 100) // Defer by 100ms to let UI render first
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
 
@@ -351,18 +352,27 @@ class MainActivity : FragmentActivity() {
         appList = mutableListOf()
         fullAppList = mutableListOf()
 
-        loadApps()
+        // Initialize adapter immediately with empty/cached list for instant UI
         adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
         recyclerView.adapter = adapter
+        recyclerView.visibility = View.VISIBLE
 
-        appSearchManager = AppSearchManager(
-            packageManager = packageManager,
-            appList = appList,
-            fullAppList = fullAppList,
-            adapter = adapter,
-            searchBox = searchBox,
-            contactsList = contactsList
-        )
+        // Load apps in background - will update adapter when ready
+        loadApps()
+        
+        // Defer AppSearchManager initialization to avoid blocking
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                appSearchManager = AppSearchManager(
+                    packageManager = packageManager,
+                    appList = appList,
+                    fullAppList = fullAppList,
+                    adapter = adapter,
+                    searchBox = searchBox,
+                    contactsList = contactsList
+                )
+            }
+        }, 150)
 
         // Initialize DrawerLayout
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -424,6 +434,7 @@ class MainActivity : FragmentActivity() {
             widgetManager.requestPickWidget(this, REQUEST_PICK_WIDGET)
         }
 
+        // Load wallpaper immediately - only show default if we can't get the real one
         setWallpaperBackground()
 
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
@@ -433,15 +444,20 @@ class MainActivity : FragmentActivity() {
 
         lastUpdateDate = getCurrentDateString()
 
-        // Initialize finance widget
-        financeManager = FinanceManager(sharedPreferences)
-        balanceText = findViewById(R.id.balance_text)
-        monthlySpentText = findViewById(R.id.monthly_spent_text)
-        amountInput = findViewById(R.id.amount_input)
-        descriptionInput = findViewById(R.id.description_input)
+        // Defer finance widget initialization to avoid blocking
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                // Initialize finance widget
+                financeManager = FinanceManager(sharedPreferences)
+                balanceText = findViewById(R.id.balance_text)
+                monthlySpentText = findViewById(R.id.monthly_spent_text)
+                amountInput = findViewById(R.id.amount_input)
+                descriptionInput = findViewById(R.id.description_input)
 
-        setupFinanceWidget()
-        updateFinanceDisplay()
+                setupFinanceWidget()
+                updateFinanceDisplay()
+            }
+        }, 100)
     }
 
     fun refreshAppsForFocusMode() {
@@ -837,25 +853,98 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun setWallpaperBackground() {
-        // Load wallpaper asynchronously to avoid blocking UI
+        // Check if we have a cached wallpaper bitmap - use it instantly
+        if (currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
+            wallpaperBackground.setImageBitmap(currentWallpaperBitmap)
+            findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(currentWallpaperBitmap)
+            return
+        }
+        
+        // Try to load wallpaper synchronously first (for BitmapDrawable, this is very fast)
+        // This prevents the black flash
+        try {
+            val wallpaperManager = WallpaperManager.getInstance(this)
+            val drawable = wallpaperManager.drawable
+            
+            if (drawable != null && drawable is BitmapDrawable) {
+                // BitmapDrawable is fast to load - do it synchronously for instant display
+                val bitmap = drawable.bitmap
+                if (bitmap != null && !bitmap.isRecycled) {
+                    currentWallpaperBitmap?.recycle()
+                    currentWallpaperBitmap = bitmap
+                    wallpaperBackground.setImageBitmap(bitmap)
+                    findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
+                    return // Success - we're done!
+                }
+            }
+        } catch (e: SecurityException) {
+            // Permission denied - show default wallpaper
+            Log.w("MainActivity", "No permission to read wallpaper, showing default", e)
+            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+            findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
+            return
+        } catch (e: Exception) {
+            // If synchronous load fails, fall through to async load
+            Log.d("MainActivity", "Synchronous wallpaper load failed, trying async", e)
+        }
+        
+        // For non-BitmapDrawable or if sync load failed, load in background
+        // But this should be rare - most wallpapers are BitmapDrawable
         backgroundExecutor.execute {
             try {
                 val wallpaperManager = WallpaperManager.getInstance(this)
-                val bitmap = wallpaperManager.drawable.let {
-                    if (it is BitmapDrawable) it.bitmap else null
+                val drawable = wallpaperManager.drawable
+                
+                if (drawable == null) {
+                    runOnUiThread {
+                        wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
+                    }
+                    return@execute
                 }
-                runOnUiThread {
-                    if (bitmap != null) {
+                
+                val bitmap = if (drawable is BitmapDrawable) {
+                    drawable.bitmap
+                } else {
+                    // Get screen dimensions directly (resources is available in background thread)
+                    val screenWidth = resources.displayMetrics.widthPixels
+                    val screenHeight = resources.displayMetrics.heightPixels
+                    
+                    // Convert drawable to bitmap if needed
+                    val bm = Bitmap.createBitmap(
+                        screenWidth.takeIf { it > 0 } ?: 1080,
+                        screenHeight.takeIf { it > 0 } ?: 1920,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    val canvas = android.graphics.Canvas(bm)
+                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.draw(canvas)
+                    bm
+                }
+                
+                // Cache the bitmap for future use (only if valid)
+                if (bitmap != null && !bitmap.isRecycled) {
+                    currentWallpaperBitmap?.recycle()
+                    currentWallpaperBitmap = bitmap
+                    
+                    runOnUiThread {
                         wallpaperBackground.setImageBitmap(bitmap)
-                        // Also set wallpaper for drawer background
                         findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
-                    } else {
+                    }
+                } else {
+                    runOnUiThread {
                         wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                         findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
                     }
                 }
+            } catch (e: SecurityException) {
+                Log.w("MainActivity", "No permission to read wallpaper, showing default", e)
+                runOnUiThread {
+                    wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                    findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("MainActivity", "Error loading wallpaper, showing default", e)
                 runOnUiThread {
                     wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                     findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
@@ -1146,6 +1235,16 @@ class MainActivity : FragmentActivity() {
             applyFocusMode(appDockManager.getCurrentMode())
             appDockManager.refreshWorkspaceToggle()
         }
+        
+        // Ensure app list is loaded - reload if empty (fixes issue where apps don't load)
+        if (::adapter.isInitialized && (appList.isEmpty() || !::appDockManager.isInitialized)) {
+            Log.d("MainActivity", "App list is empty in onResume, reloading...")
+            handler.postDelayed({
+                if (!isFinishing && !isDestroyed && ::appDockManager.isInitialized) {
+                    loadApps(forceRefresh = false)
+                }
+            }, 100)
+        }
 
         // Start widget managers (fast operations)
         if (::widgetManager.isInitialized) {
@@ -1197,18 +1296,7 @@ class MainActivity : FragmentActivity() {
             }
         }, 50) // Small delay to let UI render first
 
-        // Only update weather if it's been more than 10 minutes (defer this too)
-        val lastWeatherUpdate = sharedPreferences.getLong("last_weather_update", 0)
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastWeatherUpdate > 600000) { // 10 minutes
-            lastWeatherUpdateTime = currentTime
-            handler.postDelayed({
-                setupWeather()
-                sharedPreferences.edit().putLong("last_weather_update", currentTime).apply()
-            }, 200) // Defer weather update
-        } else {
-            lastWeatherUpdateTime = lastWeatherUpdate
-        }
+        // Weather is now only updated when user taps on weather widget
     }
 
     override fun onPause() {
@@ -1245,13 +1333,7 @@ class MainActivity : FragmentActivity() {
     private fun updateTime() {
         val currentTime = timeFormat.format(Date())
         timeTextView.text = currentTime
-
-        // Update weather every 30 minutes (efficient check)
-        val currentTimeMillis = System.currentTimeMillis()
-        if (currentTimeMillis - lastWeatherUpdateTime >= WEATHER_UPDATE_INTERVAL) {
-            lastWeatherUpdateTime = currentTimeMillis
-            updateWeather()
-        }
+        // Weather is now only updated when user taps on weather widget
     }
 
     private fun updateDate() {
@@ -1260,13 +1342,55 @@ class MainActivity : FragmentActivity() {
     }
 
     fun loadApps(forceRefresh: Boolean = false) {
+        // Ensure appDockManager is initialized before proceeding
+        if (!::appDockManager.isInitialized) {
+            Log.w("MainActivity", "loadApps called before appDockManager initialization, retrying...")
+            handler.postDelayed({ loadApps(forceRefresh) }, 100)
+            return
+        }
+        
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
+
+        // STEP 0: Show cached app list immediately if available (instant UI)
+        val currentTime = System.currentTimeMillis()
+        if (!forceRefresh && cachedUnsortedList != null && 
+            (currentTime - lastCacheTime) < CACHE_DURATION && 
+            fullAppList.isNotEmpty() && ::appDockManager.isInitialized) {
+            try {
+                // We have a cached list - show it immediately while loading fresh data
+                val focusMode = appDockManager.getCurrentMode()
+                val workspaceMode = appDockManager.isWorkspaceModeActive()
+                
+                val cachedFiltered = cachedUnsortedList!!.filter { app ->
+                    val packageName = app.activityInfo.packageName
+                    packageName != "com.guruswarupa.launch" &&
+                            (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
+                            (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
+                }
+                
+                val cachedFinalList = favoriteAppManager.filterApps(cachedFiltered, isShowAllAppsMode)
+                
+                if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
+                    // Use handler.post for lighter UI update
+                    handler.post {
+                        if (!isFinishing && !isDestroyed) {
+                            appList = cachedFinalList.toMutableList()
+                            fullAppList = ArrayList(cachedFiltered)
+                            adapter.updateAppList(appList)
+                            recyclerView.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error showing cached app list", e)
+                // Continue to load fresh apps
+            }
+        }
 
         backgroundExecutor.execute {
             try {
                 // Use cached list if available and not forcing refresh
-                val currentTime = System.currentTimeMillis()
                 val unsortedList = if (!forceRefresh && 
                     cachedUnsortedList != null && 
                     (currentTime - lastCacheTime) < CACHE_DURATION) {
@@ -1283,10 +1407,22 @@ class MainActivity : FragmentActivity() {
 
                 if (unsortedList.isEmpty()) {
                     runOnUiThread {
-                        Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
+                        if (appList.isEmpty()) {
+                            Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
+                        }
                         recyclerView.visibility = View.VISIBLE
                     }
                 } else {
+                    // Ensure appDockManager is initialized before using it
+                    if (!::appDockManager.isInitialized) {
+                        Log.e("MainActivity", "appDockManager not initialized in loadApps background thread")
+                        runOnUiThread {
+                            // Retry loading apps after a short delay
+                            handler.postDelayed({ loadApps(forceRefresh) }, 200)
+                        }
+                        return@execute
+                    }
+                    
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
@@ -1302,7 +1438,12 @@ class MainActivity : FragmentActivity() {
                     val finalAppList = favoriteAppManager.filterApps(filteredApps, isShowAllAppsMode)
 
                     // STEP 2: Show list immediately without sorting/labels (fast initial render)
-                    runOnUiThread {
+                    // Use handler.post instead of runOnUiThread for better performance
+                    handler.post {
+                        if (isFinishing || isDestroyed) {
+                            return@post
+                        }
+                        
                         appList = finalAppList.toMutableList()
                         fullAppList = ArrayList(filteredApps)
 
@@ -1320,12 +1461,21 @@ class MainActivity : FragmentActivity() {
                         }
                         
                         recyclerView.visibility = View.VISIBLE
+                    }
+                    
+                    // Defer expensive operations to avoid blocking UI
+                    handler.postDelayed({
+                        if (isFinishing || isDestroyed) {
+                            return@postDelayed
+                        }
                         
-                        // Update dock toggle icon
-                        appDockManager.refreshFavoriteToggle()
+                        // Update dock toggle icon (non-critical, can be deferred)
+                        if (::appDockManager.isInitialized) {
+                            appDockManager.refreshFavoriteToggle()
+                        }
 
-                        // Initialize AppSearchManager
-                        if (!::appSearchManager.isInitialized) {
+                        // Update AppSearchManager (can be deferred slightly)
+                        if (::appSearchManager.isInitialized) {
                             appSearchManager = AppSearchManager(
                                 packageManager,
                                 appList,
@@ -1335,67 +1485,93 @@ class MainActivity : FragmentActivity() {
                                 contactsList
                             )
                         }
-                    }
+                    }, 50) // Small delay to let UI render first
                     
                     // STEP 3: Load labels, usage stats, and sort in background (after UI is shown)
-                    backgroundExecutor.execute {
-                        try {
-                            // Batch read all usage stats at once (much faster than individual reads)
-                            val allPrefs = sharedPreferences.all
-                            val usageCache = mutableMapOf<String, Int>()
-                            for ((key, value) in allPrefs) {
-                                if (key.startsWith("usage_") && value is Int) {
-                                    val packageName = key.removePrefix("usage_")
-                                    usageCache[packageName] = value
-                                }
-                            }
-                            
-                            // Load labels and create sorted list
-                            val labelCache = mutableMapOf<String, String>()
-                            val sortedApps = filteredApps.sortedWith(
-                                compareByDescending<ResolveInfo> { 
-                                    usageCache[it.activityInfo.packageName] ?: 0
-                                }
-                                .thenBy { app ->
-                                    val packageName = app.activityInfo.packageName
-                                    labelCache.getOrPut(packageName) {
-                                        try {
-                                            app.loadLabel(packageManager).toString().lowercase()
-                                        } catch (e: Exception) {
-                                            packageName.lowercase()
-                                        }
+                    // Defer this expensive operation to avoid blocking initial render
+                    handler.postDelayed({
+                        backgroundExecutor.execute {
+                            try {
+                                // Batch read all usage stats at once (much faster than individual reads)
+                                val allPrefs = sharedPreferences.all
+                                val usageCache = mutableMapOf<String, Int>()
+                                for ((key, value) in allPrefs) {
+                                    if (key.startsWith("usage_") && value is Int) {
+                                        val packageName = key.removePrefix("usage_")
+                                        usageCache[packageName] = value
                                     }
                                 }
-                            )
-                            
-                            // Update with sorted list
-                            val sortedFinalList = favoriteAppManager.filterApps(sortedApps, isShowAllAppsMode)
-                            
-                            runOnUiThread {
-                                appList = sortedFinalList.toMutableList()
-                                fullAppList = ArrayList(sortedApps)
-                                adapter.updateAppList(appList)
                                 
-                                // Update AppSearchManager with sorted list
-                                if (::appSearchManager.isInitialized) {
-                                    appSearchManager = AppSearchManager(
-                                        packageManager,
-                                        appList,
-                                        fullAppList,
-                                        adapter,
-                                        searchBox,
-                                        contactsList
-                                    )
+                                // Load labels in batches to avoid blocking
+                                val labelCache = mutableMapOf<String, String>()
+                                val sortedApps = filteredApps.sortedWith(
+                                    compareByDescending<ResolveInfo> { 
+                                        usageCache[it.activityInfo.packageName] ?: 0
+                                    }
+                                    .thenBy { app ->
+                                        val packageName = app.activityInfo.packageName
+                                        labelCache.getOrPut(packageName) {
+                                            try {
+                                                app.loadLabel(packageManager).toString().lowercase()
+                                            } catch (e: Exception) {
+                                                packageName.lowercase()
+                                            }
+                                        }
+                                    }
+                                )
+                                
+                                // Update with sorted list
+                                val sortedFinalList = favoriteAppManager.filterApps(sortedApps, isShowAllAppsMode)
+                                
+                                // Use handler.post for UI update (lighter than runOnUiThread)
+                                handler.post {
+                                    if (isFinishing || isDestroyed) {
+                                        return@post
+                                    }
+                                    
+                                    appList = sortedFinalList.toMutableList()
+                                    fullAppList = ArrayList(sortedApps)
+                                    
+                                    if (::adapter.isInitialized) {
+                                        adapter.updateAppList(appList)
+                                    }
+                                    
+                                    // Update AppSearchManager with sorted list (defer slightly)
+                                    handler.postDelayed({
+                                        if (::appSearchManager.isInitialized && !isFinishing && !isDestroyed) {
+                                            appSearchManager = AppSearchManager(
+                                                packageManager,
+                                                appList,
+                                                fullAppList,
+                                                adapter,
+                                                searchBox,
+                                                contactsList
+                                            )
+                                        }
+                                    }, 50)
                                 }
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error sorting apps", e)
                             }
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "Error sorting apps", e)
                         }
-                    }
+                    }, 200) // Defer sorting by 200ms to let UI render first
                 }
             } catch (e: Exception) {
+                Log.e("MainActivity", "Error loading apps", e)
                 runOnUiThread {
-                    Toast.makeText(this, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                    if (isFinishing || isDestroyed) {
+                        return@runOnUiThread
+                    }
+                    
+                    // If app list is empty, try to reload after a delay
+                    if (appList.isEmpty() && !forceRefresh) {
+                        Log.w("MainActivity", "App list is empty after error, retrying loadApps...")
+                        handler.postDelayed({ loadApps(forceRefresh = true) }, 500)
+                    }
+                    
+                    if (appList.isEmpty()) {
+                        Toast.makeText(this, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                     recyclerView.visibility = View.VISIBLE
                 }
             }
@@ -1810,9 +1986,16 @@ class MainActivity : FragmentActivity() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)
 
-        // Don't request permissions automatically - only when user taps weather widget
-        // Just update weather with existing stored location or show unavailable
-        weatherManager.updateWeather(weatherIcon, weatherText)
+        // Set initial placeholder - weather only loads when user taps
+        weatherText.text = "Tap to load weather"
+        weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+        
+        // Add click listeners to load weather only when tapped
+        val weatherClickListener = View.OnClickListener {
+            updateWeather()
+        }
+        weatherIcon.setOnClickListener(weatherClickListener)
+        weatherText.setOnClickListener(weatherClickListener)
     }
 
     private fun setupBatteryAndUsage() {
