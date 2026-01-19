@@ -18,6 +18,11 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     
     var onDaySelected: ((String, Map<String, Long>) -> Unit)? = null
     
+    private var touchDownX: Float = 0f
+    private var touchDownY: Float = 0f
+    private var touchedCardIndex: Int = -1
+    private val TAP_THRESHOLD = 50f // Maximum distance for a tap (in pixels)
+    
     private val cardPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
@@ -186,40 +191,63 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     }
     
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) {
-            val dataToUse = if (appUsageData.isNotEmpty()) appUsageData else
-                usageData.map { it.first to mapOf("Total" to it.second) }
-            
-            if (dataToUse.isEmpty()) return false
-            
-            val padding = 20f
-            val cardSpacing = 12f
-            val cardHeight = 100f
-            val topPadding = 4f
-            val bottomPadding = 8f
-            
-            val startY = topPadding
-            
-            val touchX = event.x
-            val touchY = event.y
-            
-            // Check which card was touched
-            dataToUse.forEachIndexed { dayIndex, (day, appUsages) ->
-                val cardY = startY + (dayIndex * (cardHeight + cardSpacing))
-                val cardLeft = padding
-                val cardRight = width - padding
-                val cardTop = cardY
-                val cardBottom = cardY + cardHeight
+        val dataToUse = if (appUsageData.isNotEmpty()) appUsageData else
+            usageData.map { it.first to mapOf("Total" to it.second) }
+        
+        if (dataToUse.isEmpty()) return super.onTouchEvent(event)
+        
+        val padding = 20f
+        val cardSpacing = 12f
+        val cardHeight = 100f
+        val topPadding = 4f
+        val bottomPadding = 8f
+        val startY = topPadding
+        
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                touchDownX = event.x
+                touchDownY = event.y
+                touchedCardIndex = -1
                 
-                if (touchX >= cardLeft && touchX <= cardRight &&
-                    touchY >= cardTop && touchY <= cardBottom) {
-                    // Show dialog for this day
-                    onDaySelected?.invoke(day, appUsages)
-                    return true
+                // Check which card was touched
+                dataToUse.forEachIndexed { dayIndex, (day, appUsages) ->
+                    val cardY = startY + (dayIndex * (cardHeight + cardSpacing))
+                    val cardLeft = padding
+                    val cardRight = width - padding
+                    val cardTop = cardY
+                    val cardBottom = cardY + cardHeight
+                    
+                    if (touchDownX >= cardLeft && touchDownX <= cardRight &&
+                        touchDownY >= cardTop && touchDownY <= cardBottom) {
+                        touchedCardIndex = dayIndex
+                        return true
+                    }
                 }
+                return false
             }
             
-            // Clicked outside, do nothing
+            MotionEvent.ACTION_UP -> {
+                // Only trigger if it was a tap (not a swipe)
+                if (touchedCardIndex >= 0) {
+                    val deltaX = kotlin.math.abs(event.x - touchDownX)
+                    val deltaY = kotlin.math.abs(event.y - touchDownY)
+                    val distance = kotlin.math.sqrt(deltaX * deltaX + deltaY * deltaY)
+                    
+                    // If the touch moved less than the threshold, it's a tap
+                    if (distance < TAP_THRESHOLD) {
+                        val (day, appUsages) = dataToUse[touchedCardIndex]
+                        onDaySelected?.invoke(day, appUsages)
+                        return true
+                    }
+                }
+                touchedCardIndex = -1
+                return false
+            }
+            
+            MotionEvent.ACTION_CANCEL -> {
+                touchedCardIndex = -1
+                return false
+            }
         }
         
         return super.onTouchEvent(event)
