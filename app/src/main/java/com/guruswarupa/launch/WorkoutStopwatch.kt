@@ -1,0 +1,97 @@
+package com.guruswarupa.launch
+
+import android.os.Handler
+import android.os.Looper
+import android.widget.Button
+import android.widget.TextView
+
+class WorkoutStopwatch(
+    private val timeDisplay: TextView,
+    private val startStopButton: Button,
+    private val resetButton: Button,
+    private val onTimeRecorded: (Int) -> Unit
+) {
+    private var isRunning = false
+    private var startTime = 0L
+    private var elapsedTime = 0L
+    private val handler = Handler(Looper.getMainLooper())
+    private var updateRunnable: Runnable? = null
+    
+    init {
+        startStopButton.setOnClickListener {
+            if (isRunning) {
+                stop()
+            } else {
+                start()
+            }
+        }
+        
+        resetButton.setOnClickListener {
+            reset()
+        }
+        
+        updateDisplay()
+    }
+    
+    private fun start() {
+        if (!isRunning) {
+            startTime = System.currentTimeMillis() - elapsedTime
+            isRunning = true
+            startStopButton.text = "Stop"
+            resetButton.isEnabled = false
+            
+            updateRunnable = object : Runnable {
+                override fun run() {
+                    if (isRunning) {
+                        elapsedTime = System.currentTimeMillis() - startTime
+                        updateDisplay()
+                        handler.postDelayed(this, 100) // Update every 100ms
+                    }
+                }
+            }
+            handler.post(updateRunnable!!)
+        }
+    }
+    
+    private fun stop() {
+        if (isRunning) {
+            isRunning = false
+            startStopButton.text = "Start"
+            resetButton.isEnabled = true
+            updateRunnable?.let { handler.removeCallbacks(it) }
+            
+            // Record the time
+            val seconds = (elapsedTime / 1000).toInt()
+            if (seconds > 0) {
+                onTimeRecorded(seconds)
+            }
+        }
+    }
+    
+    private fun reset() {
+        isRunning = false
+        elapsedTime = 0L
+        startTime = 0L
+        startStopButton.text = "Start"
+        resetButton.isEnabled = true
+        updateRunnable?.let { handler.removeCallbacks(it) }
+        updateDisplay()
+    }
+    
+    private fun updateDisplay() {
+        val totalSeconds = (elapsedTime / 1000).toInt()
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        
+        timeDisplay.text = when {
+            hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
+            minutes > 0 -> String.format("%d:%02d", minutes, seconds)
+            else -> String.format("0:%02d", seconds)
+        }
+    }
+    
+    fun cleanup() {
+        updateRunnable?.let { handler.removeCallbacks(it) }
+    }
+}

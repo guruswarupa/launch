@@ -112,6 +112,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var todoAlarmManager: TodoAlarmManager
     private lateinit var calculatorWidget: CalculatorWidget
     private lateinit var notificationsWidget: NotificationsWidget
+    private lateinit var workoutWidget: WorkoutWidget
 
     // Finance widget variables
     private lateinit var financeManager: FinanceManager
@@ -293,6 +294,12 @@ class MainActivity : FragmentActivity() {
         val calculatorView = LayoutInflater.from(this).inflate(R.layout.calculator_widget, calculatorContainer, false)
         calculatorContainer.addView(calculatorView)
         calculatorWidget = CalculatorWidget(calculatorView)
+
+        // Initialize workout widget
+        val workoutContainer = findViewById<ViewGroup>(R.id.workout_widget_container)
+        val workoutView = LayoutInflater.from(this).inflate(R.layout.workout_widget, workoutContainer, false)
+        workoutContainer.addView(workoutView)
+        workoutWidget = WorkoutWidget(workoutView)
 
         // Initialize todo widget
         setupTodoWidget()
