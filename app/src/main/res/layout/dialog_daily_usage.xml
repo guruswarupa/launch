@@ -27,15 +27,17 @@
     <com.guruswarupa.launch.DailyUsagePieView
         android:id="@+id/daily_pie_chart"
         android:layout_width="match_parent"
-        android:layout_height="400dp"
+        android:layout_height="250dp"
         android:layout_marginBottom="24dp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/app_usage_list"
         android:layout_width="match_parent"
-        android:layout_height="400dp"
+        android:layout_height="200dp"
         android:background="@drawable/input_field_background"
-        android:padding="12dp" />
+        android:padding="12dp"
+        android:paddingBottom="24dp"
+        android:clipToPadding="false" />
 
     <Button
         android:id="@+id/close_button"
