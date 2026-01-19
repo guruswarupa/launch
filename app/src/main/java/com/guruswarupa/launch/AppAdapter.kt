@@ -511,7 +511,18 @@ class AppAdapter(
                     }
                 }
 
+                // Debounce clicks to prevent double-tap issues
+                var lastClickTime = 0L
+                val CLICK_DEBOUNCE_DELAY = 500L // 500ms debounce
+                
                 holder.itemView.setOnClickListener {
+                    val currentTime = System.currentTimeMillis()
+                    // Ignore clicks that are too close together (double-tap prevention)
+                    if (currentTime - lastClickTime < CLICK_DEBOUNCE_DELAY) {
+                        return@setOnClickListener
+                    }
+                    lastClickTime = currentTime
+                    
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                     if (intent != null) {
                         val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)

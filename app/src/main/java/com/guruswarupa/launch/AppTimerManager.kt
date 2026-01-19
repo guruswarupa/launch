@@ -24,6 +24,7 @@ class AppTimerManager(private val context: Context) {
     private var currentPackageName: String? = null
     private val backgroundExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private var currentDialog: AlertDialog? = null // Track if dialog is showing
 
     companion object {
         const val TIMER_1_MIN = 60000L
@@ -33,11 +34,17 @@ class AppTimerManager(private val context: Context) {
     }
 
     fun showTimerDialog(packageName: String, appName: String, onTimerSet: (Long) -> Unit) {
+        // Prevent multiple dialogs from opening - if one is already showing, ignore
+        if (currentDialog != null && currentDialog!!.isShowing) {
+            return
+        }
+
         val options = arrayOf("1 minute", "5 minutes", "10 minutes", "Custom", "No timer")
 
         val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Set timer for $appName")
             .setItems(options) { _, which ->
+                currentDialog = null // Clear reference when dialog is dismissed via item selection
                 when (which) {
                     0 -> onTimerSet(TIMER_1_MIN)
                     1 -> onTimerSet(TIMER_5_MIN)
@@ -47,9 +54,15 @@ class AppTimerManager(private val context: Context) {
                 }
             }
             .setNegativeButton("Cancel") { dialog, _ ->
+                currentDialog = null // Clear reference when dialog is dismissed
                 dialog.dismiss()
             }
+            .setOnDismissListener {
+                currentDialog = null // Clear reference when dialog is dismissed
+            }
             .show()
+        
+        currentDialog = dialog // Store reference to track if showing
         
         // Fix dialog items text color to white
         fixDialogItemsTextColor(dialog)
