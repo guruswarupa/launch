@@ -106,7 +106,8 @@
             <FrameLayout
                 android:id="@+id/step_content_container"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:minHeight="400dp">
 
                 <!-- Welcome Step -->
@@ -276,6 +277,62 @@
 
                 </LinearLayout>
 
+                <!-- Backup Import Step -->
+                <LinearLayout
+                    android:id="@+id/backup_import_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Import Backup"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Do you have a backup file from a previous installation? You can import your settings, favorites, workspaces, and all other data."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="32dp"/>
+
+                    <Button
+                        android:id="@+id/import_backup_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Import Backup"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:paddingHorizontal="32dp"
+                        android:paddingVertical="16dp"
+                        android:layout_marginBottom="16dp"
+                        android:backgroundTint="@color/nord7"/>
+
+                    <Button
+                        android:id="@+id/skip_backup_button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Skip"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:backgroundTint="@android:color/transparent"
+                        android:paddingHorizontal="24dp"
+                        android:paddingVertical="12dp"/>
+
+                </LinearLayout>
+
                 <!-- Display Style Step -->
                 <LinearLayout
                     android:id="@+id/display_style_step"
@@ -337,6 +394,151 @@
                             android:padding="16dp"/>
 
                     </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Favorites Step -->
+                <LinearLayout
+                    android:id="@+id/favorites_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select Favorite Apps"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Choose which apps you want to see by default. You can change this later in settings."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="16dp"/>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/favorites_recycler_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:padding="8dp"
+                        android:clipToPadding="false"/>
+
+                </LinearLayout>
+
+                <!-- Workspaces Step -->
+                <LinearLayout
+                    android:id="@+id/workspaces_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Create Workspaces"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Organize your apps into workspaces. You can create multiple workspaces and switch between them."
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.9"
+                        android:lineSpacingExtra="4dp"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="16dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="8dp">
+
+                        <EditText
+                            android:id="@+id/workspace_name_input"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:hint="Workspace name (e.g., Work, Personal)"
+                            android:textSize="14sp"
+                            android:textColor="@android:color/white"
+                            android:textColorHint="@android:color/white"
+                            android:alpha="0.7"
+                            android:padding="12dp"
+                            android:layout_marginEnd="8dp"/>
+
+                        <Button
+                            android:id="@+id/add_workspace_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Add"
+                            android:textAllCaps="false"
+                            android:background="@drawable/button_background"
+                            android:textColor="@android:color/white"
+                            android:paddingHorizontal="16dp"
+                            android:paddingVertical="12dp"/>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/workspaces_list_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Your Workspaces:"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginBottom="8dp"
+                        android:visibility="gone"/>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/workspaces_list_recycler_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:padding="8dp"
+                        android:clipToPadding="false"
+                        android:visibility="gone"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Select apps for workspace:"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:alpha="0.9"
+                        android:paddingHorizontal="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/workspaces_apps_recycler_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:padding="8dp"
+                        android:clipToPadding="false"/>
 
                 </LinearLayout>
 

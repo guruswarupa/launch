@@ -519,9 +519,15 @@ class MainActivity : FragmentActivity() {
                 // Filter apps based on favorite/show all mode in background
                 val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
                 
+                // Sort alphabetically by app name
+                val sortedFinalList = finalAppList.sortedBy {
+                    appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                        ?: it.activityInfo.packageName.lowercase()
+                }
+                
                 // Update UI on main thread
                 runOnUiThread {
-                    appList = finalAppList.toMutableList()
+                    appList = sortedFinalList.toMutableList()
                     adapter.updateAppList(appList)
                     appDockManager.refreshFavoriteToggle()
                     
@@ -1450,9 +1456,24 @@ class MainActivity : FragmentActivity() {
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
-        // STEP 0: Check persistent cache first (highest priority for instant loading)
+        // STEP 0: If forceRefresh, skip ALL cache checks and go straight to loading
         val currentTime = System.currentTimeMillis()
-        if (!forceRefresh && appListCacheFile.exists()) {
+        if (forceRefresh) {
+            // Clear all caches immediately
+            cachedUnsortedList = null
+            try {
+                if (::appListCacheFile.isInitialized && appListCacheFile.exists()) {
+                    appListCacheFile.delete()
+                }
+                if (::appListVersionFile.isInitialized && appListVersionFile.exists()) {
+                    appListVersionFile.delete()
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error clearing cache", e)
+            }
+            // Skip to background loading - no cache checks
+        } else if (appListCacheFile.exists()) {
+            // STEP 0: Check persistent cache (only if not forceRefresh)
             val cacheAge = try {
                 val cachedTime = appListCacheTimeFile.readText().toLongOrNull() ?: 0L
                 currentTime - cachedTime
@@ -1460,46 +1481,37 @@ class MainActivity : FragmentActivity() {
                 Long.MAX_VALUE
             }
             
-            // Check version match
-            val currentVersion = getAppListVersion()
-            val cachedVersion = try {
-                if (appListVersionFile.exists()) {
-                    appListVersionFile.readText().trim()
-                } else null
-            } catch (e: Exception) {
-                null
-            }
-            
-            if (cacheAge < CACHE_DURATION && currentVersion == cachedVersion) {
+            // Only use cache if it's recent (show immediately, verify version in background)
+            if (cacheAge < CACHE_DURATION) {
+                // Load cached apps immediately (fast file read) - show first, verify later
                 val cachedApps = loadAppListFromCache()
                 if (cachedApps.isNotEmpty()) {
-                    // Load metadata cache
+                    // Load metadata cache (fast deserialization)
                     loadAppMetadataFromCache()
                     
-                    // Show cached list immediately
+                    // Show cached list immediately without blocking version check
                     try {
                         val focusMode = appDockManager.getCurrentMode()
                         val workspaceMode = appDockManager.isWorkspaceModeActive()
                         
                         val cachedFiltered = cachedApps.filter { app ->
                             val packageName = app.activityInfo.packageName
-                            packageName != "com.guruswarupa.launch" &&
+                            val activityName = app.activityInfo.name
+                            // Allow SettingsActivity, but exclude MainActivity
+                            (packageName != "com.guruswarupa.launch" || 
+                             (activityName.contains("SettingsActivity") && !activityName.contains("MainActivity"))) &&
                                     (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
-                                    (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
+                                    (!workspaceMode || !appDockManager.isAppInActiveWorkspace(packageName))
                         }
                         
                         val cachedFinalList = favoriteAppManager.filterApps(cachedFiltered, isShowAllAppsMode)
                         
                         if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
-                            // Sort immediately using cached metadata and usage stats
-                            val sorted = cachedFinalList.sortedWith(
-                                compareByDescending<ResolveInfo> {
-                                    usageStatsCache[it.activityInfo.packageName] ?: 0
-                                }.thenBy {
-                                    appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
-                                        ?: it.activityInfo.packageName.lowercase()
-                                }
-                            )
+                            // Sort alphabetically by app name
+                            val sorted = cachedFinalList.sortedBy {
+                                appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                                    ?: it.activityInfo.packageName.lowercase()
+                            }
                             
                             handler.post {
                                 if (!isFinishing && !isDestroyed) {
@@ -1523,14 +1535,32 @@ class MainActivity : FragmentActivity() {
                                 }
                             }
                             
-                            // Refresh in background without blocking
+                            // Verify version in background (non-blocking) - refresh if changed
                             backgroundExecutor.execute {
-                                refreshAppListFromPackageManager()
+                                val currentVersion = getAppListVersion() // Expensive call, but in background
+                                val cachedVersion = try {
+                                    if (appListVersionFile.exists()) {
+                                        appListVersionFile.readText().trim()
+                                    } else null
+                                } catch (e: Exception) {
+                                    null
+                                }
+                                
+                                // If version changed, refresh in background
+                                if (currentVersion != cachedVersion) {
+                                    handler.post {
+                                        if (!isFinishing && !isDestroyed) {
+                                            loadApps(forceRefresh = false) // Refresh without clearing cache
+                                        }
+                                    }
+                                }
                             }
-                            return
+                            
+                            return // Exit early - cached list shown, version check happens in background
                         }
                     } catch (e: Exception) {
                         Log.e("MainActivity", "Error showing cached app list", e)
+                        // Continue to load fresh apps
                     }
                 }
             }
@@ -1547,7 +1577,10 @@ class MainActivity : FragmentActivity() {
                 
                 val cachedFiltered = cachedUnsortedList!!.filter { app ->
                     val packageName = app.activityInfo.packageName
-                    packageName != "com.guruswarupa.launch" &&
+                    val activityName = app.activityInfo.name
+                    // Allow SettingsActivity, but exclude MainActivity
+                    (packageName != "com.guruswarupa.launch" || 
+                     (activityName.contains("SettingsActivity") && !activityName.contains("MainActivity"))) &&
                             (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
                             (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
                 }
@@ -1555,10 +1588,16 @@ class MainActivity : FragmentActivity() {
                 val cachedFinalList = favoriteAppManager.filterApps(cachedFiltered, isShowAllAppsMode)
                 
                 if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
+                    // Sort alphabetically by app name
+                    val sorted = cachedFinalList.sortedBy {
+                        appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                            ?: it.activityInfo.packageName.lowercase()
+                    }
+                    
                     // Use handler.post for lighter UI update
                     handler.post {
                         if (!isFinishing && !isDestroyed) {
-                            appList = cachedFinalList.toMutableList()
+                            appList = sorted.toMutableList()
                             fullAppList = ArrayList(cachedFiltered)
                             adapter.updateAppList(appList)
                             recyclerView.visibility = View.VISIBLE
@@ -1619,22 +1658,31 @@ class MainActivity : FragmentActivity() {
                     // STEP 1: Fast filtering without expensive operations - show list immediately
                     val filteredApps = unsortedList.filter { app ->
                         val packageName = app.activityInfo.packageName
-                        packageName != "com.guruswarupa.launch" &&
+                        val activityName = app.activityInfo.name
+                        // Allow SettingsActivity, but exclude MainActivity
+                        (packageName != "com.guruswarupa.launch" || 
+                         (activityName.contains("SettingsActivity") && !activityName.contains("MainActivity"))) &&
                                 (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
                                 (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
                     }.toMutableList()
                     
                     // Filter apps based on favorite/show all mode
                     val finalAppList = favoriteAppManager.filterApps(filteredApps, isShowAllAppsMode)
+                    
+                    // Sort alphabetically by app name (use metadata cache if available)
+                    val sortedFinalList = finalAppList.sortedBy {
+                        appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                            ?: it.activityInfo.packageName.lowercase()
+                    }
 
-                    // STEP 2: Show list immediately without sorting/labels (fast initial render)
+                    // STEP 2: Show list immediately (fast initial render)
                     // Use handler.post instead of runOnUiThread for better performance
                     handler.post {
                         if (isFinishing || isDestroyed) {
                             return@post
                         }
                         
-                        appList = finalAppList.toMutableList()
+                        appList = sortedFinalList.toMutableList()
                         fullAppList = ArrayList(filteredApps)
 
                         // Optimize: Update existing adapter instead of creating new one
@@ -1712,14 +1760,10 @@ class MainActivity : FragmentActivity() {
                                     }
                                 }
                                 
-                                val sortedApps = filteredApps.sortedWith(
-                                    compareByDescending<ResolveInfo> { 
-                                        usageStatsCache[it.activityInfo.packageName] ?: 0
-                                    }
-                                    .thenBy { app ->
-                                        labelCache[app.activityInfo.packageName] ?: app.activityInfo.packageName.lowercase()
-                                    }
-                                )
+                                // Sort alphabetically by app name
+                                val sortedApps = filteredApps.sortedBy { app ->
+                                    labelCache[app.activityInfo.packageName] ?: app.activityInfo.packageName.lowercase()
+                                }
                                 
                                 // Save updated metadata cache
                                 saveAppMetadataToCache(appMetadataCache)
@@ -1749,7 +1793,8 @@ class MainActivity : FragmentActivity() {
                                                 fullAppList,
                                                 adapter,
                                                 searchBox,
-                                                contactsList
+                                                contactsList,
+                                                appMetadataCache
                                             )
                                         }
                                     }, 50)
@@ -2268,13 +2313,10 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                     
-                    filteredOrSortedApps = fullAppList.sortedWith(
-                        compareByDescending<ResolveInfo> {
-                            usageCache[it.activityInfo.packageName] ?: 0
-                        }.thenBy {
-                            labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
-                        }
-                    ).toMutableList()
+                    // Sort alphabetically by app name
+                    filteredOrSortedApps = fullAppList.sortedBy {
+                        labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
+                    }.toMutableList()
                 }
 
                 // Update UI on main thread
