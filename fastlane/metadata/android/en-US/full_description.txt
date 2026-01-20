@@ -67,7 +67,6 @@ Launch is a clean, efficient, and minimalist Android launcher designed to maximi
 
 ⚙️ Settings
 - Backup and restore all data
-- Reset usage stats any time
 - Toggle grid/list layout
 - Change weather API key
 - Manage app locks

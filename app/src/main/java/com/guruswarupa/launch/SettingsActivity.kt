@@ -64,8 +64,6 @@ class SettingsActivity : ComponentActivity() {
         }
         val exportButton = findViewById<Button>(R.id.export_settings_button)
         val importButton = findViewById<Button>(R.id.import_settings_button)
-        // Add reset button
-        val resetButton = findViewById<Button>(R.id.reset_usage_button)
         val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
         val appLockButton = findViewById<Button>(R.id.app_lock_button)
         val checkPermissionsButton = findViewById<Button>(R.id.check_permissions_button)
@@ -87,10 +85,6 @@ class SettingsActivity : ComponentActivity() {
 
         importButton.setOnClickListener {
             importSettings()
-        }
-
-        resetButton.setOnClickListener {
-            resetAppUsageCount()
         }
 
         resetFinanceButton.setOnClickListener {
@@ -136,12 +130,6 @@ class SettingsActivity : ComponentActivity() {
         val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
         val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
         setupSectionToggle(backupHeader, backupContent, backupArrow)
-        
-        // App Usage Section
-        val appUsageHeader = findViewById<LinearLayout>(R.id.app_usage_header)
-        val appUsageContent = findViewById<LinearLayout>(R.id.app_usage_content)
-        val appUsageArrow = findViewById<TextView>(R.id.app_usage_arrow)
-        setupSectionToggle(appUsageHeader, appUsageContent, appUsageArrow)
         
         // Finance Data Section
         val financeHeader = findViewById<LinearLayout>(R.id.finance_data_header)
@@ -363,28 +351,6 @@ class SettingsActivity : ComponentActivity() {
             }
             settingsJson.put("main_preferences", mainPrefsJson)
             
-            // Export app usage preferences
-            val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
-            val appUsageAll = appUsagePrefs.all
-            if (appUsageAll.isNotEmpty()) {
-                val appUsageJson = JSONObject()
-                for ((key, value) in appUsageAll) {
-                    when (value) {
-                        is String -> appUsageJson.put(key, value)
-                        is Boolean -> appUsageJson.put(key, value)
-                        is Int -> appUsageJson.put(key, value)
-                        is Long -> appUsageJson.put(key, value)
-                        is Float -> appUsageJson.put(key, value)
-                        is Set<*> -> {
-                            val jsonArray = JSONArray()
-                            value.forEach { jsonArray.put(it) }
-                            appUsageJson.put(key, jsonArray)
-                        }
-                    }
-                }
-                settingsJson.put("app_usage", appUsageJson)
-            }
-            
             // Export app timer preferences
             val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
             val appTimerAll = appTimerPrefs.all
@@ -405,28 +371,6 @@ class SettingsActivity : ComponentActivity() {
                     }
                 }
                 settingsJson.put("app_timer_prefs", appTimerJson)
-            }
-            
-            // Export daily usage preferences
-            val dailyUsagePrefs = getSharedPreferences("daily_usage_prefs", MODE_PRIVATE)
-            val dailyUsageAll = dailyUsagePrefs.all
-            if (dailyUsageAll.isNotEmpty()) {
-                val dailyUsageJson = JSONObject()
-                for ((key, value) in dailyUsageAll) {
-                    when (value) {
-                        is String -> dailyUsageJson.put(key, value)
-                        is Boolean -> dailyUsageJson.put(key, value)
-                        is Int -> dailyUsageJson.put(key, value)
-                        is Long -> dailyUsageJson.put(key, value)
-                        is Float -> dailyUsageJson.put(key, value)
-                        is Set<*> -> {
-                            val jsonArray = JSONArray()
-                            value.forEach { jsonArray.put(it) }
-                            dailyUsageJson.put(key, jsonArray)
-                        }
-                    }
-                }
-                settingsJson.put("daily_usage_prefs", dailyUsageJson)
             }
             
             // Export app lock preferences
@@ -481,30 +425,12 @@ class SettingsActivity : ComponentActivity() {
                         editor.apply()
                     }
                     
-                    // Import app usage preferences
-                    if (settingsJson.has("app_usage")) {
-                        val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
-                        val appUsageJson = settingsJson.getJSONObject("app_usage")
-                        val editor = appUsagePrefs.edit()
-                        importPreferences(appUsageJson, editor)
-                        editor.apply()
-                    }
-                    
                     // Import app timer preferences
                     if (settingsJson.has("app_timer_prefs")) {
                         val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
                         val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
                         val editor = appTimerPrefs.edit()
                         importPreferences(appTimerJson, editor)
-                        editor.apply()
-                    }
-                    
-                    // Import daily usage preferences
-                    if (settingsJson.has("daily_usage_prefs")) {
-                        val dailyUsagePrefs = getSharedPreferences("daily_usage_prefs", MODE_PRIVATE)
-                        val dailyUsageJson = settingsJson.getJSONObject("daily_usage_prefs")
-                        val editor = dailyUsagePrefs.edit()
-                        importPreferences(dailyUsageJson, editor)
                         editor.apply()
                     }
                     
@@ -561,36 +487,6 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun resetAppUsageCount() {
-        // Show confirmation dialog
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Reset App Usage Count")
-            .setMessage("This will reset all app usage statistics and reorder apps alphabetically. Are you sure?")
-            .setPositiveButton("Reset") { _, _ ->
-                // Clear app usage preferences
-                val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
-                appUsagePrefs.edit().clear().apply()
-
-                // Clear usage count from main preferences as well
-                val mainPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-                val editor = mainPrefs.edit()
-                val allPrefs = mainPrefs.all
-                for (key in allPrefs.keys) {
-                    if (key.startsWith("usage_")) {
-                        editor.remove(key)
-                    }
-                }
-                editor.apply()
-
-                Toast.makeText(this, "App usage count reset successfully", Toast.LENGTH_SHORT).show()
-
-                // Send broadcast to refresh MainActivity
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                sendBroadcast(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
 
     private fun resetFinanceData() {
         AlertDialog.Builder(this, R.style.CustomDialogTheme)

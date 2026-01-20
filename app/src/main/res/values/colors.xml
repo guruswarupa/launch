@@ -37,4 +37,5 @@
     <color name="gray_light">#FFCCCCCC</color>
     <color name="gray">#808080</color>
     <color name="red">#FF5252</color>
+    <color name="icon_color">#FFFFFF</color> <!-- White icons -->
 </resources>
