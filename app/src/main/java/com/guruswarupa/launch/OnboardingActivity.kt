@@ -3,7 +3,9 @@ package com.guruswarupa.launch
 import android.Manifest
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -20,6 +22,8 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.app.AppOpsManager
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class PermissionInfo(
     val permission: String,
@@ -32,7 +36,10 @@ enum class OnboardingStep {
     WELCOME,
     PERMISSIONS,
     DEFAULT_LAUNCHER,
+    BACKUP_IMPORT,
     DISPLAY_STYLE,
+    FAVORITES,
+    WORKSPACES,
     WEATHER_API_KEY,
     COMPLETE
 }
@@ -46,12 +53,16 @@ class OnboardingActivity : ComponentActivity() {
     private var currentPermissionIndex = 0
     private var hasRequestedDefaultLauncher = false
     private var displayStyleSelected = false
+    private var backupImported = false
+    private val IMPORT_BACKUP_REQUEST_CODE = 1000
 
     // UI References
     private lateinit var welcomeStep: LinearLayout
     private lateinit var permissionsStep: LinearLayout
     private lateinit var defaultLauncherStep: LinearLayout
+    private lateinit var backupImportStep: LinearLayout
     private lateinit var displayStyleStep: LinearLayout
+    private lateinit var favoritesStep: LinearLayout
     private lateinit var weatherApiKeyStep: LinearLayout
     private lateinit var completeStep: LinearLayout
     private lateinit var backButton: Button
@@ -59,6 +70,22 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var gridStyleButton: Button
     private lateinit var listStyleButton: Button
     private lateinit var weatherApiKeyInput: EditText
+    private lateinit var favoritesRecyclerView: androidx.recyclerview.widget.RecyclerView
+    private lateinit var favoritesAdapter: FavoritesOnboardingAdapter
+    private var selectedFavorites = mutableSetOf<String>()
+    
+    // Workspaces UI
+    private lateinit var workspacesStep: LinearLayout
+    private lateinit var workspaceNameInput: EditText
+    private lateinit var addWorkspaceButton: Button
+    private lateinit var workspacesListRecyclerView: androidx.recyclerview.widget.RecyclerView
+    private lateinit var workspacesAppsRecyclerView: androidx.recyclerview.widget.RecyclerView
+    private lateinit var workspacesListTitle: TextView
+    private lateinit var workspacesListAdapter: WorkspacesListAdapter
+    private lateinit var workspacesAppsAdapter: WorkspacesAppsAdapter
+    private var currentWorkspaceApps = mutableSetOf<String>()
+    private var createdWorkspaces = mutableListOf<Pair<String, Set<String>>>() // name to apps
+    private var allAppsList = listOf<android.content.pm.ResolveInfo>() // Store all apps
 
     // Progress indicators
     private lateinit var step1Indicator: View
@@ -141,8 +168,8 @@ class OnboardingActivity : ComponentActivity() {
         // Check if we should continue from default launcher step (when MainActivity redirects here)
         val continueFromDefaultLauncher = intent.getBooleanExtra("continueFromDefaultLauncher", false)
         if (continueFromDefaultLauncher && isDefaultLauncher()) {
-            // User set launcher as default, continue to display style step
-            showStep(OnboardingStep.DISPLAY_STYLE)
+            // User set launcher as default, continue to backup import step
+            showStep(OnboardingStep.BACKUP_IMPORT)
         } else {
             showStep(OnboardingStep.WELCOME)
         }
@@ -209,9 +236,23 @@ class OnboardingActivity : ComponentActivity() {
         welcomeStep = findViewById(R.id.welcome_step)
         permissionsStep = findViewById(R.id.permissions_step)
         defaultLauncherStep = findViewById(R.id.default_launcher_step)
+        backupImportStep = findViewById(R.id.backup_import_step)
         displayStyleStep = findViewById(R.id.display_style_step)
+        favoritesStep = findViewById(R.id.favorites_step)
+        workspacesStep = findViewById(R.id.workspaces_step)
         weatherApiKeyStep = findViewById(R.id.weather_api_key_step)
         completeStep = findViewById(R.id.complete_step)
+        
+        favoritesRecyclerView = findViewById(R.id.favorites_recycler_view)
+        favoritesRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        
+        workspaceNameInput = findViewById(R.id.workspace_name_input)
+        addWorkspaceButton = findViewById(R.id.add_workspace_button)
+        workspacesListRecyclerView = findViewById(R.id.workspaces_list_recycler_view)
+        workspacesAppsRecyclerView = findViewById(R.id.workspaces_apps_recycler_view)
+        workspacesListTitle = findViewById(R.id.workspaces_list_title)
+        workspacesListRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        workspacesAppsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
         
         backButton = findViewById(R.id.back_button)
         nextButton = findViewById(R.id.next_button)
@@ -244,7 +285,10 @@ class OnboardingActivity : ComponentActivity() {
         welcomeStep.visibility = View.GONE
         permissionsStep.visibility = View.GONE
         defaultLauncherStep.visibility = View.GONE
+        backupImportStep.visibility = View.GONE
         displayStyleStep.visibility = View.GONE
+        favoritesStep.visibility = View.GONE
+        workspacesStep.visibility = View.GONE
         weatherApiKeyStep.visibility = View.GONE
         completeStep.visibility = View.GONE
 
@@ -272,19 +316,50 @@ class OnboardingActivity : ComponentActivity() {
                 // Reset next button listener
                 nextButton.setOnClickListener { goToNextStep() }
             }
+            OnboardingStep.BACKUP_IMPORT -> {
+                backupImportStep.visibility = View.VISIBLE
+                backButton.visibility = View.VISIBLE
+                nextButton.text = "Skip"
+                updateProgressIndicator(3)
+                // Setup backup import buttons
+                setupBackupImportButtons()
+                // Setup backup import buttons
+                setupBackupImportButtons()
+            }
             OnboardingStep.DISPLAY_STYLE -> {
                 displayStyleStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
                 nextButton.text = if (displayStyleSelected) "Continue" else "Select Style First"
                 nextButton.isEnabled = displayStyleSelected
-                updateProgressIndicator(3)
+                updateProgressIndicator(4)
+            }
+            OnboardingStep.FAVORITES -> {
+                favoritesStep.visibility = View.VISIBLE
+                backButton.visibility = View.VISIBLE
+                nextButton.text = "Continue"
+                nextButton.isEnabled = true
+                updateProgressIndicator(5)
+                
+                // Load apps and setup RecyclerView
+                loadAppsForFavoritesSelection()
+            }
+            OnboardingStep.WORKSPACES -> {
+                workspacesStep.visibility = View.VISIBLE
+                backButton.visibility = View.VISIBLE
+                nextButton.text = "Continue"
+                nextButton.isEnabled = true
+                updateProgressIndicator(6)
+                
+                // Load apps and setup RecyclerView
+                loadAppsForWorkspacesSelection()
+                setupWorkspaceButtons()
             }
             OnboardingStep.WEATHER_API_KEY -> {
                 weatherApiKeyStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
                 nextButton.text = "Continue"
                 nextButton.isEnabled = true
-                updateProgressIndicator(4)
+                updateProgressIndicator(7)
                 // Load existing API key if any
                 val existingKey = prefs.getString("weather_api_key", "") ?: ""
                 if (existingKey.isNotEmpty()) {
@@ -295,7 +370,7 @@ class OnboardingActivity : ComponentActivity() {
                 completeStep.visibility = View.VISIBLE
                 backButton.visibility = View.GONE
                 nextButton.text = "Launch App"
-                updateProgressIndicator(5)
+                updateProgressIndicator(7)
             }
         }
     }
@@ -369,6 +444,28 @@ class OnboardingActivity : ComponentActivity() {
                 setViewColor(step4Connector, activeColor)
                 setViewColor(step5Indicator, activeColor, true)
             }
+            6 -> {
+                setViewColor(step1Indicator, activeColor, true)
+                setViewColor(step1Connector, activeColor)
+                setViewColor(step2Indicator, activeColor, true)
+                setViewColor(step2Connector, activeColor)
+                setViewColor(step3Indicator, activeColor, true)
+                setViewColor(step3Connector, activeColor)
+                setViewColor(step4Indicator, activeColor, true)
+                setViewColor(step4Connector, activeColor)
+                setViewColor(step5Indicator, activeColor, true)
+            }
+            7 -> {
+                setViewColor(step1Indicator, activeColor, true)
+                setViewColor(step1Connector, activeColor)
+                setViewColor(step2Indicator, activeColor, true)
+                setViewColor(step2Connector, activeColor)
+                setViewColor(step3Indicator, activeColor, true)
+                setViewColor(step3Connector, activeColor)
+                setViewColor(step4Indicator, activeColor, true)
+                setViewColor(step4Connector, activeColor)
+                setViewColor(step5Indicator, activeColor, true)
+            }
         }
     }
 
@@ -379,8 +476,11 @@ class OnboardingActivity : ComponentActivity() {
             }
             OnboardingStep.PERMISSIONS -> showStep(OnboardingStep.WELCOME)
             OnboardingStep.DEFAULT_LAUNCHER -> showStep(OnboardingStep.PERMISSIONS)
-            OnboardingStep.DISPLAY_STYLE -> showStep(OnboardingStep.DEFAULT_LAUNCHER)
-            OnboardingStep.WEATHER_API_KEY -> showStep(OnboardingStep.DISPLAY_STYLE)
+            OnboardingStep.BACKUP_IMPORT -> showStep(OnboardingStep.DEFAULT_LAUNCHER)
+            OnboardingStep.DISPLAY_STYLE -> showStep(OnboardingStep.BACKUP_IMPORT)
+            OnboardingStep.FAVORITES -> showStep(OnboardingStep.DISPLAY_STYLE)
+            OnboardingStep.WORKSPACES -> showStep(OnboardingStep.FAVORITES)
+            OnboardingStep.WEATHER_API_KEY -> showStep(OnboardingStep.WORKSPACES)
             OnboardingStep.COMPLETE -> showStep(OnboardingStep.WEATHER_API_KEY)
         }
     }
@@ -395,17 +495,35 @@ class OnboardingActivity : ComponentActivity() {
             }
             OnboardingStep.DEFAULT_LAUNCHER -> {
                 if (isDefaultLauncher()) {
-                    showStep(OnboardingStep.DISPLAY_STYLE)
+                    showStep(OnboardingStep.BACKUP_IMPORT)
                 } else {
                     setDefaultLauncher()
                 }
             }
+            OnboardingStep.BACKUP_IMPORT -> {
+                // If backup was imported, skip to complete
+                if (backupImported) {
+                    showStep(OnboardingStep.COMPLETE)
+                } else {
+                    // User chose to skip, continue with normal flow
+                    showStep(OnboardingStep.DISPLAY_STYLE)
+                }
+            }
             OnboardingStep.DISPLAY_STYLE -> {
                 if (displayStyleSelected) {
-                    showStep(OnboardingStep.WEATHER_API_KEY)
+                    showStep(OnboardingStep.FAVORITES)
                 } else {
                     Toast.makeText(this, "Please select a display style first", Toast.LENGTH_SHORT).show()
                 }
+            }
+            OnboardingStep.FAVORITES -> {
+                // Save selected favorites
+                saveSelectedFavorites()
+                showStep(OnboardingStep.WORKSPACES)
+            }
+            OnboardingStep.WORKSPACES -> {
+                // Workspaces are handled in dialog, continue to weather
+                showStep(OnboardingStep.WEATHER_API_KEY)
             }
             OnboardingStep.WEATHER_API_KEY -> {
                 // Save weather API key (can be empty if user skips)
@@ -446,8 +564,8 @@ class OnboardingActivity : ComponentActivity() {
             val wasRequested = hasRequestedDefaultLauncher
             hasRequestedDefaultLauncher = false
             if (isDefaultLauncher()) {
-                // Launcher is set as default, move to display style step
-                showStep(OnboardingStep.DISPLAY_STYLE)
+                // Launcher is set as default, move to backup import step
+                showStep(OnboardingStep.BACKUP_IMPORT)
             } else {
                 // User didn't set it as default, ask if they want to continue anyway
                 showDefaultLauncherSkippedDialog()
@@ -455,7 +573,7 @@ class OnboardingActivity : ComponentActivity() {
         } else if (currentStep == OnboardingStep.DEFAULT_LAUNCHER && isDefaultLauncher()) {
             // User might have set launcher as default and Android launched MainActivity which redirected here
             // Check if we should move to next step
-            showStep(OnboardingStep.DISPLAY_STYLE)
+            showStep(OnboardingStep.BACKUP_IMPORT)
         }
     }
 
@@ -678,7 +796,7 @@ class OnboardingActivity : ComponentActivity() {
             .setTitle("Continue Without Setting Default?")
             .setMessage("You can set this launcher as default later from Settings. However, you'll need to set it as default to use it as your home screen.\n\nDo you want to continue?")
             .setPositiveButton("Continue") { _, _ ->
-                showStep(OnboardingStep.DISPLAY_STYLE)
+                showStep(OnboardingStep.BACKUP_IMPORT)
             }
             .setNegativeButton("Set as Default") { _, _ ->
                 setDefaultLauncher()
@@ -710,9 +828,244 @@ class OnboardingActivity : ComponentActivity() {
         nextButton.text = "Continue"
     }
     
+    private fun loadAppsForFavoritesSelection() {
+        val packageManager = packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val allApps = packageManager.queryIntentActivities(mainIntent, 0)
+            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        
+        // Load existing favorites
+        val favoriteAppManager = FavoriteAppManager(prefs)
+        selectedFavorites = favoriteAppManager.getFavoriteApps().toMutableSet()
+        
+        // Create and set adapter
+        favoritesAdapter = FavoritesOnboardingAdapter(allApps, selectedFavorites) { packageName, isChecked ->
+            if (isChecked) {
+                selectedFavorites.add(packageName)
+            } else {
+                selectedFavorites.remove(packageName)
+            }
+        }
+        favoritesRecyclerView.adapter = favoritesAdapter
+    }
+    
+    private fun saveSelectedFavorites() {
+        // Save favorites
+        prefs.edit().putStringSet("favorite_apps", selectedFavorites).apply()
+        
+        // Set to show favorites by default
+        prefs.edit().putBoolean("show_all_apps_mode", false).apply()
+    }
+    
+    private fun loadAppsForWorkspacesSelection() {
+        val packageManager = packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        allAppsList = packageManager.queryIntentActivities(mainIntent, 0)
+            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        
+        // Update available apps (filter out apps already in workspaces)
+        updateAvailableAppsForWorkspace()
+        
+        // Initialize workspaces list adapter
+        workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
+            // Remove workspace
+            createdWorkspaces.removeAt(position)
+            workspacesListAdapter.notifyDataSetChanged()
+            updateWorkspacesListVisibility()
+            // Refresh available apps when workspace is deleted
+            updateAvailableAppsForWorkspace()
+        }
+        workspacesListRecyclerView.adapter = workspacesListAdapter
+        
+        updateWorkspacesListVisibility()
+    }
+    
+    private fun updateAvailableAppsForWorkspace() {
+        // Get all apps already used in created workspaces
+        val usedApps = createdWorkspaces.flatMap { it.second }.toSet()
+        
+        // Filter out apps that are already in workspaces
+        val availableApps = allAppsList.filter { 
+            it.activityInfo.packageName !in usedApps 
+        }
+        
+        // Create and set adapter for apps selection
+        workspacesAppsAdapter = WorkspacesAppsAdapter(availableApps, currentWorkspaceApps) { packageName, isChecked ->
+            if (isChecked) {
+                currentWorkspaceApps.add(packageName)
+            } else {
+                currentWorkspaceApps.remove(packageName)
+            }
+        }
+        workspacesAppsRecyclerView.adapter = workspacesAppsAdapter
+    }
+    
+    private fun setupWorkspaceButtons() {
+        addWorkspaceButton.setOnClickListener {
+            val workspaceName = workspaceNameInput.text.toString().trim()
+            if (workspaceName.isEmpty()) {
+                Toast.makeText(this, "Please enter a workspace name", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            if (currentWorkspaceApps.isEmpty()) {
+                Toast.makeText(this, "Please select at least one app", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            // Add workspace
+            createdWorkspaces.add(Pair(workspaceName, currentWorkspaceApps.toSet()))
+            workspacesListAdapter.notifyDataSetChanged()
+            
+            // Clear inputs
+            workspaceNameInput.text.clear()
+            currentWorkspaceApps.clear()
+            
+            // Update available apps (remove apps that are now in a workspace)
+            updateAvailableAppsForWorkspace()
+            
+            updateWorkspacesListVisibility()
+            
+            Toast.makeText(this, "Workspace '$workspaceName' created with ${createdWorkspaces.last().second.size} apps", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun updateWorkspacesListVisibility() {
+        if (createdWorkspaces.isNotEmpty()) {
+            workspacesListTitle.visibility = View.VISIBLE
+            workspacesListRecyclerView.visibility = View.VISIBLE
+        } else {
+            workspacesListTitle.visibility = View.GONE
+            workspacesListRecyclerView.visibility = View.GONE
+        }
+    }
+    
+    private fun saveCreatedWorkspaces() {
+        val workspaceManager = WorkspaceManager(prefs)
+        createdWorkspaces.forEach { (name, apps) ->
+            workspaceManager.createWorkspace(name, apps)
+        }
+    }
+    
     /**
      * Fix dialog text colors programmatically for latest Android versions
      */
+    
+    private fun showWorkspaceCreationDialog() {
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Create Workspaces")
+            .setMessage("Would you like to create workspaces to organize your apps? You can create workspaces later from settings.")
+            .setPositiveButton("Create Workspace") { _, _ ->
+                showCreateWorkspaceDialog()
+            }
+            .setNegativeButton("Skip") { _, _ ->
+                // User skipped, continue
+            }
+            .setCancelable(false)
+            .create()
+        
+        dialog.setOnShowListener {
+            fixDialogTextColors(dialog)
+        }
+        
+        dialog.show()
+    }
+    
+    private fun showCreateWorkspaceDialog() {
+        val input = EditText(this)
+        input.hint = "Workspace name (e.g., Work, Personal)"
+        
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Create Workspace")
+            .setView(input)
+            .setPositiveButton("Next") { _, _ ->
+                val workspaceName = input.text.toString().trim()
+                if (workspaceName.isNotEmpty()) {
+                    showAppPickerForWorkspace(workspaceName)
+                } else {
+                    Toast.makeText(this, "Please enter a workspace name", Toast.LENGTH_SHORT).show()
+                    showCreateWorkspaceDialog()
+                }
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                // Ask if user wants to create another or skip
+                showWorkspaceCreationDialog()
+            }
+            .create()
+        
+        dialog.setOnShowListener {
+            fixDialogTextColors(dialog)
+        }
+        
+        dialog.show()
+    }
+    
+    private fun showAppPickerForWorkspace(workspaceName: String) {
+        val packageManager = packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val allApps = packageManager.queryIntentActivities(mainIntent, 0)
+            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        
+        val appNames = allApps.map { it.loadLabel(packageManager).toString() }.toTypedArray()
+        val packageNames = allApps.map { it.activityInfo.packageName }.toTypedArray()
+        val checkedItems = BooleanArray(appNames.size) { false }
+        val selectedApps = mutableSetOf<String>()
+        
+        val dialogBuilder = AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Select Apps for '$workspaceName'")
+            .setMultiChoiceItems(appNames, checkedItems) { _, which, isChecked ->
+                val packageName = packageNames[which]
+                if (isChecked) {
+                    selectedApps.add(packageName)
+                } else {
+                    selectedApps.remove(packageName)
+                }
+            }
+            .setPositiveButton("Save") { _, _ ->
+                if (selectedApps.isEmpty()) {
+                    Toast.makeText(this, "Please select at least one app", Toast.LENGTH_SHORT).show()
+                    showAppPickerForWorkspace(workspaceName)
+                } else {
+                    val workspaceManager = WorkspaceManager(prefs)
+                    workspaceManager.createWorkspace(workspaceName, selectedApps)
+                    Toast.makeText(this, "Workspace '$workspaceName' created with ${selectedApps.size} apps", Toast.LENGTH_SHORT).show()
+                    
+                    // Ask if user wants to create another workspace
+                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                        .setTitle("Create Another Workspace?")
+                        .setMessage("Would you like to create another workspace?")
+                        .setPositiveButton("Yes") { _, _ ->
+                            showCreateWorkspaceDialog()
+                        }
+                        .setNegativeButton("No") { _, _ ->
+                            // Continue with onboarding
+                        }
+                        .setOnDismissListener {
+                            // Continue with onboarding when dismissed
+                        }
+                        .show()
+                }
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                showCreateWorkspaceDialog()
+            }
+        
+        val dialog = dialogBuilder.create()
+        dialog.setOnShowListener {
+            fixDialogTextColors(dialog)
+        }
+        dialog.show()
+    }
+    
     private fun fixDialogTextColors(dialog: AlertDialog) {
         try {
             val whiteColor = ContextCompat.getColor(this, android.R.color.white)
@@ -748,5 +1101,137 @@ class OnboardingActivity : ComponentActivity() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK 
         })
         finish()
+    }
+    
+    private fun setupBackupImportButtons() {
+        val importButton = findViewById<Button>(R.id.import_backup_button)
+        val skipButton = findViewById<Button>(R.id.skip_backup_button)
+        
+        importButton.setOnClickListener {
+            requestBackupFile()
+        }
+        
+        skipButton.setOnClickListener {
+            backupImported = false
+            goToNextStep()
+        }
+    }
+    
+    private fun requestBackupFile() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        startActivityForResult(intent, IMPORT_BACKUP_REQUEST_CODE)
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        if (resultCode == RESULT_OK && data != null) {
+            when (requestCode) {
+                IMPORT_BACKUP_REQUEST_CODE -> {
+                    data.data?.let { uri ->
+                        importBackupFromFile(uri)
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun importBackupFromFile(uri: Uri) {
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val jsonString = inputStream.bufferedReader().use { it.readText() }
+                val settingsJson = JSONObject(jsonString)
+                
+                // Check if this is the new format (with separate SharedPreferences files)
+                // or the old format (all at root level)
+                val isNewFormat = settingsJson.has("main_preferences")
+                
+                if (isNewFormat) {
+                    // New format: organized by SharedPreferences file
+                    // Import main preferences
+                    if (settingsJson.has("main_preferences")) {
+                        val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
+                        val editor = prefs.edit()
+                        importPreferences(mainPrefsJson, editor)
+                        editor.apply()
+                    }
+                    
+                    // Import app usage preferences
+                    if (settingsJson.has("app_usage")) {
+                        val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
+                        val appUsageJson = settingsJson.getJSONObject("app_usage")
+                        val editor = appUsagePrefs.edit()
+                        importPreferences(appUsageJson, editor)
+                        editor.apply()
+                    }
+                    
+                    // Import app timer preferences
+                    if (settingsJson.has("app_timer_prefs")) {
+                        val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
+                        val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
+                        val editor = appTimerPrefs.edit()
+                        importPreferences(appTimerJson, editor)
+                        editor.apply()
+                    }
+                    
+                    // Import daily usage preferences
+                    if (settingsJson.has("daily_usage_prefs")) {
+                        val dailyUsagePrefs = getSharedPreferences("daily_usage_prefs", MODE_PRIVATE)
+                        val dailyUsageJson = settingsJson.getJSONObject("daily_usage_prefs")
+                        val editor = dailyUsagePrefs.edit()
+                        importPreferences(dailyUsageJson, editor)
+                        editor.apply()
+                    }
+                    
+                    // Import app lock preferences
+                    if (settingsJson.has("app_lock_prefs")) {
+                        val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
+                        val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
+                        val editor = appLockPrefs.edit()
+                        importPreferences(appLockJson, editor)
+                        editor.apply()
+                    }
+                } else {
+                    // Old format: all preferences at root level (backward compatibility)
+                    val editor = prefs.edit()
+                    importPreferences(settingsJson, editor)
+                    editor.apply()
+                }
+                
+                backupImported = true
+                Toast.makeText(this, "Backup imported successfully", Toast.LENGTH_SHORT).show()
+                // Skip to complete step
+                showStep(OnboardingStep.COMPLETE)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to import backup: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun importPreferences(prefsJson: JSONObject, editor: SharedPreferences.Editor) {
+        val keys = prefsJson.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val value = prefsJson.get(key)
+
+            when (value) {
+                is String -> editor.putString(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Double -> editor.putFloat(key, value.toFloat())
+                is Float -> editor.putFloat(key, value)
+                is JSONArray -> {
+                    val stringSet = mutableSetOf<String>()
+                    for (i in 0 until value.length()) {
+                        stringSet.add(value.getString(i))
+                    }
+                    editor.putStringSet(key, stringSet)
+                }
+            }
+        }
     }
 }

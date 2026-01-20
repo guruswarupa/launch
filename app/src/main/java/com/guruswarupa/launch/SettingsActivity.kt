@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.AppOpsManager
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -307,14 +308,28 @@ class SettingsActivity : ComponentActivity() {
 
     private fun exportSettingsToFile(uri: Uri) {
         try {
-            val allPrefs = prefs.all
             val settingsJson = JSONObject()
-
-            for ((key, value) in allPrefs) {
-                // Include all keys including todo_items and transaction data
+            
+            // Export main preferences (com.guruswarupa.launch.PREFS)
+            // This includes:
+            // - Favorite apps (favorite_apps)
+            // - Workspaces (workspaces)
+            // - Active workspace ID (active_workspace_id)
+            // - Show all apps mode (show_all_apps_mode)
+            // - Weather API key (weather_api_key)
+            // - Currency preference (finance_currency)
+            // - Display style (view_preference)
+            // - Todo items (todo_items)
+            // - Workout widget data (workout_exercises, workout_streak, workout_last_reset_date, workout_last_streak_date)
+            // - Android widgets (saved_widgets)
+            // - Transaction data
+            // - All other preferences
+            val mainPrefs = prefs.all
+            val mainPrefsJson = JSONObject()
+            for ((key, value) in mainPrefs) {
                 when (value) {
                     is String -> {
-                        settingsJson.put(key, value)
+                        mainPrefsJson.put(key, value)
                         // Special handling for todo_items to ensure proper format
                         if (key == "todo_items" && value.isNotEmpty()) {
                             // Validate todo items format before export
@@ -334,16 +349,106 @@ class SettingsActivity : ComponentActivity() {
                             }
                         }
                     }
-                    is Boolean -> settingsJson.put(key, value)
-                    is Int -> settingsJson.put(key, value)
-                    is Long -> settingsJson.put(key, value)
-                    is Float -> settingsJson.put(key, value)
+                    is Boolean -> mainPrefsJson.put(key, value)
+                    is Int -> mainPrefsJson.put(key, value)
+                    is Long -> mainPrefsJson.put(key, value)
+                    is Float -> mainPrefsJson.put(key, value)
                     is Set<*> -> {
+                        // This includes favorite_apps and other Set preferences
                         val jsonArray = JSONArray()
                         value.forEach { jsonArray.put(it) }
-                        settingsJson.put(key, jsonArray)
+                        mainPrefsJson.put(key, jsonArray)
                     }
                 }
+            }
+            settingsJson.put("main_preferences", mainPrefsJson)
+            
+            // Export app usage preferences
+            val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
+            val appUsageAll = appUsagePrefs.all
+            if (appUsageAll.isNotEmpty()) {
+                val appUsageJson = JSONObject()
+                for ((key, value) in appUsageAll) {
+                    when (value) {
+                        is String -> appUsageJson.put(key, value)
+                        is Boolean -> appUsageJson.put(key, value)
+                        is Int -> appUsageJson.put(key, value)
+                        is Long -> appUsageJson.put(key, value)
+                        is Float -> appUsageJson.put(key, value)
+                        is Set<*> -> {
+                            val jsonArray = JSONArray()
+                            value.forEach { jsonArray.put(it) }
+                            appUsageJson.put(key, jsonArray)
+                        }
+                    }
+                }
+                settingsJson.put("app_usage", appUsageJson)
+            }
+            
+            // Export app timer preferences
+            val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
+            val appTimerAll = appTimerPrefs.all
+            if (appTimerAll.isNotEmpty()) {
+                val appTimerJson = JSONObject()
+                for ((key, value) in appTimerAll) {
+                    when (value) {
+                        is String -> appTimerJson.put(key, value)
+                        is Boolean -> appTimerJson.put(key, value)
+                        is Int -> appTimerJson.put(key, value)
+                        is Long -> appTimerJson.put(key, value)
+                        is Float -> appTimerJson.put(key, value)
+                        is Set<*> -> {
+                            val jsonArray = JSONArray()
+                            value.forEach { jsonArray.put(it) }
+                            appTimerJson.put(key, jsonArray)
+                        }
+                    }
+                }
+                settingsJson.put("app_timer_prefs", appTimerJson)
+            }
+            
+            // Export daily usage preferences
+            val dailyUsagePrefs = getSharedPreferences("daily_usage_prefs", MODE_PRIVATE)
+            val dailyUsageAll = dailyUsagePrefs.all
+            if (dailyUsageAll.isNotEmpty()) {
+                val dailyUsageJson = JSONObject()
+                for ((key, value) in dailyUsageAll) {
+                    when (value) {
+                        is String -> dailyUsageJson.put(key, value)
+                        is Boolean -> dailyUsageJson.put(key, value)
+                        is Int -> dailyUsageJson.put(key, value)
+                        is Long -> dailyUsageJson.put(key, value)
+                        is Float -> dailyUsageJson.put(key, value)
+                        is Set<*> -> {
+                            val jsonArray = JSONArray()
+                            value.forEach { jsonArray.put(it) }
+                            dailyUsageJson.put(key, jsonArray)
+                        }
+                    }
+                }
+                settingsJson.put("daily_usage_prefs", dailyUsageJson)
+            }
+            
+            // Export app lock preferences
+            val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
+            val appLockAll = appLockPrefs.all
+            if (appLockAll.isNotEmpty()) {
+                val appLockJson = JSONObject()
+                for ((key, value) in appLockAll) {
+                    when (value) {
+                        is String -> appLockJson.put(key, value)
+                        is Boolean -> appLockJson.put(key, value)
+                        is Int -> appLockJson.put(key, value)
+                        is Long -> appLockJson.put(key, value)
+                        is Float -> appLockJson.put(key, value)
+                        is Set<*> -> {
+                            val jsonArray = JSONArray()
+                            value.forEach { jsonArray.put(it) }
+                            appLockJson.put(key, jsonArray)
+                        }
+                    }
+                }
+                settingsJson.put("app_lock_prefs", appLockJson)
             }
 
             contentResolver.openOutputStream(uri)?.use { outputStream ->
@@ -361,31 +466,62 @@ class SettingsActivity : ComponentActivity() {
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 val jsonString = inputStream.bufferedReader().use { it.readText() }
                 val settingsJson = JSONObject(jsonString)
-                val editor = prefs.edit()
-
-                val keys = settingsJson.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val value = settingsJson.get(key)
-
-                    when (value) {
-                        is String -> editor.putString(key, value)
-                        is Boolean -> editor.putBoolean(key, value)
-                        is Int -> editor.putInt(key, value)
-                        is Long -> editor.putLong(key, value)
-                        is Double -> editor.putFloat(key, value.toFloat())
-                        is Float -> editor.putFloat(key, value)
-                        is JSONArray -> {
-                            val stringSet = mutableSetOf<String>()
-                            for (i in 0 until value.length()) {
-                                stringSet.add(value.getString(i))
-                            }
-                            editor.putStringSet(key, stringSet)
-                        }
+                
+                // Check if this is the new format (with separate SharedPreferences files)
+                // or the old format (all at root level)
+                val isNewFormat = settingsJson.has("main_preferences")
+                
+                if (isNewFormat) {
+                    // New format: organized by SharedPreferences file
+                    // Import main preferences
+                    if (settingsJson.has("main_preferences")) {
+                        val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
+                        val editor = prefs.edit()
+                        importPreferences(mainPrefsJson, editor)
+                        editor.apply()
                     }
+                    
+                    // Import app usage preferences
+                    if (settingsJson.has("app_usage")) {
+                        val appUsagePrefs = getSharedPreferences("app_usage", MODE_PRIVATE)
+                        val appUsageJson = settingsJson.getJSONObject("app_usage")
+                        val editor = appUsagePrefs.edit()
+                        importPreferences(appUsageJson, editor)
+                        editor.apply()
+                    }
+                    
+                    // Import app timer preferences
+                    if (settingsJson.has("app_timer_prefs")) {
+                        val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
+                        val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
+                        val editor = appTimerPrefs.edit()
+                        importPreferences(appTimerJson, editor)
+                        editor.apply()
+                    }
+                    
+                    // Import daily usage preferences
+                    if (settingsJson.has("daily_usage_prefs")) {
+                        val dailyUsagePrefs = getSharedPreferences("daily_usage_prefs", MODE_PRIVATE)
+                        val dailyUsageJson = settingsJson.getJSONObject("daily_usage_prefs")
+                        val editor = dailyUsagePrefs.edit()
+                        importPreferences(dailyUsageJson, editor)
+                        editor.apply()
+                    }
+                    
+                    // Import app lock preferences
+                    if (settingsJson.has("app_lock_prefs")) {
+                        val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
+                        val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
+                        val editor = appLockPrefs.edit()
+                        importPreferences(appLockJson, editor)
+                        editor.apply()
+                    }
+                } else {
+                    // Old format: all preferences at root level (backward compatibility)
+                    val editor = prefs.edit()
+                    importPreferences(settingsJson, editor)
+                    editor.apply()
                 }
-
-                editor.apply()
 
                 // Reload current settings in UI
                 val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
@@ -398,6 +534,30 @@ class SettingsActivity : ComponentActivity() {
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to import settings: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun importPreferences(prefsJson: JSONObject, editor: SharedPreferences.Editor) {
+        val keys = prefsJson.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val value = prefsJson.get(key)
+
+            when (value) {
+                is String -> editor.putString(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Double -> editor.putFloat(key, value.toFloat())
+                is Float -> editor.putFloat(key, value)
+                is JSONArray -> {
+                    val stringSet = mutableSetOf<String>()
+                    for (i in 0 until value.length()) {
+                        stringSet.add(value.getString(i))
+                    }
+                    editor.putStringSet(key, stringSet)
+                }
+            }
         }
     }
 
