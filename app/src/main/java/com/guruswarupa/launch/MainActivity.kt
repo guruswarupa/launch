@@ -1755,7 +1755,7 @@ class MainActivity : FragmentActivity() {
                         favoriteAppManager.filterApps(filteredApps, currentShowAllMode)
                     }
                     
-                    // Sort alphabetically by app name (use metadata cache if available)
+                    // Sort alphabetically by app name
                     val sortedFinalList = finalAppList.sortedBy {
                         appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
                             ?: it.activityInfo.packageName.lowercase()
