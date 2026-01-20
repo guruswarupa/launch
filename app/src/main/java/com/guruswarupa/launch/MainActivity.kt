@@ -52,6 +52,8 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import android.graphics.Rect
 import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -180,6 +182,45 @@ class MainActivity : FragmentActivity() {
         }
         val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
         return resolveInfo?.activityInfo?.packageName == packageName
+    }
+    
+    /**
+     * Excludes the left edge area from system gesture handling to allow the drawer to open
+     * when system navigation gestures are enabled.
+     */
+    private fun setupGestureExclusion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mainContent = findViewById<FrameLayout>(R.id.main_content)
+            mainContent?.let { view ->
+                // Set initial exclusion rects
+                view.post {
+                    updateGestureExclusion()
+                }
+                
+                // Update exclusion rects when window insets change (e.g., keyboard, rotation)
+                ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+                    updateGestureExclusion()
+                    insets
+                }
+            }
+        }
+    }
+    
+    /**
+     * Updates gesture exclusion rects when window focus changes (e.g., screen rotation).
+     */
+    private fun updateGestureExclusion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mainContent = findViewById<FrameLayout>(R.id.main_content)
+            mainContent?.let { view ->
+                // Convert 50dp to pixels
+                val exclusionWidthPx = (50 * resources.displayMetrics.density).toInt()
+                val exclusionRects = listOf(
+                    Rect(0, 0, exclusionWidthPx, view.height)
+                )
+                ViewCompat.setSystemGestureExclusionRects(view, exclusionRects)
+            }
+        }
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -463,6 +504,9 @@ class MainActivity : FragmentActivity() {
             gestureDetector.onTouchEvent(event)
             false
         }
+        
+        // Setup gesture exclusion to allow drawer to open with system navigation gestures enabled
+        setupGestureExclusion()
         
         // Initialize WidgetManager
         val widgetContainer = findViewById<LinearLayout>(R.id.widget_container)
@@ -1311,6 +1355,14 @@ class MainActivity : FragmentActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            // Update gesture exclusion rects when window gains focus (e.g., after rotation)
+            updateGestureExclusion()
         }
     }
 
