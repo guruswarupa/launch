@@ -51,7 +51,12 @@
             android:exported="true"
             android:theme="@style/Theme.Launch"
             android:screenOrientation="portrait"
-            android:excludeFromRecents="true"/>
+            android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".FocusModeConfigActivity"
@@ -85,12 +90,7 @@
             android:exported="true"
             android:theme="@style/Theme.Launch"
             android:label="@string/settings_app_name"
-            android:excludeFromRecents="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:excludeFromRecents="true" />
 
         <service
             android:name=".AppUsageMonitor"

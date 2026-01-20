@@ -155,6 +155,17 @@ class OnboardingActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Check if onboarding is already complete
+        if (!prefs.getBoolean("isFirstTime", true)) {
+            // Onboarding already completed, redirect to MainActivity
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            })
+            finish()
+            return
+        }
+        
         setContentView(R.layout.activity_onboarding)
         
         // Make status bar and navigation bar transparent
