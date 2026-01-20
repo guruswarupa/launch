@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="16dp"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/rounded_background">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginEnd="16dp">
+
+        <TextView
+            android:id="@+id/permission_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Permission Name"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:id="@+id/permission_description"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Permission description"
+            android:textSize="12sp"
+            android:textColor="@android:color/white"
+            android:alpha="0.7"/>
+
+    </LinearLayout>
+
+    <Switch
+        android:id="@+id/permission_switch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:thumbTint="@color/nord7"
+        android:trackTint="@color/nord3"/>
+
+</LinearLayout>

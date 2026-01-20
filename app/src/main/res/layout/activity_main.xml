@@ -149,8 +149,8 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:hint="@string/search_text"
-                        android:textColor="@color/text"
-                        android:textColorHint="@color/text"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/white"
                         android:padding="12dp"
                         android:background="@drawable/search_box_transparent_bg"
                         android:drawableStart="@drawable/ic_search"
@@ -255,12 +255,12 @@
                         android:id="@+id/add_widget_button"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Add Widget"
-                        android:textSize="14sp"
+                        android:background="@drawable/button_neutral_ripple"
                         android:paddingHorizontal="20dp"
                         android:paddingVertical="10dp"
-                        android:background="@drawable/button_neutral_ripple"
-                        android:textColor="@color/white" />
+                        android:text="Add Widget"
+                        android:textColor="@color/white"
+                        android:textSize="14sp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -364,6 +364,22 @@
                     android:clipToPadding="false"
                     android:paddingTop="4dp"
                     android:paddingBottom="4dp" />
+
+            </LinearLayout>
+
+            <!-- Workout Widget -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:layout_marginVertical="16dp">
+
+                <FrameLayout
+                    android:id="@+id/workout_widget_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
 
             </LinearLayout>
 

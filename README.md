@@ -147,7 +147,6 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 
 ## ⚙️ Settings Features
 - **Import/Export Data**: Backup or restore your launcher settings and data
-- **Reset App Usage Stats**: Start fresh any time
 - **Change Display Style**: Toggle between grid and list view easily
 - **Update Weather API Key**: Use your personal API key from openweathermap.org
 - **Manage App Locks**: Configure PIN and fingerprint authentication

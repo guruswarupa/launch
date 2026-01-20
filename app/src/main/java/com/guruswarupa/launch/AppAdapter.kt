@@ -25,6 +25,7 @@ import android.view.Gravity
 import android.widget.PopupMenu
 import java.util.concurrent.Executors
 import android.app.Activity
+import androidx.core.content.ContextCompat
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -113,10 +114,13 @@ class AppAdapter(
     
     /**
      * Pre-loads icons in background to improve scroll performance
+     * Optimized to preload visible items first, then next batch
      */
     private fun preloadIcons(apps: List<ResolveInfo>) {
         iconPreloadExecutor.execute {
-            for (app in apps) {
+            // Pre-load first 30 icons immediately (visible + near-visible)
+            val immediateLoad = apps.take(30)
+            for (app in immediateLoad) {
                 val packageName = app.activityInfo.packageName
                 
                 // Skip special entries
@@ -155,6 +159,64 @@ class AppAdapter(
                         }
                     } catch (e: Exception) {
                         // Ignore errors during pre-loading
+                    }
+                }
+            }
+            
+            // Pre-load remaining icons in batches
+            val remainingApps = apps.drop(30)
+            for (batch in remainingApps.chunked(20)) {
+                for (app in batch) {
+                    val packageName = app.activityInfo.packageName
+                    
+                    if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
+                            "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                        continue
+                    }
+                    
+                    if (!iconCache.containsKey(packageName)) {
+                        try {
+                            val isValidApp = packageValidityCache.getOrPut(packageName) {
+                                app.activityInfo?.applicationInfo != null
+                            }
+                            
+                            if (isValidApp) {
+                                val icon = app.loadIcon(activity.packageManager)
+                                iconCache[packageName] = icon
+                            }
+                        } catch (e: Exception) {
+                            // Ignore errors
+                        }
+                    }
+                }
+                // Small delay between batches to avoid blocking
+                Thread.sleep(10)
+            }
+        }
+    }
+    
+    /**
+     * Pre-load next N icons starting from position
+     */
+    private fun preloadNextIcons(startPosition: Int, endPosition: Int) {
+        if (startPosition >= appList.size) return
+        
+        iconPreloadExecutor.execute {
+            val appsToPreload = appList.subList(startPosition, minOf(endPosition, appList.size))
+            for (app in appsToPreload) {
+                val packageName = app.activityInfo.packageName
+                
+                if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
+                        "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                    continue
+                }
+                
+                if (!iconCache.containsKey(packageName)) {
+                    try {
+                        val icon = app.loadIcon(activity.packageManager)
+                        iconCache[packageName] = icon
+                    } catch (e: Exception) {
+                        // Ignore errors
                     }
                 }
             }
@@ -509,8 +571,24 @@ class AppAdapter(
                         }
                     }
                 }
+                
+                // Pre-load next 10 icons for smooth scrolling
+                if (position < appList.size - 1 && position % 5 == 0) {
+                    preloadNextIcons(position + 1, minOf(position + 11, appList.size))
+                }
 
+                // Debounce clicks to prevent double-tap issues
+                var lastClickTime = 0L
+                val CLICK_DEBOUNCE_DELAY = 500L // 500ms debounce
+                
                 holder.itemView.setOnClickListener {
+                    val currentTime = System.currentTimeMillis()
+                    // Ignore clicks that are too close together (double-tap prevention)
+                    if (currentTime - lastClickTime < CLICK_DEBOUNCE_DELAY) {
+                        return@setOnClickListener
+                    }
+                    lastClickTime = currentTime
+                    
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                     if (intent != null) {
                         val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
@@ -606,7 +684,87 @@ class AppAdapter(
             }
         }
 
+        // Show the menu and then fix text colors
         popupMenu.show()
+        
+        // Fix text colors after menu is shown using reflection
+        fixPopupMenuTextColors(popupMenu)
+    }
+    
+    private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
+        try {
+            val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+            
+            // Try to get the ListView from the popup menu using reflection
+            val popupField = popupMenu.javaClass.getDeclaredField("mPopup")
+            popupField.isAccessible = true
+            val menuPopupHelper = popupField.get(popupMenu)
+            val menuPopupHelperClass = menuPopupHelper?.javaClass
+            
+            // Try different field names for different Android versions
+            val listViewFieldNames = arrayOf("mDropDownList", "mPopup")
+            var listView: android.widget.ListView? = null
+            
+            for (fieldName in listViewFieldNames) {
+                try {
+                    val listViewField = menuPopupHelperClass?.getDeclaredField(fieldName)
+                    listViewField?.isAccessible = true
+                    val result = listViewField?.get(menuPopupHelper)
+                    if (result is android.widget.ListView) {
+                        listView = result
+                        break
+                    }
+                } catch (e: NoSuchFieldException) {
+                    // Try next field name
+                }
+            }
+            
+            // If we got the ListView, fix text colors
+            listView?.post {
+                try {
+                    for (i in 0 until listView.childCount) {
+                        val itemView = listView.getChildAt(i)
+                        if (itemView is TextView) {
+                            itemView.setTextColor(whiteColor)
+                        } else if (itemView is ViewGroup) {
+                            findTextViewsAndSetColor(itemView, whiteColor)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            
+            // Also try after a small delay in case items load asynchronously
+            listView?.postDelayed({
+                try {
+                    for (i in 0 until listView.childCount) {
+                        val itemView = listView.getChildAt(i)
+                        if (itemView is TextView) {
+                            itemView.setTextColor(whiteColor)
+                        } else if (itemView is ViewGroup) {
+                            findTextViewsAndSetColor(itemView, whiteColor)
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }, 50)
+        } catch (e: Exception) {
+            // If reflection fails, the style should still apply
+            e.printStackTrace()
+        }
+    }
+    
+    private fun findTextViewsAndSetColor(viewGroup: ViewGroup, color: Int) {
+        for (i in 0 until viewGroup.childCount) {
+            val child = viewGroup.getChildAt(i)
+            if (child is TextView) {
+                child.setTextColor(color)
+            } else if (child is ViewGroup) {
+                findTextViewsAndSetColor(child, color)
+            }
+        }
     }
 
     private fun showAppInfo(packageName: String) {

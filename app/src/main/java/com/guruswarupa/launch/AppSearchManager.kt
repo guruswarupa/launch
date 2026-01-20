@@ -16,7 +16,8 @@ class AppSearchManager(
     private val fullAppList: MutableList<ResolveInfo>,
     private val adapter: AppAdapter,
     private val searchBox: EditText,
-    private val contactsList: List<String>
+    private val contactsList: List<String>,
+    private val appMetadataCache: Map<String, MainActivity.AppMetadata>? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val searchExecutor = Executors.newSingleThreadExecutor() // Background thread for search operations
@@ -65,11 +66,18 @@ class AppSearchManager(
 
     private fun refreshAppList() {
         appLabelMap = fullAppList.associateWith { resolveInfo ->
-            appLabelCache.getOrPut(resolveInfo.activityInfo.packageName) {
-                try {
-                    resolveInfo.loadLabel(packageManager).toString().lowercase()
-                } catch (e: Exception) {
-                    resolveInfo.activityInfo.packageName.lowercase()
+            val packageName = resolveInfo.activityInfo.packageName
+            // Use pre-loaded metadata cache if available
+            val cachedMetadata = appMetadataCache?.get(packageName)
+            if (cachedMetadata != null) {
+                cachedMetadata.label.lowercase()
+            } else {
+                appLabelCache.getOrPut(packageName) {
+                    try {
+                        resolveInfo.loadLabel(packageManager).toString().lowercase()
+                    } catch (e: Exception) {
+                        packageName.lowercase()
+                    }
                 }
             }
         }
@@ -109,12 +117,12 @@ class AppSearchManager(
                     }
                 }
 
-                // Sort by usage count only for matches found (using pre-loaded cache)
-                val sortedExact = exactMatches.sortedByDescending {
-                    usageCache[it.activityInfo.packageName] ?: 0
+                // Sort alphabetically for matches found
+                val sortedExact = exactMatches.sortedBy {
+                    appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase()
                 }
-                val sortedPartial = partialMatches.sortedByDescending {
-                    usageCache[it.activityInfo.packageName] ?: 0
+                val sortedPartial = partialMatches.sortedBy {
+                    appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase()
                 }
 
                 // 1. Add apps first
@@ -149,11 +157,14 @@ class AppSearchManager(
                     refreshAppList()
                 }
                 
-                val sorted = fullAppList.sortedWith(
-                    compareByDescending<ResolveInfo> {
-                        usageCache[it.activityInfo.packageName] ?: 0
-                    }.thenBy {
-                        appLabelMap[it]?.lowercase() ?: run {
+                // Sort alphabetically by app name
+                val sorted = fullAppList.sortedBy {
+                    appLabelMap[it]?.lowercase() ?: run {
+                        // Use pre-loaded metadata cache if available
+                        val cachedMetadata = appMetadataCache?.get(it.activityInfo.packageName)
+                        if (cachedMetadata != null) {
+                            cachedMetadata.label.lowercase()
+                        } else {
                             // Fallback: load label only if not in cache
                             try {
                                 appLabelCache.getOrPut(it.activityInfo.packageName) {
@@ -164,7 +175,7 @@ class AppSearchManager(
                             }
                         }
                     }
-                )
+                }
                 newFilteredList.addAll(sorted)
                 searchCache[emptyQueryKey] = ArrayList(sorted)
             }

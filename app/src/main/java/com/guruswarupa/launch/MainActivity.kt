@@ -48,8 +48,12 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.core.view.GravityCompat
+import androidx.core.view.ViewCompat
+import android.graphics.Rect
 import android.widget.Spinner
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
@@ -61,6 +65,14 @@ import com.guruswarupa.launch.TodoAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import java.util.concurrent.Executors
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.io.Serializable
+import android.content.pm.ApplicationInfo
+import android.content.pm.ActivityInfo
 
 
 class MainActivity : FragmentActivity() {
@@ -78,7 +90,18 @@ class MainActivity : FragmentActivity() {
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
     private var cachedUnsortedList: List<ResolveInfo>? = null // Cache the raw app list
     private var lastCacheTime = 0L
-    private val CACHE_DURATION = 60000L // Cache for 1 minute
+    private val CACHE_DURATION = 300000L // Cache for 5 minutes (increased from 1 minute)
+    
+    // Persistent cache files
+    private lateinit var appListCacheFile: File
+    private lateinit var appListCacheTimeFile: File
+    private lateinit var appMetadataCacheFile: File
+    private lateinit var appListVersionFile: File
+    
+    // App metadata cache
+    private val appMetadataCache = mutableMapOf<String, AppMetadata>()
+    private var usageStatsCache = mutableMapOf<String, Int>()
+    private var cachedAppListVersion: String? = null
     private val handler = Handler(Looper.getMainLooper())
     private val backgroundExecutor = Executors.newFixedThreadPool(4) // Reusable thread pool
 
@@ -93,8 +116,6 @@ class MainActivity : FragmentActivity() {
     private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
     private var lastUpdateDate: String = ""
-    private var lastWeatherUpdateTime = 0L
-    private val WEATHER_UPDATE_INTERVAL = 30 * 60 * 1000L // 30 minutes in milliseconds
     // Cache SimpleDateFormat instances to avoid repeated creation
     private val timeFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
@@ -110,6 +131,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var todoAlarmManager: TodoAlarmManager
     private lateinit var calculatorWidget: CalculatorWidget
     private lateinit var notificationsWidget: NotificationsWidget
+    private lateinit var workoutWidget: WorkoutWidget
 
     // Finance widget variables
     private lateinit var financeManager: FinanceManager
@@ -141,24 +163,104 @@ class MainActivity : FragmentActivity() {
         private const val REQUEST_CONFIGURE_WIDGET = 801
         private const val NOTIFICATION_PERMISSION_REQUEST = 900
     }
+    
+    // Data class for app metadata caching
+    data class AppMetadata(
+        val packageName: String,
+        val activityName: String,
+        val label: String,
+        val lastUpdated: Long
+    ) : Serializable {
+        companion object {
+            // Make it accessible from other classes
+        }
+    }
+    
+    private fun isDefaultLauncher(): Boolean {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName == packageName
+    }
+    
+    /**
+     * Excludes the left edge area from system gesture handling to allow the drawer to open
+     * when system navigation gestures are enabled.
+     */
+    private fun setupGestureExclusion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mainContent = findViewById<FrameLayout>(R.id.main_content)
+            mainContent?.let { view ->
+                // Set initial exclusion rects
+                view.post {
+                    updateGestureExclusion()
+                }
+                
+                // Update exclusion rects when window insets change (e.g., keyboard, rotation)
+                ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+                    updateGestureExclusion()
+                    insets
+                }
+            }
+        }
+    }
+    
+    /**
+     * Updates gesture exclusion rects when window focus changes (e.g., screen rotation).
+     */
+    private fun updateGestureExclusion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mainContent = findViewById<FrameLayout>(R.id.main_content)
+            mainContent?.let { view ->
+                // Convert 50dp to pixels
+                val exclusionWidthPx = (50 * resources.displayMetrics.density).toInt()
+                val exclusionRects = listOf(
+                    Rect(0, 0, exclusionWidthPx, view.height)
+                )
+                ViewCompat.setSystemGestureExclusionRects(view, exclusionRects)
+            }
+        }
+    }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
-
-        if (isFirstRun) {
-            sharedPreferences.edit().putBoolean("isFirstRun", false).apply()
-
-            startActivity(Intent(this, OnboardingActivity::class.java))
-            finish()
-        } else {
-            setContentView(R.layout.activity_main)
+        
+        // Make status bar and navigation bar transparent (after setContentView, post to ensure window is ready)
+        window.decorView.post {
+            makeSystemBarsTransparent()
         }
 
+        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        
+        // Initialize cache files
+        initializeCacheFiles()
+        
+        // Load usage stats cache immediately
+        loadUsageStatsCache()
+        
+        val isFirstRun = sharedPreferences.getBoolean("isFirstRun", true)
+        val isFirstTime = sharedPreferences.getBoolean("isFirstTime", true)
+
+        // Check if onboarding is complete - if not, redirect to onboarding
+        if (isFirstRun || isFirstTime) {
+            if (isFirstRun) {
+                sharedPreferences.edit().putBoolean("isFirstRun", false).apply()
+            }
+            
+            // Start onboarding - if we're here because launcher was set as default, continue from default launcher step
+            val intent = Intent(this, OnboardingActivity::class.java)
+            if (isDefaultLauncher() && !isFirstRun) {
+                // Launcher is set as default but onboarding not complete - continue from default launcher step
+                intent.putExtra("continueFromDefaultLauncher", true)
+            }
+            startActivity(intent)
+            finish()
+            return
+        }
+        
         // Initialize APK sharing manager
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
@@ -247,58 +349,67 @@ class MainActivity : FragmentActivity() {
         updateDate()
         setupWeather()
 
-        // Initialize battery and phone usage widgets
-        setupBatteryAndUsage()
+        // Defer expensive widget initialization to avoid blocking UI
+        handler.postDelayed({
+            // Initialize battery and phone usage widgets
+            setupBatteryAndUsage()
 
-        // Initialize notifications widget
-        val notificationsContainer = findViewById<ViewGroup>(R.id.notifications_widget_container)
-        val notificationsView = LayoutInflater.from(this).inflate(R.layout.notifications_widget, notificationsContainer, false)
-        notificationsContainer.addView(notificationsView)
-        notificationsWidget = NotificationsWidget(notificationsView)
-        
-        // Register broadcast receiver for notification updates
-        val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(notificationUpdateReceiver, notificationFilter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(notificationUpdateReceiver, notificationFilter)
-        }
-        
-        // Initialize calculator widget
-        val calculatorContainer = findViewById<ViewGroup>(R.id.calculator_widget_container)
-        val calculatorView = LayoutInflater.from(this).inflate(R.layout.calculator_widget, calculatorContainer, false)
-        calculatorContainer.addView(calculatorView)
-        calculatorWidget = CalculatorWidget(calculatorView)
+            // Initialize notifications widget
+            val notificationsContainer = findViewById<ViewGroup>(R.id.notifications_widget_container)
+            val notificationsView = LayoutInflater.from(this).inflate(R.layout.notifications_widget, notificationsContainer, false)
+            notificationsContainer.addView(notificationsView)
+            notificationsWidget = NotificationsWidget(notificationsView)
+            
+            // Register broadcast receiver for notification updates
+            val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(notificationUpdateReceiver, notificationFilter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(notificationUpdateReceiver, notificationFilter)
+            }
 
-        // Initialize todo widget
-        setupTodoWidget()
+            // Initialize calculator widget
+            val calculatorContainer = findViewById<ViewGroup>(R.id.calculator_widget_container)
+            val calculatorView = LayoutInflater.from(this).inflate(R.layout.calculator_widget, calculatorContainer, false)
+            calculatorContainer.addView(calculatorView)
+            calculatorWidget = CalculatorWidget(calculatorView)
 
-        // Initialize todo alarm manager
-        todoAlarmManager = TodoAlarmManager(this)
-        
-        // Request notification permission
-        requestNotificationPermission()
+            // Initialize workout widget
+            val workoutContainer = findViewById<ViewGroup>(R.id.workout_widget_container)
+            val workoutView = LayoutInflater.from(this).inflate(R.layout.workout_widget, workoutContainer, false)
+            workoutContainer.addView(workoutView)
+            workoutWidget = WorkoutWidget(workoutView)
 
-        todoRecyclerView = findViewById(R.id.todo_recycler_view)
-        addTodoButton = findViewById(R.id.add_todo_button)
+            // Initialize todo widget
+            setupTodoWidget()
 
-        todoRecyclerView.layoutManager = LinearLayoutManager(this)
-        todoAdapter = TodoAdapter(todoItems, { todoItem ->
-            removeTodoItem(todoItem)
-        }, {
-            // onTaskStateChanged callback - save and reschedule alarms when task state changes
-            saveTodoItems()
+            // Initialize todo alarm manager
+            todoAlarmManager = TodoAlarmManager(this)
+            
+            // Request notification permission
+            requestNotificationPermission()
+
+            todoRecyclerView = findViewById(R.id.todo_recycler_view)
+            addTodoButton = findViewById(R.id.add_todo_button)
+
+            todoRecyclerView.layoutManager = LinearLayoutManager(this)
+            todoAdapter = TodoAdapter(todoItems, { todoItem ->
+                removeTodoItem(todoItem)
+            }, {
+                // onTaskStateChanged callback - save and reschedule alarms when task state changes
+                saveTodoItems()
+                rescheduleTodoAlarms()
+            })
+            todoRecyclerView.adapter = todoAdapter
+
+            addTodoButton.setOnClickListener {
+                showAddTodoDialog()
+            }
+
+            loadTodoItems()
+            // Reschedule alarms after loading todos
             rescheduleTodoAlarms()
-        })
-        todoRecyclerView.adapter = todoAdapter
-
-        addTodoButton.setOnClickListener {
-            showAddTodoDialog()
-        }
-
-        loadTodoItems()
-        // Reschedule alarms after loading todos
-        rescheduleTodoAlarms()
+        }, 100) // Defer by 100ms to let UI render first
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
 
@@ -320,18 +431,28 @@ class MainActivity : FragmentActivity() {
         appList = mutableListOf()
         fullAppList = mutableListOf()
 
-        loadApps()
+        // Initialize adapter immediately with empty/cached list for instant UI
         adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
         recyclerView.adapter = adapter
+        recyclerView.visibility = View.VISIBLE
 
-        appSearchManager = AppSearchManager(
-            packageManager = packageManager,
-            appList = appList,
-            fullAppList = fullAppList,
-            adapter = adapter,
-            searchBox = searchBox,
-            contactsList = contactsList
-        )
+        // Load apps in background - will update adapter when ready
+        loadApps()
+        
+        // Defer AppSearchManager initialization to avoid blocking
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                appSearchManager = AppSearchManager(
+                    packageManager = packageManager,
+                    appList = appList,
+                    fullAppList = fullAppList,
+                    adapter = adapter,
+                    searchBox = searchBox,
+                    contactsList = contactsList,
+                    appMetadataCache = appMetadataCache
+                )
+            }
+        }, 150)
 
         // Initialize DrawerLayout
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -384,6 +505,9 @@ class MainActivity : FragmentActivity() {
             false
         }
         
+        // Setup gesture exclusion to allow drawer to open with system navigation gestures enabled
+        setupGestureExclusion()
+        
         // Initialize WidgetManager
         val widgetContainer = findViewById<LinearLayout>(R.id.widget_container)
         widgetManager = WidgetManager(this, widgetContainer)
@@ -393,6 +517,7 @@ class MainActivity : FragmentActivity() {
             widgetManager.requestPickWidget(this, REQUEST_PICK_WIDGET)
         }
 
+        // Load wallpaper immediately - only show default if we can't get the real one
         setWallpaperBackground()
 
         findViewById<ImageButton>(R.id.voice_search_button).setOnClickListener {
@@ -402,15 +527,20 @@ class MainActivity : FragmentActivity() {
 
         lastUpdateDate = getCurrentDateString()
 
-        // Initialize finance widget
-        financeManager = FinanceManager(sharedPreferences)
-        balanceText = findViewById(R.id.balance_text)
-        monthlySpentText = findViewById(R.id.monthly_spent_text)
-        amountInput = findViewById(R.id.amount_input)
-        descriptionInput = findViewById(R.id.description_input)
+        // Defer finance widget initialization to avoid blocking
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                // Initialize finance widget
+                financeManager = FinanceManager(sharedPreferences)
+                balanceText = findViewById(R.id.balance_text)
+                monthlySpentText = findViewById(R.id.monthly_spent_text)
+                amountInput = findViewById(R.id.amount_input)
+                descriptionInput = findViewById(R.id.description_input)
 
-        setupFinanceWidget()
-        updateFinanceDisplay()
+                setupFinanceWidget()
+                updateFinanceDisplay()
+            }
+        }, 100)
     }
 
     fun refreshAppsForFocusMode() {
@@ -430,12 +560,26 @@ class MainActivity : FragmentActivity() {
         
         backgroundExecutor.execute {
             try {
-                // Filter apps based on favorite/show all mode in background
-                val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
+                // Check if workspace mode is active - if so, ignore favorites filter
+                val currentWorkspaceMode = appDockManager.isWorkspaceModeActive()
+                // Filter apps based on favorite/show all mode, but skip favorites filter if workspace mode is active
+                val finalAppList = if (currentWorkspaceMode) {
+                    fullAppList // Show all workspace apps, ignore favorites
+                } else {
+                    // Always read fresh from manager to avoid stale state
+                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                    favoriteAppManager.filterApps(fullAppList, currentShowAllMode)
+                }
+                
+                // Sort alphabetically by app name
+                val sortedFinalList = finalAppList.sortedBy {
+                    appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                        ?: it.activityInfo.packageName.lowercase()
+                }
                 
                 // Update UI on main thread
                 runOnUiThread {
-                    appList = finalAppList.toMutableList()
+                    appList = sortedFinalList.toMutableList()
                     adapter.updateAppList(appList)
                     appDockManager.refreshFavoriteToggle()
                     
@@ -460,8 +604,42 @@ class MainActivity : FragmentActivity() {
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
-                loadApps() // Refresh apps with new settings
-                updateFinanceDisplay() // Refresh finance display after reset
+                // Run on UI thread to update views
+                runOnUiThread {
+                    // Update display style if changed
+                    val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"
+                    val newIsGridMode = viewPreference == "grid"
+                    val currentIsGridMode = recyclerView.layoutManager is GridLayoutManager
+                    
+                    if (newIsGridMode != currentIsGridMode && ::adapter.isInitialized) {
+                        // Update layout manager
+                        recyclerView.layoutManager = if (newIsGridMode) {
+                            GridLayoutManager(this@MainActivity, 4)
+                        } else {
+                            LinearLayoutManager(this@MainActivity)
+                        }
+                        
+                        // Recreate adapter with new mode
+                        adapter = AppAdapter(this@MainActivity, appList, searchBox, newIsGridMode, this@MainActivity)
+                        recyclerView.adapter = adapter
+                        
+                        // Update app search manager with new adapter
+                        if (::appSearchManager.isInitialized) {
+                            appSearchManager = AppSearchManager(
+                                packageManager = packageManager,
+                                appList = appList,
+                                fullAppList = fullAppList,
+                                adapter = adapter,
+                                searchBox = searchBox,
+                                contactsList = contactsList
+                            )
+                        }
+                    }
+                    
+                    // Always refresh apps to ensure latest data
+                    loadApps()
+                    updateFinanceDisplay() // Refresh finance display after reset
+                }
             }
         }
     }
@@ -772,25 +950,117 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun setWallpaperBackground() {
-        // Load wallpaper asynchronously to avoid blocking UI
+        // Check if we have a cached wallpaper bitmap - use it instantly
+        if (currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
+            wallpaperBackground.setImageBitmap(currentWallpaperBitmap)
+            findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(currentWallpaperBitmap)
+            return
+        }
+        
+        // Try to load wallpaper synchronously first (for BitmapDrawable, this is very fast)
+        // This prevents the black flash
+        try {
+            val wallpaperManager = WallpaperManager.getInstance(this)
+            val drawable = wallpaperManager.drawable
+            
+            if (drawable != null && drawable is BitmapDrawable) {
+                // BitmapDrawable is fast to load - do it synchronously for instant display
+                val sourceBitmap = drawable.bitmap
+                if (sourceBitmap != null && !sourceBitmap.isRecycled) {
+                    // Create a copy of the bitmap so we own it and can safely recycle it
+                    val bitmap = sourceBitmap.copy(sourceBitmap.config ?: Bitmap.Config.ARGB_8888, false)
+                    if (bitmap != null) {
+                        // Clear ImageView before recycling old bitmap to prevent crash
+                        val oldBitmap = currentWallpaperBitmap
+                        wallpaperBackground.setImageDrawable(null)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageDrawable(null)
+                        oldBitmap?.recycle()
+                        currentWallpaperBitmap = bitmap
+                        wallpaperBackground.setImageBitmap(bitmap)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
+                        return // Success - we're done!
+                    }
+                }
+            }
+        } catch (e: SecurityException) {
+            // Permission denied - show default wallpaper
+            Log.w("MainActivity", "No permission to read wallpaper, showing default", e)
+            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+            findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
+            return
+        } catch (e: Exception) {
+            // If synchronous load fails, fall through to async load
+            Log.d("MainActivity", "Synchronous wallpaper load failed, trying async", e)
+        }
+        
+        // For non-BitmapDrawable or if sync load failed, load in background
+        // But this should be rare - most wallpapers are BitmapDrawable
         backgroundExecutor.execute {
             try {
                 val wallpaperManager = WallpaperManager.getInstance(this)
-                val bitmap = wallpaperManager.drawable.let {
-                    if (it is BitmapDrawable) it.bitmap else null
+                val drawable = wallpaperManager.drawable
+                
+                if (drawable == null) {
+                    runOnUiThread {
+                        wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
+                    }
+                    return@execute
                 }
-                runOnUiThread {
-                    if (bitmap != null) {
-                        wallpaperBackground.setImageBitmap(bitmap)
-                        // Also set wallpaper for drawer background
-                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
+                
+                val bitmap = if (drawable is BitmapDrawable) {
+                    // Create a copy of the bitmap so we own it and can safely recycle it
+                    val sourceBitmap = drawable.bitmap
+                    if (sourceBitmap != null && !sourceBitmap.isRecycled) {
+                        sourceBitmap.copy(sourceBitmap.config ?: Bitmap.Config.ARGB_8888, false)
                     } else {
+                        null
+                    }
+                } else {
+                    // Get screen dimensions directly (resources is available in background thread)
+                    val screenWidth = resources.displayMetrics.widthPixels
+                    val screenHeight = resources.displayMetrics.heightPixels
+                    
+                    // Convert drawable to bitmap if needed
+                    val bm = Bitmap.createBitmap(
+                        screenWidth.takeIf { it > 0 } ?: 1080,
+                        screenHeight.takeIf { it > 0 } ?: 1920,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    val canvas = android.graphics.Canvas(bm)
+                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.draw(canvas)
+                    bm
+                }
+                
+                // Cache the bitmap for future use (only if valid)
+                if (bitmap != null && !bitmap.isRecycled) {
+                    val oldBitmap = currentWallpaperBitmap
+                    currentWallpaperBitmap = bitmap
+                    
+                    runOnUiThread {
+                        // Clear ImageView before setting new bitmap to prevent crash
+                        wallpaperBackground.setImageDrawable(null)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageDrawable(null)
+                        // Now safe to recycle old bitmap
+                        oldBitmap?.recycle()
+                        wallpaperBackground.setImageBitmap(bitmap)
+                        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(bitmap)
+                    }
+                } else {
+                    runOnUiThread {
                         wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                         findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
                     }
                 }
+            } catch (e: SecurityException) {
+                Log.w("MainActivity", "No permission to read wallpaper, showing default", e)
+                runOnUiThread {
+                    wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+                    findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("MainActivity", "Error loading wallpaper, showing default", e)
                 runOnUiThread {
                     wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                     findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageResource(R.drawable.default_wallpaper)
@@ -801,8 +1071,25 @@ class MainActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Clear ImageView before recycling to prevent crash
+        if (::wallpaperBackground.isInitialized) {
+            wallpaperBackground.setImageDrawable(null)
+        }
+        findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageDrawable(null)
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
+        
+        // Unregister receivers to prevent leaks
+        try {
+            unregisterReceiver(settingsUpdateReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered
+        }
+        try {
+            unregisterReceiver(notificationUpdateReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered
+        }
         
         // Shutdown executor to prevent memory leaks
         backgroundExecutor.shutdown()
@@ -904,9 +1191,26 @@ class MainActivity : FragmentActivity() {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                         val packageName = intent.data?.encodedSchemeSpecificPart
                         if (packageName != null && context is MainActivity) {
+                            // Clear caches for removed package
+                            context.appMetadataCache.remove(packageName)
+                            context.usageStatsCache.remove(packageName)
+                            
+                            // Clear persistent cache files to force refresh
+                            try {
+                                if (context::appListCacheFile.isInitialized && context.appListCacheFile.exists()) {
+                                    context.appListCacheFile.delete()
+                                }
+                                if (context::appListVersionFile.isInitialized && context.appListVersionFile.exists()) {
+                                    context.appListVersionFile.delete()
+                                }
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error clearing cache", e)
+                            }
+                            
                             context.runOnUiThread {
                                 context.appList.removeAll { it.activityInfo.packageName == packageName }
                                 context.fullAppList.removeAll { it.activityInfo.packageName == packageName }
+                                context.cachedUnsortedList = null // Clear in-memory cache
                                 if (context::adapter.isInitialized) {
                                     context.adapter.appList = context.appList
                                     context.adapter.notifyDataSetChanged()
@@ -919,9 +1223,27 @@ class MainActivity : FragmentActivity() {
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                         // Reload apps when a new package is installed (force refresh to clear cache)
                         if (context is MainActivity) {
-                            context.cachedUnsortedList = null // Clear cache
+                            context.cachedUnsortedList = null // Clear in-memory cache
+                            // Clear persistent cache
+                            try {
+                                if (context::appListCacheFile.isInitialized && context.appListCacheFile.exists()) {
+                                    context.appListCacheFile.delete()
+                                }
+                                if (context::appListVersionFile.isInitialized && context.appListVersionFile.exists()) {
+                                    context.appListVersionFile.delete()
+                                }
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error clearing cache", e)
+                            }
                             context.loadApps(forceRefresh = true)
                         }
+                    }
+                }
+                Intent.ACTION_PACKAGE_REPLACED -> {
+                    // Package updated - refresh cache
+                    if (context is MainActivity) {
+                        context.cachedUnsortedList = null
+                        context.loadApps(forceRefresh = true)
                     }
                 }
             }
@@ -1036,8 +1358,25 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            // Update gesture exclusion rects when window gains focus (e.g., after rotation)
+            updateGestureExclusion()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        // Ensure system bars stay transparent
+        makeSystemBarsTransparent()
+        
+        // Clear app lock authentication timeout when returning to launcher
+        // This ensures locked apps always prompt for authentication
+        if (::appLockManager.isInitialized) {
+            appLockManager.clearAuthTimeout()
+        }
+        
         // Update notifications widget when activity resumes
         if (::notificationsWidget.isInitialized) {
             notificationsWidget.updateNotifications()
@@ -1055,8 +1394,21 @@ class MainActivity : FragmentActivity() {
         registerReceiver(batteryChangeReceiver, batteryFilter)
 
         // Reapply focus mode state when returning from apps (fast operation)
-        applyFocusMode(appDockManager.getCurrentMode())
-        appDockManager.refreshWorkspaceToggle()
+        // Check if appDockManager is initialized (might not be if we redirected to onboarding)
+        if (::appDockManager.isInitialized) {
+            applyFocusMode(appDockManager.getCurrentMode())
+            appDockManager.refreshWorkspaceToggle()
+        }
+        
+        // Ensure app list is loaded - reload if empty (fixes issue where apps don't load)
+        if (::adapter.isInitialized && (appList.isEmpty() || !::appDockManager.isInitialized)) {
+            Log.d("MainActivity", "App list is empty in onResume, reloading...")
+            handler.postDelayed({
+                if (!isFinishing && !isDestroyed && ::appDockManager.isInitialized) {
+                    loadApps(forceRefresh = false)
+                }
+            }, 100)
+        }
 
         // Start widget managers (fast operations)
         if (::widgetManager.isInitialized) {
@@ -1065,7 +1417,10 @@ class MainActivity : FragmentActivity() {
 
         // PRIORITY 2: Load lightweight data in background (non-blocking)
         // Invalidate cache but don't refresh immediately
-        usageStatsManager.invalidateCache()
+        // Check if usageStatsManager is initialized (might not be if we redirected to onboarding)
+        if (::usageStatsManager.isInitialized) {
+            usageStatsManager.invalidateCache()
+        }
         
         // Start update runnable immediately for time/date
         if (isInPowerSaverMode) {
@@ -1105,18 +1460,7 @@ class MainActivity : FragmentActivity() {
             }
         }, 50) // Small delay to let UI render first
 
-        // Only update weather if it's been more than 10 minutes (defer this too)
-        val lastWeatherUpdate = sharedPreferences.getLong("last_weather_update", 0)
-        val currentTime = System.currentTimeMillis()
-        if (currentTime - lastWeatherUpdate > 600000) { // 10 minutes
-            lastWeatherUpdateTime = currentTime
-            handler.postDelayed({
-                setupWeather()
-                sharedPreferences.edit().putLong("last_weather_update", currentTime).apply()
-            }, 200) // Defer weather update
-        } else {
-            lastWeatherUpdateTime = lastWeatherUpdate
-        }
+        // Weather is now only updated when user taps on weather widget
     }
 
     override fun onPause() {
@@ -1153,13 +1497,7 @@ class MainActivity : FragmentActivity() {
     private fun updateTime() {
         val currentTime = timeFormat.format(Date())
         timeTextView.text = currentTime
-
-        // Update weather every 30 minutes (efficient check)
-        val currentTimeMillis = System.currentTimeMillis()
-        if (currentTimeMillis - lastWeatherUpdateTime >= WEATHER_UPDATE_INTERVAL) {
-            lastWeatherUpdateTime = currentTimeMillis
-            updateWeather()
-        }
+        // Weather is now only updated when user taps on weather widget
     }
 
     private fun updateDate() {
@@ -1168,13 +1506,192 @@ class MainActivity : FragmentActivity() {
     }
 
     fun loadApps(forceRefresh: Boolean = false) {
+        // Ensure appDockManager is initialized before proceeding
+        if (!::appDockManager.isInitialized) {
+            Log.w("MainActivity", "loadApps called before appDockManager initialization, retrying...")
+            handler.postDelayed({ loadApps(forceRefresh) }, 100)
+            return
+        }
+        
+        // Sync isShowAllAppsMode with the manager to ensure consistency
+        isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
+        
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
+
+        // STEP 0: If forceRefresh, skip ALL cache checks and go straight to loading
+        val currentTime = System.currentTimeMillis()
+        if (forceRefresh) {
+            // Clear all caches immediately
+            cachedUnsortedList = null
+            try {
+                if (::appListCacheFile.isInitialized && appListCacheFile.exists()) {
+                    appListCacheFile.delete()
+                }
+                if (::appListVersionFile.isInitialized && appListVersionFile.exists()) {
+                    appListVersionFile.delete()
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error clearing cache", e)
+            }
+            // Skip to background loading - no cache checks
+        } else if (appListCacheFile.exists()) {
+            // STEP 0: Check persistent cache (only if not forceRefresh)
+            val cacheAge = try {
+                val cachedTime = appListCacheTimeFile.readText().toLongOrNull() ?: 0L
+                currentTime - cachedTime
+            } catch (e: Exception) {
+                Long.MAX_VALUE
+            }
+            
+            // Only use cache if it's recent (show immediately, verify version in background)
+            if (cacheAge < CACHE_DURATION) {
+                // Load cached apps immediately (fast file read) - show first, verify later
+                val cachedApps = loadAppListFromCache()
+                if (cachedApps.isNotEmpty()) {
+                    // Load metadata cache (fast deserialization)
+                    loadAppMetadataFromCache()
+                    
+                    // Show cached list immediately without blocking version check
+                    try {
+                        val focusMode = appDockManager.getCurrentMode()
+                        val workspaceMode = appDockManager.isWorkspaceModeActive()
+                        
+                        val cachedFiltered = cachedApps.filter { app ->
+                            val packageName = app.activityInfo.packageName
+                            val activityName = app.activityInfo.name
+                            // Allow SettingsActivity, but exclude MainActivity
+                            (packageName != "com.guruswarupa.launch" || 
+                             (activityName.contains("SettingsActivity") && !activityName.contains("MainActivity"))) &&
+                                    (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
+                                    (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
+                        }
+                        
+                        // When workspace mode is active, show all apps in workspace (ignore favorites filter)
+                        // Only apply favorites filter when workspace mode is not active
+                        val cachedFinalList = if (workspaceMode) {
+                            cachedFiltered // Show all workspace apps, ignore favorites
+                        } else {
+                            // Always read fresh from manager to avoid stale state
+                            val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                            favoriteAppManager.filterApps(cachedFiltered, currentShowAllMode)
+                        }
+                        
+                        if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
+                            // Sort alphabetically by app name
+                            val sorted = cachedFinalList.sortedBy {
+                                appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                                    ?: it.activityInfo.packageName.lowercase()
+                            }
+                            
+                            handler.post {
+                                if (!isFinishing && !isDestroyed) {
+                                    appList = sorted.toMutableList()
+                                    fullAppList = ArrayList(cachedFiltered)
+                                    adapter.updateAppList(appList)
+                                    recyclerView.visibility = View.VISIBLE
+                                    
+                                    // Update AppSearchManager immediately with cached data
+                                    if (::appSearchManager.isInitialized) {
+                                        appSearchManager = AppSearchManager(
+                                            packageManager,
+                                            appList,
+                                            fullAppList,
+                                            adapter,
+                                            searchBox,
+                                            contactsList,
+                                            appMetadataCache
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Verify version in background (non-blocking) - refresh if changed
+                            backgroundExecutor.execute {
+                                val currentVersion = getAppListVersion() // Expensive call, but in background
+                                val cachedVersion = try {
+                                    if (appListVersionFile.exists()) {
+                                        appListVersionFile.readText().trim()
+                                    } else null
+                                } catch (e: Exception) {
+                                    null
+                                }
+                                
+                                // If version changed, refresh in background
+                                if (currentVersion != cachedVersion) {
+                                    handler.post {
+                                        if (!isFinishing && !isDestroyed) {
+                                            loadApps(forceRefresh = false) // Refresh without clearing cache
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            return // Exit early - cached list shown, version check happens in background
+                        }
+                    } catch (e: Exception) {
+                        Log.e("MainActivity", "Error showing cached app list", e)
+                        // Continue to load fresh apps
+                    }
+                }
+            }
+        }
+        
+        // STEP 0.5: Show in-memory cached app list if available (fallback)
+        if (!forceRefresh && cachedUnsortedList != null && 
+            (currentTime - lastCacheTime) < CACHE_DURATION && 
+            fullAppList.isNotEmpty() && ::appDockManager.isInitialized) {
+            try {
+                // We have a cached list - show it immediately while loading fresh data
+                val focusMode = appDockManager.getCurrentMode()
+                val workspaceMode = appDockManager.isWorkspaceModeActive()
+                
+                val cachedFiltered = cachedUnsortedList!!.filter { app ->
+                    val packageName = app.activityInfo.packageName
+                    val activityName = app.activityInfo.name
+                    // Allow SettingsActivity, but exclude MainActivity
+                    (packageName != "com.guruswarupa.launch" || 
+                     (activityName.contains("SettingsActivity") && !activityName.contains("MainActivity"))) &&
+                            (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
+                            (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
+                }
+                
+                // When workspace mode is active, show all apps in workspace (ignore favorites filter)
+                // Only apply favorites filter when workspace mode is not active
+                val cachedFinalList = if (workspaceMode) {
+                    cachedFiltered // Show all workspace apps, ignore favorites
+                } else {
+                    // Always read fresh from manager to avoid stale state
+                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                    favoriteAppManager.filterApps(cachedFiltered, currentShowAllMode)
+                }
+                
+                if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
+                    // Sort alphabetically by app name
+                    val sorted = cachedFinalList.sortedBy {
+                        appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                            ?: it.activityInfo.packageName.lowercase()
+                    }
+                    
+                    // Use handler.post for lighter UI update
+                    handler.post {
+                        if (!isFinishing && !isDestroyed) {
+                            appList = sorted.toMutableList()
+                            fullAppList = ArrayList(cachedFiltered)
+                            adapter.updateAppList(appList)
+                            recyclerView.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error showing cached app list", e)
+                // Continue to load fresh apps
+            }
+        }
 
         backgroundExecutor.execute {
             try {
                 // Use cached list if available and not forcing refresh
-                val currentTime = System.currentTimeMillis()
                 val unsortedList = if (!forceRefresh && 
                     cachedUnsortedList != null && 
                     (currentTime - lastCacheTime) < CACHE_DURATION) {
@@ -1186,32 +1703,72 @@ class MainActivity : FragmentActivity() {
                     val list = packageManager.queryIntentActivities(mainIntent, 0)
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
+                    
+                    // Save to persistent cache
+                    saveAppListToCache(list)
+                    
+                    // Pre-load metadata in background
+                    preloadAppMetadata(list)
+                    
                     list
                 }
 
                 if (unsortedList.isEmpty()) {
                     runOnUiThread {
-                        Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
+                        if (appList.isEmpty()) {
+                            Toast.makeText(this, "No apps found!", Toast.LENGTH_SHORT).show()
+                        }
                         recyclerView.visibility = View.VISIBLE
                     }
                 } else {
+                    // Ensure appDockManager is initialized before using it
+                    if (!::appDockManager.isInitialized) {
+                        Log.e("MainActivity", "appDockManager not initialized in loadApps background thread")
+                        runOnUiThread {
+                            // Retry loading apps after a short delay
+                            handler.postDelayed({ loadApps(forceRefresh) }, 200)
+                        }
+                        return@execute
+                    }
+                    
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
                     // STEP 1: Fast filtering without expensive operations - show list immediately
                     val filteredApps = unsortedList.filter { app ->
                         val packageName = app.activityInfo.packageName
-                        packageName != "com.guruswarupa.launch" &&
+                        val activityName = app.activityInfo.name
+                        // Allow SettingsActivity, but exclude MainActivity
+                        (packageName != "com.guruswarupa.launch" || 
+                         (activityName.contains("SettingsActivity") && !activityName.contains("MainActivity"))) &&
                                 (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
                                 (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
                     }.toMutableList()
                     
-                    // Filter apps based on favorite/show all mode
-                    val finalAppList = favoriteAppManager.filterApps(filteredApps, isShowAllAppsMode)
+                    // When workspace mode is active, show all apps in workspace (ignore favorites filter)
+                    // Only apply favorites filter when workspace mode is not active
+                    val finalAppList = if (workspaceMode) {
+                        filteredApps // Show all workspace apps, ignore favorites
+                    } else {
+                        // Always read fresh from manager to avoid stale state
+                        val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                        favoriteAppManager.filterApps(filteredApps, currentShowAllMode)
+                    }
+                    
+                    // Sort alphabetically by app name
+                    val sortedFinalList = finalAppList.sortedBy {
+                        appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                            ?: it.activityInfo.packageName.lowercase()
+                    }
 
-                    // STEP 2: Show list immediately without sorting/labels (fast initial render)
-                    runOnUiThread {
-                        appList = finalAppList.toMutableList()
+                    // STEP 2: Show list immediately (fast initial render)
+                    // Use handler.post instead of runOnUiThread for better performance
+                    handler.post {
+                        if (isFinishing || isDestroyed) {
+                            return@post
+                        }
+                        
+                        appList = sortedFinalList.toMutableList()
                         fullAppList = ArrayList(filteredApps)
 
                         // Optimize: Update existing adapter instead of creating new one
@@ -1228,12 +1785,21 @@ class MainActivity : FragmentActivity() {
                         }
                         
                         recyclerView.visibility = View.VISIBLE
+                    }
+                    
+                    // Defer expensive operations to avoid blocking UI
+                    handler.postDelayed({
+                        if (isFinishing || isDestroyed) {
+                            return@postDelayed
+                        }
                         
-                        // Update dock toggle icon
-                        appDockManager.refreshFavoriteToggle()
+                        // Update dock toggle icon (non-critical, can be deferred)
+                        if (::appDockManager.isInitialized) {
+                            appDockManager.refreshFavoriteToggle()
+                        }
 
-                        // Initialize AppSearchManager
-                        if (!::appSearchManager.isInitialized) {
+                        // Update AppSearchManager (can be deferred slightly)
+                        if (::appSearchManager.isInitialized) {
                             appSearchManager = AppSearchManager(
                                 packageManager,
                                 appList,
@@ -1243,67 +1809,112 @@ class MainActivity : FragmentActivity() {
                                 contactsList
                             )
                         }
-                    }
+                    }, 50) // Small delay to let UI render first
                     
                     // STEP 3: Load labels, usage stats, and sort in background (after UI is shown)
-                    backgroundExecutor.execute {
-                        try {
-                            // Batch read all usage stats at once (much faster than individual reads)
-                            val allPrefs = sharedPreferences.all
-                            val usageCache = mutableMapOf<String, Int>()
-                            for ((key, value) in allPrefs) {
-                                if (key.startsWith("usage_") && value is Int) {
-                                    val packageName = key.removePrefix("usage_")
-                                    usageCache[packageName] = value
+                    // Use cached metadata if available, otherwise load on-demand
+                    handler.postDelayed({
+                        backgroundExecutor.execute {
+                            try {
+                                // Use pre-loaded usage stats cache (already loaded in onCreate)
+                                // Reload if cache is empty
+                                if (usageStatsCache.isEmpty()) {
+                                    loadUsageStatsCache()
                                 }
-                            }
-                            
-                            // Load labels and create sorted list
-                            val labelCache = mutableMapOf<String, String>()
-                            val sortedApps = filteredApps.sortedWith(
-                                compareByDescending<ResolveInfo> { 
-                                    usageCache[it.activityInfo.packageName] ?: 0
-                                }
-                                .thenBy { app ->
+                                
+                                // Use cached metadata, load missing ones on-demand
+                                val labelCache = mutableMapOf<String, String>()
+                                filteredApps.forEach { app ->
                                     val packageName = app.activityInfo.packageName
-                                    labelCache.getOrPut(packageName) {
+                                    val cached = appMetadataCache[packageName]
+                                    if (cached != null) {
+                                        labelCache[packageName] = cached.label.lowercase()
+                                    } else {
+                                        // Load on-demand and cache
                                         try {
-                                            app.loadLabel(packageManager).toString().lowercase()
+                                            val label = app.loadLabel(packageManager).toString().lowercase()
+                                            labelCache[packageName] = label
+                                            appMetadataCache[packageName] = AppMetadata(
+                                                packageName = packageName,
+                                                activityName = app.activityInfo.name,
+                                                label = label,
+                                                lastUpdated = System.currentTimeMillis()
+                                            )
                                         } catch (e: Exception) {
-                                            packageName.lowercase()
+                                            labelCache[packageName] = packageName.lowercase()
                                         }
                                     }
                                 }
-                            )
-                            
-                            // Update with sorted list
-                            val sortedFinalList = favoriteAppManager.filterApps(sortedApps, isShowAllAppsMode)
-                            
-                            runOnUiThread {
-                                appList = sortedFinalList.toMutableList()
-                                fullAppList = ArrayList(sortedApps)
-                                adapter.updateAppList(appList)
                                 
-                                // Update AppSearchManager with sorted list
-                                if (::appSearchManager.isInitialized) {
-                                    appSearchManager = AppSearchManager(
-                                        packageManager,
-                                        appList,
-                                        fullAppList,
-                                        adapter,
-                                        searchBox,
-                                        contactsList
-                                    )
+                                // Sort alphabetically by app name
+                                val sortedApps = filteredApps.sortedBy { app ->
+                                    labelCache[app.activityInfo.packageName] ?: app.activityInfo.packageName.lowercase()
                                 }
+                                
+                                // Save updated metadata cache
+                                saveAppMetadataToCache(appMetadataCache)
+                                
+                                // Check if workspace mode is active - if so, ignore favorites filter
+                                val currentWorkspaceMode = appDockManager.isWorkspaceModeActive()
+                                // Update with sorted list
+                                val sortedFinalList = if (currentWorkspaceMode) {
+                                    sortedApps // Show all workspace apps, ignore favorites
+                                } else {
+                                    // Always read fresh from manager to avoid stale state
+                                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                                    favoriteAppManager.filterApps(sortedApps, currentShowAllMode)
+                                }
+                                
+                                // Use handler.post for UI update (lighter than runOnUiThread)
+                                handler.post {
+                                    if (isFinishing || isDestroyed) {
+                                        return@post
+                                    }
+                                    
+                                    appList = sortedFinalList.toMutableList()
+                                    fullAppList = ArrayList(sortedApps)
+                                    
+                                    if (::adapter.isInitialized) {
+                                        adapter.updateAppList(appList)
+                                    }
+                                    
+                                    // Update AppSearchManager with sorted list (defer slightly)
+                                    handler.postDelayed({
+                                        if (::appSearchManager.isInitialized && !isFinishing && !isDestroyed) {
+                                            appSearchManager = AppSearchManager(
+                                                packageManager,
+                                                appList,
+                                                fullAppList,
+                                                adapter,
+                                                searchBox,
+                                                contactsList,
+                                                appMetadataCache
+                                            )
+                                        }
+                                    }, 50)
+                                }
+                            } catch (e: Exception) {
+                                Log.e("MainActivity", "Error sorting apps", e)
                             }
-                        } catch (e: Exception) {
-                            Log.e("MainActivity", "Error sorting apps", e)
                         }
-                    }
+                    }, 200) // Defer sorting by 200ms to let UI render first
                 }
             } catch (e: Exception) {
+                Log.e("MainActivity", "Error loading apps", e)
                 runOnUiThread {
-                    Toast.makeText(this, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                    if (isFinishing || isDestroyed) {
+                        return@runOnUiThread
+                    }
+                    
+                    // If app list is empty, try to reload after a delay
+                    if (appList.isEmpty() && !forceRefresh) {
+                        Log.w("MainActivity", "App list is empty after error, retrying loadApps...")
+                        handler.postDelayed({ loadApps(forceRefresh = true) }, 500)
+                    }
+                    
+                    if (appList.isEmpty()) {
+                        Toast.makeText(this, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                     recyclerView.visibility = View.VISIBLE
                 }
             }
@@ -1322,16 +1933,266 @@ class MainActivity : FragmentActivity() {
         }
     }
     
+    // ========== CACHE OPTIMIZATION METHODS ==========
+    
+    /**
+     * Initialize cache file paths
+     */
+    private fun initializeCacheFiles() {
+        appListCacheFile = File(cacheDir, "app_list_cache.dat")
+        appListCacheTimeFile = File(cacheDir, "app_list_cache_time.txt")
+        appMetadataCacheFile = File(cacheDir, "app_metadata_cache.dat")
+        appListVersionFile = File(cacheDir, "app_list_version.txt")
+    }
+    
+    /**
+     * Load usage stats cache from SharedPreferences (batch read)
+     */
+    private fun loadUsageStatsCache() {
+        backgroundExecutor.execute {
+            try {
+                val allPrefs = sharedPreferences.all
+                usageStatsCache.clear()
+                for ((key, value) in allPrefs) {
+                    if (key.startsWith("usage_") && value is Int) {
+                        val packageName = key.removePrefix("usage_")
+                        usageStatsCache[packageName] = value
+                    }
+                }
+                Log.d("MainActivity", "Loaded ${usageStatsCache.size} usage stats into cache")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error loading usage stats cache", e)
+            }
+        }
+    }
+    
+    /**
+     * Get app list version based on installed packages
+     */
+    private fun getAppListVersion(): String {
+        return try {
+            val packages = packageManager.getInstalledPackages(0)
+                .map { it.packageName }
+                .sorted()
+                .joinToString("")
+            packages.hashCode().toString()
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error getting app list version", e)
+            System.currentTimeMillis().toString()
+        }
+    }
+    
+    /**
+     * Save app list to persistent cache
+     */
+    private fun saveAppListToCache(apps: List<ResolveInfo>) {
+        backgroundExecutor.execute {
+            try {
+                val cacheData = apps.map { 
+                    "${it.activityInfo.packageName}|${it.activityInfo.name}" 
+                }
+                appListCacheFile.writeText(cacheData.joinToString("\n"))
+                appListCacheTimeFile.writeText(System.currentTimeMillis().toString())
+                
+                // Save version
+                val version = getAppListVersion()
+                appListVersionFile.writeText(version)
+                cachedAppListVersion = version
+                
+                Log.d("MainActivity", "Saved ${apps.size} apps to cache")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error saving app list cache", e)
+            }
+        }
+    }
+    
+    /**
+     * Load app list from persistent cache
+     */
+    private fun loadAppListFromCache(): List<ResolveInfo> {
+        return try {
+            if (!appListCacheFile.exists()) return emptyList()
+            
+            val cacheData = appListCacheFile.readText().lines()
+            val apps = mutableListOf<ResolveInfo>()
+            
+            for (line in cacheData) {
+                if (line.isBlank()) continue
+                val parts = line.split("|")
+                if (parts.size == 2) {
+                    val packageName = parts[0]
+                    val activityName = parts[1]
+                    
+                    try {
+                        // Try to get ResolveInfo from PackageManager
+                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_LAUNCHER)
+                            setPackage(packageName)
+                            setClassName(packageName, activityName)
+                        }
+                        val resolveInfo = packageManager.resolveActivity(intent, 0)
+                        if (resolveInfo != null) {
+                            apps.add(resolveInfo)
+                        }
+                    } catch (e: Exception) {
+                        // App may have been uninstalled, skip
+                    }
+                }
+            }
+            
+            Log.d("MainActivity", "Loaded ${apps.size} apps from cache")
+            apps
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error loading app list cache", e)
+            emptyList()
+        }
+    }
+    
+    /**
+     * Save app metadata to persistent cache
+     */
+    private fun saveAppMetadataToCache(metadata: Map<String, AppMetadata>) {
+        backgroundExecutor.execute {
+            try {
+                val outputStream = FileOutputStream(appMetadataCacheFile)
+                val objectOutputStream = ObjectOutputStream(outputStream)
+                objectOutputStream.writeObject(metadata)
+                objectOutputStream.close()
+                outputStream.close()
+                Log.d("MainActivity", "Saved ${metadata.size} app metadata entries to cache")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error saving app metadata cache", e)
+            }
+        }
+    }
+    
+    /**
+     * Load app metadata from persistent cache
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun loadAppMetadataFromCache(): Map<String, AppMetadata> {
+        return try {
+            if (!appMetadataCacheFile.exists()) return emptyMap()
+            
+            val inputStream = FileInputStream(appMetadataCacheFile)
+            val objectInputStream = ObjectInputStream(inputStream)
+            val metadata = objectInputStream.readObject() as? Map<String, AppMetadata> ?: emptyMap()
+            objectInputStream.close()
+            inputStream.close()
+            
+            appMetadataCache.clear()
+            appMetadataCache.putAll(metadata)
+            
+            Log.d("MainActivity", "Loaded ${metadata.size} app metadata entries from cache")
+            metadata
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error loading app metadata cache", e)
+            emptyMap()
+        }
+    }
+    
+    /**
+     * Pre-load app metadata (labels and icons) in background
+     */
+    private fun preloadAppMetadata(apps: List<ResolveInfo>) {
+        backgroundExecutor.execute {
+            try {
+                val metadata = mutableMapOf<String, AppMetadata>()
+                val currentTime = System.currentTimeMillis()
+                
+                apps.forEach { app ->
+                    val packageName = app.activityInfo.packageName
+                    try {
+                        // Check if metadata is already cached and recent
+                        val cached = appMetadataCache[packageName]
+                        if (cached != null) {
+                            val lastUpdated = cached.lastUpdated
+                            if ((currentTime - lastUpdated) < CACHE_DURATION) {
+                                metadata[packageName] = cached
+                            } else {
+                                // Cache expired, reload
+                                val label = app.loadLabel(packageManager).toString()
+                                metadata[packageName] = AppMetadata(
+                                    packageName = packageName,
+                                    activityName = app.activityInfo.name,
+                                    label = label,
+                                    lastUpdated = currentTime
+                                )
+                            }
+                        } else {
+                            // Load label
+                            val label = app.loadLabel(packageManager).toString()
+                            metadata[packageName] = AppMetadata(
+                                packageName = packageName,
+                                activityName = app.activityInfo.name,
+                                label = label,
+                                lastUpdated = currentTime
+                            )
+                        }
+                    } catch (e: Exception) {
+                        // Handle errors silently
+                    }
+                }
+                
+                // Update cache
+                appMetadataCache.putAll(metadata)
+                saveAppMetadataToCache(appMetadataCache)
+                
+                Log.d("MainActivity", "Pre-loaded metadata for ${metadata.size} apps")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error preloading app metadata", e)
+            }
+        }
+    }
+    
+    /**
+     * Refresh app list from PackageManager in background (non-blocking)
+     */
+    private fun refreshAppListFromPackageManager() {
+        backgroundExecutor.execute {
+            try {
+                val mainIntent = Intent(Intent.ACTION_MAIN, null)
+                mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                val list = packageManager.queryIntentActivities(mainIntent, 0)
+                
+                cachedUnsortedList = list
+                lastCacheTime = System.currentTimeMillis()
+                
+                // Save to persistent cache
+                saveAppListToCache(list)
+                
+                // Pre-load metadata
+                preloadAppMetadata(list)
+                
+                // Update UI if needed (only if list changed significantly)
+                val currentVersion = getAppListVersion()
+                if (currentVersion != cachedAppListVersion) {
+                    handler.post {
+                        if (!isFinishing && !isDestroyed) {
+                            loadApps(forceRefresh = false)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error refreshing app list", e)
+            }
+        }
+    }
+    
 
     private fun requestContactsPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.READ_CONTACTS),
-                CONTACTS_PERMISSION_REQUEST
-            )
+            // Only request if we haven't been permanently denied (user can still grant it)
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS) ||
+                !sharedPreferences.getBoolean("contacts_permission_denied", false)) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_CONTACTS),
+                    CONTACTS_PERMISSION_REQUEST
+                )
+            }
         } else {
             loadContacts()
         }
@@ -1353,11 +2214,15 @@ class MainActivity : FragmentActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.SEND_SMS),
-                SMS_PERMISSION_REQUEST
-            )
+            // Only request if we haven't been permanently denied (user can still grant it)
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.SEND_SMS) ||
+                !sharedPreferences.getBoolean("sms_permission_denied", false)) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.SEND_SMS),
+                    SMS_PERMISSION_REQUEST
+                )
+            }
         }
     }
 
@@ -1381,14 +2246,20 @@ class MainActivity : FragmentActivity() {
     // Request usage stats permission
     private fun requestUsageStatsPermission() {
         if (!usageStatsManager.hasUsageStatsPermission()) {
-            AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                .setTitle("Usage Stats Permission")
-                .setMessage("To show app usage time, please grant usage access permission in the next screen.")
-                .setPositiveButton("Grant") { _, _ ->
-                    startActivityForResult(usageStatsManager.requestUsageStatsPermission(), USAGE_STATS_REQUEST)
-                }
-                .setNegativeButton("Skip", null)
-                .show()
+            // Only show dialog if user hasn't previously skipped/denied it
+            if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
+                AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                    .setTitle("Usage Stats Permission")
+                    .setMessage("To show app usage time, please grant usage access permission in the next screen.")
+                    .setPositiveButton("Grant") { _, _ ->
+                        startActivityForResult(usageStatsManager.requestUsageStatsPermission(), USAGE_STATS_REQUEST)
+                    }
+                    .setNegativeButton("Skip") { _, _ ->
+                        // Mark as denied so we don't ask again
+                        sharedPreferences.edit().putBoolean("usage_stats_permission_denied", true).apply()
+                    }
+                    .show()
+            }
         }
     }
 
@@ -1402,9 +2273,15 @@ class MainActivity : FragmentActivity() {
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, load contacts
+                    // Permission granted, clear denied flag and load contacts
+                    sharedPreferences.edit().putBoolean("contacts_permission_denied", false).apply()
                     loadContacts()
                 } else {
+                    // Permission denied, mark it so we don't ask again
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_CONTACTS)) {
+                        // Permanently denied (user selected "Don't ask again")
+                        sharedPreferences.edit().putBoolean("contacts_permission_denied", true).apply()
+                    }
                 }
             }
 
@@ -1417,8 +2294,14 @@ class MainActivity : FragmentActivity() {
 
             SMS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, proceed with SMS functionality
+                    // Permission granted, clear denied flag
+                    sharedPreferences.edit().putBoolean("sms_permission_denied", false).apply()
                 } else {
+                    // Permission denied, mark it so we don't ask again
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.SEND_SMS)) {
+                        // Permanently denied (user selected "Don't ask again")
+                        sharedPreferences.edit().putBoolean("sms_permission_denied", true).apply()
+                    }
                 }
             }
             VOICE_SEARCH_REQUEST -> {
@@ -1524,13 +2407,26 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                     
-                    filteredOrSortedApps = fullAppList.sortedWith(
-                        compareByDescending<ResolveInfo> {
-                            usageCache[it.activityInfo.packageName] ?: 0
-                        }.thenBy {
-                            labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
-                        }
-                    ).toMutableList()
+                    // Sort alphabetically by app name
+                    filteredOrSortedApps = fullAppList.sortedBy {
+                        labelCache[it.activityInfo.packageName] ?: it.activityInfo.packageName.lowercase()
+                    }.toMutableList()
+                }
+
+                // Check if workspace mode is active - if so, ignore favorites filter
+                val currentWorkspaceMode = appDockManager.isWorkspaceModeActive()
+                // Apply favorites filter only if workspace mode is not active
+                val finalFilteredApps = if (currentWorkspaceMode) {
+                    filteredOrSortedApps // Show all workspace apps, ignore favorites
+                } else {
+                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                    favoriteAppManager.filterApps(filteredOrSortedApps, currentShowAllMode)
+                }
+                
+                // Sort the final list alphabetically
+                val sortedFinalList = finalFilteredApps.sortedBy {
+                    appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                        ?: it.activityInfo.packageName.lowercase()
                 }
 
                 // Update UI on main thread
@@ -1538,7 +2434,7 @@ class MainActivity : FragmentActivity() {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     
                     appList.clear()
-                    appList.addAll(filteredOrSortedApps)
+                    appList.addAll(sortedFinalList)
 
                     if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
                         if (isFocusMode) {
@@ -1692,9 +2588,16 @@ class MainActivity : FragmentActivity() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)
 
-        // Don't request permissions automatically - only when user taps weather widget
-        // Just update weather with existing stored location or show unavailable
-        weatherManager.updateWeather(weatherIcon, weatherText)
+        // Set initial placeholder - weather only loads when user taps
+        weatherText.text = "Tap to load weather"
+        weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+        
+        // Add click listeners to load weather only when tapped
+        val weatherClickListener = View.OnClickListener {
+            updateWeather()
+        }
+        weatherIcon.setOnClickListener(weatherClickListener)
+        weatherText.setOnClickListener(weatherClickListener)
     }
 
     private fun setupBatteryAndUsage() {
@@ -2437,6 +3340,66 @@ class MainActivity : FragmentActivity() {
             return
         }
         findViewById<android.view.View>(android.R.id.content)?.setBackgroundResource(R.drawable.wallpaper_background)
+    }
+    
+    /**
+     * Make status bar and navigation bar transparent
+     */
+    private fun makeSystemBarsTransparent() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ (API 30+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.setDecorFitsSystemWindows(false)
+                
+                // Use decorView to get insetsController safely
+                val decorView = window.decorView
+                if (decorView != null) {
+                    val insetsController = decorView.windowInsetsController
+                    if (insetsController != null) {
+                        // Always use white/light icons regardless of mode
+                        insetsController.setSystemBarsAppearance(
+                            0,
+                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                        )
+                    }
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // Android 5.0+ (API 21+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val decorView = window.decorView
+                    if (decorView != null) {
+                        var flags = decorView.systemUiVisibility
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        
+                        // Always use white/light icons regardless of mode (don't set LIGHT_STATUS_BAR flag)
+                        // When LIGHT_STATUS_BAR is NOT set, icons are light/white
+                        
+                        decorView.systemUiVisibility = flags
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // If anything fails, at least try to set the colors
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                }
+            } catch (ex: Exception) {
+                // Ignore if window is not ready
+            }
+        }
     }
 
     override fun onBackPressed() {

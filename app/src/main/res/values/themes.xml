@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight"/>
+    <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight">
+        <!-- Make status bar and navigation bar transparent -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Enable edge-to-edge display -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <!-- Don't use primary colors for system bars -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
 </resources>
