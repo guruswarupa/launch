@@ -1,46 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@color/background">
+    android:layout_height="match_parent">
 
-    <TextView
+    <!-- Wallpaper Background -->
+    <ImageView
+        android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Workspaces"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/text"
-        android:gravity="center"
-        android:layout_marginBottom="24dp" />
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/wallpaper_background"
+        android:contentDescription="Background"/>
 
-    <TextView
+    <!-- Semi-transparent overlay for better text visibility -->
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tap to edit, long press to delete"
-        android:textSize="14sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginBottom="16dp" />
+        android:layout_height="match_parent"
+        android:background="#80000000"/>
 
-    <ListView
-        android:id="@+id/workspace_list"
+    <!-- Content Container -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="@drawable/rounded_background"
-        android:padding="8dp" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-    <Button
-        android:id="@+id/create_workspace_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Create New Workspace"
-        android:background="@drawable/button_background"
-        android:textColor="@color/text"
-        android:textSize="16sp"
-        android:padding="12dp"
-        android:layout_marginTop="16dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:gravity="center_horizontal">
 
-</LinearLayout>
+            <!-- Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Workspaces"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:gravity="center"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="32dp"/>
+
+            <!-- Workspaces Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/rounded_background"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tap to edit, long press to delete"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/white"
+                    android:alpha="0.7"
+                    android:layout_marginBottom="12dp" />
+
+                <ListView
+                    android:id="@+id/workspace_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="200dp"
+                    android:divider="@android:color/transparent"
+                    android:dividerHeight="8dp"/>
+
+            </LinearLayout>
+
+            <!-- Create Button -->
+            <Button
+                android:id="@+id/create_workspace_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Create New Workspace"
+                android:textAllCaps="false"
+                android:background="@drawable/button_background"
+                android:textColor="@android:color/white"
+                android:padding="16dp"
+                android:layout_marginBottom="24dp"/>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</FrameLayout>
