@@ -4,7 +4,11 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.os.Build
 import android.os.Bundle
+import android.view.View
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -18,6 +22,11 @@ class WorkspaceConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workspace_config)
+        
+        // Make status bar and navigation bar transparent
+        window.decorView.post {
+            makeSystemBarsTransparent()
+        }
         
         workspaceManager = WorkspaceManager(getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
         
@@ -43,7 +52,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
             "${it.name} ($appCount apps)"
         }.toTypedArray()
         
-        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, workspaceNames)
+        val adapter = ArrayAdapter(this, R.layout.item_workspace, workspaceNames)
         workspaceList.adapter = adapter
         
         workspaceList.setOnItemClickListener { _, _, position, _ ->
@@ -213,5 +222,62 @@ class WorkspaceConfigActivity : ComponentActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+    
+    private fun makeSystemBarsTransparent() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+ (API 30+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.setDecorFitsSystemWindows(false)
+                
+                // Use decorView to get insetsController safely
+                val decorView = window.decorView
+                if (decorView != null) {
+                    val insetsController = decorView.windowInsetsController
+                    if (insetsController != null) {
+                        // Always use white/light icons regardless of mode
+                        insetsController.setSystemBarsAppearance(
+                            0,
+                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                        )
+                    }
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                // Android 5.0+ (API 21+)
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val decorView = window.decorView
+                    if (decorView != null) {
+                        var flags = decorView.systemUiVisibility
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        
+                        // Always use white/light icons regardless of mode (don't set LIGHT_STATUS_BAR flag)
+                        // When LIGHT_STATUS_BAR is NOT set, icons are light/white
+                        
+                        decorView.systemUiVisibility = flags
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // If anything fails, at least try to set the colors
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    window.statusBarColor = android.graphics.Color.TRANSPARENT
+                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                }
+            } catch (ex: Exception) {
+                // Ignore if even this fails
+            }
+        }
     }
 }

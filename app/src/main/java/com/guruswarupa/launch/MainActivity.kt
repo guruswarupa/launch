@@ -516,8 +516,16 @@ class MainActivity : FragmentActivity() {
         
         backgroundExecutor.execute {
             try {
-                // Filter apps based on favorite/show all mode in background
-                val finalAppList = favoriteAppManager.filterApps(fullAppList, isShowAllAppsMode)
+                // Check if workspace mode is active - if so, ignore favorites filter
+                val currentWorkspaceMode = appDockManager.isWorkspaceModeActive()
+                // Filter apps based on favorite/show all mode, but skip favorites filter if workspace mode is active
+                val finalAppList = if (currentWorkspaceMode) {
+                    fullAppList // Show all workspace apps, ignore favorites
+                } else {
+                    // Always read fresh from manager to avoid stale state
+                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                    favoriteAppManager.filterApps(fullAppList, currentShowAllMode)
+                }
                 
                 // Sort alphabetically by app name
                 val sortedFinalList = finalAppList.sortedBy {
@@ -1453,6 +1461,9 @@ class MainActivity : FragmentActivity() {
             return
         }
         
+        // Sync isShowAllAppsMode with the manager to ensure consistency
+        isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
+        
         val viewPreference = sharedPreferences.getString("view_preference", "list") // Read the latest preference
         val isGridMode = viewPreference == "grid"
 
@@ -1501,10 +1512,18 @@ class MainActivity : FragmentActivity() {
                             (packageName != "com.guruswarupa.launch" || 
                              (activityName.contains("SettingsActivity") && !activityName.contains("MainActivity"))) &&
                                     (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
-                                    (!workspaceMode || !appDockManager.isAppInActiveWorkspace(packageName))
+                                    (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
                         }
                         
-                        val cachedFinalList = favoriteAppManager.filterApps(cachedFiltered, isShowAllAppsMode)
+                        // When workspace mode is active, show all apps in workspace (ignore favorites filter)
+                        // Only apply favorites filter when workspace mode is not active
+                        val cachedFinalList = if (workspaceMode) {
+                            cachedFiltered // Show all workspace apps, ignore favorites
+                        } else {
+                            // Always read fresh from manager to avoid stale state
+                            val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                            favoriteAppManager.filterApps(cachedFiltered, currentShowAllMode)
+                        }
                         
                         if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
                             // Sort alphabetically by app name
@@ -1585,7 +1604,15 @@ class MainActivity : FragmentActivity() {
                             (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
                 }
                 
-                val cachedFinalList = favoriteAppManager.filterApps(cachedFiltered, isShowAllAppsMode)
+                // When workspace mode is active, show all apps in workspace (ignore favorites filter)
+                // Only apply favorites filter when workspace mode is not active
+                val cachedFinalList = if (workspaceMode) {
+                    cachedFiltered // Show all workspace apps, ignore favorites
+                } else {
+                    // Always read fresh from manager to avoid stale state
+                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                    favoriteAppManager.filterApps(cachedFiltered, currentShowAllMode)
+                }
                 
                 if (cachedFinalList.isNotEmpty() && ::adapter.isInitialized) {
                     // Sort alphabetically by app name
@@ -1666,8 +1693,15 @@ class MainActivity : FragmentActivity() {
                                 (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
                     }.toMutableList()
                     
-                    // Filter apps based on favorite/show all mode
-                    val finalAppList = favoriteAppManager.filterApps(filteredApps, isShowAllAppsMode)
+                    // When workspace mode is active, show all apps in workspace (ignore favorites filter)
+                    // Only apply favorites filter when workspace mode is not active
+                    val finalAppList = if (workspaceMode) {
+                        filteredApps // Show all workspace apps, ignore favorites
+                    } else {
+                        // Always read fresh from manager to avoid stale state
+                        val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                        favoriteAppManager.filterApps(filteredApps, currentShowAllMode)
+                    }
                     
                     // Sort alphabetically by app name (use metadata cache if available)
                     val sortedFinalList = finalAppList.sortedBy {
@@ -1768,8 +1802,16 @@ class MainActivity : FragmentActivity() {
                                 // Save updated metadata cache
                                 saveAppMetadataToCache(appMetadataCache)
                                 
+                                // Check if workspace mode is active - if so, ignore favorites filter
+                                val currentWorkspaceMode = appDockManager.isWorkspaceModeActive()
                                 // Update with sorted list
-                                val sortedFinalList = favoriteAppManager.filterApps(sortedApps, isShowAllAppsMode)
+                                val sortedFinalList = if (currentWorkspaceMode) {
+                                    sortedApps // Show all workspace apps, ignore favorites
+                                } else {
+                                    // Always read fresh from manager to avoid stale state
+                                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                                    favoriteAppManager.filterApps(sortedApps, currentShowAllMode)
+                                }
                                 
                                 // Use handler.post for UI update (lighter than runOnUiThread)
                                 handler.post {
@@ -2319,12 +2361,28 @@ class MainActivity : FragmentActivity() {
                     }.toMutableList()
                 }
 
+                // Check if workspace mode is active - if so, ignore favorites filter
+                val currentWorkspaceMode = appDockManager.isWorkspaceModeActive()
+                // Apply favorites filter only if workspace mode is not active
+                val finalFilteredApps = if (currentWorkspaceMode) {
+                    filteredOrSortedApps // Show all workspace apps, ignore favorites
+                } else {
+                    val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
+                    favoriteAppManager.filterApps(filteredOrSortedApps, currentShowAllMode)
+                }
+                
+                // Sort the final list alphabetically
+                val sortedFinalList = finalFilteredApps.sortedBy {
+                    appMetadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+                        ?: it.activityInfo.packageName.lowercase()
+                }
+
                 // Update UI on main thread
                 runOnUiThread {
                     if (isFinishing || isDestroyed) return@runOnUiThread
                     
                     appList.clear()
-                    appList.addAll(filteredOrSortedApps)
+                    appList.addAll(sortedFinalList)
 
                     if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
                         if (isFocusMode) {
