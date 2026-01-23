@@ -755,6 +755,13 @@ class MainActivity : FragmentActivity() {
             val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
             widgetManager.handleWidgetConfigured(this, appWidgetId)
         }
+        // Handle wallpaper change - clear cache and reload when wallpaper picker returns
+        if (requestCode == WALLPAPER_REQUEST_CODE) {
+            // Clear cached bitmap to force reload of new wallpaper
+            currentWallpaperBitmap?.recycle()
+            currentWallpaperBitmap = null
+            setWallpaperBackground()
+        }
     }
 
     private fun sendWhatsAppMessage(phoneNumber: String, message: String) {
@@ -1108,6 +1115,9 @@ class MainActivity : FragmentActivity() {
     private val wallpaperChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_WALLPAPER_CHANGED) {
+                // Clear cached bitmap to force reload of new wallpaper
+                currentWallpaperBitmap?.recycle()
+                currentWallpaperBitmap = null
                 setWallpaperBackground()
             }
         }
