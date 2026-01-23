@@ -36,6 +36,12 @@ class FeatureTutorialManager(
         val position: HighlightPosition = HighlightPosition.BOTTOM,
         val targetViewTag: String? = null // Optional tag for finding views by tag instead of ID
     ) {
+        WELCOME_OVERVIEW(
+            "Welcome to Launch",
+            "This is your new launcher home screen. You'll see widget at the top,  quick access buttons in the middle, app list at the bottom. Let's explore the features!",
+            R.id.main_content,
+            HighlightPosition.CENTER
+        ),
         SEARCH_BAR(
             "Universal Search",
             "Search for apps, contacts, or web queries. Double tap to change wallpaper, long press to open Google.",
@@ -110,7 +116,7 @@ class FeatureTutorialManager(
         ),
         APP_LIST(
             "Smart App List",
-            "Apps are sorted alphabetically. Long press any app to uninstall, lock, set a timer, or add to favorites.",
+            "Apps are sorted alphabetically. Long press any app to uninstall, share, and add to favorites.",
             R.id.app_list,
             HighlightPosition.TOP
         ),
@@ -402,8 +408,10 @@ class FeatureTutorialManager(
                     val targetWidth = if (targetView.width > 0) targetView.width else targetView.measuredWidth
                     val targetHeight = if (targetView.height > 0) targetView.height else targetView.measuredHeight
                     
-                    // Only position highlight if we have valid dimensions
-                    if (targetWidth > 0 && targetHeight > 0) {
+                    // Special handling for welcome overview - hide highlight to show whole window
+                    if (step == TutorialStep.WELCOME_OVERVIEW) {
+                        highlightView.visibility = View.GONE
+                    } else if (targetWidth > 0 && targetHeight > 0) {
                         // Position highlight view to match target view using FrameLayout.LayoutParams
                         val highlightParams = highlightView.layoutParams as? FrameLayout.LayoutParams
                             ?: FrameLayout.LayoutParams(

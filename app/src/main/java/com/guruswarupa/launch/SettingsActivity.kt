@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 class SettingsActivity : ComponentActivity() {
 
@@ -70,6 +71,8 @@ class SettingsActivity : ComponentActivity() {
         val checkPermissionsButton = findViewById<Button>(R.id.check_permissions_button)
         val showTutorialButton = findViewById<Button>(R.id.show_tutorial_button)
         val restartLauncherButton = findViewById<Button>(R.id.restart_launcher_button)
+        val clearCacheButton = findViewById<Button>(R.id.clear_cache_button)
+        val clearDataButton = findViewById<Button>(R.id.clear_data_button)
 
         // Setup currency spinner
         setupCurrencySpinner(currencySpinner)
@@ -106,6 +109,14 @@ class SettingsActivity : ComponentActivity() {
         
         restartLauncherButton.setOnClickListener {
             restartLauncher()
+        }
+        
+        clearCacheButton.setOnClickListener {
+            clearCache()
+        }
+        
+        clearDataButton.setOnClickListener {
+            clearData()
         }
         
         // Setup expandable sections
@@ -887,6 +898,172 @@ class SettingsActivity : ComponentActivity() {
                     }
                 } catch (e: Exception) {
                     Toast.makeText(this, "Failed to restart launcher: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun clearCache() {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Clear Cache")
+            .setMessage("This will clear the launcher's cache files. This may free up storage space but won't affect your settings or data. Continue?")
+            .setPositiveButton("Clear Cache") { _, _ ->
+                try {
+                    var deletedCount = 0
+                    var totalSize = 0L
+                    
+                    // Helper function to calculate directory size recursively
+                    fun getDirectorySize(dir: File): Long {
+                        var size = 0L
+                        if (dir.isDirectory) {
+                            dir.listFiles()?.forEach { file ->
+                                size += if (file.isDirectory) {
+                                    getDirectorySize(file)
+                                } else {
+                                    file.length()
+                                }
+                            }
+                        } else {
+                            size = dir.length()
+                        }
+                        return size
+                    }
+                    
+                    // Clear cache directory
+                    if (cacheDir.exists() && cacheDir.isDirectory) {
+                        val files = cacheDir.listFiles()
+                        files?.forEach { file ->
+                            try {
+                                val size = getDirectorySize(file)
+                                if (file.deleteRecursively()) {
+                                    deletedCount++
+                                    totalSize += size
+                                }
+                            } catch (e: Exception) {
+                                // Ignore individual file deletion errors
+                            }
+                        }
+                    }
+                    
+                    // Clear external cache if available
+                    externalCacheDir?.let { extCacheDir ->
+                        if (extCacheDir.exists() && extCacheDir.isDirectory) {
+                            val files = extCacheDir.listFiles()
+                            files?.forEach { file ->
+                                try {
+                                    val size = getDirectorySize(file)
+                                    if (file.deleteRecursively()) {
+                                        deletedCount++
+                                        totalSize += size
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignore individual file deletion errors
+                                }
+                            }
+                        }
+                    }
+                    
+                    val sizeInMB = if (totalSize > 0) totalSize / (1024 * 1024) else 0L
+                    val message = if (deletedCount > 0) {
+                        "Cache cleared successfully. Freed ${sizeInMB}MB from $deletedCount items."
+                    } else {
+                        "Cache cleared successfully."
+                    }
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Failed to clear cache: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun clearData() {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Clear Data")
+            .setMessage("WARNING: This will delete ALL launcher data including:\n\n• All settings and preferences\n• Favorite apps\n• Workspaces\n• App locks and timers\n• Todo items\n• Workout data\n• Finance data\n• Widget configurations\n• All other app data\n\nThis action CANNOT be undone. The launcher will restart after clearing data.\n\nAre you absolutely sure?")
+            .setPositiveButton("Clear All Data") { _, _ ->
+                try {
+                    // Clear all SharedPreferences
+                    val allPrefs = listOf(
+                        "com.guruswarupa.launch.PREFS",
+                        "app_timer_prefs",
+                        "app_lock_prefs"
+                    )
+                    
+                    allPrefs.forEach { prefName ->
+                        try {
+                            val prefs = getSharedPreferences(prefName, MODE_PRIVATE)
+                            prefs.edit().clear().commit()
+                        } catch (e: Exception) {
+                            // Ignore individual preference clearing errors
+                        }
+                    }
+                    
+                    // Clear cache
+                    try {
+                        if (cacheDir.exists() && cacheDir.isDirectory) {
+                            cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+                        }
+                        externalCacheDir?.let { extCacheDir ->
+                            if (extCacheDir.exists() && extCacheDir.isDirectory) {
+                                extCacheDir.listFiles()?.forEach { it.deleteRecursively() }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore cache clearing errors
+                    }
+                    
+                    // Clear databases
+                    try {
+                        val databasesDir = File(filesDir.parent, "databases")
+                        if (databasesDir.exists() && databasesDir.isDirectory) {
+                            databasesDir.listFiles()?.forEach { file ->
+                                if (file.name.startsWith(packageName.replace(".", "_"))) {
+                                    file.delete()
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore database clearing errors
+                    }
+                    
+                    // Clear internal files (except important system files)
+                    try {
+                        if (filesDir.exists() && filesDir.isDirectory) {
+                            filesDir.listFiles()?.forEach { file ->
+                                // Don't delete critical system files
+                                if (!file.name.startsWith(".") && file.name != "shared_prefs") {
+                                    file.deleteRecursively()
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore file clearing errors
+                    }
+                    
+                    Toast.makeText(this, "All data cleared. Launcher will restart.", Toast.LENGTH_LONG).show()
+                    
+                    // Restart launcher after a short delay
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        try {
+                            val packageManager = packageManager
+                            val intent = packageManager.getLaunchIntentForPackage(packageName)
+                            val componentName = intent?.component
+                            if (componentName != null) {
+                                val mainIntent = Intent.makeRestartActivityTask(componentName)
+                                startActivity(mainIntent)
+                                Runtime.getRuntime().exit(0)
+                            } else {
+                                finish()
+                            }
+                        } catch (e: Exception) {
+                            finish()
+                        }
+                    }, 1000)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Failed to clear data: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
