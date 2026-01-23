@@ -675,6 +675,28 @@
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
+                        android:padding="16dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <Button
+                        android:id="@+id/clear_cache_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Clear Cache"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
+                        android:padding="16dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <Button
+                        android:id="@+id/clear_data_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Clear Data"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
                         android:padding="16dp"/>
 
                 </LinearLayout>
