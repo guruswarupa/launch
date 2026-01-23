@@ -12,19 +12,10 @@ import android.widget.TextView
 import org.json.JSONObject
 import java.net.URL
 import java.util.concurrent.Executors
-import android.location.LocationManager
-import android.location.LocationListener
-import android.location.Location
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-
 class WeatherManager(private val context: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
-    private val locationManager: LocationManager? = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-    var onLocationPermissionNeeded: (() -> Unit)? = null // Callback for requesting location permission
 
     private fun getApiKey(): String? {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
@@ -46,37 +37,60 @@ class WeatherManager(private val context: Context) {
         prefs.edit().putBoolean("weather_api_key_rejected", rejected).apply()
     }
 
-    private fun getStoredLocation(): Pair<Double, Double>? {
+    private fun getStoredCityName(): String? {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-        val lat = prefs.getFloat("weather_stored_latitude", 0f).toDouble()
-        val lon = prefs.getFloat("weather_stored_longitude", 0f).toDouble()
-        return if (lat != 0.0 && lon != 0.0) Pair(lat, lon) else null
+        return prefs.getString("weather_stored_city_name", null)
     }
 
-    private fun saveLocation(latitude: Double, longitude: Double) {
+    private fun saveCityName(cityName: String) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
         prefs.edit()
-            .putFloat("weather_stored_latitude", latitude.toFloat())
-            .putFloat("weather_stored_longitude", longitude.toFloat())
+            .putString("weather_stored_city_name", cityName)
             .apply()
     }
 
-    private fun clearStoredLocation() {
+    private fun getCachedWeather(): CachedWeather? {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        val timestamp = prefs.getLong("weather_cached_timestamp", 0)
+        val temperature = prefs.getInt("weather_cached_temperature", Int.MIN_VALUE)
+        val description = prefs.getString("weather_cached_description", null)
+        val weatherId = prefs.getInt("weather_cached_weather_id", -1)
+        
+        if (timestamp == 0L || temperature == Int.MIN_VALUE || description == null || weatherId == -1) {
+            return null
+        }
+        
+        return CachedWeather(temperature, description, weatherId, timestamp)
+    }
+
+    private fun saveCachedWeather(temperature: Int, description: String, weatherId: Int) {
+        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        val currentTime = System.currentTimeMillis()
         prefs.edit()
-            .remove("weather_stored_latitude")
-            .remove("weather_stored_longitude")
+            .putInt("weather_cached_temperature", temperature)
+            .putString("weather_cached_description", description)
+            .putInt("weather_cached_weather_id", weatherId)
+            .putLong("weather_cached_timestamp", currentTime)
             .apply()
     }
 
-    private fun hasLocationPermission(): Boolean {
-        return ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    private fun isCacheValid(cachedWeather: CachedWeather, maxAgeMinutes: Long = 45): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val ageMinutes = (currentTime - cachedWeather.timestamp) / (1000 * 60)
+        return ageMinutes < maxAgeMinutes
     }
+
+    private data class CachedWeather(
+        val temperature: Int,
+        val description: String,
+        val weatherId: Int,
+        val timestamp: Long
+    )
 
     private var isPromptingForApiKey = false
+    private var isPromptingForCityName = false
 
-    fun updateWeather(weatherIcon: ImageView, weatherText: TextView, latitude: Double = 0.0, longitude: Double = 0.0, forcePrompt: Boolean = false, forceRefreshLocation: Boolean = false) {
+    fun updateWeather(weatherIcon: ImageView, weatherText: TextView, forcePrompt: Boolean = false) {
         val apiKey = getApiKey()
 
         if (apiKey == null) {
@@ -93,12 +107,8 @@ class WeatherManager(private val context: Context) {
                                 if (key != null) {
                                     saveApiKey(key)
                                     setUserRejectedApiKey(false)
-                                    // Use the provided coordinates if available, otherwise get user location
-                                    if (latitude != 0.0 && longitude != 0.0) {
-                                        fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
-                                    } else {
-                                        getUserLocationAndFetchWeather(weatherIcon, weatherText, key, forceRefreshLocation)
-                                    }
+                                    // After API key is set, prompt for city name
+                                    promptForCityNameAndFetchWeather(weatherIcon, weatherText, key)
                                 }
                             }
                         }
@@ -117,12 +127,8 @@ class WeatherManager(private val context: Context) {
                     if (key != null) {
                         saveApiKey(key)
                         setUserRejectedApiKey(false)
-                        // Use the provided coordinates if available, otherwise get user location
-                        if (latitude != 0.0 && longitude != 0.0) {
-                            fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
-                        } else {
-                            getUserLocationAndFetchWeather(weatherIcon, weatherText, key, forceRefreshLocation)
-                        }
+                        // After API key is set, prompt for city name
+                        promptForCityNameAndFetchWeather(weatherIcon, weatherText, key)
                     } else {
                         setUserRejectedApiKey(true)
                         handler.post {
@@ -137,12 +143,8 @@ class WeatherManager(private val context: Context) {
                                         if (key != null) {
                                             saveApiKey(key)
                                             setUserRejectedApiKey(false)
-                                            // Use the provided coordinates if available, otherwise get user location
-                                            if (latitude != 0.0 && longitude != 0.0) {
-                                                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, key)
-                                            } else {
-                                                getUserLocationAndFetchWeather(weatherIcon, weatherText, key, forceRefreshLocation)
-                                            }
+                                            // After API key is set, prompt for city name
+                                            promptForCityNameAndFetchWeather(weatherIcon, weatherText, key)
                                         }
                                     }
                                 }
@@ -154,83 +156,89 @@ class WeatherManager(private val context: Context) {
                 }
             }
         } else {
-            // Use the provided coordinates if available, otherwise get user location
-            if (latitude != 0.0 && longitude != 0.0) {
-                fetchWeatherData(weatherIcon, weatherText, latitude, longitude, apiKey)
+            // API key exists, check for cached weather first
+            val cachedWeather = getCachedWeather()
+            if (cachedWeather != null) {
+                if (isCacheValid(cachedWeather)) {
+                    // Show cached weather immediately (cache is still fresh)
+                    handler.post {
+                        weatherText.text = "${cachedWeather.temperature}°C ${cachedWeather.description}"
+                        setWeatherIcon(weatherIcon, cachedWeather.weatherId)
+                        setupRefreshListeners(weatherIcon, weatherText)
+                    }
+                    return
+                } else {
+                    // Cache expired, show cached data but indicate it needs refresh
+                    handler.post {
+                        weatherText.text = "${cachedWeather.temperature}°C ${cachedWeather.description} (tap to refresh)"
+                        setWeatherIcon(weatherIcon, cachedWeather.weatherId)
+                        setupRefreshListeners(weatherIcon, weatherText)
+                    }
+                    return
+                }
+            }
+            
+            // No cache at all, check for city name
+            val storedCityName = getStoredCityName()
+            if (storedCityName != null && storedCityName.isNotEmpty()) {
+                // Show placeholder and allow user to tap to fetch
+                handler.post {
+                    weatherText.text = "Tap to load weather"
+                    weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+                    setupRefreshListeners(weatherIcon, weatherText)
+                }
             } else {
-                getUserLocationAndFetchWeather(weatherIcon, weatherText, apiKey, forceRefreshLocation)
+                // No city name stored, prompt for it
+                promptForCityNameAndFetchWeather(weatherIcon, weatherText, apiKey)
             }
         }
     }
 
-    private fun getUserLocationAndFetchWeather(weatherIcon: ImageView, weatherText: TextView, apiKey: String, forceRefresh: Boolean = false) {
-        // First, check if we have a stored location
-        val storedLocation = getStoredLocation()
-        
-        // If we have a stored location and not forcing refresh, use it regardless of permissions
-        if (storedLocation != null && !forceRefresh) {
-            fetchWeatherData(weatherIcon, weatherText, storedLocation.first, storedLocation.second, apiKey)
-            return
-        }
+    private fun promptForCityNameAndFetchWeather(weatherIcon: ImageView, weatherText: TextView, apiKey: String) {
+        handler.post {
+            if (isPromptingForCityName) return@post
+            isPromptingForCityName = true
+            
+            val builder = AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            val input = EditText(context)
+            input.hint = "Enter city name (e.g., London, New York)"
+            
+            // Pre-fill with stored city name if available
+            val storedCityName = getStoredCityName()
+            if (storedCityName != null && storedCityName.isNotEmpty()) {
+                input.setText(storedCityName)
+            }
 
-        // If we don't have a stored location or forcing refresh, check permissions
-        if (hasLocationPermission() && locationManager != null) {
-            // Need to get new location (either no stored location or forcing refresh)
-            try {
-                val locationListener = object : LocationListener {
-                    override fun onLocationChanged(location: Location) {
-                        locationManager?.removeUpdates(this)
-                        // Save the location for future use
-                        saveLocation(location.latitude, location.longitude)
-                        fetchWeatherData(weatherIcon, weatherText, location.latitude, location.longitude, apiKey)
-                    }
-
-                    override fun onProviderEnabled(provider: String) {}
-                    override fun onProviderDisabled(provider: String) {}
-                }
-
-                // Try to get last known location first
-                val lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-
-                if (lastKnownLocation != null) {
-                    // Save the location for future use
-                    saveLocation(lastKnownLocation.latitude, lastKnownLocation.longitude)
-                    fetchWeatherData(weatherIcon, weatherText, lastKnownLocation.latitude, lastKnownLocation.longitude, apiKey)
-                } else {
-                    // Request fresh location
-                    locationManager.requestSingleUpdate(LocationManager.NETWORK_PROVIDER, locationListener, null)
-
-                    // Fallback timeout - if no location after 5 seconds, use stored location if available, otherwise default
-                    handler.postDelayed({
-                        locationManager?.removeUpdates(locationListener)
-                        val fallbackLocation = getStoredLocation()
-                        if (fallbackLocation != null) {
-                            fetchWeatherData(weatherIcon, weatherText, fallbackLocation.first, fallbackLocation.second, apiKey)
-                        } else {
-                            fetchWeatherData(weatherIcon, weatherText, 0.0, 0.0, apiKey)
+            builder.setTitle("Enter Location")
+                .setMessage("Enter the name of the city for weather information")
+                .setView(input)
+                .setPositiveButton("Get Weather") { _, _ ->
+                    val cityName = input.text.toString().trim()
+                    if (cityName.isNotEmpty()) {
+                        saveCityName(cityName)
+                        isPromptingForCityName = false
+                        fetchWeatherData(weatherIcon, weatherText, cityName, apiKey)
+                    } else {
+                        isPromptingForCityName = false
+                        handler.post {
+                            weatherText.text = "Tap to enter location"
+                            weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+                            setupRefreshListeners(weatherIcon, weatherText)
                         }
-                    }, 5000)
+                    }
                 }
-            } catch (e: SecurityException) {
-                // Fallback to stored location if available, otherwise default
-                val fallbackLocation = getStoredLocation()
-                if (fallbackLocation != null) {
-                    fetchWeatherData(weatherIcon, weatherText, fallbackLocation.first, fallbackLocation.second, apiKey)
-                } else {
-                    fetchWeatherData(weatherIcon, weatherText, 0.0, 0.0, apiKey)
+                .setNegativeButton("Cancel") { _, _ -> 
+                    isPromptingForCityName = false
+                    handler.post {
+                        weatherText.text = "Tap to enter location"
+                        weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+                        setupRefreshListeners(weatherIcon, weatherText)
+                    }
                 }
-            }
-        } else {
-            // No location permissions and no stored location - show unavailable
-            // Don't clear stored location, keep it for future use
-            if (storedLocation != null) {
-                // Use stored location even without permissions
-                fetchWeatherData(weatherIcon, weatherText, storedLocation.first, storedLocation.second, apiKey)
-            } else {
-                // No stored location and no permissions - show unavailable
-                fetchWeatherData(weatherIcon, weatherText, 0.0, 0.0, apiKey)
-            }
+                .setOnDismissListener {
+                    isPromptingForCityName = false
+                }
+                .show()
         }
     }
 
@@ -256,13 +264,10 @@ class WeatherManager(private val context: Context) {
         }
     }
 
-    private fun fetchWeatherData(weatherIcon: ImageView, weatherText: TextView, latitude: Double, longitude: Double, apiKey: String) {
-        val url = if (latitude != 0.0 && longitude != 0.0) {
-            "https://api.openweathermap.org/data/2.5/weather?lat=$latitude&lon=$longitude&appid=$apiKey&units=metric"
-        } else {
-            // If no location available, try to get location by IP
-            "https://api.openweathermap.org/data/2.5/weather?q=&appid=$apiKey&units=metric"
-        }
+    private fun fetchWeatherData(weatherIcon: ImageView, weatherText: TextView, cityName: String, apiKey: String) {
+        // URL encode the city name to handle spaces and special characters
+        val encodedCityName = java.net.URLEncoder.encode(cityName, "UTF-8")
+        val url = "https://api.openweathermap.org/data/2.5/weather?q=$encodedCityName&appid=$apiKey&units=metric"
 
         executor.execute {
             try {
@@ -276,6 +281,9 @@ class WeatherManager(private val context: Context) {
                 val weatherId = weather.getInt("id")
                 val cityName = jsonObject.getString("name")
 
+                // Save to cache
+                saveCachedWeather(temperature, description, weatherId)
+                
                 handler.post {
                     weatherText.text = "$temperature°C $description"
                     setWeatherIcon(weatherIcon, weatherId)
@@ -288,7 +296,7 @@ class WeatherManager(private val context: Context) {
                 handler.post {
                     weatherText.text = "Weather unavailable"
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
-                    // Set up click listeners even when weather is unavailable so user can tap to get location
+                    // Set up click listeners even when weather is unavailable so user can tap to enter location
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
             }
@@ -311,16 +319,31 @@ class WeatherManager(private val context: Context) {
 
     private fun setupRefreshListeners(weatherIcon: ImageView, weatherText: TextView) {
         val refreshClickListener = View.OnClickListener {
-            val storedLocation = getStoredLocation()
-            
-            // If no stored location and no permissions, request permission
-            if (storedLocation == null && !hasLocationPermission()) {
-                // Request location permission through callback
-                onLocationPermissionNeeded?.invoke()
+            val apiKey = getApiKey()
+            if (apiKey == null) {
+                // No API key, prompt for it
+                updateWeather(weatherIcon, weatherText)
             } else {
-                // Refresh weather data (force refresh location if permissions are granted and we want new location)
-                val forceRefreshLocation = hasLocationPermission() && storedLocation == null
-                updateWeather(weatherIcon, weatherText, forceRefreshLocation = forceRefreshLocation)
+                val storedCityName = getStoredCityName()
+                if (storedCityName != null && storedCityName.isNotEmpty()) {
+                    // Clear expired cache and fetch fresh weather
+                    val cachedWeather = getCachedWeather()
+                    if (cachedWeather != null && !isCacheValid(cachedWeather)) {
+                        // Clear expired cache
+                        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+                        prefs.edit()
+                            .remove("weather_cached_temperature")
+                            .remove("weather_cached_description")
+                            .remove("weather_cached_weather_id")
+                            .remove("weather_cached_timestamp")
+                            .apply()
+                    }
+                    // Fetch fresh weather with stored city name
+                    fetchWeatherData(weatherIcon, weatherText, storedCityName, apiKey)
+                } else {
+                    // No city name, prompt for it
+                    promptForCityNameAndFetchWeather(weatherIcon, weatherText, apiKey)
+                }
             }
         }
         weatherIcon.setOnClickListener(refreshClickListener)

@@ -312,10 +312,6 @@ class MainActivity : FragmentActivity() {
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
-        // Set callback for location permission requests
-        weatherManager.onLocationPermissionNeeded = {
-            requestLocationPermissionForWeather()
-        }
 
         // Request necessary permissions
         requestContactsPermission()
@@ -2245,11 +2241,6 @@ class MainActivity : FragmentActivity() {
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
                 LOCATION_PERMISSION_REQUEST
             )
-        } else {
-            // Permission already granted, force refresh to get location
-            if (::weatherManager.isInitialized && ::weatherIcon.isInitialized && ::weatherText.isInitialized) {
-                weatherManager.updateWeather(weatherIcon, weatherText, forceRefreshLocation = true)
-            }
         }
     }
 
@@ -2320,12 +2311,8 @@ class MainActivity : FragmentActivity() {
                 }
             }
             LOCATION_PERMISSION_REQUEST -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Location permission granted, force refresh to get new location and store it
-                    if (::weatherManager.isInitialized && ::weatherIcon.isInitialized && ::weatherText.isInitialized) {
-                        weatherManager.updateWeather(weatherIcon, weatherText, forceRefreshLocation = true)
-                    }
-                }
+                // Location permission no longer used for weather
+                // This case can be removed in future cleanup
             }
             NOTIFICATION_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -2598,11 +2585,10 @@ class MainActivity : FragmentActivity() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)
 
-        // Set initial placeholder - weather only loads when user taps
-        weatherText.text = "Tap to load weather"
-        weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+        // Try to load cached weather first, otherwise show placeholder
+        updateWeather()
         
-        // Add click listeners to load weather only when tapped
+        // Add click listeners to refresh weather when tapped
         val weatherClickListener = View.OnClickListener {
             updateWeather()
         }
