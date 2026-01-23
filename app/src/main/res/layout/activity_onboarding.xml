@@ -597,6 +597,32 @@
                         android:textColor="@android:color/white"
                         android:gravity="center"
                         android:alpha="0.7"
+                        android:layout_marginBottom="16dp"/>
+
+                    <EditText
+                        android:id="@+id/weather_location_input"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter city name (e.g., London, New York)"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="@android:color/white"
+                        android:alpha="0.7"
+                        android:background="@drawable/rounded_background"
+                        android:padding="16dp"
+                        android:layout_marginHorizontal="24dp"
+                        android:layout_marginBottom="8dp"
+                        android:inputType="text"
+                        android:singleLine="true"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Enter the name of the city for weather information"
+                        android:textSize="12sp"
+                        android:textColor="@android:color/white"
+                        android:gravity="center"
+                        android:alpha="0.7"
                         android:layout_marginBottom="32dp"/>
 
                 </LinearLayout>

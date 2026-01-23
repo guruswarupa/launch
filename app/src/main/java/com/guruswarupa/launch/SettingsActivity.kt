@@ -39,6 +39,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
+        val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
         val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
         val gridOption = findViewById<Button>(R.id.grid_option)
         val listOption = findViewById<Button>(R.id.list_option)
@@ -73,10 +74,10 @@ class SettingsActivity : ComponentActivity() {
         setupCurrencySpinner(currencySpinner)
         
         // Load current settings
-        loadCurrentSettings(weatherApiKeyInput, currencySpinner, gridOption, listOption)
+        loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
 
         saveButton.setOnClickListener {
-            saveSettings(weatherApiKeyInput, currencySpinner, selectedStyleRef.value)
+            saveSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, selectedStyleRef.value)
         }
 
         exportButton.setOnClickListener {
@@ -181,6 +182,7 @@ class SettingsActivity : ComponentActivity() {
     
     private fun loadCurrentSettings(
         weatherApiKeyInput: EditText,
+        weatherLocationInput: EditText,
         currencySpinner: Spinner,
         gridOption: Button,
         listOption: Button
@@ -188,6 +190,10 @@ class SettingsActivity : ComponentActivity() {
         // Load weather API key
         val currentApiKey = prefs.getString("weather_api_key", "") ?: ""
         weatherApiKeyInput.setText(currentApiKey)
+
+        // Load weather location
+        val currentLocation = prefs.getString("weather_stored_city_name", "") ?: ""
+        weatherLocationInput.setText(currentLocation)
 
         // Load currency
         val currentCurrency = prefs.getString("finance_currency", "USD") ?: "USD"
@@ -211,7 +217,7 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun saveSettings(weatherApiKeyInput: EditText, currencySpinner: Spinner, selectedDisplayStyle: String) {
+    private fun saveSettings(weatherApiKeyInput: EditText, weatherLocationInput: EditText, currencySpinner: Spinner, selectedDisplayStyle: String) {
         val editor = prefs.edit()
 
         // Save weather API key
@@ -220,6 +226,10 @@ class SettingsActivity : ComponentActivity() {
         if (apiKey.isNotEmpty()) {
             editor.putBoolean("weather_api_key_rejected", false)
         }
+
+        // Save weather location - always save the value (even if empty)
+        val location = weatherLocationInput.text.toString().trim()
+        editor.putString("weather_stored_city_name", location)
 
         // Save currency
         val selectedCurrencyIndex = currencySpinner.selectedItemPosition
@@ -231,7 +241,8 @@ class SettingsActivity : ComponentActivity() {
         // Save display style
         editor.putString("view_preference", selectedDisplayStyle)
 
-        editor.apply()
+        // Use commit() instead of apply() to ensure immediate save
+        editor.commit()
 
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()
 
@@ -305,6 +316,7 @@ class SettingsActivity : ComponentActivity() {
             // - Active workspace ID (active_workspace_id)
             // - Show all apps mode (show_all_apps_mode)
             // - Weather API key (weather_api_key)
+            // - Weather location (weather_stored_city_name)
             // - Currency preference (finance_currency)
             // - Display style (view_preference)
             // - Todo items (todo_items)
@@ -451,10 +463,11 @@ class SettingsActivity : ComponentActivity() {
 
                 // Reload current settings in UI
                 val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
+                val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
                 val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
                 val gridOption = findViewById<Button>(R.id.grid_option)
                 val listOption = findViewById<Button>(R.id.list_option)
-                loadCurrentSettings(weatherApiKeyInput, currencySpinner, gridOption, listOption)
+                loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
 
                 Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }

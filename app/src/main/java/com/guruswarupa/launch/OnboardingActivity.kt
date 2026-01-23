@@ -70,6 +70,7 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var gridStyleButton: Button
     private lateinit var listStyleButton: Button
     private lateinit var weatherApiKeyInput: EditText
+    private lateinit var weatherLocationInput: EditText
     private lateinit var favoritesRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var favoritesAdapter: FavoritesOnboardingAdapter
     private var selectedFavorites = mutableSetOf<String>()
@@ -270,6 +271,7 @@ class OnboardingActivity : ComponentActivity() {
         gridStyleButton = findViewById(R.id.grid_style_button)
         listStyleButton = findViewById(R.id.list_style_button)
         weatherApiKeyInput = findViewById(R.id.weather_api_key_input)
+        weatherLocationInput = findViewById(R.id.weather_location_input)
 
         step1Indicator = findViewById(R.id.step1_indicator)
         step2Indicator = findViewById(R.id.step2_indicator)
@@ -375,6 +377,11 @@ class OnboardingActivity : ComponentActivity() {
                 val existingKey = prefs.getString("weather_api_key", "") ?: ""
                 if (existingKey.isNotEmpty()) {
                     weatherApiKeyInput.setText(existingKey)
+                }
+                // Load existing location if any
+                val existingLocation = prefs.getString("weather_stored_city_name", "") ?: ""
+                if (existingLocation.isNotEmpty()) {
+                    weatherLocationInput.setText(existingLocation)
                 }
             }
             OnboardingStep.COMPLETE -> {
@@ -543,6 +550,9 @@ class OnboardingActivity : ComponentActivity() {
                 if (apiKey.isNotEmpty()) {
                     prefs.edit().putBoolean("weather_api_key_rejected", false).apply()
                 }
+                // Save weather location (can be empty if user skips)
+                val location = weatherLocationInput.text.toString().trim()
+                prefs.edit().putString("weather_stored_city_name", location).apply()
                 showStep(OnboardingStep.COMPLETE)
             }
             OnboardingStep.COMPLETE -> finishSetup()
