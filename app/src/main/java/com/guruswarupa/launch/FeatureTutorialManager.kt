@@ -44,7 +44,7 @@ class FeatureTutorialManager(
         ),
         SEARCH_BAR(
             "Universal Search",
-            "Search for apps, contacts, or web queries. Double tap to change wallpaper, long press to open Google.",
+            "Search for apps, contacts, or web queries. Long press to open Google.",
             R.id.search_box,
             HighlightPosition.BOTTOM
         ),
