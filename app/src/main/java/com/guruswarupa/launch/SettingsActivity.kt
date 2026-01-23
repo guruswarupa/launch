@@ -68,6 +68,7 @@ class SettingsActivity : ComponentActivity() {
         val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
         val appLockButton = findViewById<Button>(R.id.app_lock_button)
         val checkPermissionsButton = findViewById<Button>(R.id.check_permissions_button)
+        val showTutorialButton = findViewById<Button>(R.id.show_tutorial_button)
         val restartLauncherButton = findViewById<Button>(R.id.restart_launcher_button)
 
         // Setup currency spinner
@@ -97,6 +98,10 @@ class SettingsActivity : ComponentActivity() {
         
         checkPermissionsButton.setOnClickListener {
             checkAndRequestPermissions()
+        }
+        
+        showTutorialButton.setOnClickListener {
+            showTutorial()
         }
         
         restartLauncherButton.setOnClickListener {
@@ -149,6 +154,12 @@ class SettingsActivity : ComponentActivity() {
         val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
         val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
         setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
+        
+        // Tutorial Section
+        val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
+        val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
+        val tutorialArrow = findViewById<TextView>(R.id.tutorial_arrow)
+        setupSectionToggle(tutorialHeader, tutorialContent, tutorialArrow)
         
         // Launcher Section
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
@@ -840,6 +851,22 @@ class SettingsActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    
+    private fun showTutorial() {
+        // Reset tutorial preferences to show it again
+        val editor = prefs.edit()
+        editor.putBoolean("feature_tutorial_shown", false)
+        editor.putInt("feature_tutorial_current_step", 0)
+        editor.apply()
+        
+        // Navigate to MainActivity with intent to start tutorial
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("start_tutorial", true)
+        }
+        startActivity(intent)
+        finish()
     }
     
     private fun restartLauncher() {
