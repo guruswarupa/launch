@@ -17,7 +17,8 @@ class AppSearchManager(
     private val adapter: AppAdapter,
     private val searchBox: EditText,
     private val contactsList: List<String>,
-    private val appMetadataCache: Map<String, MainActivity.AppMetadata>? = null
+    private val appMetadataCache: Map<String, MainActivity.AppMetadata>? = null,
+    private val isAppFiltered: ((String) -> Boolean)? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val searchExecutor = Executors.newSingleThreadExecutor() // Background thread for search operations
@@ -65,7 +66,14 @@ class AppSearchManager(
     }
 
     private fun refreshAppList() {
-        appLabelMap = fullAppList.associateWith { resolveInfo ->
+        // Filter out apps that should be hidden (e.g., in focus mode)
+        val filteredAppList = if (isAppFiltered != null) {
+            fullAppList.filter { !isAppFiltered(it.activityInfo.packageName) }
+        } else {
+            fullAppList
+        }
+        
+        appLabelMap = filteredAppList.associateWith { resolveInfo ->
             val packageName = resolveInfo.activityInfo.packageName
             // Use pre-loaded metadata cache if available
             val cachedMetadata = appMetadataCache?.get(packageName)
@@ -117,11 +125,23 @@ class AppSearchManager(
                     }
                 }
 
+                // Filter out apps that should be hidden (e.g., in focus mode)
+                val filteredExactMatches = if (isAppFiltered != null) {
+                    exactMatches.filter { !isAppFiltered(it.activityInfo.packageName) }
+                } else {
+                    exactMatches
+                }
+                val filteredPartialMatches = if (isAppFiltered != null) {
+                    partialMatches.filter { !isAppFiltered(it.activityInfo.packageName) }
+                } else {
+                    partialMatches
+                }
+
                 // Sort alphabetically for matches found
-                val sortedExact = exactMatches.sortedBy {
+                val sortedExact = filteredExactMatches.sortedBy {
                     appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase()
                 }
-                val sortedPartial = partialMatches.sortedBy {
+                val sortedPartial = filteredPartialMatches.sortedBy {
                     appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase()
                 }
 
@@ -157,8 +177,15 @@ class AppSearchManager(
                     refreshAppList()
                 }
                 
+                // Filter out apps that should be hidden (e.g., in focus mode)
+                val appsToSort = if (isAppFiltered != null) {
+                    fullAppList.filter { !isAppFiltered(it.activityInfo.packageName) }
+                } else {
+                    fullAppList
+                }
+                
                 // Sort alphabetically by app name
-                val sorted = fullAppList.sortedBy {
+                val sorted = appsToSort.sortedBy {
                     appLabelMap[it]?.lowercase() ?: run {
                         // Use pre-loaded metadata cache if available
                         val cachedMetadata = appMetadataCache?.get(it.activityInfo.packageName)
