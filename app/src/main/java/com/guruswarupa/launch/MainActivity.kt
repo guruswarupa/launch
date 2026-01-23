@@ -150,6 +150,9 @@ class MainActivity : FragmentActivity() {
     private lateinit var widgetManager: WidgetManager
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var gestureDetector: GestureDetector
+    private var touchStartX = 0f
+    private var touchStartY = 0f
+    private var isSwipeFromLeftEdge = false
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -213,8 +216,8 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val mainContent = findViewById<FrameLayout>(R.id.main_content)
             mainContent?.let { view ->
-                // Convert 50dp to pixels
-                val exclusionWidthPx = (50 * resources.displayMetrics.density).toInt()
+                // Convert 100dp to pixels - increased to better prevent system gesture conflicts
+                val exclusionWidthPx = (100 * resources.displayMetrics.density).toInt()
                 val exclusionRects = listOf(
                     Rect(0, 0, exclusionWidthPx, view.height)
                 )
@@ -468,8 +471,61 @@ class MainActivity : FragmentActivity() {
         // Enable edge swipe for DrawerLayout (this is the default, but making it explicit)
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)
         
-        // DrawerLayout already handles edge swipes automatically, but we can add additional
-        // gesture detection for more responsive swipes from the left corner
+        // Setup touch listener on main content to detect swipes from left edge
+        // This intercepts touch events early to prevent system gestures from taking over
+        val mainContent = findViewById<FrameLayout>(R.id.main_content)
+        val edgeThresholdPx = (100 * resources.displayMetrics.density).toInt()
+        val minSwipeDistancePx = (100 * resources.displayMetrics.density).toInt()
+        
+        mainContent.setOnTouchListener { view, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    touchStartX = event.x
+                    touchStartY = event.y
+                    // Check if touch started from left edge
+                    isSwipeFromLeftEdge = event.x < edgeThresholdPx
+                    // If touch is from left edge, consume the event to prevent system gestures
+                    // This prevents Samsung launcher switcher and other system gestures
+                    isSwipeFromLeftEdge
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (isSwipeFromLeftEdge) {
+                        val deltaX = event.x - touchStartX
+                        val deltaY = event.y - touchStartY
+                        // If moving rightward, continue consuming to prevent system gestures
+                        if (deltaX > 10 && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                            true // Consume to prevent system gestures
+                        } else {
+                            // Reset if not a valid swipe
+                            isSwipeFromLeftEdge = false
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (isSwipeFromLeftEdge) {
+                        val deltaX = event.x - touchStartX
+                        val deltaY = event.y - touchStartY
+                        // Check if it's a valid rightward swipe
+                        if (deltaX > minSwipeDistancePx && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                            // Open drawer if not already open
+                            if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                                drawerLayout.openDrawer(GravityCompat.START)
+                            }
+                        }
+                        isSwipeFromLeftEdge = false
+                        true // Consume to prevent system gesture from triggering
+                    } else {
+                        false
+                    }
+                }
+                else -> false
+            }
+        }
+        
+        // Keep gesture detector for backward compatibility and additional gesture handling
         gestureDetector = GestureDetector(this, object : SimpleOnGestureListener() {
             override fun onFling(
                 e1: MotionEvent?,
@@ -481,7 +537,7 @@ class MainActivity : FragmentActivity() {
                     val deltaX = e2.x - e1.x
                     val deltaY = e2.y - e1.y
                     // Check if swipe is from left edge (start x < 100px) and rightward
-                    if (e1.x < 100 && deltaX > 200 && Math.abs(deltaY) < Math.abs(deltaX) * 0.8) {
+                    if (e1.x < edgeThresholdPx && deltaX > minSwipeDistancePx && Math.abs(deltaY) < Math.abs(deltaX) * 0.8) {
                         if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
                             drawerLayout.openDrawer(GravityCompat.START)
                         }
@@ -491,15 +547,6 @@ class MainActivity : FragmentActivity() {
                 return false
             }
         })
-        
-        // Setup touch listener on main content to detect swipes from left edge
-        // This works alongside DrawerLayout's built-in edge swipe detection
-        val mainContent = findViewById<FrameLayout>(R.id.main_content)
-        mainContent.setOnTouchListener { _, event ->
-            // Process gesture but don't consume event - let DrawerLayout handle it too
-            gestureDetector.onTouchEvent(event)
-            false
-        }
         
         // Setup gesture exclusion to allow drawer to open with system navigation gestures enabled
         setupGestureExclusion()
