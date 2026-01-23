@@ -1,13 +1,16 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24"
-    android:tint="@color/white">
-    <path
-        android:fillColor="@android:color/white"
-        android:pathData="M4,6H2v14c0,1.1 0.9,2 2,2h14v-2H4V6z"/>
-    <path
-        android:fillColor="@android:color/white"
-        android:pathData="M20,2H8c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V4C22,2.9 21.1,2 20,2zM20,16H8V4h12V16z"/>
-</vector>
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background - gray -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="16dp" />
+            <solid android:color="#424242" />
+        </shape>
+    </item>
+    <!-- Icon -->
+    <item
+        android:drawable="@drawable/ic_workspace_inactive_icon"
+        android:gravity="center"
+        android:width="28dp"
+        android:height="28dp" />
+</layer-list>
