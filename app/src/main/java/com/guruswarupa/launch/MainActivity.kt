@@ -175,6 +175,8 @@ class MainActivity : FragmentActivity() {
     private var touchStartX = 0f
     private var touchStartY = 0f
     private var isSwipeFromLeftEdge = false
+    private var isBlockingBackGesture = false
+    private val backGestureBlockDuration = 800L // Block back gestures for 800ms after widget picker returns
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -822,10 +824,14 @@ class MainActivity : FragmentActivity() {
         }
         // Handle widget picking
         if (requestCode == REQUEST_PICK_WIDGET && resultCode == RESULT_OK) {
+            // Temporarily block back gestures to prevent system back gesture from exiting launcher
+            blockBackGesturesTemporarily()
             widgetManager.handleWidgetPicked(this, data, REQUEST_PICK_WIDGET)
         }
         // Handle widget configuration
         if (requestCode == REQUEST_CONFIGURE_WIDGET && resultCode == RESULT_OK) {
+            // Temporarily block back gestures to prevent system back gesture from exiting launcher
+            blockBackGesturesTemporarily()
             val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
             widgetManager.handleWidgetConfigured(this, appWidgetId)
         }
@@ -1464,6 +1470,11 @@ class MainActivity : FragmentActivity() {
         // Update notifications widget when activity resumes
         if (::notificationsWidget.isInitialized) {
             notificationsWidget.updateNotifications()
+        }
+        
+        // Update gesture exclusion when activity resumes (unless we're temporarily blocking back gestures)
+        if (!isBlockingBackGesture) {
+            updateGestureExclusion()
         }
 
         // PRIORITY 1: Show UI immediately - register receivers and update visible elements first
@@ -3493,11 +3504,53 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onBackPressed() {
+        // Block back gesture if we're temporarily blocking it (e.g., after widget picker returns)
+        if (isBlockingBackGesture) {
+            return
+        }
+        
         // Close drawer if it's open, otherwise handle back button normally
         if (::drawerLayout.isInitialized && drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
         } else {
             super.onBackPressed()
+        }
+    }
+    
+    /**
+     * Temporarily blocks back gestures to prevent system back gesture from exiting launcher
+     * when returning from widget picker or configuration activities.
+     */
+    private fun blockBackGesturesTemporarily() {
+        isBlockingBackGesture = true
+        // Also update gesture exclusion to cover entire screen temporarily
+        updateGestureExclusionForWidgetOpening()
+        
+        // Reset the flag after the blocking duration
+        handler.postDelayed({
+            isBlockingBackGesture = false
+            // Restore normal gesture exclusion
+            updateGestureExclusion()
+        }, backGestureBlockDuration)
+    }
+    
+    /**
+     * Updates gesture exclusion to cover the entire screen when widgets are being opened.
+     * This prevents system back gestures from interfering.
+     */
+    private fun updateGestureExclusionForWidgetOpening() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mainContent = findViewById<FrameLayout>(R.id.main_content)
+            mainContent?.let { view ->
+                // Post to ensure view is laid out before setting exclusion rects
+                view.post {
+                    // Exclude entire screen to prevent all system gestures
+                    val exclusionRects = listOf(
+                        Rect(0, 0, view.width, view.height)
+                    )
+                    ViewCompat.setSystemGestureExclusionRects(view, exclusionRects)
+                }
+            }
         }
     }
 }
