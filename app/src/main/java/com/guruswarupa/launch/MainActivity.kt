@@ -65,6 +65,7 @@ import com.guruswarupa.launch.TodoAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -104,6 +105,27 @@ class MainActivity : FragmentActivity() {
     private var cachedAppListVersion: String? = null
     private val handler = Handler(Looper.getMainLooper())
     private val backgroundExecutor = Executors.newFixedThreadPool(4) // Reusable thread pool
+    
+    /**
+     * Safely execute a task on the background executor.
+     * Returns true if the task was submitted, false if executor is shut down or activity is finishing.
+     */
+    private fun safeExecute(task: Runnable): Boolean {
+        if (isFinishing || isDestroyed) {
+            return false
+        }
+        try {
+            if (backgroundExecutor.isShutdown) {
+                Log.w("MainActivity", "Background executor is shut down, skipping task")
+                return false
+            }
+            backgroundExecutor.execute(task)
+            return true
+        } catch (e: RejectedExecutionException) {
+            Log.w("MainActivity", "Task rejected by executor", e)
+            return false
+        }
+    }
 
     private lateinit var wallpaperBackground: ImageView
     private var currentWallpaperBitmap: Bitmap? = null
@@ -448,7 +470,10 @@ class MainActivity : FragmentActivity() {
                     adapter = adapter,
                     searchBox = searchBox,
                     contactsList = contactsList,
-                    appMetadataCache = appMetadataCache
+                    appMetadataCache = appMetadataCache,
+                    isAppFiltered = { packageName -> 
+                        ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
+                    }
                 )
             }
         }, 150)
@@ -633,7 +658,10 @@ class MainActivity : FragmentActivity() {
                         fullAppList,
                         adapter,
                         searchBox,
-                        contactsList
+                        contactsList,
+                        isAppFiltered = { packageName -> 
+                            appDockManager.isAppHiddenInFocusMode(packageName)
+                        }
                     )
                 }
             } catch (e: Exception) {
@@ -674,7 +702,10 @@ class MainActivity : FragmentActivity() {
                                 fullAppList = fullAppList,
                                 adapter = adapter,
                                 searchBox = searchBox,
-                                contactsList = contactsList
+                                contactsList = contactsList,
+                                isAppFiltered = { packageName -> 
+                                    appDockManager.isAppHiddenInFocusMode(packageName)
+                                }
                             )
                         }
                     }
@@ -1653,14 +1684,17 @@ class MainActivity : FragmentActivity() {
                                             adapter,
                                             searchBox,
                                             contactsList,
-                                            appMetadataCache
+                                            appMetadataCache,
+                                            isAppFiltered = { packageName -> 
+                                                appDockManager.isAppHiddenInFocusMode(packageName)
+                                            }
                                         )
                                     }
                                 }
                             }
                             
                             // Verify version in background (non-blocking) - refresh if changed
-                            backgroundExecutor.execute {
+                            safeExecute {
                                 val currentVersion = getAppListVersion() // Expensive call, but in background
                                 val cachedVersion = try {
                                     if (appListVersionFile.exists()) {
@@ -1742,7 +1776,7 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        backgroundExecutor.execute {
+        safeExecute {
             try {
                 // Use cached list if available and not forcing refresh
                 val unsortedList = if (!forceRefresh && 
@@ -1777,11 +1811,13 @@ class MainActivity : FragmentActivity() {
                     // Ensure appDockManager is initialized before using it
                     if (!::appDockManager.isInitialized) {
                         Log.e("MainActivity", "appDockManager not initialized in loadApps background thread")
-                        runOnUiThread {
-                            // Retry loading apps after a short delay
-                            handler.postDelayed({ loadApps(forceRefresh) }, 200)
+                        handler.post {
+                            if (!isFinishing && !isDestroyed) {
+                                // Retry loading apps after a short delay
+                                handler.postDelayed({ loadApps(forceRefresh) }, 200)
+                            }
                         }
-                        return@execute
+                        return@safeExecute
                     }
                     
                     val focusMode = appDockManager.getCurrentMode()
@@ -1859,7 +1895,10 @@ class MainActivity : FragmentActivity() {
                                 fullAppList,
                                 adapter,
                                 searchBox,
-                                contactsList
+                                contactsList,
+                                isAppFiltered = { packageName -> 
+                                    appDockManager.isAppHiddenInFocusMode(packageName)
+                                }
                             )
                         }
                     }, 50) // Small delay to let UI render first
@@ -1867,7 +1906,7 @@ class MainActivity : FragmentActivity() {
                     // STEP 3: Load labels, usage stats, and sort in background (after UI is shown)
                     // Use cached metadata if available, otherwise load on-demand
                     handler.postDelayed({
-                        backgroundExecutor.execute {
+                        safeExecute {
                             try {
                                 // Use pre-loaded usage stats cache (already loaded in onCreate)
                                 // Reload if cache is empty
@@ -1941,7 +1980,10 @@ class MainActivity : FragmentActivity() {
                                                 adapter,
                                                 searchBox,
                                                 contactsList,
-                                                appMetadataCache
+                                                appMetadataCache,
+                                                isAppFiltered = { packageName -> 
+                                                    appDockManager.isAppHiddenInFocusMode(packageName)
+                                                }
                                             )
                                         }
                                     }, 50)
@@ -1975,8 +2017,9 @@ class MainActivity : FragmentActivity() {
 
         // Set visibility of search bar and voice search button based on focus mode
         // Only modify if activity is not finishing
-        if (!isFinishing && !isDestroyed && ::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
-            if (appDockManager.getCurrentMode()) {
+        if (!isFinishing && !isDestroyed && ::searchBox.isInitialized && ::voiceSearchButton.isInitialized && ::appDockManager.isInitialized) {
+            val currentFocusMode = appDockManager.getCurrentMode()
+            if (currentFocusMode) {
                 searchBox.visibility = android.view.View.GONE
                 voiceSearchButton.visibility = android.view.View.GONE
             } else {
@@ -2417,7 +2460,7 @@ class MainActivity : FragmentActivity() {
         }
         
         // Run filtering/sorting in background thread
-        backgroundExecutor.execute {
+        safeExecute {
             try {
                 val filteredOrSortedApps: MutableList<ResolveInfo>
                 
@@ -2480,8 +2523,9 @@ class MainActivity : FragmentActivity() {
                     appList.clear()
                     appList.addAll(sortedFinalList)
 
-                    if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
-                        if (isFocusMode) {
+                    if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized && ::appDockManager.isInitialized) {
+                        val currentFocusMode = appDockManager.getCurrentMode()
+                        if (currentFocusMode) {
                             searchBox.visibility = android.view.View.GONE
                             voiceSearchButton.visibility = android.view.View.GONE
                         } else {
@@ -2502,7 +2546,10 @@ class MainActivity : FragmentActivity() {
                             fullAppList,
                             adapter,
                             searchBox,
-                            contactsList
+                            contactsList,
+                            isAppFiltered = { packageName -> 
+                                appDockManager.isAppHiddenInFocusMode(packageName)
+                            }
                         )
                     }
                 }
