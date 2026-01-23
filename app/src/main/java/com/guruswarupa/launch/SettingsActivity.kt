@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 class SettingsActivity : ComponentActivity() {
 
@@ -39,6 +40,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
+        val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
         val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
         val gridOption = findViewById<Button>(R.id.grid_option)
         val listOption = findViewById<Button>(R.id.list_option)
@@ -67,16 +69,20 @@ class SettingsActivity : ComponentActivity() {
         val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
         val appLockButton = findViewById<Button>(R.id.app_lock_button)
         val checkPermissionsButton = findViewById<Button>(R.id.check_permissions_button)
+        val showTutorialButton = findViewById<Button>(R.id.show_tutorial_button)
         val restartLauncherButton = findViewById<Button>(R.id.restart_launcher_button)
+        val clearCacheButton = findViewById<Button>(R.id.clear_cache_button)
+        val clearDataButton = findViewById<Button>(R.id.clear_data_button)
+        val changeWallpaperButton = findViewById<Button>(R.id.change_wallpaper_button)
 
         // Setup currency spinner
         setupCurrencySpinner(currencySpinner)
         
         // Load current settings
-        loadCurrentSettings(weatherApiKeyInput, currencySpinner, gridOption, listOption)
+        loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
 
         saveButton.setOnClickListener {
-            saveSettings(weatherApiKeyInput, currencySpinner, selectedStyleRef.value)
+            saveSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, selectedStyleRef.value)
         }
 
         exportButton.setOnClickListener {
@@ -98,8 +104,24 @@ class SettingsActivity : ComponentActivity() {
             checkAndRequestPermissions()
         }
         
+        showTutorialButton.setOnClickListener {
+            showTutorial()
+        }
+        
         restartLauncherButton.setOnClickListener {
             restartLauncher()
+        }
+        
+        clearCacheButton.setOnClickListener {
+            clearCache()
+        }
+        
+        clearDataButton.setOnClickListener {
+            clearData()
+        }
+        
+        changeWallpaperButton.setOnClickListener {
+            chooseWallpaper()
         }
         
         // Setup expandable sections
@@ -149,6 +171,18 @@ class SettingsActivity : ComponentActivity() {
         val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
         setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
         
+        // Wallpaper Section
+        val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
+        val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
+        val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
+        setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
+        
+        // Tutorial Section
+        val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
+        val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
+        val tutorialArrow = findViewById<TextView>(R.id.tutorial_arrow)
+        setupSectionToggle(tutorialHeader, tutorialContent, tutorialArrow)
+        
         // Launcher Section
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
         val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
@@ -181,6 +215,7 @@ class SettingsActivity : ComponentActivity() {
     
     private fun loadCurrentSettings(
         weatherApiKeyInput: EditText,
+        weatherLocationInput: EditText,
         currencySpinner: Spinner,
         gridOption: Button,
         listOption: Button
@@ -188,6 +223,10 @@ class SettingsActivity : ComponentActivity() {
         // Load weather API key
         val currentApiKey = prefs.getString("weather_api_key", "") ?: ""
         weatherApiKeyInput.setText(currentApiKey)
+
+        // Load weather location
+        val currentLocation = prefs.getString("weather_stored_city_name", "") ?: ""
+        weatherLocationInput.setText(currentLocation)
 
         // Load currency
         val currentCurrency = prefs.getString("finance_currency", "USD") ?: "USD"
@@ -211,7 +250,7 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun saveSettings(weatherApiKeyInput: EditText, currencySpinner: Spinner, selectedDisplayStyle: String) {
+    private fun saveSettings(weatherApiKeyInput: EditText, weatherLocationInput: EditText, currencySpinner: Spinner, selectedDisplayStyle: String) {
         val editor = prefs.edit()
 
         // Save weather API key
@@ -220,6 +259,10 @@ class SettingsActivity : ComponentActivity() {
         if (apiKey.isNotEmpty()) {
             editor.putBoolean("weather_api_key_rejected", false)
         }
+
+        // Save weather location - always save the value (even if empty)
+        val location = weatherLocationInput.text.toString().trim()
+        editor.putString("weather_stored_city_name", location)
 
         // Save currency
         val selectedCurrencyIndex = currencySpinner.selectedItemPosition
@@ -231,7 +274,8 @@ class SettingsActivity : ComponentActivity() {
         // Save display style
         editor.putString("view_preference", selectedDisplayStyle)
 
-        editor.apply()
+        // Use commit() instead of apply() to ensure immediate save
+        editor.commit()
 
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()
 
@@ -290,7 +334,17 @@ class SettingsActivity : ComponentActivity() {
                         importSettingsFromFile(uri)
                     }
                 }
+                WALLPAPER_REQUEST_CODE -> {
+                    // Wallpaper changed - send broadcast to refresh MainActivity
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                    Toast.makeText(this, "Wallpaper changed", Toast.LENGTH_SHORT).show()
+                }
             }
+        } else if (requestCode == WALLPAPER_REQUEST_CODE) {
+            // User may have cancelled, but we still send the broadcast in case they changed it
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            sendBroadcast(intent)
         }
     }
 
@@ -305,6 +359,7 @@ class SettingsActivity : ComponentActivity() {
             // - Active workspace ID (active_workspace_id)
             // - Show all apps mode (show_all_apps_mode)
             // - Weather API key (weather_api_key)
+            // - Weather location (weather_stored_city_name)
             // - Currency preference (finance_currency)
             // - Display style (view_preference)
             // - Todo items (todo_items)
@@ -451,10 +506,11 @@ class SettingsActivity : ComponentActivity() {
 
                 // Reload current settings in UI
                 val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
+                val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
                 val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
                 val gridOption = findViewById<Button>(R.id.grid_option)
                 val listOption = findViewById<Button>(R.id.list_option)
-                loadCurrentSettings(weatherApiKeyInput, currencySpinner, gridOption, listOption)
+                loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
 
                 Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }
@@ -829,6 +885,22 @@ class SettingsActivity : ComponentActivity() {
         }
     }
     
+    private fun showTutorial() {
+        // Reset tutorial preferences to show it again
+        val editor = prefs.edit()
+        editor.putBoolean("feature_tutorial_shown", false)
+        editor.putInt("feature_tutorial_current_step", 0)
+        editor.apply()
+        
+        // Navigate to MainActivity with intent to start tutorial
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("start_tutorial", true)
+        }
+        startActivity(intent)
+        finish()
+    }
+    
     private fun restartLauncher() {
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Restart Launcher")
@@ -853,8 +925,180 @@ class SettingsActivity : ComponentActivity() {
             .show()
     }
     
+    private fun clearCache() {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Clear Cache")
+            .setMessage("This will clear the launcher's cache files. This may free up storage space but won't affect your settings or data. Continue?")
+            .setPositiveButton("Clear Cache") { _, _ ->
+                try {
+                    var deletedCount = 0
+                    var totalSize = 0L
+                    
+                    // Helper function to calculate directory size recursively
+                    fun getDirectorySize(dir: File): Long {
+                        var size = 0L
+                        if (dir.isDirectory) {
+                            dir.listFiles()?.forEach { file ->
+                                size += if (file.isDirectory) {
+                                    getDirectorySize(file)
+                                } else {
+                                    file.length()
+                                }
+                            }
+                        } else {
+                            size = dir.length()
+                        }
+                        return size
+                    }
+                    
+                    // Clear cache directory
+                    if (cacheDir.exists() && cacheDir.isDirectory) {
+                        val files = cacheDir.listFiles()
+                        files?.forEach { file ->
+                            try {
+                                val size = getDirectorySize(file)
+                                if (file.deleteRecursively()) {
+                                    deletedCount++
+                                    totalSize += size
+                                }
+                            } catch (e: Exception) {
+                                // Ignore individual file deletion errors
+                            }
+                        }
+                    }
+                    
+                    // Clear external cache if available
+                    externalCacheDir?.let { extCacheDir ->
+                        if (extCacheDir.exists() && extCacheDir.isDirectory) {
+                            val files = extCacheDir.listFiles()
+                            files?.forEach { file ->
+                                try {
+                                    val size = getDirectorySize(file)
+                                    if (file.deleteRecursively()) {
+                                        deletedCount++
+                                        totalSize += size
+                                    }
+                                } catch (e: Exception) {
+                                    // Ignore individual file deletion errors
+                                }
+                            }
+                        }
+                    }
+                    
+                    val sizeInMB = if (totalSize > 0) totalSize / (1024 * 1024) else 0L
+                    val message = if (deletedCount > 0) {
+                        "Cache cleared successfully. Freed ${sizeInMB}MB from $deletedCount items."
+                    } else {
+                        "Cache cleared successfully."
+                    }
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Failed to clear cache: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun clearData() {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Clear Data")
+            .setMessage("WARNING: This will delete ALL launcher data including:\n\n• All settings and preferences\n• Favorite apps\n• Workspaces\n• App locks and timers\n• Todo items\n• Workout data\n• Finance data\n• Widget configurations\n• All other app data\n\nThis action CANNOT be undone. The launcher will restart after clearing data.\n\nAre you absolutely sure?")
+            .setPositiveButton("Clear All Data") { _, _ ->
+                try {
+                    // Clear all SharedPreferences
+                    val allPrefs = listOf(
+                        "com.guruswarupa.launch.PREFS",
+                        "app_timer_prefs",
+                        "app_lock_prefs"
+                    )
+                    
+                    allPrefs.forEach { prefName ->
+                        try {
+                            val prefs = getSharedPreferences(prefName, MODE_PRIVATE)
+                            prefs.edit().clear().commit()
+                        } catch (e: Exception) {
+                            // Ignore individual preference clearing errors
+                        }
+                    }
+                    
+                    // Clear cache
+                    try {
+                        if (cacheDir.exists() && cacheDir.isDirectory) {
+                            cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+                        }
+                        externalCacheDir?.let { extCacheDir ->
+                            if (extCacheDir.exists() && extCacheDir.isDirectory) {
+                                extCacheDir.listFiles()?.forEach { it.deleteRecursively() }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore cache clearing errors
+                    }
+                    
+                    // Clear databases
+                    try {
+                        val databasesDir = File(filesDir.parent, "databases")
+                        if (databasesDir.exists() && databasesDir.isDirectory) {
+                            databasesDir.listFiles()?.forEach { file ->
+                                if (file.name.startsWith(packageName.replace(".", "_"))) {
+                                    file.delete()
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore database clearing errors
+                    }
+                    
+                    // Clear internal files (except important system files)
+                    try {
+                        if (filesDir.exists() && filesDir.isDirectory) {
+                            filesDir.listFiles()?.forEach { file ->
+                                // Don't delete critical system files
+                                if (!file.name.startsWith(".") && file.name != "shared_prefs") {
+                                    file.deleteRecursively()
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore file clearing errors
+                    }
+                    
+                    Toast.makeText(this, "All data cleared. Launcher will restart.", Toast.LENGTH_LONG).show()
+                    
+                    // Restart launcher after a short delay
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        try {
+                            val packageManager = packageManager
+                            val intent = packageManager.getLaunchIntentForPackage(packageName)
+                            val componentName = intent?.component
+                            if (componentName != null) {
+                                val mainIntent = Intent.makeRestartActivityTask(componentName)
+                                startActivity(mainIntent)
+                                Runtime.getRuntime().exit(0)
+                            } else {
+                                finish()
+                            }
+                        } catch (e: Exception) {
+                            finish()
+                        }
+                    }, 1000)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Failed to clear data: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1000
+        private const val WALLPAPER_REQUEST_CODE = 456
+    }
+    
+    private fun chooseWallpaper() {
+        val intent = Intent(Intent.ACTION_SET_WALLPAPER)
+        startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
     }
     
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {

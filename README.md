@@ -42,7 +42,6 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - **Date Widget** → Tap to open the Calendar app
 - **Search Bar**:
   - Long press → Open Google in browser
-  - Double tap → Change wallpaper
   - Calculator support built-in
 - **Weather Widget**:
   - Shows real-time weather and forecast
@@ -148,6 +147,7 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 ## ⚙️ Settings Features
 - **Import/Export Data**: Backup or restore your launcher settings and data
 - **Change Display Style**: Toggle between grid and list view easily
+- **Change Wallpaper**: Set custom wallpapers for your home screen
 - **Update Weather API Key**: Use your personal API key from openweathermap.org
 - **Manage App Locks**: Configure PIN and fingerprint authentication
 - **App Timer Settings**: Configure default timer durations
@@ -163,7 +163,6 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 | **Tap Time Widget**         | Opens Clock app                             |
 | **Tap Date Widget**         | Opens Calendar app                          |
 | **Long Press Search Bar**   | Opens Google in browser                     |
-| **Double Tap Search Bar**   | Opens wallpaper picker                      |
 | **Long Press App Icon**     | Opens uninstall prompt                      |
 | **Long Press Dock App**     | Remove or rename app                        |
 | **Type in Search Bar**      | Instant calculator                          |

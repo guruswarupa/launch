@@ -65,6 +65,7 @@ import com.guruswarupa.launch.TodoAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentActivity
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -104,6 +105,27 @@ class MainActivity : FragmentActivity() {
     private var cachedAppListVersion: String? = null
     private val handler = Handler(Looper.getMainLooper())
     private val backgroundExecutor = Executors.newFixedThreadPool(4) // Reusable thread pool
+    
+    /**
+     * Safely execute a task on the background executor.
+     * Returns true if the task was submitted, false if executor is shut down or activity is finishing.
+     */
+    private fun safeExecute(task: Runnable): Boolean {
+        if (isFinishing || isDestroyed) {
+            return false
+        }
+        try {
+            if (backgroundExecutor.isShutdown) {
+                Log.w("MainActivity", "Background executor is shut down, skipping task")
+                return false
+            }
+            backgroundExecutor.execute(task)
+            return true
+        } catch (e: RejectedExecutionException) {
+            Log.w("MainActivity", "Task rejected by executor", e)
+            return false
+        }
+    }
 
     private lateinit var wallpaperBackground: ImageView
     private var currentWallpaperBitmap: Bitmap? = null
@@ -112,8 +134,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var appDockManager: AppDockManager
     private lateinit var usageStatsManager: AppUsageStatsManager
     private var contactsList: MutableList<String> = mutableListOf()
-    private var lastSearchTapTime = 0L
-    private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
     private var lastUpdateDate: String = ""
     // Cache SimpleDateFormat instances to avoid repeated creation
@@ -148,8 +168,14 @@ class MainActivity : FragmentActivity() {
     lateinit var favoriteAppManager: FavoriteAppManager
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
-    private lateinit var drawerLayout: DrawerLayout
+    internal lateinit var drawerLayout: DrawerLayout
+    private lateinit var featureTutorialManager: FeatureTutorialManager
     private lateinit var gestureDetector: GestureDetector
+    private var touchStartX = 0f
+    private var touchStartY = 0f
+    private var isSwipeFromLeftEdge = false
+    private var isBlockingBackGesture = false
+    private val backGestureBlockDuration = 800L // Block back gestures for 800ms after widget picker returns
 
     companion object {
         private const val CONTACTS_PERMISSION_REQUEST = 100
@@ -213,8 +239,8 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val mainContent = findViewById<FrameLayout>(R.id.main_content)
             mainContent?.let { view ->
-                // Convert 50dp to pixels
-                val exclusionWidthPx = (50 * resources.displayMetrics.density).toInt()
+                // Convert 100dp to pixels - increased to better prevent system gesture conflicts
+                val exclusionWidthPx = (100 * resources.displayMetrics.density).toInt()
                 val exclusionRects = listOf(
                     Rect(0, 0, exclusionWidthPx, view.height)
                 )
@@ -268,6 +294,9 @@ class MainActivity : FragmentActivity() {
         appCategoryManager = AppCategoryManager(packageManager)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
+        
+        // Initialize feature tutorial manager
+        featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -285,12 +314,7 @@ class MainActivity : FragmentActivity() {
         voiceSearchButton = findViewById(R.id.voice_search_button)
 
         searchBox.setOnClickListener {
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastSearchTapTime < DOUBLE_TAP_THRESHOLD) {
-                // Double tap detected
-                chooseWallpaper()
-            }
-            lastSearchTapTime = currentTime
+            // Single tap - focus search box
         }
 
         searchBox.setOnLongClickListener {
@@ -312,10 +336,6 @@ class MainActivity : FragmentActivity() {
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
-        // Set callback for location permission requests
-        weatherManager.onLocationPermissionNeeded = {
-            requestLocationPermissionForWeather()
-        }
 
         // Request necessary permissions
         requestContactsPermission()
@@ -449,7 +469,10 @@ class MainActivity : FragmentActivity() {
                     adapter = adapter,
                     searchBox = searchBox,
                     contactsList = contactsList,
-                    appMetadataCache = appMetadataCache
+                    appMetadataCache = appMetadataCache,
+                    isAppFiltered = { packageName -> 
+                        ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
+                    }
                 )
             }
         }, 150)
@@ -472,8 +495,61 @@ class MainActivity : FragmentActivity() {
         // Enable edge swipe for DrawerLayout (this is the default, but making it explicit)
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, GravityCompat.START)
         
-        // DrawerLayout already handles edge swipes automatically, but we can add additional
-        // gesture detection for more responsive swipes from the left corner
+        // Setup touch listener on main content to detect swipes from left edge
+        // This intercepts touch events early to prevent system gestures from taking over
+        val mainContent = findViewById<FrameLayout>(R.id.main_content)
+        val edgeThresholdPx = (100 * resources.displayMetrics.density).toInt()
+        val minSwipeDistancePx = (100 * resources.displayMetrics.density).toInt()
+        
+        mainContent.setOnTouchListener { view, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    touchStartX = event.x
+                    touchStartY = event.y
+                    // Check if touch started from left edge
+                    isSwipeFromLeftEdge = event.x < edgeThresholdPx
+                    // If touch is from left edge, consume the event to prevent system gestures
+                    // This prevents Samsung launcher switcher and other system gestures
+                    isSwipeFromLeftEdge
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (isSwipeFromLeftEdge) {
+                        val deltaX = event.x - touchStartX
+                        val deltaY = event.y - touchStartY
+                        // If moving rightward, continue consuming to prevent system gestures
+                        if (deltaX > 10 && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                            true // Consume to prevent system gestures
+                        } else {
+                            // Reset if not a valid swipe
+                            isSwipeFromLeftEdge = false
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (isSwipeFromLeftEdge) {
+                        val deltaX = event.x - touchStartX
+                        val deltaY = event.y - touchStartY
+                        // Check if it's a valid rightward swipe
+                        if (deltaX > minSwipeDistancePx && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                            // Open drawer if not already open
+                            if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                                drawerLayout.openDrawer(GravityCompat.START)
+                            }
+                        }
+                        isSwipeFromLeftEdge = false
+                        true // Consume to prevent system gesture from triggering
+                    } else {
+                        false
+                    }
+                }
+                else -> false
+            }
+        }
+        
+        // Keep gesture detector for backward compatibility and additional gesture handling
         gestureDetector = GestureDetector(this, object : SimpleOnGestureListener() {
             override fun onFling(
                 e1: MotionEvent?,
@@ -485,7 +561,7 @@ class MainActivity : FragmentActivity() {
                     val deltaX = e2.x - e1.x
                     val deltaY = e2.y - e1.y
                     // Check if swipe is from left edge (start x < 100px) and rightward
-                    if (e1.x < 100 && deltaX > 200 && Math.abs(deltaY) < Math.abs(deltaX) * 0.8) {
+                    if (e1.x < edgeThresholdPx && deltaX > minSwipeDistancePx && Math.abs(deltaY) < Math.abs(deltaX) * 0.8) {
                         if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
                             drawerLayout.openDrawer(GravityCompat.START)
                         }
@@ -495,15 +571,6 @@ class MainActivity : FragmentActivity() {
                 return false
             }
         })
-        
-        // Setup touch listener on main content to detect swipes from left edge
-        // This works alongside DrawerLayout's built-in edge swipe detection
-        val mainContent = findViewById<FrameLayout>(R.id.main_content)
-        mainContent.setOnTouchListener { _, event ->
-            // Process gesture but don't consume event - let DrawerLayout handle it too
-            gestureDetector.onTouchEvent(event)
-            false
-        }
         
         // Setup gesture exclusion to allow drawer to open with system navigation gestures enabled
         setupGestureExclusion()
@@ -590,7 +657,10 @@ class MainActivity : FragmentActivity() {
                         fullAppList,
                         adapter,
                         searchBox,
-                        contactsList
+                        contactsList,
+                        isAppFiltered = { packageName -> 
+                            appDockManager.isAppHiddenInFocusMode(packageName)
+                        }
                     )
                 }
             } catch (e: Exception) {
@@ -631,7 +701,10 @@ class MainActivity : FragmentActivity() {
                                 fullAppList = fullAppList,
                                 adapter = adapter,
                                 searchBox = searchBox,
-                                contactsList = contactsList
+                                contactsList = contactsList,
+                                isAppFiltered = { packageName -> 
+                                    appDockManager.isAppHiddenInFocusMode(packageName)
+                                }
                             )
                         }
                     }
@@ -639,6 +712,14 @@ class MainActivity : FragmentActivity() {
                     // Always refresh apps to ensure latest data
                     loadApps()
                     updateFinanceDisplay() // Refresh finance display after reset
+                    
+                    // Refresh wallpaper in case it was changed from settings
+                    if (::wallpaperBackground.isInitialized) {
+                        // Clear cached bitmap to force reload from system
+                        currentWallpaperBitmap?.recycle()
+                        currentWallpaperBitmap = null
+                        setWallpaperBackground(forceReload = true)
+                    }
                 }
             }
         }
@@ -748,12 +829,23 @@ class MainActivity : FragmentActivity() {
         }
         // Handle widget picking
         if (requestCode == REQUEST_PICK_WIDGET && resultCode == RESULT_OK) {
+            // Temporarily block back gestures to prevent system back gesture from exiting launcher
+            blockBackGesturesTemporarily()
             widgetManager.handleWidgetPicked(this, data, REQUEST_PICK_WIDGET)
         }
         // Handle widget configuration
         if (requestCode == REQUEST_CONFIGURE_WIDGET && resultCode == RESULT_OK) {
+            // Temporarily block back gestures to prevent system back gesture from exiting launcher
+            blockBackGesturesTemporarily()
             val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
             widgetManager.handleWidgetConfigured(this, appWidgetId)
+        }
+        // Handle wallpaper change - clear cache and reload when wallpaper picker returns
+        if (requestCode == WALLPAPER_REQUEST_CODE) {
+            // Clear cached bitmap to force reload of new wallpaper
+            currentWallpaperBitmap?.recycle()
+            currentWallpaperBitmap = null
+            setWallpaperBackground()
         }
     }
 
@@ -949,9 +1041,9 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun setWallpaperBackground() {
-        // Check if we have a cached wallpaper bitmap - use it instantly
-        if (currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
+    private fun setWallpaperBackground(forceReload: Boolean = false) {
+        // Check if we have a cached wallpaper bitmap - use it instantly (unless force reload)
+        if (!forceReload && currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
             wallpaperBackground.setImageBitmap(currentWallpaperBitmap)
             findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(currentWallpaperBitmap)
             return
@@ -1108,7 +1200,10 @@ class MainActivity : FragmentActivity() {
     private val wallpaperChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_WALLPAPER_CHANGED) {
-                setWallpaperBackground()
+                // Clear cached bitmap to force reload from system
+                currentWallpaperBitmap?.recycle()
+                currentWallpaperBitmap = null
+                setWallpaperBackground(forceReload = true)
             }
         }
     }
@@ -1381,6 +1476,19 @@ class MainActivity : FragmentActivity() {
         if (::notificationsWidget.isInitialized) {
             notificationsWidget.updateNotifications()
         }
+        
+        // Refresh wallpaper when returning from Settings (in case it was changed)
+        if (::wallpaperBackground.isInitialized) {
+            // Clear cached bitmap to force reload from system
+            currentWallpaperBitmap?.recycle()
+            currentWallpaperBitmap = null
+            setWallpaperBackground(forceReload = true)
+        }
+        
+        // Update gesture exclusion when activity resumes (unless we're temporarily blocking back gestures)
+        if (!isBlockingBackGesture) {
+            updateGestureExclusion()
+        }
 
         // PRIORITY 1: Show UI immediately - register receivers and update visible elements first
         val filter = IntentFilter().apply {
@@ -1459,6 +1567,16 @@ class MainActivity : FragmentActivity() {
                 rescheduleTodoAlarms()
             }
         }, 50) // Small delay to let UI render first
+
+        // Check and show feature tutorial if needed (after UI is fully loaded)
+        val shouldStartTutorial = intent.getBooleanExtra("start_tutorial", false)
+        handler.postDelayed({
+            if (::featureTutorialManager.isInitialized) {
+                if (shouldStartTutorial || featureTutorialManager.shouldShowTutorial()) {
+                    featureTutorialManager.startTutorial()
+                }
+            }
+        }, 1000) // Wait 1 second for all views to be ready
 
         // Weather is now only updated when user taps on weather widget
     }
@@ -1600,14 +1718,17 @@ class MainActivity : FragmentActivity() {
                                             adapter,
                                             searchBox,
                                             contactsList,
-                                            appMetadataCache
+                                            appMetadataCache,
+                                            isAppFiltered = { packageName -> 
+                                                appDockManager.isAppHiddenInFocusMode(packageName)
+                                            }
                                         )
                                     }
                                 }
                             }
                             
                             // Verify version in background (non-blocking) - refresh if changed
-                            backgroundExecutor.execute {
+                            safeExecute {
                                 val currentVersion = getAppListVersion() // Expensive call, but in background
                                 val cachedVersion = try {
                                     if (appListVersionFile.exists()) {
@@ -1689,7 +1810,7 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        backgroundExecutor.execute {
+        safeExecute {
             try {
                 // Use cached list if available and not forcing refresh
                 val unsortedList = if (!forceRefresh && 
@@ -1724,11 +1845,13 @@ class MainActivity : FragmentActivity() {
                     // Ensure appDockManager is initialized before using it
                     if (!::appDockManager.isInitialized) {
                         Log.e("MainActivity", "appDockManager not initialized in loadApps background thread")
-                        runOnUiThread {
-                            // Retry loading apps after a short delay
-                            handler.postDelayed({ loadApps(forceRefresh) }, 200)
+                        handler.post {
+                            if (!isFinishing && !isDestroyed) {
+                                // Retry loading apps after a short delay
+                                handler.postDelayed({ loadApps(forceRefresh) }, 200)
+                            }
                         }
-                        return@execute
+                        return@safeExecute
                     }
                     
                     val focusMode = appDockManager.getCurrentMode()
@@ -1806,7 +1929,10 @@ class MainActivity : FragmentActivity() {
                                 fullAppList,
                                 adapter,
                                 searchBox,
-                                contactsList
+                                contactsList,
+                                isAppFiltered = { packageName -> 
+                                    appDockManager.isAppHiddenInFocusMode(packageName)
+                                }
                             )
                         }
                     }, 50) // Small delay to let UI render first
@@ -1814,7 +1940,7 @@ class MainActivity : FragmentActivity() {
                     // STEP 3: Load labels, usage stats, and sort in background (after UI is shown)
                     // Use cached metadata if available, otherwise load on-demand
                     handler.postDelayed({
-                        backgroundExecutor.execute {
+                        safeExecute {
                             try {
                                 // Use pre-loaded usage stats cache (already loaded in onCreate)
                                 // Reload if cache is empty
@@ -1888,7 +2014,10 @@ class MainActivity : FragmentActivity() {
                                                 adapter,
                                                 searchBox,
                                                 contactsList,
-                                                appMetadataCache
+                                                appMetadataCache,
+                                                isAppFiltered = { packageName -> 
+                                                    appDockManager.isAppHiddenInFocusMode(packageName)
+                                                }
                                             )
                                         }
                                     }, 50)
@@ -1922,8 +2051,9 @@ class MainActivity : FragmentActivity() {
 
         // Set visibility of search bar and voice search button based on focus mode
         // Only modify if activity is not finishing
-        if (!isFinishing && !isDestroyed && ::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
-            if (appDockManager.getCurrentMode()) {
+        if (!isFinishing && !isDestroyed && ::searchBox.isInitialized && ::voiceSearchButton.isInitialized && ::appDockManager.isInitialized) {
+            val currentFocusMode = appDockManager.getCurrentMode()
+            if (currentFocusMode) {
                 searchBox.visibility = android.view.View.GONE
                 voiceSearchButton.visibility = android.view.View.GONE
             } else {
@@ -2235,11 +2365,6 @@ class MainActivity : FragmentActivity() {
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
                 LOCATION_PERMISSION_REQUEST
             )
-        } else {
-            // Permission already granted, force refresh to get location
-            if (::weatherManager.isInitialized && ::weatherIcon.isInitialized && ::weatherText.isInitialized) {
-                weatherManager.updateWeather(weatherIcon, weatherText, forceRefreshLocation = true)
-            }
         }
     }
 
@@ -2310,12 +2435,8 @@ class MainActivity : FragmentActivity() {
                 }
             }
             LOCATION_PERMISSION_REQUEST -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Location permission granted, force refresh to get new location and store it
-                    if (::weatherManager.isInitialized && ::weatherIcon.isInitialized && ::weatherText.isInitialized) {
-                        weatherManager.updateWeather(weatherIcon, weatherText, forceRefreshLocation = true)
-                    }
-                }
+                // Location permission no longer used for weather
+                // This case can be removed in future cleanup
             }
             NOTIFICATION_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -2373,7 +2494,7 @@ class MainActivity : FragmentActivity() {
         }
         
         // Run filtering/sorting in background thread
-        backgroundExecutor.execute {
+        safeExecute {
             try {
                 val filteredOrSortedApps: MutableList<ResolveInfo>
                 
@@ -2436,8 +2557,9 @@ class MainActivity : FragmentActivity() {
                     appList.clear()
                     appList.addAll(sortedFinalList)
 
-                    if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized) {
-                        if (isFocusMode) {
+                    if (::searchBox.isInitialized && ::voiceSearchButton.isInitialized && ::appDockManager.isInitialized) {
+                        val currentFocusMode = appDockManager.getCurrentMode()
+                        if (currentFocusMode) {
                             searchBox.visibility = android.view.View.GONE
                             voiceSearchButton.visibility = android.view.View.GONE
                         } else {
@@ -2458,7 +2580,10 @@ class MainActivity : FragmentActivity() {
                             fullAppList,
                             adapter,
                             searchBox,
-                            contactsList
+                            contactsList,
+                            isAppFiltered = { packageName -> 
+                                appDockManager.isAppHiddenInFocusMode(packageName)
+                            }
                         )
                     }
                 }
@@ -2588,11 +2713,10 @@ class MainActivity : FragmentActivity() {
         val weatherIcon = findViewById<ImageView>(R.id.weather_icon)
         val weatherText = findViewById<TextView>(R.id.weather_text)
 
-        // Set initial placeholder - weather only loads when user taps
-        weatherText.text = "Tap to load weather"
-        weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+        // Try to load cached weather first, otherwise show placeholder
+        updateWeather()
         
-        // Add click listeners to load weather only when tapped
+        // Add click listeners to refresh weather when tapped
         val weatherClickListener = View.OnClickListener {
             updateWeather()
         }
@@ -3403,11 +3527,53 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onBackPressed() {
+        // Block back gesture if we're temporarily blocking it (e.g., after widget picker returns)
+        if (isBlockingBackGesture) {
+            return
+        }
+        
         // Close drawer if it's open, otherwise handle back button normally
         if (::drawerLayout.isInitialized && drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
         } else {
             super.onBackPressed()
+        }
+    }
+    
+    /**
+     * Temporarily blocks back gestures to prevent system back gesture from exiting launcher
+     * when returning from widget picker or configuration activities.
+     */
+    private fun blockBackGesturesTemporarily() {
+        isBlockingBackGesture = true
+        // Also update gesture exclusion to cover entire screen temporarily
+        updateGestureExclusionForWidgetOpening()
+        
+        // Reset the flag after the blocking duration
+        handler.postDelayed({
+            isBlockingBackGesture = false
+            // Restore normal gesture exclusion
+            updateGestureExclusion()
+        }, backGestureBlockDuration)
+    }
+    
+    /**
+     * Updates gesture exclusion to cover the entire screen when widgets are being opened.
+     * This prevents system back gestures from interfering.
+     */
+    private fun updateGestureExclusionForWidgetOpening() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val mainContent = findViewById<FrameLayout>(R.id.main_content)
+            mainContent?.let { view ->
+                // Post to ensure view is laid out before setting exclusion rects
+                view.post {
+                    // Exclude entire screen to prevent all system gestures
+                    val exclusionRects = listOf(
+                        Rect(0, 0, view.width, view.height)
+                    )
+                    ViewCompat.setSystemGestureExclusionRects(view, exclusionRects)
+                }
+            }
         }
     }
 }

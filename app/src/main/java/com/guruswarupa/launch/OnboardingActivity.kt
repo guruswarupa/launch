@@ -70,6 +70,7 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var gridStyleButton: Button
     private lateinit var listStyleButton: Button
     private lateinit var weatherApiKeyInput: EditText
+    private lateinit var weatherLocationInput: EditText
     private lateinit var favoritesRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var favoritesAdapter: FavoritesOnboardingAdapter
     private var selectedFavorites = mutableSetOf<String>()
@@ -122,7 +123,7 @@ class OnboardingActivity : ComponentActivity() {
             add(PermissionInfo(
                 Manifest.permission.READ_MEDIA_IMAGES,
                 "Photos & Media Permission",
-                "We need access to your photos so you can set custom wallpapers for your home screen. You can double-tap the search bar anytime to change your wallpaper.",
+                "We need access to your photos so you can set custom wallpapers for your home screen. You can change your wallpaper from Settings.",
                 103
             ))
         } else {
@@ -147,7 +148,7 @@ class OnboardingActivity : ComponentActivity() {
             add(PermissionInfo(
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 "Storage Permission",
-                "We need access to your storage to load custom wallpapers for your home screen. You can double-tap the search bar anytime to change your wallpaper.",
+                "We need access to your storage to load custom wallpapers for your home screen. You can change your wallpaper from Settings.",
                 103
             ))
         }
@@ -155,6 +156,17 @@ class OnboardingActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Check if onboarding is already complete
+        if (!prefs.getBoolean("isFirstTime", true)) {
+            // Onboarding already completed, redirect to MainActivity
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            })
+            finish()
+            return
+        }
+        
         setContentView(R.layout.activity_onboarding)
         
         // Make status bar and navigation bar transparent
@@ -259,6 +271,7 @@ class OnboardingActivity : ComponentActivity() {
         gridStyleButton = findViewById(R.id.grid_style_button)
         listStyleButton = findViewById(R.id.list_style_button)
         weatherApiKeyInput = findViewById(R.id.weather_api_key_input)
+        weatherLocationInput = findViewById(R.id.weather_location_input)
 
         step1Indicator = findViewById(R.id.step1_indicator)
         step2Indicator = findViewById(R.id.step2_indicator)
@@ -364,6 +377,11 @@ class OnboardingActivity : ComponentActivity() {
                 val existingKey = prefs.getString("weather_api_key", "") ?: ""
                 if (existingKey.isNotEmpty()) {
                     weatherApiKeyInput.setText(existingKey)
+                }
+                // Load existing location if any
+                val existingLocation = prefs.getString("weather_stored_city_name", "") ?: ""
+                if (existingLocation.isNotEmpty()) {
+                    weatherLocationInput.setText(existingLocation)
                 }
             }
             OnboardingStep.COMPLETE -> {
@@ -532,6 +550,9 @@ class OnboardingActivity : ComponentActivity() {
                 if (apiKey.isNotEmpty()) {
                     prefs.edit().putBoolean("weather_api_key_rejected", false).apply()
                 }
+                // Save weather location (can be empty if user skips)
+                val location = weatherLocationInput.text.toString().trim()
+                prefs.edit().putString("weather_stored_city_name", location).apply()
                 showStep(OnboardingStep.COMPLETE)
             }
             OnboardingStep.COMPLETE -> finishSetup()

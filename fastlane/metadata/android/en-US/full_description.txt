@@ -25,7 +25,6 @@ Launch is a clean, efficient, and minimalist Android launcher designed to maximi
 - Date widget → Calendar  
 - Search bar:  
   • Long press → Google search in browser  
-  • Double tap → Change wallpaper  
 - Weather widget with live data and API key support
 
 ---
@@ -68,6 +67,7 @@ Launch is a clean, efficient, and minimalist Android launcher designed to maximi
 ⚙️ Settings
 - Backup and restore all data
 - Toggle grid/list layout
+- Change wallpaper
 - Change weather API key
 - Manage app locks
 

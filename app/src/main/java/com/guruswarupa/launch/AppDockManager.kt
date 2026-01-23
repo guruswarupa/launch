@@ -128,7 +128,7 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(24, 24, 24, 24)
+                    setPadding(12, 12, 12, 12)
                 }
                 setOnClickListener { showApkShareDialog() }
                 setOnLongClickListener {
@@ -211,7 +211,7 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(24,24,24,24)
+                    setPadding(12,12,12,12)
                 }
                 setOnClickListener { toggleFocusMode() }
                 setOnLongClickListener {
@@ -268,7 +268,7 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(24, 24, 24, 24)
+                    setPadding(12, 12, 12, 12)
                     marginStart = 8
                 }
                 setOnClickListener { toggleWorkspace() }
@@ -373,7 +373,7 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(24, 24, 24, 24)
+                    setPadding(12, 12, 12, 12)
                 }
                 setOnClickListener { togglePowerSaverMode() }
                 setOnLongClickListener {
@@ -403,7 +403,7 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(24, 24, 24, 24)
+                    setPadding(12, 12, 12, 12)
                     marginStart = 8
                 }
                 setOnClickListener {
@@ -429,7 +429,7 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(24, 24, 24, 24)
+                    setPadding(12, 12, 12, 12)
                     marginStart = 8
                 }
                 setOnClickListener { toggleFavoriteMode() }
@@ -509,7 +509,7 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(24, 24, 24, 24)
+                    setPadding(12, 12, 12, 12)
                 }
                 setOnClickListener { restartLauncher() }
                 setOnLongClickListener {
