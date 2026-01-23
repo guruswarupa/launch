@@ -170,7 +170,8 @@ class MainActivity : FragmentActivity() {
     lateinit var favoriteAppManager: FavoriteAppManager
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
-    private lateinit var drawerLayout: DrawerLayout
+    internal lateinit var drawerLayout: DrawerLayout
+    private lateinit var featureTutorialManager: FeatureTutorialManager
     private lateinit var gestureDetector: GestureDetector
     private var touchStartX = 0f
     private var touchStartY = 0f
@@ -295,6 +296,9 @@ class MainActivity : FragmentActivity() {
         appCategoryManager = AppCategoryManager(packageManager)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
+        
+        // Initialize feature tutorial manager
+        featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
 
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1554,6 +1558,16 @@ class MainActivity : FragmentActivity() {
                 rescheduleTodoAlarms()
             }
         }, 50) // Small delay to let UI render first
+
+        // Check and show feature tutorial if needed (after UI is fully loaded)
+        val shouldStartTutorial = intent.getBooleanExtra("start_tutorial", false)
+        handler.postDelayed({
+            if (::featureTutorialManager.isInitialized) {
+                if (shouldStartTutorial || featureTutorialManager.shouldShowTutorial()) {
+                    featureTutorialManager.startTutorial()
+                }
+            }
+        }, 1000) // Wait 1 second for all views to be ready
 
         // Weather is now only updated when user taps on weather widget
     }
