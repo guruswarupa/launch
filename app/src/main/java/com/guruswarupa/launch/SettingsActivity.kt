@@ -73,6 +73,7 @@ class SettingsActivity : ComponentActivity() {
         val restartLauncherButton = findViewById<Button>(R.id.restart_launcher_button)
         val clearCacheButton = findViewById<Button>(R.id.clear_cache_button)
         val clearDataButton = findViewById<Button>(R.id.clear_data_button)
+        val changeWallpaperButton = findViewById<Button>(R.id.change_wallpaper_button)
 
         // Setup currency spinner
         setupCurrencySpinner(currencySpinner)
@@ -117,6 +118,10 @@ class SettingsActivity : ComponentActivity() {
         
         clearDataButton.setOnClickListener {
             clearData()
+        }
+        
+        changeWallpaperButton.setOnClickListener {
+            chooseWallpaper()
         }
         
         // Setup expandable sections
@@ -165,6 +170,12 @@ class SettingsActivity : ComponentActivity() {
         val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
         val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
         setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
+        
+        // Wallpaper Section
+        val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
+        val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
+        val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
+        setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
         
         // Tutorial Section
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
@@ -323,7 +334,17 @@ class SettingsActivity : ComponentActivity() {
                         importSettingsFromFile(uri)
                     }
                 }
+                WALLPAPER_REQUEST_CODE -> {
+                    // Wallpaper changed - send broadcast to refresh MainActivity
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                    Toast.makeText(this, "Wallpaper changed", Toast.LENGTH_SHORT).show()
+                }
             }
+        } else if (requestCode == WALLPAPER_REQUEST_CODE) {
+            // User may have cancelled, but we still send the broadcast in case they changed it
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            sendBroadcast(intent)
         }
     }
 
@@ -1072,6 +1093,12 @@ class SettingsActivity : ComponentActivity() {
     
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1000
+        private const val WALLPAPER_REQUEST_CODE = 456
+    }
+    
+    private fun chooseWallpaper() {
+        val intent = Intent(Intent.ACTION_SET_WALLPAPER)
+        startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
     }
     
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {

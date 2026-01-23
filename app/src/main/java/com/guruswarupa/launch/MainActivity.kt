@@ -134,8 +134,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var appDockManager: AppDockManager
     private lateinit var usageStatsManager: AppUsageStatsManager
     private var contactsList: MutableList<String> = mutableListOf()
-    private var lastSearchTapTime = 0L
-    private val DOUBLE_TAP_THRESHOLD = 300
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView // Add this line
     private var lastUpdateDate: String = ""
     // Cache SimpleDateFormat instances to avoid repeated creation
@@ -316,12 +314,7 @@ class MainActivity : FragmentActivity() {
         voiceSearchButton = findViewById(R.id.voice_search_button)
 
         searchBox.setOnClickListener {
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastSearchTapTime < DOUBLE_TAP_THRESHOLD) {
-                // Double tap detected
-                chooseWallpaper()
-            }
-            lastSearchTapTime = currentTime
+            // Single tap - focus search box
         }
 
         searchBox.setOnLongClickListener {
@@ -719,6 +712,14 @@ class MainActivity : FragmentActivity() {
                     // Always refresh apps to ensure latest data
                     loadApps()
                     updateFinanceDisplay() // Refresh finance display after reset
+                    
+                    // Refresh wallpaper in case it was changed from settings
+                    if (::wallpaperBackground.isInitialized) {
+                        // Clear cached bitmap to force reload from system
+                        currentWallpaperBitmap?.recycle()
+                        currentWallpaperBitmap = null
+                        setWallpaperBackground(forceReload = true)
+                    }
                 }
             }
         }
@@ -1040,9 +1041,9 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun setWallpaperBackground() {
-        // Check if we have a cached wallpaper bitmap - use it instantly
-        if (currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
+    private fun setWallpaperBackground(forceReload: Boolean = false) {
+        // Check if we have a cached wallpaper bitmap - use it instantly (unless force reload)
+        if (!forceReload && currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
             wallpaperBackground.setImageBitmap(currentWallpaperBitmap)
             findViewById<ImageView>(R.id.drawer_wallpaper_background)?.setImageBitmap(currentWallpaperBitmap)
             return
@@ -1199,10 +1200,10 @@ class MainActivity : FragmentActivity() {
     private val wallpaperChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_WALLPAPER_CHANGED) {
-                // Clear cached bitmap to force reload of new wallpaper
+                // Clear cached bitmap to force reload from system
                 currentWallpaperBitmap?.recycle()
                 currentWallpaperBitmap = null
-                setWallpaperBackground()
+                setWallpaperBackground(forceReload = true)
             }
         }
     }
@@ -1474,6 +1475,14 @@ class MainActivity : FragmentActivity() {
         // Update notifications widget when activity resumes
         if (::notificationsWidget.isInitialized) {
             notificationsWidget.updateNotifications()
+        }
+        
+        // Refresh wallpaper when returning from Settings (in case it was changed)
+        if (::wallpaperBackground.isInitialized) {
+            // Clear cached bitmap to force reload from system
+            currentWallpaperBitmap?.recycle()
+            currentWallpaperBitmap = null
+            setWallpaperBackground(forceReload = true)
         }
         
         // Update gesture exclusion when activity resumes (unless we're temporarily blocking back gestures)

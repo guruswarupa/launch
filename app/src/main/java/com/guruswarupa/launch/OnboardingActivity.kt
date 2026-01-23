@@ -123,7 +123,7 @@ class OnboardingActivity : ComponentActivity() {
             add(PermissionInfo(
                 Manifest.permission.READ_MEDIA_IMAGES,
                 "Photos & Media Permission",
-                "We need access to your photos so you can set custom wallpapers for your home screen. You can double-tap the search bar anytime to change your wallpaper.",
+                "We need access to your photos so you can set custom wallpapers for your home screen. You can change your wallpaper from Settings.",
                 103
             ))
         } else {
@@ -148,7 +148,7 @@ class OnboardingActivity : ComponentActivity() {
             add(PermissionInfo(
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 "Storage Permission",
-                "We need access to your storage to load custom wallpapers for your home screen. You can double-tap the search bar anytime to change your wallpaper.",
+                "We need access to your storage to load custom wallpapers for your home screen. You can change your wallpaper from Settings.",
                 103
             ))
         }
