@@ -28,6 +28,29 @@ android {
             )
         }
     }
+    
+    // Enable code splitting and optimize APK size
+    splits {
+        abi {
+            isEnable = false // Disable ABI splits to keep single APK, but enable other optimizations
+        }
+    }
+    
+    // Enable additional optimizations
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/*.kotlin_module",
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1"
+            )
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -37,17 +60,6 @@ android {
     }
     buildFeatures {
         compose = true
-    }
-    packaging {
-        resources {
-            excludes += setOf(
-                "META-INF/DEPENDENCIES",
-                "META-INF/LICENSE",
-                "META-INF/LICENSE.txt",
-                "META-INF/NOTICE",
-                "META-INF/NOTICE.txt"
-            )
-        }
     }
 }
 
@@ -65,7 +77,7 @@ dependencies {
     implementation(libs.cardview)
     implementation(libs.material)
     implementation(libs.exp4j)
-    implementation(libs.androidx.room.ktx)
+    // Removed unused dependencies: room-ktx, joda-time, google-http-client, findbugs-jsr305
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -74,9 +86,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.biometric)
-    implementation(libs.findbugs.jsr305)
-    implementation(libs.joda.time)
-    implementation(libs.google.http.client)
-    implementation(libs.google.http.client.android)
 
 }
