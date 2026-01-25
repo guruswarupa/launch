@@ -88,7 +88,7 @@
         <activity
             android:name=".SettingsActivity"
             android:exported="true"
-            android:theme="@style/Theme.Launch"
+            android:theme="@style/Theme.Launch.Settings"
             android:label="@string/settings_app_name"
             android:excludeFromRecents="true" />
 

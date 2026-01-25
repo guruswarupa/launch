@@ -11,4 +11,16 @@
         <!-- Don't use primary colors for system bars -->
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
+    
+    <style name="Theme.Launch.Settings" parent="Theme.Launch">
+        <!-- Use dark background to match settings screen overlay -->
+        <item name="android:windowBackground">@android:color/black</item>
+        <!-- Make status bar and navigation bar transparent from the start -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Enable edge-to-edge display -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
 </resources>

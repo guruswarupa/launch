@@ -32,9 +32,17 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Make status bar and navigation bar transparent before setContentView
+        // This prevents the blue flash on activity start
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        }
+        
         setContentView(R.layout.activity_settings)
         
-        // Make status bar and navigation bar transparent
+        // Ensure system bars are fully configured after view is created
         window.decorView.post {
             makeSystemBarsTransparent()
         }
