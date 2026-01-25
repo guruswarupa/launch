@@ -17,7 +17,7 @@ class AppSearchManager(
     private val adapter: AppAdapter,
     private val searchBox: EditText,
     private val contactsList: List<String>,
-    private val appMetadataCache: Map<String, MainActivity.AppMetadata>? = null,
+    private val appMetadataCache: Map<String, AppMetadata>? = null,
     private val isAppFiltered: ((String) -> Boolean)? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())

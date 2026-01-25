@@ -349,4 +349,46 @@ class WeatherManager(private val context: Context) {
         weatherIcon.setOnClickListener(refreshClickListener)
         weatherText.setOnClickListener(refreshClickListener)
     }
+    
+    /**
+     * Shows weather API settings dialog.
+     * Extracted from MainActivity.
+     */
+    fun showWeatherSettings(
+        weatherIcon: ImageView? = null,
+        weatherText: TextView? = null,
+        onApiKeyUpdated: (() -> Unit)? = null
+    ) {
+        handler.post {
+            val currentApiKey = getApiKey() ?: ""
+            
+            val builder = AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            val input = EditText(context)
+            input.setText(currentApiKey)
+            input.hint = "Enter your OpenWeatherMap API key"
+            
+            builder.setTitle("Weather API Settings")
+                .setMessage("Update your OpenWeatherMap API key.\n\nGet one free at: openweathermap.org/api")
+                .setView(input)
+                .setPositiveButton("Save") { _, _ ->
+                    val apiKey = input.text.toString().trim()
+                    if (apiKey.isNotEmpty()) {
+                        saveApiKey(apiKey)
+                        setUserRejectedApiKey(false)
+                        android.widget.Toast.makeText(context, "API key saved", android.widget.Toast.LENGTH_SHORT).show()
+                        // Refresh weather if views are provided
+                        if (weatherIcon != null && weatherText != null) {
+                            updateWeather(weatherIcon, weatherText)
+                        }
+                        onApiKeyUpdated?.invoke()
+                    } else {
+                        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+                        prefs.edit().remove("weather_api_key").apply()
+                        android.widget.Toast.makeText(context, "API key removed", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
 }
