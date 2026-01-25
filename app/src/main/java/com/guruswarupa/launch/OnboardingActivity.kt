@@ -126,6 +126,12 @@ class OnboardingActivity : ComponentActivity() {
                 "We need access to your photos so you can set custom wallpapers for your home screen. You can change your wallpaper from Settings.",
                 103
             ))
+            add(PermissionInfo(
+                Manifest.permission.POST_NOTIFICATIONS,
+                "Notifications Permission",
+                "This permission allows the launcher to show notifications in the notifications widget. You'll be able to see and interact with your notifications directly from the home screen.",
+                104
+            ))
         } else {
             add(PermissionInfo(
                 Manifest.permission.READ_CONTACTS,
@@ -681,6 +687,9 @@ class OnboardingActivity : ComponentActivity() {
             }
             Manifest.permission.CALL_PHONE -> {
                 prefs.edit().putBoolean("call_phone_permission_denied", true).apply()
+            }
+            Manifest.permission.POST_NOTIFICATIONS -> {
+                prefs.edit().putBoolean("notification_permission_denied", true).apply()
             }
         }
     }
