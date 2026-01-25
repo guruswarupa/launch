@@ -50,6 +50,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var todoRecyclerView: RecyclerView
     private lateinit var addTodoButton: ImageButton
     private lateinit var voiceSearchButton: ImageButton
+    private lateinit var topWidgetContainer: LinearLayout
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
 
     // Core managers
@@ -157,6 +158,7 @@ class MainActivity : FragmentActivity() {
         weatherText = findViewById(R.id.weather_text)
         timeTextView = findViewById(R.id.time_widget)
         dateTextView = findViewById(R.id.date_widget)
+        topWidgetContainer = findViewById(R.id.top_widget_container)
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
@@ -167,6 +169,31 @@ class MainActivity : FragmentActivity() {
             wallpaperBackground, weeklyUsageGraph, weatherIcon, weatherText,
             timeTextView, dateTextView
         )
+        
+        // Setup search box listener to show/hide top widget
+        setupSearchBoxListener()
+    }
+    
+    /**
+     * Sets up the search box listener to show/hide the top widget based on search text.
+     */
+    private fun setupSearchBoxListener() {
+        searchBox.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s?.toString()?.trim() ?: ""
+                if (query.isEmpty()) {
+                    // Show top widget when search is empty
+                    topWidgetContainer.visibility = View.VISIBLE
+                } else {
+                    // Hide top widget when searching
+                    topWidgetContainer.visibility = View.GONE
+                }
+            }
+            
+            override fun afterTextChanged(s: android.text.Editable?) {}
+        })
     }
     
     /**
