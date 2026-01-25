@@ -32,9 +32,17 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Make status bar and navigation bar transparent before setContentView
+        // This prevents the blue flash on activity start
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        }
+        
         setContentView(R.layout.activity_settings)
         
-        // Make status bar and navigation bar transparent
+        // Ensure system bars are fully configured after view is created
         window.decorView.post {
             makeSystemBarsTransparent()
         }
@@ -663,14 +671,16 @@ class SettingsActivity : ComponentActivity() {
             ))
         }
         
-        // Check Location permission - always show
-        val locationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            "Location",
-            "Get your location for weather information",
-            locationGranted
-        ))
+        // Check Notification permission - always show (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val notificationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            allPermissions.add(PermissionItem(
+                Manifest.permission.POST_NOTIFICATIONS,
+                "Notifications",
+                "Show notifications in the notifications widget",
+                notificationGranted
+            ))
+        }
         
         // Check Usage Stats permission - always show
         val usageStatsGranted = hasUsageStatsPermission()
@@ -1115,7 +1125,7 @@ class SettingsActivity : ComponentActivity() {
                     Manifest.permission.SEND_SMS -> "SMS"
                     Manifest.permission.READ_EXTERNAL_STORAGE -> "Storage"
                     Manifest.permission.READ_MEDIA_IMAGES -> "Storage (Images)"
-                    Manifest.permission.ACCESS_FINE_LOCATION -> "Location"
+                    Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
                     else -> null
                 }
                 

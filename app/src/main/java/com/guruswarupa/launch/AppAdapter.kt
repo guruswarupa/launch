@@ -65,22 +65,25 @@ class AppAdapter(
     }
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
-        executor.execute {
-            val newItems = ArrayList(newAppList)
-            val isFirstLoad = itemsRendered == 0
+        // OPTIMIZATION: Update UI immediately on main thread for instant feedback
+        // Use executor only for heavy preloading work
+        val newItems = ArrayList(newAppList)
+        val isFirstLoad = itemsRendered == 0
 
-            // Update UI on main thread with DiffUtil for efficient updates
-            (context as? Activity)?.runOnUiThread {
-                val diffCallback = AppListDiffCallback(appList, newItems)
-                val diffResult = DiffUtil.calculateDiff(diffCallback)
-                
-                appList.clear()
-                appList.addAll(newItems)
-                diffResult.dispatchUpdatesTo(this)
-                
-                // Pre-load icons asynchronously after initial render (only on first load)
-                if (isFirstLoad && newItems.isNotEmpty()) {
-                    itemsRendered = newItems.size
+        // Update UI immediately on main thread (fast path)
+        (context as? Activity)?.runOnUiThread {
+            val diffCallback = AppListDiffCallback(appList, newItems)
+            val diffResult = DiffUtil.calculateDiff(diffCallback)
+            
+            appList.clear()
+            appList.addAll(newItems)
+            diffResult.dispatchUpdatesTo(this)
+            
+            // Pre-load icons asynchronously after initial render (only on first load)
+            if (isFirstLoad && newItems.isNotEmpty()) {
+                itemsRendered = newItems.size
+                // Defer icon preloading to avoid blocking UI
+                executor.execute {
                     preloadIcons(newItems)
                 }
             }
@@ -264,9 +267,9 @@ class AppAdapter(
         val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
         
         if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
-            // On first 20 items, defer usage stats to improve initial render speed
-            // After that, load immediately for better UX
-            if (position < 20 && itemsRendered < 20) {
+            // OPTIMIZATION: Always defer usage stats loading for first 30 items to improve initial render
+            // This prevents blocking the UI thread during initial load
+            if (position < 30 && itemsRendered < 30) {
                 holder.appUsageTime?.text = ""
                 holder.appUsageTime?.visibility = View.VISIBLE
                 // Load usage time asynchronously after initial render
@@ -538,15 +541,18 @@ class AppAdapter(
                     }
                 }
 
-                // Use cached icon first (fast path)
+                // OPTIMIZATION: Use cached icon first (fast path)
                 val cachedIcon = iconCache[packageName]
                 if (cachedIcon != null) {
                     holder.appIcon.setImageDrawable(cachedIcon)
                 } else {
-                    // Show placeholder immediately
+                    // Show placeholder immediately to prevent UI freeze
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
-                    // Load icon asynchronously in background
-                    iconPreloadExecutor.execute {
+                    // Load icon asynchronously in background with priority for visible items
+                    val isVisible = position < 50 // Prioritize first 50 items
+                    val executorToUse = if (isVisible) iconPreloadExecutor else executor
+                    
+                    executorToUse.execute {
                         try {
                             val icon = if (isValidApp) {
                                 appInfo.loadIcon(activity.packageManager)
