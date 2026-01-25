@@ -21,7 +21,6 @@ class PermissionManager(
         const val SMS_PERMISSION_REQUEST = 300
         const val VOICE_SEARCH_REQUEST = 500
         const val USAGE_STATS_REQUEST = 600
-        const val LOCATION_PERMISSION_REQUEST = 700
         const val NOTIFICATION_PERMISSION_REQUEST = 900
     }
     

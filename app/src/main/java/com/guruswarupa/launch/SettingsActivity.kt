@@ -671,14 +671,16 @@ class SettingsActivity : ComponentActivity() {
             ))
         }
         
-        // Check Location permission - always show
-        val locationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            "Location",
-            "Get your location for weather information",
-            locationGranted
-        ))
+        // Check Notification permission - always show (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val notificationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            allPermissions.add(PermissionItem(
+                Manifest.permission.POST_NOTIFICATIONS,
+                "Notifications",
+                "Show notifications in the notifications widget",
+                notificationGranted
+            ))
+        }
         
         // Check Usage Stats permission - always show
         val usageStatsGranted = hasUsageStatsPermission()
@@ -1123,7 +1125,7 @@ class SettingsActivity : ComponentActivity() {
                     Manifest.permission.SEND_SMS -> "SMS"
                     Manifest.permission.READ_EXTERNAL_STORAGE -> "Storage"
                     Manifest.permission.READ_MEDIA_IMAGES -> "Storage (Images)"
-                    Manifest.permission.ACCESS_FINE_LOCATION -> "Location"
+                    Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
                     else -> null
                 }
                 
