@@ -140,6 +140,28 @@ class LifecycleManager(
             it.refreshWorkspaceToggle()
         }
         
+        // Refresh app list when returning to MainActivity (in case hidden apps changed)
+        // This ensures unhidden apps appear immediately
+        handler.postDelayed({
+            if (!activity.isFinishing && !activity.isDestroyed && appDockManager != null) {
+                try {
+                    val mainActivity = activity as? MainActivity
+                    if (mainActivity != null) {
+                        // Force reload from package manager to ensure all apps are included
+                        // This is necessary because fullAppList might not have unhidden apps
+                        // Use try-catch to handle initialization safely
+                        try {
+                            mainActivity.loadApps(forceRefresh = false)
+                        } catch (e: UninitializedPropertyAccessException) {
+                            // Managers not initialized yet, skip refresh
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Not MainActivity or error, ignore
+                }
+            }
+        }, 300)
+        
         // Ensure app list is loaded - reload if empty (fixes issue where apps don't load)
         if (adapter != null && (appList?.isEmpty() == true || appDockManager == null)) {
             Log.d("LifecycleManager", "App list is empty in onResume, reloading...")
@@ -147,7 +169,7 @@ class LifecycleManager(
                 if (!activity.isFinishing && !activity.isDestroyed && appDockManager != null) {
                     onLoadApps?.invoke(false)
                 }
-            }, 100)
+            }, 150)
         }
         
         // Start widget managers (fast operations)

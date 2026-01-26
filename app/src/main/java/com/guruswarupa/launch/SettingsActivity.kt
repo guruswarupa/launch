@@ -28,6 +28,7 @@ class SettingsActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
     private val EXPORT_REQUEST_CODE = 1
     private val IMPORT_REQUEST_CODE = 2
+    private val HIDDEN_APPS_REQUEST_CODE = 3
     private var hasRequestedUsageStats = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,7 +111,7 @@ class SettingsActivity : ComponentActivity() {
         
         val hiddenAppsButton = findViewById<Button>(R.id.hidden_apps_button)
         hiddenAppsButton.setOnClickListener {
-            startActivity(Intent(this, HiddenAppsSettingsActivity::class.java))
+            startActivityForResult(Intent(this, HiddenAppsSettingsActivity::class.java), HIDDEN_APPS_REQUEST_CODE)
         }
         
         checkPermissionsButton.setOnClickListener {
@@ -341,17 +342,22 @@ class SettingsActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (resultCode == RESULT_OK && data != null) {
+        if (resultCode == RESULT_OK) {
             when (requestCode) {
                 EXPORT_REQUEST_CODE -> {
-                    data.data?.let { uri ->
+                    data?.data?.let { uri ->
                         exportSettingsToFile(uri)
                     }
                 }
                 IMPORT_REQUEST_CODE -> {
-                    data.data?.let { uri ->
+                    data?.data?.let { uri ->
                         importSettingsFromFile(uri)
                     }
+                }
+                HIDDEN_APPS_REQUEST_CODE -> {
+                    // Hidden apps changed - send broadcast to refresh MainActivity
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
                 }
                 WALLPAPER_REQUEST_CODE -> {
                     // Wallpaper changed - send broadcast to refresh MainActivity

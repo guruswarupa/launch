@@ -54,6 +54,14 @@ class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
     }
     
     /**
+     * Force refresh from SharedPreferences (invalidates cache)
+     * Call this when you know the data might have changed externally
+     */
+    fun forceRefresh() {
+        invalidateCache()
+    }
+    
+    /**
      * Get all hidden apps
      */
     fun getHiddenApps(): Set<String> {
