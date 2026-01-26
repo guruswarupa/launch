@@ -132,10 +132,16 @@ class FeatureTutorialManager(
             R.id.widgets_section,
             HighlightPosition.BOTTOM
         ),
-        TODO_WIDGET(
-            "Todo List Widget",
-            "Manage your daily tasks. Tap the + button to add tasks with due times and priorities.",
-            R.id.add_todo_button,
+        NOTIFICATIONS_WIDGET(
+            "Notifications Widget",
+            "View and manage notifications directly from your launcher. Swipe to dismiss.",
+            R.id.notifications_widget_container,
+            HighlightPosition.BOTTOM
+        ),
+        PHYSICAL_ACTIVITY_WIDGET(
+            "Physical Activity Widget",
+            "Track your daily steps and distance walked. View your activity history in calendar view. Grant activity permission to start tracking.",
+            R.id.physical_activity_widget_container,
             HighlightPosition.BOTTOM
         ),
         WORKOUT_WIDGET(
@@ -150,6 +156,12 @@ class FeatureTutorialManager(
             R.id.calculator_widget_container,
             HighlightPosition.BOTTOM
         ),
+        TODO_WIDGET(
+            "Todo List Widget",
+            "Manage your daily tasks. Tap the + button to add tasks with due times and priorities.",
+            R.id.add_todo_button,
+            HighlightPosition.BOTTOM
+        ),
         FINANCE_WIDGET(
             "Finance Tracker",
             "Track your income and expenses. Long press the balance to view transaction history.",
@@ -161,12 +173,6 @@ class FeatureTutorialManager(
             "View your weekly app usage. Tap on any day to see detailed usage for that day.",
             R.id.weekly_usage_graph,
             HighlightPosition.TOP
-        ),
-        NOTIFICATIONS_WIDGET(
-            "Notifications Widget",
-            "View and manage notifications directly from your launcher. Swipe to dismiss.",
-            R.id.notifications_widget_container,
-            HighlightPosition.BOTTOM
         )
     }
     
@@ -259,20 +265,12 @@ class FeatureTutorialManager(
             return
         }
         
-        // Check if view is already visible - skip scrolling for top elements like search bar
-        val isViewVisible = isViewVisibleOnScreen(targetView)
-        
-        if (!isViewVisible) {
-            // Scroll to view first, then show overlay
-            scrollToView(targetView)
-            // Wait a bit for scroll to complete, then show overlay
-            targetView.postDelayed({
-                showTutorialOverlay(step, targetView)
-            }, 400)
-        } else {
-            // View is already visible, show overlay immediately
+        // Always scroll to center the widget for better tutorial visibility
+        scrollToView(targetView)
+        // Wait for scroll animation to complete (smooth scroll takes ~300ms), then show overlay
+        targetView.postDelayed({
             showTutorialOverlay(step, targetView)
-        }
+        }, 500)
     }
     
     /**
@@ -324,9 +322,14 @@ class FeatureTutorialManager(
         
         parentView?.addView(tutorialOverlay)
         
-        // Make overlay clickable to intercept touches and prevent scrolling
-        tutorialOverlay?.isClickable = true
-        tutorialOverlay?.isFocusable = true
+        // Allow touch events to pass through to underlying views for scrolling
+        // Return false to allow events to propagate to children (buttons) and underlying views (scroll views)
+        tutorialOverlay?.setOnTouchListener { _, _ ->
+            // Return false to indicate we didn't consume the event
+            // This allows child views (buttons) to handle clicks
+            // and allows scroll gestures to pass through to underlying scroll views
+            false
+        }
         tutorialOverlay?.visibility = View.VISIBLE
         
         // Ensure overlay is on top
@@ -359,8 +362,7 @@ class FeatureTutorialManager(
             finishTutorial()
         }
         
-        // Disable scrolling while tutorial is active
-        disableScrolling()
+        // Don't disable scrolling - allow users to scroll while tutorial is active
         
         // Position the highlight and text based on target view
         // Use a post to ensure overlay is fully laid out
@@ -440,22 +442,43 @@ class FeatureTutorialManager(
                     val screenWidth = parentView.width
                     val screenHeight = parentView.height
                     val padding = 40
-                    val textContainerHeight = 250 // Approximate height of text container
+                    
+                    // Measure text container to get actual height
+                    textContainer.measure(
+                        View.MeasureSpec.makeMeasureSpec(screenWidth - padding * 2, View.MeasureSpec.AT_MOST),
+                        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                    )
+                    val textContainerHeight = textContainer.measuredHeight
+                    
+                    // Check if target view is very tall (long widget)
+                    val isLongWidget = targetHeight > screenHeight * 0.6
+                    
+                    // Determine if we should center the text container
+                    var shouldCenter = false
                     
                     when (step.position) {
                         HighlightPosition.TOP -> {
                             val topMargin = (targetY - textContainerHeight - padding).coerceAtLeast(padding)
-                            textParams.topMargin = topMargin
-                            textParams.leftMargin = padding
-                            textParams.rightMargin = padding
+                            // If target is too high or text would go off top, center instead
+                            if (targetY < padding * 2 || topMargin < padding) {
+                                shouldCenter = true
+                            } else {
+                                textParams.topMargin = topMargin
+                                textParams.leftMargin = padding
+                                textParams.rightMargin = padding
+                            }
                         }
                         HighlightPosition.BOTTOM -> {
                             val bottomMargin = targetY + targetHeight + padding
-                            // Ensure text doesn't go off screen
                             val maxBottom = screenHeight - textContainerHeight - padding
-                            textParams.topMargin = bottomMargin.coerceAtMost(maxBottom)
-                            textParams.leftMargin = padding
-                            textParams.rightMargin = padding
+                            // If widget is long or text would go off screen, center instead
+                            if (isLongWidget || bottomMargin > maxBottom || bottomMargin + textContainerHeight > screenHeight - padding) {
+                                shouldCenter = true
+                            } else {
+                                textParams.topMargin = bottomMargin.coerceAtMost(maxBottom)
+                                textParams.leftMargin = padding
+                                textParams.rightMargin = padding
+                            }
                         }
                         HighlightPosition.LEFT -> {
                             val textWidth = 350 // Approximate width of text container
@@ -469,30 +492,40 @@ class FeatureTutorialManager(
                             textParams.rightMargin = padding
                         }
                         HighlightPosition.CENTER -> {
-                            textParams.topMargin = (screenHeight / 2 - textContainerHeight / 2).coerceAtLeast(padding)
-                            textParams.leftMargin = padding
-                            textParams.rightMargin = padding
+                            shouldCenter = true
                         }
                     }
+                    
+                    // Center the text container if needed
+                    if (shouldCenter) {
+                        textParams.topMargin = ((screenHeight - textContainerHeight) / 2).coerceAtLeast(padding)
+                        textParams.leftMargin = padding
+                        textParams.rightMargin = padding
+                    }
+                    
                     textContainer.layoutParams = textParams
                     textContainer.visibility = View.VISIBLE
                     
-                    // Ensure text container is actually visible on screen
+                    // Final check: Ensure text container is actually visible on screen
                     textContainer.post {
                         val textLocation = IntArray(2)
                         textContainer.getLocationOnScreen(textLocation)
                         val textHeight = textContainer.height
                         val screenHeight = parentView.height
                         
-                        // If text container is off screen, reposition it
-                        if (textLocation[1] < 0 || textLocation[1] + textHeight > screenHeight) {
+                        // If text container is off screen or not fully visible, center it
+                        val isOffScreen = textLocation[1] < padding || textLocation[1] + textHeight > screenHeight - padding
+                        val isPartiallyVisible = textLocation[1] < 0 || textLocation[1] + textHeight > screenHeight
+                        
+                        if (isOffScreen || isPartiallyVisible) {
                             // Reposition to center
                             val fallbackParams = textContainer.layoutParams as? FrameLayout.LayoutParams
                                 ?: FrameLayout.LayoutParams(
                                     FrameLayout.LayoutParams.MATCH_PARENT,
                                     FrameLayout.LayoutParams.WRAP_CONTENT
                                 )
-                            fallbackParams.topMargin = (screenHeight / 2 - textHeight / 2).coerceAtLeast(padding)
+                            val actualTextHeight = if (textHeight > 0) textHeight else textContainerHeight
+                            fallbackParams.topMargin = ((screenHeight - actualTextHeight) / 2).coerceAtLeast(padding)
                             fallbackParams.leftMargin = padding
                             fallbackParams.rightMargin = padding
                             textContainer.layoutParams = fallbackParams
@@ -535,43 +568,64 @@ class FeatureTutorialManager(
                     val visibleTop = currentScrollY
                     val visibleBottom = currentScrollY + scrollView.height
                     
-                    // Calculate how much of the view is visible
-                    val visibleHeight = if (viewTopInContent < visibleBottom && viewBottomInContent > visibleTop) {
-                        minOf(viewBottomInContent, visibleBottom) - maxOf(viewTopInContent, visibleTop)
-                    } else {
-                        0
+                    // Always center the widget on screen for tutorial
+                    // Calculate desired scroll position to center the widget vertically
+                    val scrollViewHeight = scrollView.height
+                    val targetViewHeight = targetView.height
+                    
+                    // Calculate the center position: widget center should be at screen center
+                    // desiredScrollY = viewTopInContent - (screenHeight / 2) + (widgetHeight / 2)
+                    val desiredScrollY = (viewTopInContent - (scrollViewHeight / 2) + (targetViewHeight / 2)).coerceAtLeast(0)
+                    
+                    // Get max scroll position
+                    val maxScrollY = when (scrollView) {
+                        is androidx.core.widget.NestedScrollView -> {
+                            val child = scrollView.getChildAt(0)
+                            if (child != null) {
+                                (child.height - scrollViewHeight).coerceAtLeast(0)
+                            } else {
+                                0
+                            }
+                        }
+                        is android.widget.ScrollView -> {
+                            val child = scrollView.getChildAt(0)
+                            if (child != null) {
+                                (child.height - scrollViewHeight).coerceAtLeast(0)
+                            } else {
+                                0
+                            }
+                        }
+                        else -> 0
                     }
                     
-                    // If view is already mostly visible (at least 70% visible), don't scroll
-                    if (visibleHeight > targetView.height * 0.7) {
-                        return@post // View is already visible enough
-                    }
+                    // Clamp the desired scroll position to valid range
+                    val finalScrollY = desiredScrollY.coerceIn(0, maxScrollY)
                     
-                    // View needs scrolling - calculate desired position
-                    // Position view with padding at top for tutorial text
-                    val paddingForTutorial = 180
-                    val desiredScrollY = (viewTopInContent - paddingForTutorial).coerceAtLeast(0)
-                    
-                    // Only scroll if it's a significant change
-                    if (Math.abs(desiredScrollY - currentScrollY) > 20) {
+                    // Only scroll if it's a significant change (more than 10 pixels)
+                    if (Math.abs(finalScrollY - currentScrollY) > 10) {
                         when (scrollView) {
                             is androidx.core.widget.NestedScrollView -> {
-                                scrollView.smoothScrollTo(0, desiredScrollY)
+                                // Use smooth scroll for better animation
+                                scrollView.smoothScrollTo(0, finalScrollY)
                             }
                             is android.widget.ScrollView -> {
-                                scrollView.smoothScrollTo(0, desiredScrollY)
+                                scrollView.smoothScrollTo(0, finalScrollY)
                             }
                         }
                     }
+                    // Note: showTutorialOverlay is called from findAndShowView after scrolling completes
                 }
             } else {
-                // No scroll view found, try to scroll the view into view using requestRectangleOnScreen
+                // No scroll view found, try to center the view using requestRectangleOnScreen
                 targetView.post {
                     val rect = android.graphics.Rect()
                     targetView.getHitRect(rect)
-                    // Expand rect to include some padding for tutorial text above
-                    rect.top -= 200
-                    rect.bottom += 100
+                    // Center the view on screen by expanding rect equally above and below
+                    val screenHeight = activity.findViewById<ViewGroup>(android.R.id.content)?.height ?: 0
+                    val viewHeight = targetView.height
+                    val centerOffset = (screenHeight / 2) - (viewHeight / 2)
+                    rect.top -= centerOffset
+                    rect.bottom += centerOffset
                     targetView.requestRectangleOnScreen(rect, true)
                 }
             }
@@ -683,7 +737,8 @@ class FeatureTutorialManager(
             TutorialStep.CALCULATOR_WIDGET,
             TutorialStep.FINANCE_WIDGET,
             TutorialStep.WEEKLY_USAGE,
-            TutorialStep.NOTIFICATIONS_WIDGET
+            TutorialStep.NOTIFICATIONS_WIDGET,
+            TutorialStep.PHYSICAL_ACTIVITY_WIDGET
         )
     }
     
@@ -702,6 +757,7 @@ class FeatureTutorialManager(
         
         val nextStep = TutorialStep.values()[currentStep]
         val isNextDrawerStep = isDrawerStep(nextStep) && nextStep != TutorialStep.DRAWER_GESTURE
+        val wasPreviousDrawerStep = previousStep != null && isDrawerStep(previousStep) && previousStep != TutorialStep.DRAWER_GESTURE
         
         // Only close drawer if moving to a non-drawer step
         if (!isNextDrawerStep) {
@@ -721,6 +777,12 @@ class FeatureTutorialManager(
                 activity.drawerLayout.postDelayed({
                     showCurrentStep()
                 }, 400)
+                return
+            } else if (wasPreviousDrawerStep) {
+                // Both previous and next steps are in drawer - add small delay for smooth transition
+                activity.drawerLayout.postDelayed({
+                    showCurrentStep()
+                }, 150)
                 return
             }
         }
