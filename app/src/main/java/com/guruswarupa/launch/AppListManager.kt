@@ -13,12 +13,13 @@ class AppListManager(
     private val packageManager: PackageManager,
     private val appDockManager: AppDockManager,
     private val favoriteAppManager: FavoriteAppManager,
+    private val hiddenAppManager: HiddenAppManager?,
     private val cacheManager: CacheManager?,
     private val backgroundExecutor: Executor
 ) {
     
     /**
-     * Filters apps based on focus mode, workspace mode, and launcher exclusion.
+     * Filters apps based on focus mode, workspace mode, hidden apps, and launcher exclusion.
      */
     fun filterAppsByMode(
         apps: List<ResolveInfo>,
@@ -41,6 +42,8 @@ class AppListManager(
             }
             
             shouldInclude &&
+            // Filter out hidden apps (unless in workspace mode, where we might want to show them)
+            !(hiddenAppManager?.isAppHidden(packageName) ?: false) &&
             (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
             (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
         }

@@ -85,6 +85,7 @@ class MainActivity : FragmentActivity() {
     lateinit var appTimerManager: AppTimerManager
     lateinit var appCategoryManager: AppCategoryManager
     lateinit var favoriteAppManager: FavoriteAppManager
+    internal lateinit var hiddenAppManager: HiddenAppManager
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
     internal lateinit var drawerLayout: DrawerLayout
@@ -108,6 +109,7 @@ class MainActivity : FragmentActivity() {
         appTimerManager = AppTimerManager(this)
         appCategoryManager = AppCategoryManager(packageManager)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
+        hiddenAppManager = HiddenAppManager(sharedPreferences)
         isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
         featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
         
@@ -357,7 +359,7 @@ class MainActivity : FragmentActivity() {
         fullAppList = mutableListOf()
         
         // Initialize app list manager
-        appListManager = AppListManager(packageManager, appDockManager, favoriteAppManager, cacheManager, backgroundExecutor)
+        appListManager = AppListManager(packageManager, appDockManager, favoriteAppManager, hiddenAppManager, cacheManager, backgroundExecutor)
         
         // Initialize app list loader
         appListLoader = AppListLoader(
@@ -555,8 +557,16 @@ class MainActivity : FragmentActivity() {
             if (backgroundExecutor.isShutdown || isFinishing || isDestroyed) return
             backgroundExecutor.execute {
                 try {
+                    val focusMode = appListManager.getFocusMode()
                     val workspaceMode = appListManager.getWorkspaceMode()
-                    val finalAppList = appListManager.applyFavoritesFilter(fullAppList, workspaceMode)
+                    
+                    // First filter by mode (includes hidden apps, focus mode, workspace mode)
+                    val modeFilteredApps = appListManager.filterAppsByMode(fullAppList, focusMode, workspaceMode)
+                    
+                    // Then apply favorites filter
+                    val finalAppList = appListManager.applyFavoritesFilter(modeFilteredApps, workspaceMode)
+                    
+                    // Finally sort
                     val sortedFinalList = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Update UI on main thread
