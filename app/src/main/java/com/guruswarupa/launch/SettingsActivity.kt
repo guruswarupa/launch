@@ -708,6 +708,17 @@ class SettingsActivity : ComponentActivity() {
             recordAudioGranted
         ))
         
+        // Check Activity Recognition permission - always show (Android 10+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val activityRecognitionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+            allPermissions.add(PermissionItem(
+                Manifest.permission.ACTIVITY_RECOGNITION,
+                "Physical Activity",
+                "Track your steps and distance walked",
+                activityRecognitionGranted
+            ))
+        }
+        
         // Check Usage Stats permission - always show
         val usageStatsGranted = hasUsageStatsPermission()
         allPermissions.add(PermissionItem(
@@ -1153,6 +1164,7 @@ class SettingsActivity : ComponentActivity() {
                     Manifest.permission.READ_MEDIA_IMAGES -> "Storage (Images)"
                     Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
                     Manifest.permission.RECORD_AUDIO -> "Microphone"
+                    Manifest.permission.ACTIVITY_RECOGNITION -> "Physical Activity"
                     else -> null
                 }
                 
@@ -1178,6 +1190,12 @@ class SettingsActivity : ComponentActivity() {
                     }
                     if (permissionName != null) {
                         Toast.makeText(this, "$permissionName permission granted", Toast.LENGTH_SHORT).show()
+                        
+                        // Send broadcast to MainActivity to update physical activity widget if permission was granted
+                        if (permission == Manifest.permission.ACTIVITY_RECOGNITION) {
+                            val intent = Intent("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
+                            sendBroadcast(intent)
+                        }
                     }
                 } else {
                     // Permission denied - update toggle state
@@ -1207,6 +1225,9 @@ class SettingsActivity : ComponentActivity() {
                             }
                             Manifest.permission.SEND_SMS -> {
                                 prefs.edit().putBoolean("sms_permission_denied", true).apply()
+                            }
+                            Manifest.permission.ACTIVITY_RECOGNITION -> {
+                                prefs.edit().putBoolean("activity_recognition_permission_denied", true).apply()
                             }
                         }
                     }

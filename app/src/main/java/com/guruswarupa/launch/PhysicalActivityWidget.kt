@@ -175,8 +175,13 @@ class PhysicalActivityWidget(
     private fun setupWithoutPermission() {
         permissionButton.visibility = View.VISIBLE
         viewToggleButton.visibility = View.GONE
-        statsViewContainer.visibility = View.GONE
+        // Show stats container but with default/empty values
+        statsViewContainer.visibility = View.VISIBLE
         calendarViewContainer.visibility = View.GONE
+        
+        // Set default values
+        stepsText.text = "0 steps"
+        distanceText.text = "0.00 km"
         
         permissionButton.setOnClickListener {
             requestPermission()

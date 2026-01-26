@@ -188,8 +188,13 @@ class WeatherManager(private val context: Context) {
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
             } else {
-                // No city name stored, prompt for it
-                promptForCityNameAndFetchWeather(weatherIcon, weatherText, apiKey)
+                // No city name stored, show placeholder instead of prompting
+                // User can tap to enter location when they want
+                handler.post {
+                    weatherText.text = "Tap to enter location"
+                    weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+                    setupRefreshListeners(weatherIcon, weatherText)
+                }
             }
         }
     }

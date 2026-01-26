@@ -15,7 +15,6 @@ class PhysicalActivityTrackingService : Service() {
     
     private lateinit var activityManager: PhysicalActivityManager
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
-    private var updateRunnable: Runnable? = null
     
     companion object {
         private const val TAG = "PhysicalActivityService"
@@ -39,9 +38,7 @@ class PhysicalActivityTrackingService : Service() {
         // Start tracking
         if (activityManager.hasActivityRecognitionPermission()) {
             activityManager.startTracking()
-            
-            // Update notification periodically
-            startNotificationUpdates()
+            // Don't update notification periodically - keep it minimal
         } else {
             Log.w(TAG, "Activity recognition permission not granted")
             stopSelf()
@@ -50,20 +47,8 @@ class PhysicalActivityTrackingService : Service() {
         return START_STICKY // Restart if killed by system
     }
     
-    private fun startNotificationUpdates() {
-        updateRunnable = object : Runnable {
-            override fun run() {
-                updateNotification()
-                // Update every 5 minutes to reduce battery usage
-                handler.postDelayed(this, 5 * 60000L)
-            }
-        }
-        handler.post(updateRunnable!!)
-    }
-    
     override fun onDestroy() {
         super.onDestroy()
-        updateRunnable?.let { handler.removeCallbacks(it) }
         activityManager.stopTracking()
     }
     
@@ -78,6 +63,9 @@ class PhysicalActivityTrackingService : Service() {
             ).apply {
                 description = "Tracks your steps and distance even when the screen is off"
                 setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
+                setSound(null, null)
             }
             
             val notificationManager = getSystemService(NotificationManager::class.java)
@@ -94,12 +82,9 @@ class PhysicalActivityTrackingService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         
-        val activityData = activityManager.getTodayActivity()
-        val stepsText = String.format("%,d steps", activityData.steps)
-        
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Tracking Physical Activity")
-            .setContentText(stepsText)
+            .setContentText("Tracking your activity in the background")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -109,9 +94,4 @@ class PhysicalActivityTrackingService : Service() {
             .build()
     }
     
-    private fun updateNotification() {
-        val notification = createNotification()
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        notificationManager.notify(NOTIFICATION_ID, notification)
-    }
 }
