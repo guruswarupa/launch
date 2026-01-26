@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -105,6 +106,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var navigationManager: NavigationManager
     private lateinit var activityInitializer: ActivityInitializer
     private lateinit var focusModeApplier: FocusModeApplier
+    private lateinit var widgetConfigurationManager: WidgetConfigurationManager
     /**
      * Initializes core managers that are needed early in the lifecycle.
      */
@@ -258,6 +260,9 @@ class MainActivity : FragmentActivity() {
         todoManager = TodoManager(this, sharedPreferences, todoRecyclerView, addTodoButton, todoAlarmManager)
         todoManager.initialize()
         
+        // Update widget visibility based on configuration
+        updateWidgetVisibility()
+        
         // Update lifecycle manager with deferred widgets
         updateLifecycleManagerWithDeferredWidgets()
     }
@@ -325,6 +330,9 @@ class MainActivity : FragmentActivity() {
         }
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        
+        // Initialize widget configuration manager
+        widgetConfigurationManager = WidgetConfigurationManager(this, sharedPreferences)
         
         // Initialize managers
         cacheManager = CacheManager(this, packageManager, backgroundExecutor)
@@ -454,6 +462,12 @@ class MainActivity : FragmentActivity() {
             widgetManager,
             ActivityResultHandler.REQUEST_PICK_WIDGET
         )
+        
+        // Setup widget configuration button
+        val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
+        widgetConfigButton.setOnClickListener {
+            showWidgetConfigurationDialog()
+        }
 
         // Initialize wallpaper manager helper
         val drawerWallpaper = findViewById<ImageView>(R.id.drawer_wallpaper_background)
@@ -1051,6 +1065,118 @@ class MainActivity : FragmentActivity() {
     }
     
 
+    /**
+     * Shows the widget configuration dialog
+     */
+    private fun showWidgetConfigurationDialog() {
+        val dialog = WidgetConfigurationDialog(this, widgetConfigurationManager) {
+            updateWidgetVisibility()
+        }
+        dialog.show()
+    }
+    
+    /**
+     * Updates widget visibility based on configuration
+     */
+    private fun updateWidgetVisibility() {
+        val widgets = widgetConfigurationManager.getWidgetOrder()
+        
+        // Create a map for quick lookup
+        val widgetMap = widgets.associateBy { it.id }
+        
+        // Update visibility for each widget
+        findViewById<View>(R.id.widgets_section)?.visibility = 
+            if (widgetMap["widgets_section"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Notifications widget - the parent LinearLayout contains the container
+        val notificationsParent = findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? ViewGroup
+        notificationsParent?.visibility = if (widgetMap["notifications_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.physical_activity_widget_container)?.visibility = 
+            if (widgetMap["physical_activity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.compass_widget_container)?.visibility = 
+            if (widgetMap["compass_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.pressure_widget_container)?.visibility = 
+            if (widgetMap["pressure_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.proximity_widget_container)?.visibility = 
+            if (widgetMap["proximity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.temperature_widget_container)?.visibility = 
+            if (widgetMap["temperature_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Workout widget - the parent LinearLayout contains the container
+        val workoutParent = findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? ViewGroup
+        workoutParent?.visibility = if (widgetMap["workout_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Calculator widget - the parent LinearLayout contains the container
+        val calculatorParent = findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? ViewGroup
+        calculatorParent?.visibility = if (widgetMap["calculator_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Todo widget - the parent LinearLayout contains the RecyclerView
+        val todoParent = findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? ViewGroup
+        todoParent?.visibility = if (widgetMap["todo_recycler_view"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.finance_widget)?.visibility = 
+            if (widgetMap["finance_widget"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
+            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Reorder widgets - get the parent LinearLayout that contains all widgets
+        // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
+        val drawer = findViewById<FrameLayout>(R.id.widgets_drawer)
+        val scrollView = drawer?.let { view ->
+            // Find NestedScrollView (it's the second child after wallpaper ImageView and gear icon)
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                if (child is androidx.core.widget.NestedScrollView) {
+                    return@let child
+                }
+            }
+            null
+        }
+        val contentLayout = scrollView?.getChildAt(0) as? LinearLayout
+        
+        contentLayout?.let { layout ->
+            // Store all views with their widget IDs
+            val viewMap = mutableMapOf<String, View>()
+            
+            widgets.forEach { widget ->
+                val view = when (widget.id) {
+                    "widgets_section" -> findViewById<View>(R.id.widgets_section)
+                    "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
+                    "physical_activity_widget_container" -> findViewById<View>(R.id.physical_activity_widget_container)
+                    "compass_widget_container" -> findViewById<View>(R.id.compass_widget_container)
+                    "pressure_widget_container" -> findViewById<View>(R.id.pressure_widget_container)
+                    "proximity_widget_container" -> findViewById<View>(R.id.proximity_widget_container)
+                    "temperature_widget_container" -> findViewById<View>(R.id.temperature_widget_container)
+                    "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
+                    "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
+                    "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
+                    "finance_widget" -> findViewById<View>(R.id.finance_widget)
+                    "weekly_usage_widget" -> findViewById<View>(R.id.weekly_usage_widget)
+                    else -> null
+                }
+                view?.let { viewMap[widget.id] = it }
+            }
+            
+            // Remove all views from layout
+            viewMap.values.forEach { view ->
+                (view.parent as? ViewGroup)?.removeView(view)
+            }
+            
+            // Add views back in the configured order
+            widgets.forEach { widget ->
+                viewMap[widget.id]?.let { view ->
+                    layout.addView(view)
+                }
+            }
+        }
+    }
+    
     override fun onBackPressed() {
         if (::navigationManager.isInitialized) {
             navigationManager.handleBackPressed { super.onBackPressed() }

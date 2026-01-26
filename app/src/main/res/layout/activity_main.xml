@@ -213,6 +213,22 @@
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
 
+        <!-- Gear Icon for Widget Configuration -->
+        <ImageButton
+            android:id="@+id/widget_config_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:layout_marginStart="16dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_settings_icon"
+            android:tint="@color/white"
+            android:contentDescription="Configure Widgets"
+            android:elevation="4dp"/>
+
         <!-- Scrollable Content -->
         <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
@@ -231,7 +247,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="72dp"
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/widget_background"
                 android:padding="20dp">
