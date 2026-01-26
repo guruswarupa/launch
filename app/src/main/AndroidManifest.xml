@@ -123,13 +123,13 @@
         <activity
             android:name=".AppLockSettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.Launch"
+            android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
 
         <activity
             android:name=".HiddenAppsSettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.Launch"
+            android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
 
     </application>

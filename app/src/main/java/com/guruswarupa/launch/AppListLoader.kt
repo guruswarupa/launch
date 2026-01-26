@@ -94,7 +94,8 @@ class AppListLoader(
                         val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                         
                         handler.post {
-                            onAppListUpdated?.invoke(sorted, cachedFiltered)
+                            // Pass cachedApps (all apps) as second parameter, not cachedFiltered
+                            onAppListUpdated?.invoke(sorted, cachedApps)
                         }
                         
                         // Verify version in background (non-blocking) - refresh if changed
@@ -133,7 +134,8 @@ class AppListLoader(
                     val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                     
                     handler.post {
-                        onAppListUpdated?.invoke(sorted, cachedFiltered)
+                        // Pass cachedUnsortedList (all apps) as second parameter, not cachedFiltered
+                        onAppListUpdated?.invoke(sorted, cachedUnsortedList!!)
                     }
                 }
             } catch (e: Exception) {
@@ -221,7 +223,8 @@ class AppListLoader(
                         }
                         
                         // Show list immediately with cached sorting to prevent freeze
-                        onAppListUpdated?.invoke(initiallySorted, filteredApps)
+                        // Pass unsortedList (all apps) as second parameter, not filteredApps
+                        onAppListUpdated?.invoke(initiallySorted, unsortedList)
                         
                         // Optimize: Update existing adapter instead of creating new one
                         if (adapter == null) {
@@ -294,7 +297,8 @@ class AppListLoader(
                                     }
                                     
                                     // Only update if the sort actually changed (avoid unnecessary updates)
-                                    onAppListUpdated?.invoke(sortedFinalList, sortedApps)
+                                    // Pass unsortedList (all apps) as second parameter, not sortedApps
+                                    onAppListUpdated?.invoke(sortedFinalList, unsortedList)
                                 }
                             } catch (e: Exception) {
                                 Log.e("AppListLoader", "Error refining sort", e)

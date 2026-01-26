@@ -609,8 +609,16 @@ class MainActivity : FragmentActivity() {
             updateAppSearchManager()
         }
         
-        // Always refresh apps to ensure latest data
-        appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
+        // Force refresh hidden apps cache to ensure we have latest data
+        if (::hiddenAppManager.isInitialized) {
+            hiddenAppManager.forceRefresh()
+        }
+        
+        // Always refresh apps to ensure latest data (hidden apps, favorites, etc.)
+        // Force reload from package manager to ensure fullAppList has all apps including newly unhidden ones
+        if (::appListLoader.isInitialized) {
+            appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
+        }
         if (::financeWidgetManager.isInitialized) {
             financeWidgetManager.updateDisplay() // Refresh finance display after reset
         }
@@ -792,6 +800,26 @@ class MainActivity : FragmentActivity() {
                 applyFocusMode(appDockManager.getCurrentMode())
             }
         }
+        
+        // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
+        // This ensures unhidden apps appear when returning from settings
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                try {
+                    // Force refresh hidden apps cache to ensure we have latest data
+                    if (::hiddenAppManager.isInitialized) {
+                        hiddenAppManager.forceRefresh()
+                    }
+                    // Force reload from package manager to ensure all apps are included
+                    // This is necessary because unhidden apps need to be in fullAppList
+                    if (::appListLoader.isInitialized) {
+                        loadApps(forceRefresh = false)
+                    }
+                } catch (e: UninitializedPropertyAccessException) {
+                    // Managers not initialized yet, skip refresh
+                }
+            }
+        }, 500)
     }
 
     override fun onPause() {

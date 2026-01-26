@@ -26,9 +26,17 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Make status bar and navigation bar transparent BEFORE setContentView
+        // This prevents the blue flash on activity start
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        }
+        
         setContentView(R.layout.activity_hidden_apps_settings)
         
-        // Make status bar and navigation bar transparent
+        // Ensure system bars are fully configured after view is created
         window.decorView.post {
             makeSystemBarsTransparent()
         }
@@ -43,12 +51,6 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
 
         // Setup RecyclerView
         appsRecyclerView.layoutManager = LinearLayoutManager(this)
-        
-        // Back button
-        val backButton = findViewById<Button>(R.id.back_button)
-        backButton.setOnClickListener {
-            finish()
-        }
 
         recreateAppsList()
     }
@@ -129,6 +131,8 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
                 hiddenAppManager.unhideApp(packageName)
                 Toast.makeText(this, "App unhidden", Toast.LENGTH_SHORT).show()
                 recreateAppsList()
+                // Set result to indicate an app was unhidden
+                setResult(RESULT_OK)
             }
             appsRecyclerView.adapter = adapter
         }
