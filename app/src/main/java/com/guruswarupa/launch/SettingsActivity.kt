@@ -28,6 +28,7 @@ class SettingsActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
     private val EXPORT_REQUEST_CODE = 1
     private val IMPORT_REQUEST_CODE = 2
+    private val HIDDEN_APPS_REQUEST_CODE = 3
     private var hasRequestedUsageStats = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,6 +109,11 @@ class SettingsActivity : ComponentActivity() {
             startActivity(Intent(this, AppLockSettingsActivity::class.java))
         }
         
+        val hiddenAppsButton = findViewById<Button>(R.id.hidden_apps_button)
+        hiddenAppsButton.setOnClickListener {
+            startActivityForResult(Intent(this, HiddenAppsSettingsActivity::class.java), HIDDEN_APPS_REQUEST_CODE)
+        }
+        
         checkPermissionsButton.setOnClickListener {
             checkAndRequestPermissions()
         }
@@ -173,6 +179,12 @@ class SettingsActivity : ComponentActivity() {
         val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
         setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
         
+        // Hidden Apps Section
+        val hiddenAppsHeader = findViewById<LinearLayout>(R.id.hidden_apps_header)
+        val hiddenAppsContent = findViewById<LinearLayout>(R.id.hidden_apps_content)
+        val hiddenAppsArrow = findViewById<TextView>(R.id.hidden_apps_arrow)
+        setupSectionToggle(hiddenAppsHeader, hiddenAppsContent, hiddenAppsArrow)
+        
         // Permissions Section
         val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)
         val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
@@ -190,6 +202,24 @@ class SettingsActivity : ComponentActivity() {
         val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
         val tutorialArrow = findViewById<TextView>(R.id.tutorial_arrow)
         setupSectionToggle(tutorialHeader, tutorialContent, tutorialArrow)
+        
+        // Quick Actions Section
+        val quickActionsHeader = findViewById<LinearLayout>(R.id.quick_actions_header)
+        val quickActionsContent = findViewById<LinearLayout>(R.id.quick_actions_content)
+        val quickActionsArrow = findViewById<TextView>(R.id.quick_actions_arrow)
+        setupSectionToggle(quickActionsHeader, quickActionsContent, quickActionsArrow)
+        
+        // Setup torch toggle switch
+        val shakeTorchSwitch = findViewById<Switch>(R.id.shake_torch_switch)
+        val isTorchEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
+        shakeTorchSwitch.isChecked = isTorchEnabled
+        
+        shakeTorchSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked).apply()
+            // Send broadcast to update service state
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            sendBroadcast(intent)
+        }
         
         // Launcher Section
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
@@ -330,17 +360,22 @@ class SettingsActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (resultCode == RESULT_OK && data != null) {
+        if (resultCode == RESULT_OK) {
             when (requestCode) {
                 EXPORT_REQUEST_CODE -> {
-                    data.data?.let { uri ->
+                    data?.data?.let { uri ->
                         exportSettingsToFile(uri)
                     }
                 }
                 IMPORT_REQUEST_CODE -> {
-                    data.data?.let { uri ->
+                    data?.data?.let { uri ->
                         importSettingsFromFile(uri)
                     }
+                }
+                HIDDEN_APPS_REQUEST_CODE -> {
+                    // Hidden apps changed - send broadcast to refresh MainActivity
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
                 }
                 WALLPAPER_REQUEST_CODE -> {
                     // Wallpaper changed - send broadcast to refresh MainActivity
@@ -679,6 +714,26 @@ class SettingsActivity : ComponentActivity() {
                 "Notifications",
                 "Show notifications in the notifications widget",
                 notificationGranted
+            ))
+        }
+        
+        // Check Record Audio permission - always show
+        val recordAudioGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        allPermissions.add(PermissionItem(
+            Manifest.permission.RECORD_AUDIO,
+            "Microphone",
+            "Record audio for voice search functionality",
+            recordAudioGranted
+        ))
+        
+        // Check Activity Recognition permission - always show (Android 10+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val activityRecognitionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+            allPermissions.add(PermissionItem(
+                Manifest.permission.ACTIVITY_RECOGNITION,
+                "Physical Activity",
+                "Track your steps and distance walked",
+                activityRecognitionGranted
             ))
         }
         
@@ -1126,6 +1181,8 @@ class SettingsActivity : ComponentActivity() {
                     Manifest.permission.READ_EXTERNAL_STORAGE -> "Storage"
                     Manifest.permission.READ_MEDIA_IMAGES -> "Storage (Images)"
                     Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
+                    Manifest.permission.RECORD_AUDIO -> "Microphone"
+                    Manifest.permission.ACTIVITY_RECOGNITION -> "Physical Activity"
                     else -> null
                 }
                 
@@ -1151,6 +1208,12 @@ class SettingsActivity : ComponentActivity() {
                     }
                     if (permissionName != null) {
                         Toast.makeText(this, "$permissionName permission granted", Toast.LENGTH_SHORT).show()
+                        
+                        // Send broadcast to MainActivity to update physical activity widget if permission was granted
+                        if (permission == Manifest.permission.ACTIVITY_RECOGNITION) {
+                            val intent = Intent("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
+                            sendBroadcast(intent)
+                        }
                     }
                 } else {
                     // Permission denied - update toggle state
@@ -1180,6 +1243,9 @@ class SettingsActivity : ComponentActivity() {
                             }
                             Manifest.permission.SEND_SMS -> {
                                 prefs.edit().putBoolean("sms_permission_denied", true).apply()
+                            }
+                            Manifest.permission.ACTIVITY_RECOGNITION -> {
+                                prefs.edit().putBoolean("activity_recognition_permission_denied", true).apply()
                             }
                         }
                     }

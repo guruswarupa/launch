@@ -6,11 +6,13 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import androidx.core.content.ContextCompat
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -80,11 +82,17 @@ class MainActivity : FragmentActivity() {
     private lateinit var calculatorWidget: CalculatorWidget
     private lateinit var notificationsWidget: NotificationsWidget
     private lateinit var workoutWidget: WorkoutWidget
+    private lateinit var physicalActivityWidget: PhysicalActivityWidget
+    private lateinit var compassWidget: CompassWidget
+    private lateinit var pressureWidget: PressureWidget
+    private lateinit var proximityWidget: ProximityWidget
+    private lateinit var temperatureWidget: TemperatureWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
     lateinit var appCategoryManager: AppCategoryManager
     lateinit var favoriteAppManager: FavoriteAppManager
+    internal lateinit var hiddenAppManager: HiddenAppManager
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
     internal lateinit var drawerLayout: DrawerLayout
@@ -99,6 +107,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var navigationManager: NavigationManager
     private lateinit var activityInitializer: ActivityInitializer
     private lateinit var focusModeApplier: FocusModeApplier
+    private lateinit var widgetConfigurationManager: WidgetConfigurationManager
     /**
      * Initializes core managers that are needed early in the lifecycle.
      */
@@ -108,6 +117,7 @@ class MainActivity : FragmentActivity() {
         appTimerManager = AppTimerManager(this)
         appCategoryManager = AppCategoryManager(packageManager)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
+        hiddenAppManager = HiddenAppManager(sharedPreferences)
         isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
         featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
         
@@ -138,6 +148,11 @@ class MainActivity : FragmentActivity() {
             onBatteryChanged = { 
                 if (::usageStatsRefreshManager.isInitialized) {
                     usageStatsRefreshManager.updateBatteryInBackground()
+                }
+            },
+            onActivityRecognitionPermissionGranted = {
+                if (::physicalActivityWidget.isInitialized) {
+                    physicalActivityWidget.onPermissionGranted()
                 }
             }
         )
@@ -233,6 +248,11 @@ class MainActivity : FragmentActivity() {
         notificationsWidget = widgetSetupManager.setupNotificationsWidget()
         calculatorWidget = widgetSetupManager.setupCalculatorWidget()
         workoutWidget = widgetSetupManager.setupWorkoutWidget()
+        physicalActivityWidget = widgetSetupManager.setupPhysicalActivityWidget(sharedPreferences)
+        compassWidget = widgetSetupManager.setupCompassWidget(sharedPreferences)
+        pressureWidget = widgetSetupManager.setupPressureWidget(sharedPreferences)
+        proximityWidget = widgetSetupManager.setupProximityWidget(sharedPreferences)
+        temperatureWidget = widgetSetupManager.setupTemperatureWidget(sharedPreferences)
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -240,6 +260,9 @@ class MainActivity : FragmentActivity() {
         addTodoButton = findViewById(R.id.add_todo_button)
         todoManager = TodoManager(this, sharedPreferences, todoRecyclerView, addTodoButton, todoAlarmManager)
         todoManager.initialize()
+        
+        // Update widget visibility based on configuration
+        updateWidgetVisibility()
         
         // Update lifecycle manager with deferred widgets
         updateLifecycleManagerWithDeferredWidgets()
@@ -309,6 +332,9 @@ class MainActivity : FragmentActivity() {
 
         sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         
+        // Initialize widget configuration manager
+        widgetConfigurationManager = WidgetConfigurationManager(this, sharedPreferences)
+        
         // Initialize managers
         cacheManager = CacheManager(this, packageManager, backgroundExecutor)
         permissionManager = PermissionManager(this, sharedPreferences)
@@ -357,7 +383,7 @@ class MainActivity : FragmentActivity() {
         fullAppList = mutableListOf()
         
         // Initialize app list manager
-        appListManager = AppListManager(packageManager, appDockManager, favoriteAppManager, cacheManager, backgroundExecutor)
+        appListManager = AppListManager(packageManager, appDockManager, favoriteAppManager, hiddenAppManager, cacheManager, backgroundExecutor)
         
         // Initialize app list loader
         appListLoader = AppListLoader(
@@ -437,6 +463,12 @@ class MainActivity : FragmentActivity() {
             widgetManager,
             ActivityResultHandler.REQUEST_PICK_WIDGET
         )
+        
+        // Setup widget configuration button
+        val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
+        widgetConfigButton.setOnClickListener {
+            showWidgetConfigurationDialog()
+        }
 
         // Initialize wallpaper manager helper
         val drawerWallpaper = findViewById<ImageView>(R.id.drawer_wallpaper_background)
@@ -482,8 +514,43 @@ class MainActivity : FragmentActivity() {
             }
         }, 100)
         
+        // Start shake detection service for background quick actions (if enabled)
+        updateShakeDetectionService()
+        
         // Initialize lifecycle manager
         initializeLifecycleManager()
+    }
+    
+    /**
+     * Updates shake detection service based on user preference
+     */
+    private fun updateShakeDetectionService() {
+        val isTorchEnabled = sharedPreferences.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
+        if (isTorchEnabled) {
+            startShakeDetectionService()
+        } else {
+            stopShakeDetectionService()
+        }
+    }
+    
+    /**
+     * Starts the shake detection service for background quick actions
+     */
+    private fun startShakeDetectionService() {
+        val intent = Intent(this, ShakeDetectionService::class.java).apply {
+            action = ShakeDetectionService.ACTION_START
+        }
+        ContextCompat.startForegroundService(this, intent)
+    }
+    
+    /**
+     * Stops the shake detection service
+     */
+    private fun stopShakeDetectionService() {
+        val intent = Intent(this, ShakeDetectionService::class.java).apply {
+            action = ShakeDetectionService.ACTION_STOP
+        }
+        stopService(intent)
     }
     
     /**
@@ -555,8 +622,16 @@ class MainActivity : FragmentActivity() {
             if (backgroundExecutor.isShutdown || isFinishing || isDestroyed) return
             backgroundExecutor.execute {
                 try {
+                    val focusMode = appListManager.getFocusMode()
                     val workspaceMode = appListManager.getWorkspaceMode()
-                    val finalAppList = appListManager.applyFavoritesFilter(fullAppList, workspaceMode)
+                    
+                    // First filter by mode (includes hidden apps, focus mode, workspace mode)
+                    val modeFilteredApps = appListManager.filterAppsByMode(fullAppList, focusMode, workspaceMode)
+                    
+                    // Then apply favorites filter
+                    val finalAppList = appListManager.applyFavoritesFilter(modeFilteredApps, workspaceMode)
+                    
+                    // Finally sort
                     val sortedFinalList = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Update UI on main thread
@@ -599,8 +674,19 @@ class MainActivity : FragmentActivity() {
             updateAppSearchManager()
         }
         
-        // Always refresh apps to ensure latest data
-        appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
+        // Update shake detection service based on preference
+        updateShakeDetectionService()
+        
+        // Force refresh hidden apps cache to ensure we have latest data
+        if (::hiddenAppManager.isInitialized) {
+            hiddenAppManager.forceRefresh()
+        }
+        
+        // Always refresh apps to ensure latest data (hidden apps, favorites, etc.)
+        // Force reload from package manager to ensure fullAppList has all apps including newly unhidden ones
+        if (::appListLoader.isInitialized) {
+            appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
+        }
         if (::financeWidgetManager.isInitialized) {
             financeWidgetManager.updateDisplay() // Refresh finance display after reset
         }
@@ -713,6 +799,34 @@ class MainActivity : FragmentActivity() {
         if (::widgetManager.isInitialized) {
             widgetManager.onDestroy()
         }
+        
+        // Cleanup physical activity widget
+        if (::physicalActivityWidget.isInitialized) {
+            physicalActivityWidget.cleanup()
+        }
+        
+        // Cleanup compass widget
+        if (::compassWidget.isInitialized) {
+            compassWidget.cleanup()
+        }
+        
+        // Cleanup pressure widget
+        if (::pressureWidget.isInitialized) {
+            pressureWidget.cleanup()
+        }
+        
+        // Cleanup proximity widget
+        if (::proximityWidget.isInitialized) {
+            proximityWidget.cleanup()
+        }
+        
+        // Cleanup temperature widget
+        if (::temperatureWidget.isInitialized) {
+            temperatureWidget.cleanup()
+        }
+        
+        // Stop shake detection service
+        stopShakeDetectionService()
     }
 
     // Broadcast receivers moved to BroadcastReceiverManager
@@ -782,6 +896,53 @@ class MainActivity : FragmentActivity() {
                 applyFocusMode(appDockManager.getCurrentMode())
             }
         }
+        
+        // Resume physical activity tracking
+        if (::physicalActivityWidget.isInitialized) {
+            physicalActivityWidget.onResume()
+        }
+        
+        // Resume compass tracking
+        if (::compassWidget.isInitialized) {
+            compassWidget.onResume()
+        }
+        
+        // Resume pressure tracking
+        if (::pressureWidget.isInitialized) {
+            pressureWidget.onResume()
+        }
+        
+        // Resume proximity tracking
+        if (::proximityWidget.isInitialized) {
+            proximityWidget.onResume()
+        }
+        
+        // Resume temperature tracking
+        if (::temperatureWidget.isInitialized) {
+            temperatureWidget.onResume()
+        }
+        
+        // Shake detection service runs in background, no need to start/stop here
+        
+        // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
+        // This ensures unhidden apps appear when returning from settings
+        handler.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                try {
+                    // Force refresh hidden apps cache to ensure we have latest data
+                    if (::hiddenAppManager.isInitialized) {
+                        hiddenAppManager.forceRefresh()
+                    }
+                    // Force reload from package manager to ensure all apps are included
+                    // This is necessary because unhidden apps need to be in fullAppList
+                    if (::appListLoader.isInitialized) {
+                        loadApps(forceRefresh = false)
+                    }
+                } catch (e: UninitializedPropertyAccessException) {
+                    // Managers not initialized yet, skip refresh
+                }
+            }
+        }, 500)
     }
 
     override fun onPause() {
@@ -797,6 +958,33 @@ class MainActivity : FragmentActivity() {
                 todoManager.saveTodoItems()
             }
         }
+        
+        // Pause physical activity tracking
+        if (::physicalActivityWidget.isInitialized) {
+            physicalActivityWidget.onPause()
+        }
+        
+        // Pause compass tracking
+        if (::compassWidget.isInitialized) {
+            compassWidget.onPause()
+        }
+        
+        // Pause pressure tracking
+        if (::pressureWidget.isInitialized) {
+            pressureWidget.onPause()
+        }
+        
+        // Pause proximity tracking
+        if (::proximityWidget.isInitialized) {
+            proximityWidget.onPause()
+        }
+        
+        // Pause temperature tracking
+        if (::temperatureWidget.isInitialized) {
+            temperatureWidget.onPause()
+        }
+        
+        // Shake detection service runs in background, no need to stop here
     }
 
     override fun onStop() {
@@ -871,6 +1059,14 @@ class MainActivity : FragmentActivity() {
                 voiceSearchManager.startVoiceSearch()
             }
         }
+        
+        // Handle physical activity permission
+        if (requestCode == 105 && 
+            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (::physicalActivityWidget.isInitialized) {
+                physicalActivityWidget.onPermissionGranted()
+            }
+        }
     }
 
     fun applyFocusMode(isFocusMode: Boolean) {
@@ -882,6 +1078,20 @@ class MainActivity : FragmentActivity() {
 
 
     fun applyPowerSaverMode(isEnabled: Boolean) {
+        // Defer power saver mode application if required dependencies are not yet initialized
+        if (!::adapter.isInitialized || !::wallpaperManagerHelper.isInitialized || 
+            !::usageStatsDisplayManager.isInitialized || !::usageStatsRefreshManager.isInitialized ||
+            !::todoRecyclerView.isInitialized) {
+            handler.post {
+                if (!isFinishing && !isDestroyed && ::adapter.isInitialized && 
+                    ::wallpaperManagerHelper.isInitialized && ::usageStatsDisplayManager.isInitialized &&
+                    ::usageStatsRefreshManager.isInitialized && ::todoRecyclerView.isInitialized) {
+                    applyPowerSaverMode(isEnabled)
+                }
+            }
+            return
+        }
+        
         if (!::powerSaverManager.isInitialized) {
             powerSaverManager = PowerSaverManager(
                 this,
@@ -901,6 +1111,118 @@ class MainActivity : FragmentActivity() {
     }
     
 
+    /**
+     * Shows the widget configuration dialog
+     */
+    private fun showWidgetConfigurationDialog() {
+        val dialog = WidgetConfigurationDialog(this, widgetConfigurationManager) {
+            updateWidgetVisibility()
+        }
+        dialog.show()
+    }
+    
+    /**
+     * Updates widget visibility based on configuration
+     */
+    private fun updateWidgetVisibility() {
+        val widgets = widgetConfigurationManager.getWidgetOrder()
+        
+        // Create a map for quick lookup
+        val widgetMap = widgets.associateBy { it.id }
+        
+        // Update visibility for each widget
+        findViewById<View>(R.id.widgets_section)?.visibility = 
+            if (widgetMap["widgets_section"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Notifications widget - the parent LinearLayout contains the container
+        val notificationsParent = findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? ViewGroup
+        notificationsParent?.visibility = if (widgetMap["notifications_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.physical_activity_widget_container)?.visibility = 
+            if (widgetMap["physical_activity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.compass_widget_container)?.visibility = 
+            if (widgetMap["compass_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.pressure_widget_container)?.visibility = 
+            if (widgetMap["pressure_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.proximity_widget_container)?.visibility = 
+            if (widgetMap["proximity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.temperature_widget_container)?.visibility = 
+            if (widgetMap["temperature_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Workout widget - the parent LinearLayout contains the container
+        val workoutParent = findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? ViewGroup
+        workoutParent?.visibility = if (widgetMap["workout_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Calculator widget - the parent LinearLayout contains the container
+        val calculatorParent = findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? ViewGroup
+        calculatorParent?.visibility = if (widgetMap["calculator_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Todo widget - the parent LinearLayout contains the RecyclerView
+        val todoParent = findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? ViewGroup
+        todoParent?.visibility = if (widgetMap["todo_recycler_view"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.finance_widget)?.visibility = 
+            if (widgetMap["finance_widget"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
+            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Reorder widgets - get the parent LinearLayout that contains all widgets
+        // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
+        val drawer = findViewById<FrameLayout>(R.id.widgets_drawer)
+        val scrollView = drawer?.let { view ->
+            // Find NestedScrollView (it's the second child after wallpaper ImageView and gear icon)
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                if (child is androidx.core.widget.NestedScrollView) {
+                    return@let child
+                }
+            }
+            null
+        }
+        val contentLayout = scrollView?.getChildAt(0) as? LinearLayout
+        
+        contentLayout?.let { layout ->
+            // Store all views with their widget IDs
+            val viewMap = mutableMapOf<String, View>()
+            
+            widgets.forEach { widget ->
+                val view = when (widget.id) {
+                    "widgets_section" -> findViewById<View>(R.id.widgets_section)
+                    "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
+                    "physical_activity_widget_container" -> findViewById<View>(R.id.physical_activity_widget_container)
+                    "compass_widget_container" -> findViewById<View>(R.id.compass_widget_container)
+                    "pressure_widget_container" -> findViewById<View>(R.id.pressure_widget_container)
+                    "proximity_widget_container" -> findViewById<View>(R.id.proximity_widget_container)
+                    "temperature_widget_container" -> findViewById<View>(R.id.temperature_widget_container)
+                    "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
+                    "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
+                    "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
+                    "finance_widget" -> findViewById<View>(R.id.finance_widget)
+                    "weekly_usage_widget" -> findViewById<View>(R.id.weekly_usage_widget)
+                    else -> null
+                }
+                view?.let { viewMap[widget.id] = it }
+            }
+            
+            // Remove all views from layout
+            viewMap.values.forEach { view ->
+                (view.parent as? ViewGroup)?.removeView(view)
+            }
+            
+            // Add views back in the configured order
+            widgets.forEach { widget ->
+                viewMap[widget.id]?.let { view ->
+                    layout.addView(view)
+                }
+            }
+        }
+    }
+    
     override fun onBackPressed() {
         if (::navigationManager.isInitialized) {
             navigationManager.handleBackPressed { super.onBackPressed() }

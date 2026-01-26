@@ -20,4 +20,9 @@
         android:id="@+id/toggle_favorite"
         android:title="Toggle Favorite"
         android:icon="@drawable/ic_add" />
+
+    <item
+        android:id="@+id/toggle_hide"
+        android:title="Hide App"
+        android:icon="@drawable/ic_settings" />
 </menu>

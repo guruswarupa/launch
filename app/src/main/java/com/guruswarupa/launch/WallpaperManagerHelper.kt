@@ -59,7 +59,7 @@ class WallpaperManagerHelper(
             drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
             return
         } catch (e: Exception) {
-            Log.d("WallpaperManagerHelper", "Synchronous wallpaper load failed, trying async", e)
+            // Synchronous wallpaper load failed, trying async
         }
         
         // For non-BitmapDrawable or if sync load failed, load in background
@@ -122,7 +122,6 @@ class WallpaperManagerHelper(
                     drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
                 }
             } catch (e: Exception) {
-                Log.e("WallpaperManagerHelper", "Error loading wallpaper, showing default", e)
                 handler.post {
                     wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                     drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)

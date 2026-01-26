@@ -48,7 +48,6 @@ class CacheManager(
                 .joinToString("")
             packages.hashCode().toString()
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error getting app list version", e)
             System.currentTimeMillis().toString()
         }
     }
@@ -117,10 +116,8 @@ class CacheManager(
                 }
             }
             
-            Log.d("CacheManager", "Loaded ${apps.size} apps from cache")
             apps
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error loading app list cache", e)
             emptyList()
         }
     }
@@ -141,10 +138,7 @@ class CacheManager(
                 val version = getAppListVersion()
                 appListVersionFile.writeText(version)
                 cachedAppListVersion = version
-                
-                Log.d("CacheManager", "Saved ${apps.size} apps to cache")
             } catch (e: Exception) {
-                Log.e("CacheManager", "Error saving app list cache", e)
             }
         }
     }
@@ -166,10 +160,8 @@ class CacheManager(
             appMetadataCache.clear()
             appMetadataCache.putAll(metadata)
             
-            Log.d("CacheManager", "Loaded ${metadata.size} app metadata entries from cache")
             metadata
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error loading app metadata cache", e)
             emptyMap()
         }
     }
@@ -185,9 +177,7 @@ class CacheManager(
                 objectOutputStream.writeObject(metadata)
                 objectOutputStream.close()
                 outputStream.close()
-                Log.d("CacheManager", "Saved ${metadata.size} app metadata entries to cache")
             } catch (e: Exception) {
-                Log.e("CacheManager", "Error saving app metadata cache", e)
             }
         }
     }
@@ -223,10 +213,7 @@ class CacheManager(
                 
                 appMetadataCache.putAll(metadata)
                 saveAppMetadataToCache(appMetadataCache)
-                
-                Log.d("CacheManager", "Pre-loaded metadata for ${metadata.size} apps")
             } catch (e: Exception) {
-                Log.e("CacheManager", "Error preloading app metadata", e)
             }
         }
     }
@@ -243,7 +230,6 @@ class CacheManager(
             appMetadataCache.clear()
             cachedAppListVersion = null
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error clearing cache", e)
         }
     }
     

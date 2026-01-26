@@ -17,7 +17,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        Log.d(TAG, "Service created")
     }
     
     override fun onDestroy() {
@@ -25,9 +24,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             // Clear instance before calling super to prevent issues
             instance = null
             isListenerConnected = false
-            Log.d(TAG, "Service destroyed")
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onDestroy", e)
         } finally {
             super.onDestroy()
         }
@@ -36,12 +33,10 @@ class LaunchNotificationListenerService : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         isListenerConnected = true
-        Log.d(TAG, "Listener connected")
     }
     
     override fun onListenerDisconnected() {
         isListenerConnected = false
-        Log.d(TAG, "Listener disconnected")
         try {
             super.onListenerDisconnected()
         } catch (e: Exception) {
@@ -58,7 +53,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
                 updateWidget()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onNotificationPosted", e)
         }
     }
     
@@ -70,7 +64,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
                 updateWidget()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onNotificationRemoved", e)
         }
     }
     
@@ -91,7 +84,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             Log.w(TAG, "SecurityException getting active notifications", e)
             emptyArray()
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting active notifications", e)
             emptyArray()
         }
     }
@@ -101,12 +93,28 @@ class LaunchNotificationListenerService : NotificationListenerService() {
     fun dismissNotification(pkg: String, tag: String?, id: Int) {
         try {
             if (isListenerConnected) {
+                // Use cancelNotification to dismiss from system
                 cancelNotification(pkg, tag, id)
             }
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException dismissing notification", e)
         } catch (e: Exception) {
-            Log.e(TAG, "Error dismissing notification", e)
+        }
+    }
+    
+    // Alternative method using notification key (more reliable)
+    fun dismissNotificationByKey(key: String) {
+        try {
+            if (isListenerConnected) {
+                val activeNotifications = getActiveNotifications()
+                val sbn = activeNotifications.find { it.key == key }
+                if (sbn != null) {
+                    cancelNotification(sbn.packageName, sbn.tag, sbn.id)
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "SecurityException dismissing notification by key", e)
+        } catch (e: Exception) {
         }
     }
 }

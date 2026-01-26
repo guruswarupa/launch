@@ -19,7 +19,8 @@ class BroadcastReceiverManager(
     private val onNotificationsUpdated: () -> Unit,
     private val onPackageChanged: (String?, Boolean) -> Unit, // packageName, isRemoved
     private val onWallpaperChanged: () -> Unit,
-    private val onBatteryChanged: () -> Unit
+    private val onBatteryChanged: () -> Unit,
+    private val onActivityRecognitionPermissionGranted: () -> Unit = {}
 ) {
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -82,6 +83,16 @@ class BroadcastReceiverManager(
         }
     }
     
+    private val activityRecognitionPermissionReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED") {
+                activity.runOnUiThread {
+                    onActivityRecognitionPermissionGranted()
+                }
+            }
+        }
+    }
+    
     /**
      * Register all receivers
      */
@@ -116,6 +127,14 @@ class BroadcastReceiverManager(
         
         // Battery change receiver
         activity.registerReceiver(batteryChangeReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        
+        // Activity recognition permission receiver
+        val activityRecognitionFilter = IntentFilter("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.registerReceiver(activityRecognitionPermissionReceiver, activityRecognitionFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            activity.registerReceiver(activityRecognitionPermissionReceiver, activityRecognitionFilter)
+        }
     }
     
     /**
@@ -144,6 +163,11 @@ class BroadcastReceiverManager(
         }
         try {
             activity.unregisterReceiver(batteryChangeReceiver)
+        } catch (e: IllegalArgumentException) {
+            // Receiver was not registered
+        }
+        try {
+            activity.unregisterReceiver(activityRecognitionPermissionReceiver)
         } catch (e: IllegalArgumentException) {
             // Receiver was not registered
         }

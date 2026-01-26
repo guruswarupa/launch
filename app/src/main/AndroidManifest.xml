@@ -23,6 +23,18 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.stepdetector" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.magnetometer" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.pressure" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.proximity" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.ambient_temperature" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.temperature" android:required="false" />
 
     <!-- Queries declaration to access installed apps -->
     <queries>
@@ -95,6 +107,17 @@
             android:enabled="true"
             android:exported="false" />
 
+        <service
+            android:name=".PhysicalActivityTrackingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
+        <service
+            android:name=".ShakeDetectionService"
+            android:enabled="true"
+            android:exported="false" />
+
         <receiver
             android:name=".TodoAlarmReceiver"
             android:enabled="true"
@@ -123,7 +146,13 @@
         <activity
             android:name=".AppLockSettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.Launch"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".HiddenAppsSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
 
     </application>

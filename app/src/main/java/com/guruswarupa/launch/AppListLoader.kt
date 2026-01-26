@@ -94,7 +94,8 @@ class AppListLoader(
                         val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                         
                         handler.post {
-                            onAppListUpdated?.invoke(sorted, cachedFiltered)
+                            // Pass cachedApps (all apps) as second parameter, not cachedFiltered
+                            onAppListUpdated?.invoke(sorted, cachedApps)
                         }
                         
                         // Verify version in background (non-blocking) - refresh if changed
@@ -112,7 +113,6 @@ class AppListLoader(
                         return // Exit early - cached list shown, version check happens in background
                     }
                 } catch (e: Exception) {
-                    Log.e("AppListLoader", "Error showing cached app list", e)
                     // Continue to load fresh apps
                 }
             }
@@ -133,11 +133,11 @@ class AppListLoader(
                     val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                     
                     handler.post {
-                        onAppListUpdated?.invoke(sorted, cachedFiltered)
+                        // Pass cachedUnsortedList (all apps) as second parameter, not cachedFiltered
+                        onAppListUpdated?.invoke(sorted, cachedUnsortedList!!)
                     }
                 }
             } catch (e: Exception) {
-                Log.e("AppListLoader", "Error showing cached app list", e)
                 // Continue to load fresh apps
             }
         }
@@ -183,7 +183,6 @@ class AppListLoader(
                                 // Pre-load metadata in background
                                 cm.preloadAppMetadata(list)
                             } catch (e: Exception) {
-                                Log.e("AppListLoader", "Error saving cache", e)
                             }
                         }
                     }
@@ -221,7 +220,8 @@ class AppListLoader(
                         }
                         
                         // Show list immediately with cached sorting to prevent freeze
-                        onAppListUpdated?.invoke(initiallySorted, filteredApps)
+                        // Pass unsortedList (all apps) as second parameter, not filteredApps
+                        onAppListUpdated?.invoke(initiallySorted, unsortedList)
                         
                         // Optimize: Update existing adapter instead of creating new one
                         if (adapter == null) {
@@ -294,16 +294,15 @@ class AppListLoader(
                                     }
                                     
                                     // Only update if the sort actually changed (avoid unnecessary updates)
-                                    onAppListUpdated?.invoke(sortedFinalList, sortedApps)
+                                    // Pass unsortedList (all apps) as second parameter, not sortedApps
+                                    onAppListUpdated?.invoke(sortedFinalList, unsortedList)
                                 }
                             } catch (e: Exception) {
-                                Log.e("AppListLoader", "Error refining sort", e)
                             }
                         }
                     }, 200) // Small delay to let UI render first
                 }
             } catch (e: Exception) {
-                Log.e("AppListLoader", "Error loading apps", e)
                 handler.post {
                     if (activity.isFinishing || activity.isDestroyed) {
                         return@post
