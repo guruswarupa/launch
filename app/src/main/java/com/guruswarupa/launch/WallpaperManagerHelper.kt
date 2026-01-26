@@ -122,7 +122,6 @@ class WallpaperManagerHelper(
                     drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
                 }
             } catch (e: Exception) {
-                Log.e("WallpaperManagerHelper", "Error loading wallpaper, showing default", e)
                 handler.post {
                     wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                     drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)

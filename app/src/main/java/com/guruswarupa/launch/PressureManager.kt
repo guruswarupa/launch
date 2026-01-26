@@ -63,8 +63,6 @@ class PressureManager(private val context: Context) : SensorEventListener {
         
         if (success) {
             isListening = true
-        } else {
-            Log.e(TAG, "Failed to register pressure sensor listener")
         }
     }
     

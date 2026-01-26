@@ -72,8 +72,6 @@ class CompassManager(private val context: Context) : SensorEventListener {
         
         if (success1 && success2) {
             isListening = true
-        } else {
-            Log.e(TAG, "Failed to register sensor listeners")
         }
     }
     

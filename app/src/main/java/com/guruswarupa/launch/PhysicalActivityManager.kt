@@ -152,7 +152,6 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading historical data", e)
             }
         }
         return data
@@ -203,8 +202,6 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
             )
             if (success) {
                 isListening = true
-            } else {
-                Log.e(TAG, "Failed to register sensor listener")
             }
         } else {
             Log.w(TAG, "No step sensors available")
@@ -357,7 +354,6 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                     data[key] = json.getString(key)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading hourly data", e)
             }
         }
         return data
@@ -383,11 +379,10 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                         if (hour != null) {
                             hourlySteps[hour] = steps
                         }
+                        }
                     }
+                } catch (e: Exception) {
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error loading hourly data for date", e)
-            }
         }
         
         // Set current hour
@@ -432,7 +427,6 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error loading hourly data for date", e)
                     // Return empty data for all hours
                     for (hour in 0..23) {
                         hourlyDataList.add(HourlyActivityData(hour, 0, 0.0))

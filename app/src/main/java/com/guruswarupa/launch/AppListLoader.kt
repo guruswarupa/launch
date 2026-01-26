@@ -113,7 +113,6 @@ class AppListLoader(
                         return // Exit early - cached list shown, version check happens in background
                     }
                 } catch (e: Exception) {
-                    Log.e("AppListLoader", "Error showing cached app list", e)
                     // Continue to load fresh apps
                 }
             }
@@ -139,7 +138,6 @@ class AppListLoader(
                     }
                 }
             } catch (e: Exception) {
-                Log.e("AppListLoader", "Error showing cached app list", e)
                 // Continue to load fresh apps
             }
         }
@@ -185,7 +183,6 @@ class AppListLoader(
                                 // Pre-load metadata in background
                                 cm.preloadAppMetadata(list)
                             } catch (e: Exception) {
-                                Log.e("AppListLoader", "Error saving cache", e)
                             }
                         }
                     }
@@ -301,13 +298,11 @@ class AppListLoader(
                                     onAppListUpdated?.invoke(sortedFinalList, unsortedList)
                                 }
                             } catch (e: Exception) {
-                                Log.e("AppListLoader", "Error refining sort", e)
                             }
                         }
                     }, 200) // Small delay to let UI render first
                 }
             } catch (e: Exception) {
-                Log.e("AppListLoader", "Error loading apps", e)
                 handler.post {
                     if (activity.isFinishing || activity.isDestroyed) {
                         return@post
