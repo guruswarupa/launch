@@ -699,6 +699,15 @@ class SettingsActivity : ComponentActivity() {
             ))
         }
         
+        // Check Record Audio permission - always show
+        val recordAudioGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        allPermissions.add(PermissionItem(
+            Manifest.permission.RECORD_AUDIO,
+            "Microphone",
+            "Record audio for voice search functionality",
+            recordAudioGranted
+        ))
+        
         // Check Usage Stats permission - always show
         val usageStatsGranted = hasUsageStatsPermission()
         allPermissions.add(PermissionItem(
@@ -1143,6 +1152,7 @@ class SettingsActivity : ComponentActivity() {
                     Manifest.permission.READ_EXTERNAL_STORAGE -> "Storage"
                     Manifest.permission.READ_MEDIA_IMAGES -> "Storage (Images)"
                     Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
+                    Manifest.permission.RECORD_AUDIO -> "Microphone"
                     else -> null
                 }
                 
