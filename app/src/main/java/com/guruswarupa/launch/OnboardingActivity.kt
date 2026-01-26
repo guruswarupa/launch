@@ -132,6 +132,12 @@ class OnboardingActivity : ComponentActivity() {
                 "This permission allows the launcher to show notifications in the notifications widget. You'll be able to see and interact with your notifications directly from the home screen.",
                 104
             ))
+            add(PermissionInfo(
+                Manifest.permission.ACTIVITY_RECOGNITION,
+                "Physical Activity Permission",
+                "This permission allows the launcher to track your physical activity such as steps walked and distance traveled. You'll be able to see your daily activity stats in the physical activity widget.",
+                105
+            ))
         } else {
             add(PermissionInfo(
                 Manifest.permission.READ_CONTACTS,
@@ -690,6 +696,9 @@ class OnboardingActivity : ComponentActivity() {
             }
             Manifest.permission.POST_NOTIFICATIONS -> {
                 prefs.edit().putBoolean("notification_permission_denied", true).apply()
+            }
+            Manifest.permission.ACTIVITY_RECOGNITION -> {
+                prefs.edit().putBoolean("activity_recognition_permission_denied", true).apply()
             }
         }
     }
