@@ -57,7 +57,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             pickIntent.putExtra(AppWidgetManager.EXTRA_CUSTOM_INFO, true)
             activity.startActivityForResult(pickIntent, requestCode)
         } catch (e: Exception) {
-            Log.e(TAG, "Error requesting widget picker", e)
             Toast.makeText(context, "Error opening widget picker: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -66,14 +65,12 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         val appWidgetId = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
         
         if (appWidgetId == -1) {
-            Log.e(TAG, "No widget ID in result")
             Toast.makeText(context, "Invalid widget selected", Toast.LENGTH_SHORT).show()
             return
         }
         
         val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
         if (appWidgetInfo == null) {
-            Log.e(TAG, "Widget info not found for ID: $appWidgetId")
             Toast.makeText(context, "Widget info not found", Toast.LENGTH_SHORT).show()
             appWidgetHost.deleteAppWidgetId(appWidgetId)
             return
@@ -89,7 +86,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 // Use REQUEST_CONFIGURE_WIDGET constant from MainActivity
                 activity.startActivityForResult(configIntent, 801) // REQUEST_CONFIGURE_WIDGET
             } catch (e: Exception) {
-                Log.e(TAG, "Error launching widget config", e)
                 // If config fails, try to bind anyway
                 bindWidget(appWidgetId, appWidgetInfo)
             }
@@ -116,8 +112,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             val widgetView = try {
                 appWidgetHost.createView(context, appWidgetId, appWidgetInfo)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to create widget view: ${e.message}", e)
-                
                 // If creation fails, the widget might not be bound to our host
                 // Try to explicitly bind it (this may fail if we don't have permissions)
                 val bound = try {
@@ -133,13 +127,11 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                         appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, appWidgetInfo.provider)
                     }
                 } catch (bindException: Exception) {
-                    Log.e(TAG, "Binding also failed: ${bindException.message}", bindException)
                     false
                 }
                 
                 if (!bound) {
                     // Binding failed - this is expected for some widgets that require special permissions
-                    Log.e(TAG, "Cannot bind widget. This launcher may not have widget binding permissions.")
                     Toast.makeText(
                         context,
                         "Cannot add this widget. Some widgets require special launcher permissions.",
@@ -153,7 +145,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 try {
                     appWidgetHost.createView(context, appWidgetId, appWidgetInfo)
                 } catch (e2: Exception) {
-                    Log.e(TAG, "Still failed to create view after binding: ${e2.message}", e2)
                     Toast.makeText(context, "Failed to create widget: ${e2.message}", Toast.LENGTH_SHORT).show()
                     appWidgetHost.deleteAppWidgetId(appWidgetId)
                     return
@@ -161,7 +152,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             }
             
             if (widgetView == null) {
-                Log.e(TAG, "Widget view is null")
                 Toast.makeText(context, "Failed to create widget view", Toast.LENGTH_SHORT).show()
                 appWidgetHost.deleteAppWidgetId(appWidgetId)
                 return
@@ -194,7 +184,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             
             Toast.makeText(context, "Widget added successfully", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Log.e(TAG, "Error binding widget", e)
             Toast.makeText(context, "Error adding widget: ${e.message}", Toast.LENGTH_SHORT).show()
             appWidgetHost.deleteAppWidgetId(appWidgetId)
         }
@@ -347,7 +336,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             
             Toast.makeText(context, "Widget removed", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Log.e(TAG, "Error removing widget", e)
             Toast.makeText(context, "Error removing widget: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -367,7 +355,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             }
             prefs.edit().putString(PREFS_WIDGETS_KEY, jsonArray.toString()).apply()
         } catch (e: Exception) {
-            Log.e(TAG, "Error saving widgets", e)
         }
     }
     
@@ -405,7 +392,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 saveWidgets()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading widgets", e)
         }
     }
     
@@ -415,7 +401,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             val widgetContainerView = createWidgetContainer(widgetView, widgetInfo.appWidgetId, appWidgetInfo)
             widgetContainer.addView(widgetContainerView)
         } catch (e: Exception) {
-            Log.e(TAG, "Error recreating widget view", e)
             // Remove invalid widget
             widgets.remove(widgetInfo)
             appWidgetHost.deleteAppWidgetId(widgetInfo.appWidgetId)

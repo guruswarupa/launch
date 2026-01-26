@@ -124,7 +124,6 @@ class AppListManager(
                 }
                 onComplete(labelCache)
             } catch (e: Exception) {
-                Log.e("AppListManager", "Error building label cache", e)
                 onComplete(emptyMap())
             }
         }

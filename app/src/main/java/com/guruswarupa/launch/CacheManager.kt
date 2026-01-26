@@ -48,7 +48,6 @@ class CacheManager(
                 .joinToString("")
             packages.hashCode().toString()
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error getting app list version", e)
             System.currentTimeMillis().toString()
         }
     }
@@ -119,7 +118,6 @@ class CacheManager(
             
             apps
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error loading app list cache", e)
             emptyList()
         }
     }
@@ -141,7 +139,6 @@ class CacheManager(
                 appListVersionFile.writeText(version)
                 cachedAppListVersion = version
             } catch (e: Exception) {
-                Log.e("CacheManager", "Error saving app list cache", e)
             }
         }
     }
@@ -165,7 +162,6 @@ class CacheManager(
             
             metadata
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error loading app metadata cache", e)
             emptyMap()
         }
     }
@@ -182,7 +178,6 @@ class CacheManager(
                 objectOutputStream.close()
                 outputStream.close()
             } catch (e: Exception) {
-                Log.e("CacheManager", "Error saving app metadata cache", e)
             }
         }
     }
@@ -219,7 +214,6 @@ class CacheManager(
                 appMetadataCache.putAll(metadata)
                 saveAppMetadataToCache(appMetadataCache)
             } catch (e: Exception) {
-                Log.e("CacheManager", "Error preloading app metadata", e)
             }
         }
     }
@@ -236,7 +230,6 @@ class CacheManager(
             appMetadataCache.clear()
             cachedAppListVersion = null
         } catch (e: Exception) {
-            Log.e("CacheManager", "Error clearing cache", e)
         }
     }
     

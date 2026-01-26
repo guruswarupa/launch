@@ -65,8 +65,6 @@ class TemperatureManager(private val context: Context) : SensorEventListener {
         
         if (success) {
             isListening = true
-        } else {
-            Log.e(TAG, "Failed to register temperature sensor listener")
         }
     }
     

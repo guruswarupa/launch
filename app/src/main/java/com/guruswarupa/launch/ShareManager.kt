@@ -106,10 +106,8 @@ class ShareManager(private val context: Context) {
                 showToast(context.getString(R.string.activity_not_available))
             }
         } catch (e: ActivityNotFoundException) {
-            Log.e(TAG, "File manager not available", e)
             showToast(context.getString(R.string.no_file_manager_available))
         } catch (e: Exception) {
-            Log.e(TAG, "Error showing file picker", e)
             showToast(context.getString(R.string.no_file_manager_available))
         }
     }
@@ -141,7 +139,6 @@ class ShareManager(private val context: Context) {
             val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_file))
             context.startActivity(chooser)
         } catch (e: Exception) {
-            Log.e(TAG, "Error sharing file", e)
             showToast(context.getString(R.string.error_sharing_file, e.message ?: ""))
         }
     }
@@ -183,7 +180,6 @@ class ShareManager(private val context: Context) {
                 }
                 .sortedBy { it.name }
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting installed apps", e)
             emptyList()
         }
     }
@@ -205,13 +201,10 @@ class ShareManager(private val context: Context) {
                     }
                 }
             } catch (e: PackageManager.NameNotFoundException) {
-                Log.e(TAG, "Package not found: $packageName", e)
                 showToast(context.getString(R.string.apk_file_not_found))
             } catch (e: IOException) {
-                Log.e(TAG, "IO error copying APK", e)
                 showToast(context.getString(R.string.error_copying_apk))
             } catch (e: Exception) {
-                Log.e(TAG, "Error sharing APK", e)
                 showToast(context.getString(R.string.error_sharing_apk, e.message ?: ""))
             }
         }
@@ -234,7 +227,6 @@ class ShareManager(private val context: Context) {
         // Create cache directory if it doesn't exist
         val cacheDir = File(context.cacheDir, Constants.SHARED_APKS_DIR)
         if (!cacheDir.exists() && !cacheDir.mkdirs()) {
-            Log.e(TAG, "Failed to create cache directory")
             showToast(context.getString(R.string.error_creating_cache_directory))
             return null
         }
@@ -281,7 +273,6 @@ class ShareManager(private val context: Context) {
             val chooser = Intent.createChooser(shareIntent, chooserTitle)
             context.startActivity(chooser)
         } catch (e: Exception) {
-            Log.e(TAG, "Error launching share intent", e)
             showToast(context.getString(R.string.error_sharing_apk, e.message ?: ""))
         }
     }

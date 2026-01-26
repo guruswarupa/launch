@@ -25,7 +25,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             instance = null
             isListenerConnected = false
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onDestroy", e)
         } finally {
             super.onDestroy()
         }
@@ -54,7 +53,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
                 updateWidget()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onNotificationPosted", e)
         }
     }
     
@@ -66,7 +64,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
                 updateWidget()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onNotificationRemoved", e)
         }
     }
     
@@ -87,7 +84,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             Log.w(TAG, "SecurityException getting active notifications", e)
             emptyArray()
         } catch (e: Exception) {
-            Log.e(TAG, "Error getting active notifications", e)
             emptyArray()
         }
     }
@@ -103,7 +99,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException dismissing notification", e)
         } catch (e: Exception) {
-            Log.e(TAG, "Error dismissing notification", e)
         }
     }
     
@@ -120,7 +115,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException dismissing notification by key", e)
         } catch (e: Exception) {
-            Log.e(TAG, "Error dismissing notification by key", e)
         }
     }
 }

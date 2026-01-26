@@ -30,7 +30,6 @@ class UsageStatsCacheManager(
                 }
                 onComplete?.invoke(usageStatsCache)
             } catch (e: Exception) {
-                Log.e("UsageStatsCacheManager", "Error loading usage stats cache", e)
                 onComplete?.invoke(usageStatsCache)
             }
         }

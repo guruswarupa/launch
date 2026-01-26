@@ -87,7 +87,6 @@ class FocusModeApplier(
                     }
                 }
             } catch (e: Exception) {
-                Log.e("FocusModeApplier", "Error applying focus mode", e)
                 activity.runOnUiThread {
                     if (!activity.isFinishing && !activity.isDestroyed) {
                         adapter.notifyDataSetChanged()

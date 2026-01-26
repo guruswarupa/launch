@@ -297,7 +297,6 @@ class WeatherManager(private val context: Context) {
                 }
 
             } catch (e: Exception) {
-                Log.e("WeatherManager", "Error fetching weather", e)
                 handler.post {
                     weatherText.text = "Weather unavailable"
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
