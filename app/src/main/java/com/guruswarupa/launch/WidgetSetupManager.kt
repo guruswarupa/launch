@@ -77,6 +77,13 @@ class WidgetSetupManager(
         return WorkoutWidget(workoutView)
     }
     
+    fun setupPhysicalActivityWidget(sharedPreferences: android.content.SharedPreferences): PhysicalActivityWidget {
+        val activityContainer = activity.findViewById<android.widget.LinearLayout>(R.id.physical_activity_widget_container)
+        val physicalActivityWidget = PhysicalActivityWidget(activity, activityContainer, sharedPreferences)
+        physicalActivityWidget.initialize()
+        return physicalActivityWidget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }

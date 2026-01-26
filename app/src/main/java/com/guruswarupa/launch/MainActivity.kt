@@ -80,6 +80,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var calculatorWidget: CalculatorWidget
     private lateinit var notificationsWidget: NotificationsWidget
     private lateinit var workoutWidget: WorkoutWidget
+    private lateinit var physicalActivityWidget: PhysicalActivityWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
@@ -235,6 +236,7 @@ class MainActivity : FragmentActivity() {
         notificationsWidget = widgetSetupManager.setupNotificationsWidget()
         calculatorWidget = widgetSetupManager.setupCalculatorWidget()
         workoutWidget = widgetSetupManager.setupWorkoutWidget()
+        physicalActivityWidget = widgetSetupManager.setupPhysicalActivityWidget(sharedPreferences)
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -731,6 +733,11 @@ class MainActivity : FragmentActivity() {
         if (::widgetManager.isInitialized) {
             widgetManager.onDestroy()
         }
+        
+        // Cleanup physical activity widget
+        if (::physicalActivityWidget.isInitialized) {
+            physicalActivityWidget.cleanup()
+        }
     }
 
     // Broadcast receivers moved to BroadcastReceiverManager
@@ -801,6 +808,11 @@ class MainActivity : FragmentActivity() {
             }
         }
         
+        // Resume physical activity tracking
+        if (::physicalActivityWidget.isInitialized) {
+            physicalActivityWidget.onResume()
+        }
+        
         // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
         // This ensures unhidden apps appear when returning from settings
         handler.postDelayed({
@@ -834,6 +846,11 @@ class MainActivity : FragmentActivity() {
             if (::todoManager.isInitialized) {
                 todoManager.saveTodoItems()
             }
+        }
+        
+        // Pause physical activity tracking
+        if (::physicalActivityWidget.isInitialized) {
+            physicalActivityWidget.onPause()
         }
     }
 
@@ -907,6 +924,14 @@ class MainActivity : FragmentActivity() {
             grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             if (::voiceSearchManager.isInitialized) {
                 voiceSearchManager.startVoiceSearch()
+            }
+        }
+        
+        // Handle physical activity permission
+        if (requestCode == 105 && 
+            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (::physicalActivityWidget.isInitialized) {
+                physicalActivityWidget.onPermissionGranted()
             }
         }
     }

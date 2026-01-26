@@ -23,6 +23,11 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+    <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.stepdetector" android:required="false" />
 
     <!-- Queries declaration to access installed apps -->
     <queries>
@@ -94,6 +99,12 @@
             android:name=".AppUsageMonitor"
             android:enabled="true"
             android:exported="false" />
+
+        <service
+            android:name=".PhysicalActivityTrackingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="health" />
 
         <receiver
             android:name=".TodoAlarmReceiver"
