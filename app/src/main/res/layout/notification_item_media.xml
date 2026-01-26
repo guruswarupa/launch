@@ -12,60 +12,25 @@
     android:layout_marginBottom="6dp"
     android:padding="12dp">
 
-    <!-- Main notification content (horizontal) -->
+    <!-- Top row: Small app icon and time -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
 
         <ImageView
             android:id="@+id/notification_app_icon"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_default_app_icon"
-            android:layout_marginEnd="10dp"
             android:scaleType="centerCrop" />
 
-        <!-- Large icon (if available) - smaller for message notifications -->
-        <ImageView
-            android:id="@+id/notification_large_icon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
-            android:scaleType="centerCrop"
-            android:visibility="gone" />
-
-        <LinearLayout
+        <View
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/notification_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Notification Title"
-                android:textColor="@color/white"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:maxLines="1"
-                android:ellipsize="end" />
-
-            <TextView
-                android:id="@+id/notification_text"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Notification text content"
-                android:textColor="@color/text_secondary"
-                android:textSize="10sp"
-                android:maxLines="3"
-                android:ellipsize="end"
-                android:layout_marginTop="3dp"
-                android:lineSpacingExtra="2dp" />
-        </LinearLayout>
-
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <TextView
             android:id="@+id/notification_time"
@@ -73,20 +38,49 @@
             android:layout_height="wrap_content"
             android:text="2m ago"
             android:textColor="@color/text_secondary"
-            android:textSize="9sp"
-            android:layout_marginStart="6dp" />
+            android:textSize="10sp" />
     </LinearLayout>
 
-    <!-- Big picture (expanded) -->
+    <!-- Big thumbnail - square with padding -->
     <ImageView
         android:id="@+id/notification_big_picture"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_marginTop="8dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="64dp"
+        android:layout_marginEnd="64dp"
+        android:adjustViewBounds="true"
         android:scaleType="centerCrop"
+        android:background="@color/card_background"
         android:visibility="gone" />
 
-    <!-- Actions container (expanded) -->
+    <!-- Media name below thumbnail -->
+    <TextView
+        android:id="@+id/notification_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Media Title"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:layout_marginTop="8dp"
+        android:gravity="center" />
+
+    <TextView
+        android:id="@+id/notification_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Artist Name"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:layout_marginTop="2dp"
+        android:gravity="center"
+        android:visibility="gone" />
+
+    <!-- Centered action icons (smaller) -->
     <LinearLayout
         android:id="@+id/notification_actions_container"
         android:layout_width="match_parent"
@@ -94,7 +88,7 @@
         android:orientation="horizontal"
         android:layout_marginTop="12dp"
         android:visibility="gone"
-        android:gravity="start|center_vertical"
+        android:gravity="center"
         android:paddingStart="4dp"
         android:paddingEnd="4dp"
         android:paddingTop="4dp"
@@ -120,7 +114,7 @@
             android:layout_weight="1"
             android:hint="Type a reply..."
             android:textColor="@color/white"
-            android:textColorHint="@color/nord3"
+            android:textColorHint="@color/text_secondary"
             android:background="@drawable/notification_reply_input_background"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"

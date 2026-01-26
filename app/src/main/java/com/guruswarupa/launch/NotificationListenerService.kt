@@ -101,12 +101,32 @@ class LaunchNotificationListenerService : NotificationListenerService() {
     fun dismissNotification(pkg: String, tag: String?, id: Int) {
         try {
             if (isListenerConnected) {
+                // Use cancelNotification to dismiss from system
                 cancelNotification(pkg, tag, id)
+                Log.d(TAG, "Dismissed notification: pkg=$pkg, tag=$tag, id=$id")
             }
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException dismissing notification", e)
         } catch (e: Exception) {
             Log.e(TAG, "Error dismissing notification", e)
+        }
+    }
+    
+    // Alternative method using notification key (more reliable)
+    fun dismissNotificationByKey(key: String) {
+        try {
+            if (isListenerConnected) {
+                val activeNotifications = getActiveNotifications()
+                val sbn = activeNotifications.find { it.key == key }
+                if (sbn != null) {
+                    cancelNotification(sbn.packageName, sbn.tag, sbn.id)
+                    Log.d(TAG, "Dismissed notification by key: $key")
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "SecurityException dismissing notification by key", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error dismissing notification by key", e)
         }
     }
 }
