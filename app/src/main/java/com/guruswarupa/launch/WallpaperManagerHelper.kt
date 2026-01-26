@@ -59,7 +59,7 @@ class WallpaperManagerHelper(
             drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
             return
         } catch (e: Exception) {
-            Log.d("WallpaperManagerHelper", "Synchronous wallpaper load failed, trying async", e)
+            // Synchronous wallpaper load failed, trying async
         }
         
         // For non-BitmapDrawable or if sync load failed, load in background

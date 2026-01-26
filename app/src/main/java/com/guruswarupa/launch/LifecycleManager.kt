@@ -164,7 +164,6 @@ class LifecycleManager(
         
         // Ensure app list is loaded - reload if empty (fixes issue where apps don't load)
         if (adapter != null && (appList?.isEmpty() == true || appDockManager == null)) {
-            Log.d("LifecycleManager", "App list is empty in onResume, reloading...")
             handler.postDelayed({
                 if (!activity.isFinishing && !activity.isDestroyed && appDockManager != null) {
                     onLoadApps?.invoke(false)

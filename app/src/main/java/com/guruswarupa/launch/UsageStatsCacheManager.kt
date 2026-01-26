@@ -28,7 +28,6 @@ class UsageStatsCacheManager(
                         usageStatsCache[packageName] = value
                     }
                 }
-                Log.d("UsageStatsCacheManager", "Loaded ${usageStatsCache.size} usage stats into cache")
                 onComplete?.invoke(usageStatsCache)
             } catch (e: Exception) {
                 Log.e("UsageStatsCacheManager", "Error loading usage stats cache", e)

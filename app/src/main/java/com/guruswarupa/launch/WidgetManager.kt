@@ -71,8 +71,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             return
         }
         
-        Log.d(TAG, "Widget picked with ID: $appWidgetId")
-        
         val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
         if (appWidgetInfo == null) {
             Log.e(TAG, "Widget info not found for ID: $appWidgetId")
@@ -81,11 +79,8 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             return
         }
         
-        Log.d(TAG, "Widget info found: ${appWidgetInfo.provider.packageName}")
-        
         // Check if widget needs configuration
         if (appWidgetInfo.configure != null) {
-            Log.d(TAG, "Widget requires configuration")
             // Launch configuration activity
             val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
             configIntent.component = appWidgetInfo.configure
@@ -100,7 +95,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             }
         } else {
             // No configuration needed, bind directly
-            Log.d(TAG, "Widget does not require configuration, binding directly")
             bindWidget(appWidgetId, appWidgetInfo)
         }
     }
@@ -114,8 +108,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     
     private fun bindWidget(appWidgetId: Int, appWidgetInfo: AppWidgetProviderInfo) {
         try {
-            Log.d(TAG, "Attempting to bind widget ID: $appWidgetId, Provider: ${appWidgetInfo.provider.packageName}")
-            
             // For launchers, widgets picked from the picker should already be bound
             // We just need to create the view using our AppWidgetHost
             // The widget ID should already be bound to our host when returned from picker
@@ -174,8 +166,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 appWidgetHost.deleteAppWidgetId(appWidgetId)
                 return
             }
-            
-            Log.d(TAG, "Widget view created successfully")
             
             // Set widget properties on the view
             widgetView.setAppWidget(appWidgetId, appWidgetInfo)
