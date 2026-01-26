@@ -31,7 +31,6 @@ class PhysicalActivityTrackingService : Service() {
         
         // Note: Step counter sensors are hardware-based and work in deep sleep mode
         // No wake lock needed - this saves significant battery
-        Log.d(TAG, "Service created")
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -40,7 +39,6 @@ class PhysicalActivityTrackingService : Service() {
         // Start tracking
         if (activityManager.hasActivityRecognitionPermission()) {
             activityManager.startTracking()
-            Log.d(TAG, "Started physical activity tracking")
             
             // Update notification periodically
             startNotificationUpdates()
@@ -67,7 +65,6 @@ class PhysicalActivityTrackingService : Service() {
         super.onDestroy()
         updateRunnable?.let { handler.removeCallbacks(it) }
         activityManager.stopTracking()
-        Log.d(TAG, "Service destroyed")
     }
     
     override fun onBind(intent: Intent?): IBinder? = null

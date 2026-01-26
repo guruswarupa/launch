@@ -178,7 +178,6 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
             )
             if (success) {
                 isListening = true
-                Log.d(TAG, "Started tracking physical activity")
             } else {
                 Log.e(TAG, "Failed to register sensor listener")
             }
@@ -195,7 +194,6 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
             saveRunnable?.let { handler.removeCallbacks(it) }
             // Force save before stopping
             saveCurrentData()
-            Log.d(TAG, "Stopped tracking physical activity")
         }
     }
     
