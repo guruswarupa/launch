@@ -84,6 +84,34 @@ class WidgetSetupManager(
         return physicalActivityWidget
     }
     
+    fun setupCompassWidget(sharedPreferences: android.content.SharedPreferences): CompassWidget {
+        val compassContainer = activity.findViewById<android.widget.LinearLayout>(R.id.compass_widget_container)
+        val compassWidget = CompassWidget(activity, compassContainer, sharedPreferences)
+        compassWidget.initialize()
+        return compassWidget
+    }
+    
+    fun setupPressureWidget(sharedPreferences: android.content.SharedPreferences): PressureWidget {
+        val pressureContainer = activity.findViewById<android.widget.LinearLayout>(R.id.pressure_widget_container)
+        val pressureWidget = PressureWidget(activity, pressureContainer, sharedPreferences)
+        pressureWidget.initialize()
+        return pressureWidget
+    }
+    
+    fun setupProximityWidget(sharedPreferences: android.content.SharedPreferences): ProximityWidget {
+        val proximityContainer = activity.findViewById<android.widget.LinearLayout>(R.id.proximity_widget_container)
+        val proximityWidget = ProximityWidget(activity, proximityContainer, sharedPreferences)
+        proximityWidget.initialize()
+        return proximityWidget
+    }
+    
+    fun setupTemperatureWidget(sharedPreferences: android.content.SharedPreferences): TemperatureWidget {
+        val temperatureContainer = activity.findViewById<android.widget.LinearLayout>(R.id.temperature_widget_container)
+        val temperatureWidget = TemperatureWidget(activity, temperatureContainer, sharedPreferences)
+        temperatureWidget.initialize()
+        return temperatureWidget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }
