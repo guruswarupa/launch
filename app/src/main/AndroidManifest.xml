@@ -126,6 +126,12 @@
             android:theme="@style/Theme.Launch"
             android:excludeFromRecents="true" />
 
+        <activity
+            android:name=".HiddenAppsSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch"
+            android:excludeFromRecents="true" />
+
     </application>
 
 </manifest>

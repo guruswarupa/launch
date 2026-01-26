@@ -666,6 +666,37 @@ class AppAdapter(
         if (favoriteMenuItem != null) {
             val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
             favoriteMenuItem.title = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
+            // Force white text color using SpannableString
+            val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+            val spannable = android.text.SpannableString(favoriteMenuItem.title)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            favoriteMenuItem.title = spannable
+        }
+
+        // Update hide menu item text
+        val hideMenuItem = popupMenu.menu.findItem(R.id.toggle_hide)
+        if (hideMenuItem != null) {
+            try {
+                val isHidden = activity.hiddenAppManager.isAppHidden(packageName)
+                hideMenuItem.title = if (isHidden) "Unhide App" else "Hide App"
+                // Force white text color using SpannableString
+                val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+                val spannable = android.text.SpannableString(hideMenuItem.title)
+                spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                hideMenuItem.title = spannable
+            } catch (e: UninitializedPropertyAccessException) {
+                hideMenuItem.isVisible = false
+            }
+        }
+        
+        // Force white text for all menu items
+        val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+        for (i in 0 until popupMenu.menu.size()) {
+            val item = popupMenu.menu.getItem(i)
+            val title = item.title?.toString() ?: continue
+            val spannable = android.text.SpannableString(title)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            item.title = spannable
         }
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
@@ -684,6 +715,10 @@ class AppAdapter(
                 }
                 R.id.toggle_favorite -> {
                     toggleFavoriteApp(packageName, appInfo)
+                    true
+                }
+                R.id.toggle_hide -> {
+                    toggleHideApp(packageName, appInfo)
                     true
                 }
                 else -> false
@@ -708,7 +743,7 @@ class AppAdapter(
             val menuPopupHelperClass = menuPopupHelper?.javaClass
             
             // Try different field names for different Android versions
-            val listViewFieldNames = arrayOf("mDropDownList", "mPopup")
+            val listViewFieldNames = arrayOf("mDropDownList", "mPopup", "mListView")
             var listView: android.widget.ListView? = null
             
             for (fieldName in listViewFieldNames) {
@@ -725,37 +760,74 @@ class AppAdapter(
                 }
             }
             
-            // If we got the ListView, fix text colors
-            listView?.post {
-                try {
-                    for (i in 0 until listView.childCount) {
-                        val itemView = listView.getChildAt(i)
-                        if (itemView is TextView) {
-                            itemView.setTextColor(whiteColor)
-                        } else if (itemView is ViewGroup) {
-                            findTextViewsAndSetColor(itemView, whiteColor)
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
+            // Function to fix text colors in a view
+            fun fixTextColors(view: View) {
+                if (view is TextView) {
+                    view.setTextColor(whiteColor)
+                } else if (view is ViewGroup) {
+                    findTextViewsAndSetColor(view, whiteColor)
                 }
             }
             
-            // Also try after a small delay in case items load asynchronously
-            listView?.postDelayed({
+            // If we got the ListView, fix text colors immediately and with delays
+            listView?.let { lv ->
+                // Fix immediately
                 try {
-                    for (i in 0 until listView.childCount) {
-                        val itemView = listView.getChildAt(i)
-                        if (itemView is TextView) {
-                            itemView.setTextColor(whiteColor)
-                        } else if (itemView is ViewGroup) {
-                            findTextViewsAndSetColor(itemView, whiteColor)
-                        }
+                    for (i in 0 until lv.childCount) {
+                        fixTextColors(lv.getChildAt(i))
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace()
+                    // Ignore
                 }
-            }, 50)
+                
+                // Fix after a short delay (items might not be rendered yet)
+                lv.post {
+                    try {
+                        for (i in 0 until lv.childCount) {
+                            fixTextColors(lv.getChildAt(i))
+                        }
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }
+                
+                // Fix after a longer delay (for async rendering)
+                lv.postDelayed({
+                    try {
+                        for (i in 0 until lv.childCount) {
+                            fixTextColors(lv.getChildAt(i))
+                        }
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }, 50)
+                
+                // Fix after an even longer delay (for very slow rendering)
+                lv.postDelayed({
+                    try {
+                        for (i in 0 until lv.childCount) {
+                            fixTextColors(lv.getChildAt(i))
+                        }
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }, 150)
+                
+                // Also set a global layout listener to catch any late-rendered items
+                lv.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                    override fun onGlobalLayout() {
+                        try {
+                            for (i in 0 until lv.childCount) {
+                                fixTextColors(lv.getChildAt(i))
+                            }
+                        } catch (e: Exception) {
+                            // Ignore
+                        }
+                        // Remove listener after first layout to avoid performance issues
+                        lv.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    }
+                })
+            }
         } catch (e: Exception) {
             // If reflection fails, the style should still apply
             e.printStackTrace()
@@ -823,6 +895,33 @@ class AppAdapter(
         activity.filterAppsWithoutReload()
         // Refresh dock toggle icon
         activity.appDockManager.refreshFavoriteToggle()
+    }
+
+    private fun toggleHideApp(packageName: String, appInfo: ResolveInfo) {
+        try {
+            // Use cached label or fallback to avoid blocking
+        val appName = labelCache[packageName] ?: run {
+            try {
+                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
+            } catch (e: Exception) {
+                packageName
+            }
+        }
+        val isHidden = activity.hiddenAppManager.isAppHidden(packageName)
+        
+        if (isHidden) {
+            activity.hiddenAppManager.unhideApp(packageName)
+            Toast.makeText(activity, "Unhid $appName", Toast.LENGTH_SHORT).show()
+        } else {
+            activity.hiddenAppManager.hideApp(packageName)
+            Toast.makeText(activity, "Hid $appName", Toast.LENGTH_SHORT).show()
+        }
+        
+        // Reload app list to reflect changes
+        activity.filterAppsWithoutReload()
+        } catch (e: UninitializedPropertyAccessException) {
+            Toast.makeText(activity, "Hidden apps feature not available", Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun showCallConfirmationDialog(contactName: String) {
