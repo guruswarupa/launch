@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import androidx.core.content.ContextCompat
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -513,8 +514,31 @@ class MainActivity : FragmentActivity() {
             }
         }, 100)
         
+        // Start shake detection service for background quick actions
+        startShakeDetectionService()
+        
         // Initialize lifecycle manager
         initializeLifecycleManager()
+    }
+    
+    /**
+     * Starts the shake detection service for background quick actions
+     */
+    private fun startShakeDetectionService() {
+        val intent = Intent(this, ShakeDetectionService::class.java).apply {
+            action = ShakeDetectionService.ACTION_START
+        }
+        ContextCompat.startForegroundService(this, intent)
+    }
+    
+    /**
+     * Stops the shake detection service
+     */
+    private fun stopShakeDetectionService() {
+        val intent = Intent(this, ShakeDetectionService::class.java).apply {
+            action = ShakeDetectionService.ACTION_STOP
+        }
+        stopService(intent)
     }
     
     /**
@@ -785,6 +809,9 @@ class MainActivity : FragmentActivity() {
         if (::temperatureWidget.isInitialized) {
             temperatureWidget.cleanup()
         }
+        
+        // Stop shake detection service
+        stopShakeDetectionService()
     }
 
     // Broadcast receivers moved to BroadcastReceiverManager
@@ -880,6 +907,8 @@ class MainActivity : FragmentActivity() {
             temperatureWidget.onResume()
         }
         
+        // Shake detection service runs in background, no need to start/stop here
+        
         // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
         // This ensures unhidden apps appear when returning from settings
         handler.postDelayed({
@@ -939,6 +968,8 @@ class MainActivity : FragmentActivity() {
         if (::temperatureWidget.isInitialized) {
             temperatureWidget.onPause()
         }
+        
+        // Shake detection service runs in background, no need to stop here
     }
 
     override fun onStop() {
