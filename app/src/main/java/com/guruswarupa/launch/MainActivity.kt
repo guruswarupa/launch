@@ -920,6 +920,20 @@ class MainActivity : FragmentActivity() {
 
 
     fun applyPowerSaverMode(isEnabled: Boolean) {
+        // Defer power saver mode application if required dependencies are not yet initialized
+        if (!::adapter.isInitialized || !::wallpaperManagerHelper.isInitialized || 
+            !::usageStatsDisplayManager.isInitialized || !::usageStatsRefreshManager.isInitialized ||
+            !::todoRecyclerView.isInitialized) {
+            handler.post {
+                if (!isFinishing && !isDestroyed && ::adapter.isInitialized && 
+                    ::wallpaperManagerHelper.isInitialized && ::usageStatsDisplayManager.isInitialized &&
+                    ::usageStatsRefreshManager.isInitialized && ::todoRecyclerView.isInitialized) {
+                    applyPowerSaverMode(isEnabled)
+                }
+            }
+            return
+        }
+        
         if (!::powerSaverManager.isInitialized) {
             powerSaverManager = PowerSaverManager(
                 this,
