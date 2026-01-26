@@ -295,6 +295,38 @@
                 android:orientation="vertical"
                 android:layout_marginVertical="16dp" />
 
+            <!-- Compass Widget -->
+            <LinearLayout
+                android:id="@+id/compass_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="16dp" />
+
+            <!-- Pressure Widget -->
+            <LinearLayout
+                android:id="@+id/pressure_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="16dp" />
+
+            <!-- Proximity Widget -->
+            <LinearLayout
+                android:id="@+id/proximity_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="16dp" />
+
+            <!-- Temperature Widget -->
+            <LinearLayout
+                android:id="@+id/temperature_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="16dp" />
+
             <!-- Workout Widget -->
             <LinearLayout
                 android:layout_width="match_parent"

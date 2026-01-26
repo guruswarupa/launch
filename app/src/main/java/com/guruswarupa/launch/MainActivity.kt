@@ -81,6 +81,10 @@ class MainActivity : FragmentActivity() {
     private lateinit var notificationsWidget: NotificationsWidget
     private lateinit var workoutWidget: WorkoutWidget
     private lateinit var physicalActivityWidget: PhysicalActivityWidget
+    private lateinit var compassWidget: CompassWidget
+    private lateinit var pressureWidget: PressureWidget
+    private lateinit var proximityWidget: ProximityWidget
+    private lateinit var temperatureWidget: TemperatureWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
@@ -242,6 +246,10 @@ class MainActivity : FragmentActivity() {
         calculatorWidget = widgetSetupManager.setupCalculatorWidget()
         workoutWidget = widgetSetupManager.setupWorkoutWidget()
         physicalActivityWidget = widgetSetupManager.setupPhysicalActivityWidget(sharedPreferences)
+        compassWidget = widgetSetupManager.setupCompassWidget(sharedPreferences)
+        pressureWidget = widgetSetupManager.setupPressureWidget(sharedPreferences)
+        proximityWidget = widgetSetupManager.setupProximityWidget(sharedPreferences)
+        temperatureWidget = widgetSetupManager.setupTemperatureWidget(sharedPreferences)
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -743,6 +751,26 @@ class MainActivity : FragmentActivity() {
         if (::physicalActivityWidget.isInitialized) {
             physicalActivityWidget.cleanup()
         }
+        
+        // Cleanup compass widget
+        if (::compassWidget.isInitialized) {
+            compassWidget.cleanup()
+        }
+        
+        // Cleanup pressure widget
+        if (::pressureWidget.isInitialized) {
+            pressureWidget.cleanup()
+        }
+        
+        // Cleanup proximity widget
+        if (::proximityWidget.isInitialized) {
+            proximityWidget.cleanup()
+        }
+        
+        // Cleanup temperature widget
+        if (::temperatureWidget.isInitialized) {
+            temperatureWidget.cleanup()
+        }
     }
 
     // Broadcast receivers moved to BroadcastReceiverManager
@@ -818,6 +846,26 @@ class MainActivity : FragmentActivity() {
             physicalActivityWidget.onResume()
         }
         
+        // Resume compass tracking
+        if (::compassWidget.isInitialized) {
+            compassWidget.onResume()
+        }
+        
+        // Resume pressure tracking
+        if (::pressureWidget.isInitialized) {
+            pressureWidget.onResume()
+        }
+        
+        // Resume proximity tracking
+        if (::proximityWidget.isInitialized) {
+            proximityWidget.onResume()
+        }
+        
+        // Resume temperature tracking
+        if (::temperatureWidget.isInitialized) {
+            temperatureWidget.onResume()
+        }
+        
         // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
         // This ensures unhidden apps appear when returning from settings
         handler.postDelayed({
@@ -856,6 +904,26 @@ class MainActivity : FragmentActivity() {
         // Pause physical activity tracking
         if (::physicalActivityWidget.isInitialized) {
             physicalActivityWidget.onPause()
+        }
+        
+        // Pause compass tracking
+        if (::compassWidget.isInitialized) {
+            compassWidget.onPause()
+        }
+        
+        // Pause pressure tracking
+        if (::pressureWidget.isInitialized) {
+            pressureWidget.onPause()
+        }
+        
+        // Pause proximity tracking
+        if (::proximityWidget.isInitialized) {
+            proximityWidget.onPause()
+        }
+        
+        // Pause temperature tracking
+        if (::temperatureWidget.isInitialized) {
+            temperatureWidget.onPause()
         }
     }
 
