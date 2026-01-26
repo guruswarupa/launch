@@ -112,13 +112,65 @@ class PhysicalActivityWidget(
         
         val displayDate = parsedDate?.let { displayFormat.format(it) } ?: date
         
+        // Inflate dialog layout
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_hourly_activity, null)
+        
+        // Get views
+        val titleText = dialogView.findViewById<TextView>(R.id.dialog_title)
+        val totalStepsText = dialogView.findViewById<TextView>(R.id.total_steps_text)
+        val totalDistanceText = dialogView.findViewById<TextView>(R.id.total_distance_text)
+        val hourlyChart = dialogView.findViewById<HourlyStepsChartView>(R.id.hourly_chart)
+        val hourlyStatsContainer = dialogView.findViewById<LinearLayout>(R.id.hourly_stats_container)
+        
+        // Set title
+        titleText.text = displayDate
+        
+        // Set summary stats
         val df = DecimalFormat("#.##")
         val stepsFormatted = String.format("%,d", activityData.steps)
         val distanceFormatted = df.format(activityData.distanceKm)
+        totalStepsText.text = stepsFormatted
+        totalDistanceText.text = "$distanceFormatted km"
         
+        // Get hourly data
+        val hourlyData = activityManager.getHourlyActivityForDate(date)
+        hourlyChart.setHourlyData(hourlyData)
+        
+        // Populate hourly stats list
+        hourlyStatsContainer.removeAllViews()
+        hourlyData.forEach { hourly ->
+            if (hourly.steps > 0) {
+                val hourView = LayoutInflater.from(context).inflate(
+                    android.R.layout.simple_list_item_2,
+                    hourlyStatsContainer,
+                    false
+                )
+                val text1 = hourView.findViewById<TextView>(android.R.id.text1)
+                val text2 = hourView.findViewById<TextView>(android.R.id.text2)
+                
+                val hourLabel = when {
+                    hourly.hour == 0 -> "12:00 AM"
+                    hourly.hour < 12 -> "${hourly.hour}:00 AM"
+                    hourly.hour == 12 -> "12:00 PM"
+                    else -> "${hourly.hour - 12}:00 PM"
+                }
+                
+                text1.text = hourLabel
+                text1.setTextColor(ContextCompat.getColor(context, R.color.white))
+                text1.textSize = 14f
+                
+                val distanceFormattedHourly = df.format(hourly.distanceKm)
+                text2.text = "${hourly.steps} steps • $distanceFormattedHourly km"
+                text2.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                text2.textSize = 12f
+                
+                hourlyStatsContainer.addView(hourView)
+            }
+        }
+        
+        // Show dialog
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle(displayDate)
-            .setMessage("Steps: $stepsFormatted\nDistance: $distanceFormatted km")
+            .setView(dialogView)
             .setPositiveButton("Close", null)
             .show()
     }

@@ -18,6 +18,12 @@ data class ActivityData(
     val date: String
 )
 
+data class HourlyActivityData(
+    val hour: Int,
+    val steps: Int,
+    val distanceKm: Double
+)
+
 class PhysicalActivityManager(private val context: Context) : SensorEventListener {
     
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -42,6 +48,11 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
     // Average step length in meters (approximately 0.75m for average adult)
     private val AVERAGE_STEP_LENGTH_METERS = 0.75
     
+    // Hourly tracking
+    private var currentHour = -1
+    private var hourlySteps: MutableMap<Int, Int> = mutableMapOf() // hour -> steps
+    private var lastHourlySaveTime = 0L
+    
     companion object {
         private const val TAG = "PhysicalActivityManager"
         private const val PREF_LAST_STEP_COUNT = "last_step_count"
@@ -49,6 +60,7 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
         private const val PREF_LAST_RESET_DATE = "last_reset_date"
         private const val PREF_TOTAL_STEPS_BASE = "total_steps_base"
         private const val PREF_HISTORICAL_DATA = "historical_activity_data"
+        private const val PREF_HOURLY_DATA = "hourly_activity_data"
     }
     
     init {
@@ -74,6 +86,9 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
         val today = getCurrentDate()
         if (lastResetDate != today) {
             resetDailyCount()
+        } else {
+            // Load hourly data for today
+            loadHourlyData(today)
         }
     }
     
@@ -88,11 +103,15 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
         // Save yesterday's data before resetting
         if (lastResetDate.isNotEmpty() && lastResetDate != today && todayStepCount > 0) {
             saveHistoricalData(lastResetDate, todayStepCount)
+            // Save yesterday's hourly data
+            saveHourlyData(lastResetDate, hourlySteps)
         }
         
         lastResetDate = today
         todayStepCount = 0
         lastStepCount = 0
+        hourlySteps.clear()
+        currentHour = -1
         
         prefs.edit().apply {
             putString(PREF_LAST_RESET_DATE, today)
@@ -164,6 +183,12 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
         val today = getCurrentDate()
         if (lastResetDate != today) {
             resetDailyCount()
+        } else {
+            // Initialize current hour if not already set
+            if (currentHour == -1) {
+                val calendar = Calendar.getInstance()
+                currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+            }
         }
         
         // Prefer step counter over step detector (more accurate)
@@ -247,6 +272,7 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                         if (stepsToday > 0) {
                             todayStepCount += stepsToday
                             lastStepCount = currentTotalSteps
+                            updateHourlySteps(stepsToday)
                             scheduleSave() // Batch save instead of immediate
                         }
                     }
@@ -256,6 +282,7 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                 // Step detector fires once per step
                 if (event.values[0] == 1.0f) {
                     todayStepCount++
+                    updateHourlySteps(1)
                     scheduleSave() // Batch save instead of immediate
                 }
             }
@@ -264,6 +291,19 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
     
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         // Not needed for step sensors
+    }
+    
+    private fun updateHourlySteps(steps: Int) {
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        
+        // If hour changed, save previous hour's data
+        if (currentHour != -1 && currentHour != hour) {
+            // Hour changed, data for previous hour is already saved
+        }
+        
+        currentHour = hour
+        hourlySteps[hour] = (hourlySteps[hour] ?: 0) + steps
     }
     
     private fun saveCurrentData() {
@@ -278,7 +318,135 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
         // Also save today's data to historical (only if changed significantly)
         if (todayStepCount > 0) {
             saveHistoricalData(today, todayStepCount)
+            // Save hourly data
+            saveHourlyData(today, hourlySteps)
         }
+    }
+    
+    private fun saveHourlyData(date: String, hourlyData: Map<Int, Int>) {
+        val allHourlyData = getHourlyDataMap()
+        val dateKey = "hourly_$date"
+        
+        // Convert hourly data to JSON
+        val json = org.json.JSONObject()
+        hourlyData.forEach { (hour, steps) ->
+            val distanceKm = (steps * AVERAGE_STEP_LENGTH_METERS) / 1000.0
+            json.put(hour.toString(), "$steps|$distanceKm")
+        }
+        
+        allHourlyData[dateKey] = json.toString()
+        
+        // Save all hourly data
+        val mainJson = org.json.JSONObject()
+        allHourlyData.forEach { (key, value) ->
+            mainJson.put(key, value)
+        }
+        
+        prefs.edit().putString(PREF_HOURLY_DATA, mainJson.toString()).apply()
+    }
+    
+    private fun getHourlyDataMap(): MutableMap<String, String> {
+        val data = mutableMapOf<String, String>()
+        val jsonString = prefs.getString(PREF_HOURLY_DATA, null)
+        if (jsonString != null) {
+            try {
+                val json = org.json.JSONObject(jsonString)
+                val keys = json.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    data[key] = json.getString(key)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading hourly data", e)
+            }
+        }
+        return data
+    }
+    
+    private fun loadHourlyData(date: String) {
+        val dateKey = "hourly_$date"
+        val allHourlyData = getHourlyDataMap()
+        val hourlyJsonString = allHourlyData[dateKey]
+        
+        hourlySteps.clear()
+        if (hourlyJsonString != null) {
+            try {
+                val json = org.json.JSONObject(hourlyJsonString)
+                val keys = json.keys()
+                while (keys.hasNext()) {
+                    val hourStr = keys.next()
+                    val value = json.getString(hourStr)
+                    val parts = value.split("|")
+                    if (parts.size == 2) {
+                        val steps = parts[0].toIntOrNull() ?: 0
+                        val hour = hourStr.toIntOrNull()
+                        if (hour != null) {
+                            hourlySteps[hour] = steps
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading hourly data for date", e)
+            }
+        }
+        
+        // Set current hour
+        val calendar = Calendar.getInstance()
+        currentHour = calendar.get(Calendar.HOUR_OF_DAY)
+    }
+    
+    fun getHourlyActivityForDate(date: String): List<HourlyActivityData> {
+        val today = getCurrentDate()
+        val hourlyDataList = mutableListOf<HourlyActivityData>()
+        
+        if (date == today) {
+            // Get current hourly data
+            for (hour in 0..23) {
+                val steps = hourlySteps[hour] ?: 0
+                val distanceKm = (steps * AVERAGE_STEP_LENGTH_METERS) / 1000.0
+                hourlyDataList.add(HourlyActivityData(hour, steps, distanceKm))
+            }
+        } else {
+            // Get historical hourly data
+            val dateKey = "hourly_$date"
+            val allHourlyData = getHourlyDataMap()
+            val hourlyJsonString = allHourlyData[dateKey]
+            
+            if (hourlyJsonString != null) {
+                try {
+                    val json = org.json.JSONObject(hourlyJsonString)
+                    for (hour in 0..23) {
+                        val hourStr = hour.toString()
+                        if (json.has(hourStr)) {
+                            val value = json.getString(hourStr)
+                            val parts = value.split("|")
+                            if (parts.size == 2) {
+                                val steps = parts[0].toIntOrNull() ?: 0
+                                val distanceKm = parts[1].toDoubleOrNull() ?: 0.0
+                                hourlyDataList.add(HourlyActivityData(hour, steps, distanceKm))
+                            } else {
+                                hourlyDataList.add(HourlyActivityData(hour, 0, 0.0))
+                            }
+                        } else {
+                            hourlyDataList.add(HourlyActivityData(hour, 0, 0.0))
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading hourly data for date", e)
+                    // Return empty data for all hours
+                    for (hour in 0..23) {
+                        hourlyDataList.add(HourlyActivityData(hour, 0, 0.0))
+                    }
+                }
+            } else {
+                // No hourly data for this date, return zeros
+                for (hour in 0..23) {
+                    hourlyDataList.add(HourlyActivityData(hour, 0, 0.0))
+                }
+            }
+        }
+        
+        return hourlyDataList
     }
     
     fun getTodayActivity(): ActivityData {
