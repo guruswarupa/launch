@@ -142,6 +142,11 @@ class MainActivity : FragmentActivity() {
                 if (::usageStatsRefreshManager.isInitialized) {
                     usageStatsRefreshManager.updateBatteryInBackground()
                 }
+            },
+            onActivityRecognitionPermissionGranted = {
+                if (::physicalActivityWidget.isInitialized) {
+                    physicalActivityWidget.onPermissionGranted()
+                }
             }
         )
         broadcastReceiverManager.registerReceivers()
