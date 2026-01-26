@@ -6,7 +6,8 @@ Launch is a clean, efficient, and minimalist Android launcher designed to maximi
 - Sorts apps by usage frequency
 - Rarely used apps grouped alphabetically
 - App usage time shown beside icons
-- Weekly usage summary at the bottom
+- Interactive weekly usage graph
+- Daily usage breakdowns with pie charts
 - One-tap uninstall via long press
 - Switch between grid and list view
 
@@ -70,6 +71,32 @@ Launch is a clean, efficient, and minimalist Android launcher designed to maximi
 - Change wallpaper
 - Change weather API key
 - Manage app locks
+- Enable shake-to-toggle torch
+
+---
+
+📊 Enhanced Usage Statistics
+- Weekly usage graph (last 7 days)
+- Tap any day for detailed breakdown
+- Interactive pie charts
+- App-by-app time analysis
+- Total screen time per day
+
+---
+
+📱 Shake to Toggle Torch
+- Shake device twice to toggle flashlight
+- Works in background
+- Battery efficient (only when screen on)
+- Quick access without unlocking
+
+---
+
+🎓 Interactive Feature Tutorial
+- Step-by-step feature walkthrough
+- Visual highlights and explanations
+- Smart navigation through all features
+- Resume support if interrupted
 
 ---
 
@@ -84,6 +111,8 @@ Launch is a clean, efficient, and minimalist Android launcher designed to maximi
 - Tap or long-press widgets for quick actions
 - Long-press icons for uninstall or rename
 - Calculator in search bar
+- Shake device twice to toggle torch
+- Tap weekly usage day for details
 
 ---
 
@@ -105,6 +134,7 @@ Permissions used:
 - Storage → for notes, wallpapers, and backups
 - Location → for weather (OpenWeatherMap)
 - Microphone → for voice input
+- Camera → for shake-to-toggle torch (optional)
 
 ---
 

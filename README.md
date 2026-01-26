@@ -27,7 +27,8 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - Apps are sorted by usage frequency automatically
 - Rarely used apps grouped and sorted alphabetically
 - App usage stats shown beside each app icon
-- Weekly phone usage summary at the bottom
+- Weekly phone usage summary with interactive graph
+- Daily usage breakdowns with pie charts
 - One-tap uninstall with long-press gesture
 - Toggle between smooth grid and list views
 
@@ -114,6 +115,29 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - Customize which apps appear in main list
 - Quick access to your most-used apps
 
+### 📊 Enhanced Usage Statistics
+- **Weekly Usage Graph**: Visual representation of your app usage over the past 7 days
+- **Daily Usage Breakdown**: Tap any day in the weekly graph to see detailed usage
+- **Interactive Pie Charts**: Visual breakdown of app usage for each day
+- **App-by-App Analysis**: See exactly how much time you spent on each app
+- **Total Time Tracking**: View total screen time per day at a glance
+- Automatically refreshes when date changes
+
+### 📱 Shake to Toggle Torch
+- **Quick Flashlight Access**: Shake your device twice to toggle the torch
+- **Background Service**: Works even when the launcher is in the background
+- **Battery Efficient**: Only active when screen is on
+- **One-Tap Enable**: Enable from settings to start using immediately
+- Perfect for quick flashlight access without unlocking your phone
+
+### 🎓 Interactive Feature Tutorial
+- **Comprehensive Guide**: Step-by-step walkthrough of all launcher features
+- **Visual Highlights**: Interactive overlays highlight each feature as you learn
+- **Smart Navigation**: Automatically opens drawers and scrolls to relevant sections
+- **Resume Support**: Pick up where you left off if interrupted
+- **Skip Anytime**: Skip the tutorial or complete it at your own pace
+- Perfect for new users to discover all features quickly
+
 ### 📦 APK Sharing
 - Share APK files of installed apps
 - Access from app context menu or dock
@@ -131,6 +155,8 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - Guided introduction to key features
 - Permission requests with explanations
 - Quick start guide for new users
+- Interactive feature tutorial after onboarding
+- Step-by-step walkthrough of all features
 
 ---
 
@@ -169,6 +195,8 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 | **Long Press Focus Icon**   | Enter Focus Mode setup                      |
 | **Long Press Balance**      | View transaction history                    |
 | **Swipe Notification**      | Dismiss notification from widget            |
+| **Shake Device (2x)**       | Toggle torch/flashlight                     |
+| **Tap Weekly Usage Day**    | View detailed daily usage breakdown         |
 
 ---
 
@@ -202,6 +230,7 @@ Launch requires **minimal permissions**:
 - **Notification Access** → for notifications widget (optional)
 - **Location** → for weather widget location-based forecasts (optional)
 - **Audio** → for voice search functionality (optional)
+- **Camera** → for shake-to-toggle torch feature (optional)
 
 All permissions are optional except for core launcher functionality. You can use the launcher with minimal permissions and enable additional features as needed.
 

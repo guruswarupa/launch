@@ -514,11 +514,23 @@ class MainActivity : FragmentActivity() {
             }
         }, 100)
         
-        // Start shake detection service for background quick actions
-        startShakeDetectionService()
+        // Start shake detection service for background quick actions (if enabled)
+        updateShakeDetectionService()
         
         // Initialize lifecycle manager
         initializeLifecycleManager()
+    }
+    
+    /**
+     * Updates shake detection service based on user preference
+     */
+    private fun updateShakeDetectionService() {
+        val isTorchEnabled = sharedPreferences.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
+        if (isTorchEnabled) {
+            startShakeDetectionService()
+        } else {
+            stopShakeDetectionService()
+        }
     }
     
     /**
@@ -661,6 +673,9 @@ class MainActivity : FragmentActivity() {
             // Update app search manager with new adapter
             updateAppSearchManager()
         }
+        
+        // Update shake detection service based on preference
+        updateShakeDetectionService()
         
         // Force refresh hidden apps cache to ensure we have latest data
         if (::hiddenAppManager.isInitialized) {

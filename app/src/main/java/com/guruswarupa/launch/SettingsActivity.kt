@@ -203,6 +203,24 @@ class SettingsActivity : ComponentActivity() {
         val tutorialArrow = findViewById<TextView>(R.id.tutorial_arrow)
         setupSectionToggle(tutorialHeader, tutorialContent, tutorialArrow)
         
+        // Quick Actions Section
+        val quickActionsHeader = findViewById<LinearLayout>(R.id.quick_actions_header)
+        val quickActionsContent = findViewById<LinearLayout>(R.id.quick_actions_content)
+        val quickActionsArrow = findViewById<TextView>(R.id.quick_actions_arrow)
+        setupSectionToggle(quickActionsHeader, quickActionsContent, quickActionsArrow)
+        
+        // Setup torch toggle switch
+        val shakeTorchSwitch = findViewById<Switch>(R.id.shake_torch_switch)
+        val isTorchEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
+        shakeTorchSwitch.isChecked = isTorchEnabled
+        
+        shakeTorchSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked).apply()
+            // Send broadcast to update service state
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            sendBroadcast(intent)
+        }
+        
         // Launcher Section
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
         val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
