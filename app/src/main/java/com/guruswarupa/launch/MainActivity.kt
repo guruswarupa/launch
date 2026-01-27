@@ -87,6 +87,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var pressureWidget: PressureWidget
     private lateinit var proximityWidget: ProximityWidget
     private lateinit var temperatureWidget: TemperatureWidget
+    private lateinit var noiseDecibelWidget: NoiseDecibelWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
@@ -253,6 +254,7 @@ class MainActivity : FragmentActivity() {
         pressureWidget = widgetSetupManager.setupPressureWidget(sharedPreferences)
         proximityWidget = widgetSetupManager.setupProximityWidget(sharedPreferences)
         temperatureWidget = widgetSetupManager.setupTemperatureWidget(sharedPreferences)
+        noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -825,6 +827,11 @@ class MainActivity : FragmentActivity() {
             temperatureWidget.cleanup()
         }
         
+        // Cleanup noise decibel widget
+        if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.cleanup()
+        }
+        
         // Stop shake detection service
         stopShakeDetectionService()
     }
@@ -922,6 +929,11 @@ class MainActivity : FragmentActivity() {
             temperatureWidget.onResume()
         }
         
+        // Resume noise decibel tracking
+        if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.onResume()
+        }
+        
         // Shake detection service runs in background, no need to start/stop here
         
         // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
@@ -982,6 +994,11 @@ class MainActivity : FragmentActivity() {
         // Pause temperature tracking
         if (::temperatureWidget.isInitialized) {
             temperatureWidget.onPause()
+        }
+        
+        // Pause noise decibel tracking
+        if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.onPause()
         }
         
         // Shake detection service runs in background, no need to stop here
@@ -1057,6 +1074,10 @@ class MainActivity : FragmentActivity() {
             grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             if (::voiceSearchManager.isInitialized) {
                 voiceSearchManager.startVoiceSearch()
+            }
+            // Also notify noise decibel widget if permission was granted
+            if (::noiseDecibelWidget.isInitialized) {
+                noiseDecibelWidget.onPermissionGranted()
             }
         }
         
@@ -1153,6 +1174,9 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.temperature_widget_container)?.visibility = 
             if (widgetMap["temperature_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
+        findViewById<View>(R.id.noise_decibel_widget_container)?.visibility = 
+            if (widgetMap["noise_decibel_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
         // Workout widget - the parent LinearLayout contains the container
         val workoutParent = findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? ViewGroup
         workoutParent?.visibility = if (widgetMap["workout_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
@@ -1199,6 +1223,7 @@ class MainActivity : FragmentActivity() {
                     "pressure_widget_container" -> findViewById<View>(R.id.pressure_widget_container)
                     "proximity_widget_container" -> findViewById<View>(R.id.proximity_widget_container)
                     "temperature_widget_container" -> findViewById<View>(R.id.temperature_widget_container)
+                    "noise_decibel_widget_container" -> findViewById<View>(R.id.noise_decibel_widget_container)
                     "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
                     "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
                     "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View

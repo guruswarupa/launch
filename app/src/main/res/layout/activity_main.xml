@@ -343,6 +343,14 @@
                 android:orientation="vertical"
                 android:layout_marginVertical="16dp" />
 
+            <!-- Noise Decibel Widget -->
+            <LinearLayout
+                android:id="@+id/noise_decibel_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="16dp" />
+
             <!-- Workout Widget -->
             <LinearLayout
                 android:layout_width="match_parent"

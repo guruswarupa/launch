@@ -112,6 +112,13 @@ class WidgetSetupManager(
         return temperatureWidget
     }
     
+    fun setupNoiseDecibelWidget(sharedPreferences: android.content.SharedPreferences): NoiseDecibelWidget {
+        val noiseContainer = activity.findViewById<android.widget.LinearLayout>(R.id.noise_decibel_widget_container)
+        val noiseWidget = NoiseDecibelWidget(activity, noiseContainer, sharedPreferences)
+        noiseWidget.initialize()
+        return noiseWidget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }
