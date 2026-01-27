@@ -21,10 +21,11 @@ class WidgetConfigurationManager(
             WidgetInfo("widgets_section", "Android Widgets", true),
             WidgetInfo("notifications_widget_container", "Notifications", true),
             WidgetInfo("physical_activity_widget_container", "Physical Activity", true),
-            WidgetInfo("compass_widget_container", "Compass", true),
-            WidgetInfo("pressure_widget_container", "Pressure", true),
-            WidgetInfo("proximity_widget_container", "Proximity", true),
-            WidgetInfo("temperature_widget_container", "Temperature", true),
+            WidgetInfo("compass_widget_container", "Compass", false),
+            WidgetInfo("pressure_widget_container", "Pressure", false),
+            WidgetInfo("proximity_widget_container", "Proximity", false),
+            WidgetInfo("temperature_widget_container", "Temperature", false),
+            WidgetInfo("noise_decibel_widget_container", "Noise Decibel Analyzer", false),
             WidgetInfo("workout_widget_container", "Workout Tracker", true),
             WidgetInfo("calculator_widget_container", "Calculator", true),
             WidgetInfo("todo_recycler_view", "Todo List", true),
@@ -41,27 +42,47 @@ class WidgetConfigurationManager(
     
     /**
      * Get the current widget order
+     * Merges saved configuration with ALL_WIDGETS to ensure new widgets are included
      */
     fun getWidgetOrder(): List<WidgetInfo> {
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null)
-        if (orderJson != null) {
+        val savedWidgets = if (orderJson != null) {
             try {
                 val jsonArray = JSONArray(orderJson)
-                val widgets = mutableListOf<WidgetInfo>()
+                val widgets = mutableMapOf<String, WidgetInfo>()
                 for (i in 0 until jsonArray.length()) {
                     val jsonObject = jsonArray.getJSONObject(i)
                     val id = jsonObject.getString("id")
                     val name = jsonObject.getString("name")
                     val enabled = jsonObject.getBoolean("enabled")
-                    widgets.add(WidgetInfo(id, name, enabled))
+                    widgets[id] = WidgetInfo(id, name, enabled)
                 }
-                return widgets
+                widgets
             } catch (e: Exception) {
-                // If parsing fails, return default order
+                // If parsing fails, return empty map
+                mutableMapOf()
+            }
+        } else {
+            mutableMapOf()
+        }
+        
+        // Merge saved widgets with ALL_WIDGETS
+        // This ensures new widgets added to ALL_WIDGETS will appear even if not in saved config
+        val mergedWidgets = mutableListOf<WidgetInfo>()
+        for (defaultWidget in ALL_WIDGETS) {
+            // Use saved widget if it exists, otherwise use default widget
+            val widget = savedWidgets[defaultWidget.id] ?: defaultWidget
+            mergedWidgets.add(widget)
+        }
+        
+        // Also include any saved widgets that might not be in ALL_WIDGETS (for backward compatibility)
+        for ((id, widget) in savedWidgets) {
+            if (mergedWidgets.none { it.id == id }) {
+                mergedWidgets.add(widget)
             }
         }
-        // Return default order if no saved configuration
-        return ALL_WIDGETS
+        
+        return mergedWidgets
     }
     
     /**

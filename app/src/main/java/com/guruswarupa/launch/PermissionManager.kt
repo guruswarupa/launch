@@ -117,6 +117,20 @@ class PermissionManager(
     }
     
     /**
+     * Request microphone permission for audio recording (used by noise decibel widget)
+     */
+    fun requestMicrophonePermission() {
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                VOICE_SEARCH_REQUEST // Reuse voice search request code since it's the same permission
+            )
+        }
+    }
+    
+    /**
      * Handle permission result
      */
     fun handlePermissionResult(

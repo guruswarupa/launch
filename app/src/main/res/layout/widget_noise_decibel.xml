@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="20dp"
+        android:paddingHorizontal="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Noise Decibel Analyzer"
+            android:textColor="@color/white"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.02" />
+
+        <Button
+            android:id="@+id/toggle_noise_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enable"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:background="@drawable/button_neutral_ripple"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp"
+            android:minWidth="80dp" />
+    </LinearLayout>
+
+    <!-- Noise Container -->
+    <LinearLayout
+        android:id="@+id/noise_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/widget_background"
+        android:padding="24dp"
+        android:gravity="center"
+        android:visibility="gone"
+        android:elevation="4dp">
+
+        <!-- Decibel Display Card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/widget_background"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Current Noise Level"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/decibel_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 dB"
+                android:textColor="@color/nord8"
+                android:textSize="48sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="20dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/nord7"
+                android:alpha="0.3"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Noise Level Indicator -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/noise_level_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Quiet"
+                    android:textColor="@color/nord7"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Visual Indicator Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+
+                <View
+                    android:id="@+id/decibel_indicator"
+                    android:layout_width="0dp"
+                    android:layout_height="8dp"
+                    android:background="@color/nord8"
+                    android:layout_marginBottom="4dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="0"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        android:gravity="start" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="60"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        android:gravity="center" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="120"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="10sp"
+                        android:gravity="end" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- No Microphone Message -->
+        <TextView
+            android:id="@+id/no_microphone_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Microphone not available"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:visibility="gone" />
+
+        <!-- Permission Message -->
+        <TextView
+            android:id="@+id/no_permission_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Microphone permission required"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</LinearLayout>
