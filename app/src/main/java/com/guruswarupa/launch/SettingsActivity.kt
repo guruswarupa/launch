@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.Locale
 
 class SettingsActivity : ComponentActivity() {
 
@@ -197,6 +198,13 @@ class SettingsActivity : ComponentActivity() {
         val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
         setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
         
+        // Physical Activity Calibration Section
+        val calibrationHeader = findViewById<LinearLayout>(R.id.physical_activity_calibration_header)
+        val calibrationContent = findViewById<LinearLayout>(R.id.physical_activity_calibration_content)
+        val calibrationArrow = findViewById<TextView>(R.id.physical_activity_calibration_arrow)
+        setupSectionToggle(calibrationHeader, calibrationContent, calibrationArrow)
+        setupPhysicalActivityCalibration()
+        
         // Tutorial Section
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
         val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
@@ -239,6 +247,94 @@ class SettingsActivity : ComponentActivity() {
                 arrow.text = "▲"
             }
         }
+    }
+    
+    private fun setupPhysicalActivityCalibration() {
+        val activityManager = PhysicalActivityManager(this)
+        val heightInput = findViewById<EditText>(R.id.height_input)
+        val strideLengthInput = findViewById<EditText>(R.id.stride_length_input)
+        val currentStrideDisplay = findViewById<TextView>(R.id.current_stride_display)
+        val saveButton = findViewById<Button>(R.id.save_calibration_button)
+        val resetButton = findViewById<Button>(R.id.reset_calibration_button)
+        
+        // Load current values
+        val currentHeight = activityManager.getUserHeightCm()
+        val currentStride = activityManager.getStrideLengthMeters()
+        
+        if (currentHeight > 0) {
+            heightInput.setText(currentHeight.toString())
+        }
+        
+        // Update current stride display
+        updateStrideDisplay(currentStrideDisplay, currentStride)
+        
+        // When height changes, auto-calculate stride
+        heightInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus && heightInput.text.isNotEmpty()) {
+                val height = heightInput.text.toString().toIntOrNull()
+                if (height != null && height > 0) {
+                    // Calculate stride: stride ≈ height * 0.43
+                    val calculatedStride = (height * 0.43) / 100.0
+                    strideLengthInput.setText(String.format(Locale.getDefault(), "%.2f", calculatedStride))
+                }
+            }
+        }
+        
+        // Save calibration
+        saveButton.setOnClickListener {
+            var saved = false
+            
+            // Check if height is set
+            val heightText = heightInput.text.toString().trim()
+            if (heightText.isNotEmpty()) {
+                val height = heightText.toIntOrNull()
+                if (height != null && height > 0 && height < 300) {
+                    activityManager.setUserHeightCm(height)
+                    saved = true
+                    Toast.makeText(this, "Calibration saved (height-based)", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Please enter a valid height (1-299 cm)", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+            
+            // Check if stride length is manually set (overrides height)
+            val strideText = strideLengthInput.text.toString().trim()
+            if (strideText.isNotEmpty()) {
+                val stride = strideText.toDoubleOrNull()
+                if (stride != null && stride > 0 && stride < 2.0) {
+                    activityManager.setStrideLengthMeters(stride)
+                    saved = true
+                    Toast.makeText(this, "Calibration saved (manual stride)", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Please enter a valid stride length (0.1-2.0 m)", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+            }
+            
+            if (!saved) {
+                Toast.makeText(this, "Please enter either height or stride length", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            // Update display
+            val newStride = activityManager.getStrideLengthMeters()
+            updateStrideDisplay(currentStrideDisplay, newStride)
+        }
+        
+        // Reset to default
+        resetButton.setOnClickListener {
+            activityManager.resetStrideLengthToDefault()
+            heightInput.setText("")
+            strideLengthInput.setText("")
+            val defaultStride = activityManager.getStrideLengthMeters()
+            updateStrideDisplay(currentStrideDisplay, defaultStride)
+            Toast.makeText(this, "Calibration reset to default", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun updateStrideDisplay(textView: TextView, strideLength: Double) {
+        textView.text = String.format(Locale.getDefault(), "Current stride length: %.2f m", strideLength)
     }
 
     private fun setupCurrencySpinner(spinner: Spinner) {
