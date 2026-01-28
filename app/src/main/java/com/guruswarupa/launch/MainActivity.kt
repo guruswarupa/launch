@@ -472,7 +472,18 @@ class MainActivity : FragmentActivity() {
         
         // Setup widget configuration button
         val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
+        val widgetSettingsHeader = findViewById<LinearLayout>(R.id.widget_settings_header)
+        val widgetSettingsText = findViewById<TextView>(R.id.widget_settings_text)
+        
         widgetConfigButton.setOnClickListener {
+            showWidgetConfigurationDialog()
+        }
+        
+        widgetSettingsHeader.setOnClickListener {
+            showWidgetConfigurationDialog()
+        }
+        
+        widgetSettingsText.setOnClickListener {
             showWidgetConfigurationDialog()
         }
 
@@ -1215,6 +1226,11 @@ class MainActivity : FragmentActivity() {
         // Create a map for quick lookup
         val widgetMap = widgets.associateBy { it.id }
         
+        // Check if any widgets are enabled
+        val hasEnabledWidgets = widgets.any { it.enabled }
+        val emptyState = findViewById<View>(R.id.widgets_empty_state)
+        emptyState?.visibility = if (hasEnabledWidgets) View.GONE else View.VISIBLE
+        
         // Update visibility for each widget
         findViewById<View>(R.id.widgets_section)?.visibility = 
             if (widgetMap["widgets_section"]?.enabled == true) View.VISIBLE else View.GONE
@@ -1271,7 +1287,7 @@ class MainActivity : FragmentActivity() {
         // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
         val drawer = findViewById<FrameLayout>(R.id.widgets_drawer)
         val scrollView = drawer?.let { view ->
-            // Find NestedScrollView (it's the second child after wallpaper ImageView and gear icon)
+            // Find NestedScrollView (it's a child of the FrameLayout)
             for (i in 0 until view.childCount) {
                 val child = view.getChildAt(i)
                 if (child is androidx.core.widget.NestedScrollView) {
@@ -1308,15 +1324,20 @@ class MainActivity : FragmentActivity() {
                 view?.let { viewMap[widget.id] = it }
             }
             
-            // Remove all views from layout
-            viewMap.values.forEach { view ->
-                (view.parent as? ViewGroup)?.removeView(view)
+            // Remove only the widgets we're managing (in reverse order to avoid index issues)
+            val viewsToRemove = viewMap.values.filter { it.parent == layout }.toList()
+            viewsToRemove.reversed().forEach { view ->
+                layout.removeView(view)
             }
             
-            // Add views back in the configured order
+            // Add views back in the exact configured order from widgets list
+            // This preserves the order set by the user, regardless of enabled/disabled state
             widgets.forEach { widget ->
                 viewMap[widget.id]?.let { view ->
-                    layout.addView(view)
+                    // View should have no parent after removal, add it back
+                    if (view.parent == null) {
+                        layout.addView(view)
+                    }
                 }
             }
         }
