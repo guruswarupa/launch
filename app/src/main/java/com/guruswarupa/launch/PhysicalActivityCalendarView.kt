@@ -163,9 +163,9 @@ class ActivityCalendarAdapter(
                 holder.workoutIndicator.visibility = View.GONE
             }
             
-            // Highlight today
+            // Highlight today with a nice colored border
             if (dayItem.isToday) {
-                holder.itemView.setBackgroundResource(android.R.drawable.dialog_holo_light_frame)
+                holder.itemView.setBackgroundResource(R.drawable.today_highlight)
             } else {
                 holder.itemView.background = null
             }

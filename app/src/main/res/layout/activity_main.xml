@@ -303,6 +303,14 @@
 
             </LinearLayout>
 
+            <!-- Calendar Events Widget -->
+            <LinearLayout
+                android:id="@+id/calendar_events_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="16dp" />
+
             <!-- Physical Activity Widget -->
             <LinearLayout
                 android:id="@+id/physical_activity_widget_container"

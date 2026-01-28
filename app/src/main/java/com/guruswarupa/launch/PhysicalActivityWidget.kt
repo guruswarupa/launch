@@ -93,7 +93,7 @@ class PhysicalActivityWidget(
     
     private fun initializeCalendarView() {
         val calendarViewLayout = LayoutInflater.from(context)
-            .inflate(R.layout.workout_calendar_view, calendarViewContainer, false)
+            .inflate(R.layout.physical_activity_calendar_view, calendarViewContainer, false)
         calendarViewContainer.addView(calendarViewLayout)
         calendarView = PhysicalActivityCalendarView(calendarViewLayout, activityManager) { date, activityData ->
             showDayActivityDetails(date, activityData)

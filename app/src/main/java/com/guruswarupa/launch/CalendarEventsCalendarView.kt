@@ -5,24 +5,25 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.*
 
-class WorkoutCalendarView(
+class CalendarEventsCalendarView(
     private val rootView: View,
-    private val exercises: List<WorkoutExercise>,
-    private val onDayClick: ((String, List<Pair<WorkoutExercise, Int>>) -> Unit)? = null
+    private var events: List<CalendarEvent>,
+    private val onDayClick: ((String, List<CalendarEvent>) -> Unit)? = null
 ) {
     private val context: Context = rootView.context
-    private val calendarRecyclerView: RecyclerView = rootView.findViewById(R.id.calendar_recycler_view)
-    private val monthYearText: TextView = rootView.findViewById(R.id.month_year_text)
-    private val prevMonthButton: View = rootView.findViewById(R.id.prev_month_button)
-    private val nextMonthButton: View = rootView.findViewById(R.id.next_month_button)
+    private val calendarRecyclerView: RecyclerView = rootView.findViewById(R.id.calendar_events_calendar_recycler_view)
+    private val monthYearText: TextView = rootView.findViewById(R.id.calendar_events_month_year_text)
+    private val prevMonthButton: View = rootView.findViewById(R.id.calendar_events_prev_month_button)
+    private val nextMonthButton: View = rootView.findViewById(R.id.calendar_events_next_month_button)
     
     private var currentCalendar = Calendar.getInstance()
-    private val adapter = CalendarAdapter(currentCalendar, exercises, onDayClick)
+    private val adapter = CalendarEventsCalendarAdapter(currentCalendar, events, onDayClick)
     
     init {
         calendarRecyclerView.layoutManager = GridLayoutManager(context, 7)
@@ -41,8 +42,9 @@ class WorkoutCalendarView(
         updateCalendar()
     }
     
-    fun updateExercises(newExercises: List<WorkoutExercise>) {
-        adapter.updateExercises(newExercises)
+    fun updateEvents(newEvents: List<CalendarEvent>) {
+        events = newEvents
+        adapter.updateEvents(newEvents)
     }
     
     private fun updateCalendar() {
@@ -56,11 +58,11 @@ class WorkoutCalendarView(
     }
 }
 
-class CalendarAdapter(
+class CalendarEventsCalendarAdapter(
     private var calendar: Calendar,
-    private var exercises: List<WorkoutExercise>,
-    private val onDayClick: ((String, List<Pair<WorkoutExercise, Int>>) -> Unit)? = null
-) : RecyclerView.Adapter<CalendarAdapter.DayViewHolder>() {
+    private var events: List<CalendarEvent>,
+    private val onDayClick: ((String, List<CalendarEvent>) -> Unit)? = null
+) : RecyclerView.Adapter<CalendarEventsCalendarAdapter.DayViewHolder>() {
     
     private val days = mutableListOf<DayItem>()
     
@@ -74,8 +76,8 @@ class CalendarAdapter(
         notifyDataSetChanged()
     }
     
-    fun updateExercises(newExercises: List<WorkoutExercise>) {
-        exercises = newExercises
+    fun updateEvents(newEvents: List<CalendarEvent>) {
+        events = newEvents
         updateDays()
         notifyDataSetChanged()
     }
@@ -95,11 +97,30 @@ class CalendarAdapter(
         // We want Sunday to be first column (index 0)
         val startOffset = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
         for (i in 0 until startOffset) {
-            days.add(DayItem(null, false, false, null))
+            days.add(DayItem(null, false, false, null, emptyList()))
         }
         
-        // Get all workout dates from all exercises
-        val allWorkoutDates = exercises.flatMap { it.workoutDates }.toSet()
+        // Get events for this month
+        val monthEvents = events.filter { event ->
+            val eventCalendar = Calendar.getInstance().apply { timeInMillis = event.startTime }
+            eventCalendar.get(Calendar.YEAR) == calendar.get(Calendar.YEAR) &&
+            eventCalendar.get(Calendar.MONTH) == calendar.get(Calendar.MONTH)
+        }
+        
+        // Deduplicate events by title and date before grouping
+        // Festivals often appear in multiple calendars with different event IDs
+        // So we deduplicate by title + date instead of event ID
+        val uniqueMonthEvents = monthEvents.distinctBy { event ->
+            val eventCalendar = Calendar.getInstance().apply { timeInMillis = event.startTime }
+            // Use title + date as unique key (normalize title to handle case differences)
+            "${event.title.lowercase().trim()}_${eventCalendar.get(Calendar.YEAR)}_${eventCalendar.get(Calendar.MONTH)}_${eventCalendar.get(Calendar.DAY_OF_MONTH)}"
+        }
+        
+        // Group events by day
+        val eventsByDay = uniqueMonthEvents.groupBy { event ->
+            val eventCalendar = Calendar.getInstance().apply { timeInMillis = event.startTime }
+            eventCalendar.get(Calendar.DAY_OF_MONTH)
+        }
         
         // Add days of month
         val currentDate = Calendar.getInstance()
@@ -109,29 +130,33 @@ class CalendarAdapter(
         
         for (day in 1..daysInMonth) {
             val dateStr = formatDate(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, day)
-            val hasWorkout = allWorkoutDates.contains(dateStr)
+            val dayEvents = eventsByDay[day] ?: emptyList()
+            val hasEvents = dayEvents.isNotEmpty()
             val isToday = day == today && 
                           calendar.get(Calendar.MONTH) == currentMonth && 
                           calendar.get(Calendar.YEAR) == currentYear
             
-            days.add(DayItem(day, hasWorkout, isToday, dateStr))
+            days.add(DayItem(day, hasEvents, isToday, dateStr, dayEvents))
         }
     }
     
     private fun formatDate(year: Int, month: Int, day: Int): String {
-        return String.format(Locale.getDefault(), "%d-%d-%d", year, month, day)
+        // Format: yyyy-MM-dd to match calendar query format
+        return String.format(Locale.getDefault(), "%d-%02d-%02d", year, month, day)
     }
     
     data class DayItem(
         val day: Int?,
-        val hasWorkout: Boolean = false,
+        val hasEvents: Boolean = false,
         val isToday: Boolean = false,
-        val dateString: String? = null
+        val dateString: String? = null,
+        val events: List<CalendarEvent> = emptyList()
     )
     
     class DayViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val dayText: TextView = itemView.findViewById(R.id.calendar_day_text)
-        val workoutIndicator: View = itemView.findViewById(R.id.workout_indicator)
+        val eventIndicator: View = itemView.findViewById(R.id.event_indicator)
+        val festivalIndicator: View = itemView.findViewById(R.id.festival_indicator)
     }
     
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DayViewHolder {
@@ -147,18 +172,36 @@ class CalendarAdapter(
             // Empty cell
             holder.dayText.text = ""
             holder.dayText.visibility = View.INVISIBLE
-            holder.workoutIndicator.visibility = View.GONE
+            holder.eventIndicator.visibility = View.GONE
+            holder.festivalIndicator.visibility = View.GONE
             holder.itemView.background = null
             holder.itemView.setOnClickListener(null)
         } else {
             holder.dayText.text = dayItem.day.toString()
             holder.dayText.visibility = View.VISIBLE
             
-            // Show workout indicator
-            if (dayItem.hasWorkout) {
-                holder.workoutIndicator.visibility = View.VISIBLE
+            // Show event indicators: blue for custom events, red for festivals
+            val hasFestival = dayItem.events.any { it.isFestival }
+            val hasCustomEvent = dayItem.events.any { !it.isFestival }
+            
+            // Show blue indicator for custom events (top-right)
+            if (hasCustomEvent) {
+                holder.eventIndicator.visibility = View.VISIBLE
+                holder.eventIndicator.setBackgroundColor(
+                    ContextCompat.getColor(holder.itemView.context, R.color.nord9) // Blue
+                )
             } else {
-                holder.workoutIndicator.visibility = View.GONE
+                holder.eventIndicator.visibility = View.GONE
+            }
+            
+            // Show red indicator for festivals (top-left)
+            if (hasFestival) {
+                holder.festivalIndicator.visibility = View.VISIBLE
+                holder.festivalIndicator.setBackgroundColor(
+                    ContextCompat.getColor(holder.itemView.context, R.color.nord11) // Red
+                )
+            } else {
+                holder.festivalIndicator.visibility = View.GONE
             }
             
             // Highlight today with a nice colored border
@@ -168,17 +211,12 @@ class CalendarAdapter(
                 holder.itemView.background = null
             }
             
-            // Make clickable if it has workout data
-            if (dayItem.hasWorkout && dayItem.dateString != null) {
+            // Make clickable if it has events or is today
+            if (dayItem.dateString != null) {
                 holder.itemView.setOnClickListener {
-                    val dateStr = dayItem.dateString
-                    val dayExercises = exercises.mapNotNull { exercise ->
-                        val count = exercise.getCountForDate(dateStr)
-                        if (count > 0) {
-                            exercise to count
-                        } else null
+                    if (dayItem.hasEvents) {
+                        onDayClick?.invoke(dayItem.dateString, dayItem.events)
                     }
-                    onDayClick?.invoke(dateStr, dayExercises)
                 }
             } else {
                 holder.itemView.setOnClickListener(null)
