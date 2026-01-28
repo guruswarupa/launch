@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Title"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/countdown_title_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter countdown title"
+        android:textColor="@color/white"
+        android:textColorHint="@color/text_secondary"
+        android:background="@drawable/widget_background"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp"
+        android:inputType="text" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Date"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/countdown_date_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Select date"
+        android:textColor="@color/white"
+        android:textColorHint="@color/text_secondary"
+        android:background="@drawable/widget_background"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp"
+        android:focusable="false"
+        android:clickable="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Time"
+        android:textColor="@color/white"
+        android:textSize="14sp"
+        android:layout_marginBottom="4dp" />
+
+    <EditText
+        android:id="@+id/countdown_time_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Select time"
+        android:textColor="@color/white"
+        android:textColorHint="@color/text_secondary"
+        android:background="@drawable/widget_background"
+        android:padding="12dp"
+        android:layout_marginBottom="16dp"
+        android:focusable="false"
+        android:clickable="true" />
+
+    <Button
+        android:id="@+id/from_calendar_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select from Calendar"
+        android:textColor="@color/white"
+        android:background="@drawable/button_neutral_ripple"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp" />
+
+</LinearLayout>

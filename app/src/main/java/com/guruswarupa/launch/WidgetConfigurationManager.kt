@@ -21,6 +21,7 @@ class WidgetConfigurationManager(
             WidgetInfo("widgets_section", "Android Widgets", true),
             WidgetInfo("notifications_widget_container", "Notifications", true),
             WidgetInfo("calendar_events_widget_container", "Calendar Events", false),
+            WidgetInfo("countdown_widget_container", "Countdown", false),
             WidgetInfo("physical_activity_widget_container", "Physical Activity", true),
             WidgetInfo("compass_widget_container", "Compass", false),
             WidgetInfo("pressure_widget_container", "Pressure", false),

@@ -126,6 +126,13 @@ class WidgetSetupManager(
         return calendarWidget
     }
     
+    fun setupCountdownWidget(sharedPreferences: android.content.SharedPreferences): CountdownWidget {
+        val countdownContainer = activity.findViewById<android.widget.LinearLayout>(R.id.countdown_widget_container)
+        val countdownWidget = CountdownWidget(activity, countdownContainer, sharedPreferences)
+        countdownWidget.initialize()
+        return countdownWidget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }

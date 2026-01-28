@@ -89,6 +89,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var temperatureWidget: TemperatureWidget
     private lateinit var noiseDecibelWidget: NoiseDecibelWidget
     private lateinit var calendarEventsWidget: CalendarEventsWidget
+    private lateinit var countdownWidget: CountdownWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
@@ -257,6 +258,7 @@ class MainActivity : FragmentActivity() {
         temperatureWidget = widgetSetupManager.setupTemperatureWidget(sharedPreferences)
         noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
         calendarEventsWidget = widgetSetupManager.setupCalendarEventsWidget(sharedPreferences)
+        countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -839,6 +841,11 @@ class MainActivity : FragmentActivity() {
             calendarEventsWidget.cleanup()
         }
         
+        // Cleanup countdown widget
+        if (::countdownWidget.isInitialized) {
+            countdownWidget.cleanup()
+        }
+        
         // Stop shake detection service
         stopShakeDetectionService()
     }
@@ -946,6 +953,11 @@ class MainActivity : FragmentActivity() {
             calendarEventsWidget.onResume()
         }
         
+        // Resume countdown widget
+        if (::countdownWidget.isInitialized) {
+            countdownWidget.onResume()
+        }
+        
         // Shake detection service runs in background, no need to start/stop here
         
         // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
@@ -1016,6 +1028,11 @@ class MainActivity : FragmentActivity() {
         // Pause calendar events widget
         if (::calendarEventsWidget.isInitialized) {
             calendarEventsWidget.onPause()
+        }
+        
+        // Pause countdown widget
+        if (::countdownWidget.isInitialized) {
+            countdownWidget.onPause()
         }
         
         // Shake detection service runs in background, no need to stop here
@@ -1113,6 +1130,14 @@ class MainActivity : FragmentActivity() {
                 calendarEventsWidget.onPermissionGranted()
             }
         }
+        
+        // Handle calendar permission for countdown widget
+        if (requestCode == CountdownWidget.REQUEST_CODE_CALENDAR_PERMISSION && 
+            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (::countdownWidget.isInitialized) {
+                countdownWidget.onPermissionGranted()
+            }
+        }
     }
 
     fun applyFocusMode(isFocusMode: Boolean) {
@@ -1170,6 +1195,13 @@ class MainActivity : FragmentActivity() {
                     calendarEventsWidget.refresh()
                 }
             }
+            // Refresh countdown widget when it becomes visible
+            if (::countdownWidget.isInitialized) {
+                val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
+                if (isEnabled) {
+                    countdownWidget.refresh()
+                }
+            }
         }
         dialog.show()
     }
@@ -1194,6 +1226,10 @@ class MainActivity : FragmentActivity() {
         // Calendar Events widget
         findViewById<View>(R.id.calendar_events_widget_container)?.visibility = 
             if (widgetMap["calendar_events_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Countdown widget
+        findViewById<View>(R.id.countdown_widget_container)?.visibility = 
+            if (widgetMap["countdown_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         findViewById<View>(R.id.physical_activity_widget_container)?.visibility = 
             if (widgetMap["physical_activity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
@@ -1255,6 +1291,7 @@ class MainActivity : FragmentActivity() {
                     "widgets_section" -> findViewById<View>(R.id.widgets_section)
                     "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
                     "calendar_events_widget_container" -> findViewById<View>(R.id.calendar_events_widget_container)
+                    "countdown_widget_container" -> findViewById<View>(R.id.countdown_widget_container)
                     "physical_activity_widget_container" -> findViewById<View>(R.id.physical_activity_widget_container)
                     "compass_widget_container" -> findViewById<View>(R.id.compass_widget_container)
                     "pressure_widget_container" -> findViewById<View>(R.id.pressure_widget_container)
