@@ -119,6 +119,13 @@ class WidgetSetupManager(
         return noiseWidget
     }
     
+    fun setupCalendarEventsWidget(sharedPreferences: android.content.SharedPreferences): CalendarEventsWidget {
+        val calendarContainer = activity.findViewById<android.widget.LinearLayout>(R.id.calendar_events_widget_container)
+        val calendarWidget = CalendarEventsWidget(activity, calendarContainer, sharedPreferences)
+        calendarWidget.initialize()
+        return calendarWidget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }

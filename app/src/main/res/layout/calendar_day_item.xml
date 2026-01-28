@@ -23,4 +23,22 @@
         android:background="@drawable/workout_indicator_background"
         android:visibility="gone" />
 
+    <View
+        android:id="@+id/event_indicator"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="@drawable/workout_indicator_background"
+        android:visibility="gone" />
+
+    <View
+        android:id="@+id/festival_indicator"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_gravity="top|start"
+        android:layout_margin="4dp"
+        android:background="@drawable/workout_indicator_background"
+        android:visibility="gone" />
+
 </FrameLayout>
