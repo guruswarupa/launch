@@ -20,6 +20,7 @@
 
     <!-- Content Container -->
     <ScrollView
+        android:id="@+id/onboarding_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">
@@ -106,8 +107,7 @@
             <FrameLayout
                 android:id="@+id/step_content_container"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
+                android:layout_height="wrap_content"
                 android:minHeight="400dp">
 
                 <!-- Welcome Step -->
@@ -401,12 +401,12 @@
                 <LinearLayout
                     android:id="@+id/favorites_step"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:visibility="gone">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Select Favorite Apps"
                         android:textSize="28sp"
@@ -427,13 +427,20 @@
                         android:paddingHorizontal="16dp"
                         android:layout_marginBottom="16dp"/>
 
-                    <androidx.recyclerview.widget.RecyclerView
+                    <com.guruswarupa.launch.WrapContentRecyclerView
                         android:id="@+id/favorites_recycler_view"
                         android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="1"
-                        android:padding="8dp"
-                        android:clipToPadding="false"/>
+                        android:layout_height="wrap_content"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="32dp"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:clipToPadding="false"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        android:fadeScrollbars="true"
+                        android:scrollbars="none"
+                        android:background="@android:color/transparent"/>
 
                 </LinearLayout>
 
@@ -441,12 +448,12 @@
                 <LinearLayout
                     android:id="@+id/workspaces_step"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:visibility="gone">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Create Workspaces"
                         android:textSize="28sp"
@@ -472,31 +479,20 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="8dp">
+                        android:layout_marginBottom="16dp"
+                        android:gravity="center_vertical">
 
                         <EditText
                             android:id="@+id/workspace_name_input"
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
                             android:hint="Workspace name (e.g., Work, Personal)"
                             android:textSize="14sp"
                             android:textColor="@android:color/white"
                             android:textColorHint="@android:color/white"
                             android:alpha="0.7"
                             android:padding="12dp"
-                            android:layout_marginEnd="8dp"/>
-
-                        <Button
-                            android:id="@+id/add_workspace_button"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Add"
-                            android:textAllCaps="false"
-                            android:background="@drawable/button_background"
-                            android:textColor="@android:color/white"
-                            android:paddingHorizontal="16dp"
-                            android:paddingVertical="12dp"/>
+                            android:minHeight="48dp"/>
 
                     </LinearLayout>
 
@@ -508,37 +504,72 @@
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@android:color/white"
+                        android:gravity="center"
                         android:paddingHorizontal="16dp"
                         android:layout_marginBottom="8dp"
                         android:visibility="gone"/>
 
-                    <androidx.recyclerview.widget.RecyclerView
+                    <com.guruswarupa.launch.WrapContentRecyclerView
                         android:id="@+id/workspaces_list_recycler_view"
                         android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="1"
-                        android:padding="8dp"
+                        android:layout_height="wrap_content"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
                         android:clipToPadding="false"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        android:fadeScrollbars="true"
+                        android:scrollbars="none"
+                        android:background="@android:color/transparent"
                         android:visibility="gone"/>
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Select apps for workspace:"
                         android:textSize="14sp"
                         android:textColor="@android:color/white"
                         android:alpha="0.9"
+                        android:gravity="center"
                         android:paddingHorizontal="16dp"
                         android:layout_marginTop="8dp"
                         android:layout_marginBottom="8dp"/>
 
-                    <androidx.recyclerview.widget.RecyclerView
+                    <com.guruswarupa.launch.WrapContentRecyclerView
                         android:id="@+id/workspaces_apps_recycler_view"
                         android:layout_width="match_parent"
-                        android:layout_height="0dp"
-                        android:layout_weight="1"
-                        android:padding="8dp"
-                        android:clipToPadding="false"/>
+                        android:layout_height="wrap_content"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="16dp"
+                        android:paddingStart="0dp"
+                        android:paddingEnd="0dp"
+                        android:clipToPadding="false"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        android:fadeScrollbars="true"
+                        android:scrollbars="none"
+                        android:background="@android:color/transparent"/>
+
+                    <!-- Add Workspace Button - Now at bottom for better UX -->
+                    <Button
+                        android:id="@+id/add_workspace_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Create Workspace"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:paddingHorizontal="24dp"
+                        android:paddingVertical="16dp"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="8dp"
+                        android:minHeight="56dp"/>
 
                 </LinearLayout>
 

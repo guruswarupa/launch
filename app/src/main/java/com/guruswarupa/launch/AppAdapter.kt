@@ -70,6 +70,21 @@ class AppAdapter(
         val newItems = ArrayList(newAppList)
         val isFirstLoad = itemsRendered == 0
 
+        // Populate label cache from CacheManager's metadata cache before updating UI
+        // This ensures labels are available immediately and prevents showing package names
+        try {
+            val metadataCache = activity.cacheManager.getMetadataCache()
+            for (app in newItems) {
+                val packageName = app.activityInfo.packageName
+                val cachedMetadata = metadataCache[packageName]
+                if (cachedMetadata != null && !labelCache.containsKey(packageName)) {
+                    labelCache[packageName] = cachedMetadata.label
+                }
+            }
+        } catch (e: Exception) {
+            // If cache is not available, labels will be loaded on-demand
+        }
+
         // Update UI immediately on main thread (fast path)
         (context as? Activity)?.runOnUiThread {
             val diffCallback = AppListDiffCallback(appList, newItems)
@@ -511,33 +526,23 @@ class AppAdapter(
                 if (cachedLabel != null) {
                     holder.appName?.text = cachedLabel
                 } else {
-                    // Show placeholder immediately
-                    holder.appName?.text = appInfo.activityInfo?.packageName ?: "Loading..."
-                    // Load label asynchronously in background
-                    executor.execute {
+                    // Try to load label synchronously for visible items (first 50) to avoid showing package name
+                    // For items beyond position 50, load asynchronously
+                    if (position < 50 && isValidApp) {
                         try {
-                            val label = if (isValidApp) {
-                                appInfo.loadLabel(activity.packageManager)?.toString()
-                                    ?: appInfo.activityInfo.packageName
-                            } else {
-                                appInfo.activityInfo?.name ?: "Unknown"
-                            }
+                            val label = appInfo.loadLabel(activity.packageManager)?.toString()
+                                ?: appInfo.activityInfo.packageName
                             labelCache[packageName] = label
-                            // Update UI on main thread
-                            (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) {
-                                    holder.appName?.text = label
-                                }
-                            }
+                            holder.appName?.text = label
                         } catch (e: Exception) {
-                            val fallbackLabel = appInfo.activityInfo?.packageName ?: "Unknown"
-                            labelCache[packageName] = fallbackLabel
-                            (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) {
-                                    holder.appName?.text = fallbackLabel
-                                }
-                            }
+                            // If synchronous load fails, fall back to async loading
+                            holder.appName?.text = appInfo.activityInfo?.packageName ?: "Loading..."
+                            loadLabelAsync(holder, position, appInfo, packageName, isValidApp)
                         }
+                    } else {
+                        // For items beyond position 50, load asynchronously
+                        holder.appName?.text = appInfo.activityInfo?.packageName ?: "Loading..."
+                        loadLabelAsync(holder, position, appInfo, packageName, isValidApp)
                     }
                 }
 
@@ -656,6 +661,72 @@ class AppAdapter(
     }
 
     override fun getItemCount(): Int = appList.size
+
+    /**
+     * Loads app label asynchronously and updates the view.
+     * Uses notifyItemChanged to ensure the view updates even if recycled.
+     */
+    private fun loadLabelAsync(
+        holder: ViewHolder,
+        position: Int,
+        appInfo: ResolveInfo,
+        packageName: String,
+        isValidApp: Boolean
+    ) {
+        executor.execute {
+            try {
+                val label = if (isValidApp) {
+                    appInfo.loadLabel(activity.packageManager)?.toString()
+                        ?: appInfo.activityInfo.packageName
+                } else {
+                    appInfo.activityInfo?.name ?: "Unknown"
+                }
+                labelCache[packageName] = label
+                
+                // Update metadata cache if available
+                try {
+                    activity.cacheManager.updateMetadataCache(
+                        packageName,
+                        AppMetadata(
+                            packageName = packageName,
+                            activityName = appInfo.activityInfo.name,
+                            label = label,
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                    )
+                } catch (e: Exception) {
+                    // Ignore cache update errors (cacheManager might not be initialized)
+                }
+                
+                // Update UI on main thread - use notifyItemChanged to ensure update even if recycled
+                (context as? Activity)?.runOnUiThread {
+                    // Check if this holder still shows the same item
+                    if (holder.bindingAdapterPosition == position && 
+                        position < appList.size && 
+                        appList[position].activityInfo.packageName == packageName) {
+                        holder.appName?.text = label
+                    } else {
+                        // If view was recycled, notify the adapter to refresh this position
+                        // This ensures the label is shown even if the view was recycled
+                        notifyItemChanged(position)
+                    }
+                }
+            } catch (e: Exception) {
+                val fallbackLabel = appInfo.activityInfo?.packageName ?: "Unknown"
+                labelCache[packageName] = fallbackLabel
+                (context as? Activity)?.runOnUiThread {
+                    if (holder.bindingAdapterPosition == position && 
+                        position < appList.size && 
+                        appList[position].activityInfo.packageName == packageName) {
+                        holder.appName?.text = fallbackLabel
+                    } else {
+                        // If view was recycled, notify the adapter to refresh this position
+                        notifyItemChanged(position)
+                    }
+                }
+            }
+        }
+    }
 
     private fun showAppContextMenu(view: View, packageName: String, appInfo: ResolveInfo) {
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
