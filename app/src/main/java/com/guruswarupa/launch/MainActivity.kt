@@ -56,7 +56,7 @@ class MainActivity : FragmentActivity() {
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
 
     // Core managers
-    private lateinit var cacheManager: CacheManager
+    internal lateinit var cacheManager: CacheManager
     private lateinit var permissionManager: PermissionManager
     private lateinit var systemBarManager: SystemBarManager
     private lateinit var gestureHandler: GestureHandler

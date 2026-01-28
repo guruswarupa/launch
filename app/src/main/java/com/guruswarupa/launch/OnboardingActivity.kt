@@ -12,6 +12,8 @@ import android.provider.Settings
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.text.TextWatcher
+import android.text.Editable
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -57,6 +59,7 @@ class OnboardingActivity : ComponentActivity() {
     private val IMPORT_BACKUP_REQUEST_CODE = 1000
 
     // UI References
+    private lateinit var onboardingScrollView: android.widget.ScrollView
     private lateinit var welcomeStep: LinearLayout
     private lateinit var permissionsStep: LinearLayout
     private lateinit var defaultLauncherStep: LinearLayout
@@ -86,6 +89,8 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var workspacesAppsAdapter: WorkspacesAppsAdapter
     private var currentWorkspaceApps = mutableSetOf<String>()
     private var createdWorkspaces = mutableListOf<Pair<String, Set<String>>>() // name to apps
+    private var cachedAppsList: List<android.content.pm.ResolveInfo>? = null // Cached app list
+    private var isPreloadingApps = false // Track if preload is in progress
     private var allAppsList = listOf<android.content.pm.ResolveInfo>() // Store all apps
 
     // Progress indicators
@@ -189,6 +194,10 @@ class OnboardingActivity : ComponentActivity() {
         initializeViews()
         setupClickListeners()
         
+        // Preload app list immediately in background to avoid delays later
+        // Start loading as early as possible
+        preloadAppList()
+        
         // Check if we should continue from default launcher step (when MainActivity redirects here)
         val continueFromDefaultLauncher = intent.getBooleanExtra("continueFromDefaultLauncher", false)
         if (continueFromDefaultLauncher && isDefaultLauncher()) {
@@ -197,6 +206,9 @@ class OnboardingActivity : ComponentActivity() {
         } else {
             showStep(OnboardingStep.WELCOME)
         }
+        
+        // Also preload when user reaches backup import step (gives more time)
+        // This ensures app list is ready by the time they reach favorites
     }
     
     private fun makeSystemBarsTransparent() {
@@ -257,6 +269,7 @@ class OnboardingActivity : ComponentActivity() {
     }
 
     private fun initializeViews() {
+        onboardingScrollView = findViewById(R.id.onboarding_scroll_view)
         welcomeStep = findViewById(R.id.welcome_step)
         permissionsStep = findViewById(R.id.permissions_step)
         defaultLauncherStep = findViewById(R.id.default_launcher_step)
@@ -269,6 +282,11 @@ class OnboardingActivity : ComponentActivity() {
         
         favoritesRecyclerView = findViewById(R.id.favorites_recycler_view)
         favoritesRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        favoritesRecyclerView.setHasFixedSize(true)
+        favoritesRecyclerView.setItemViewCacheSize(20)
+        favoritesRecyclerView.setRecycledViewPool(androidx.recyclerview.widget.RecyclerView.RecycledViewPool().apply {
+            setMaxRecycledViews(0, 20)
+        })
         
         workspaceNameInput = findViewById(R.id.workspace_name_input)
         addWorkspaceButton = findViewById(R.id.add_workspace_button)
@@ -277,6 +295,19 @@ class OnboardingActivity : ComponentActivity() {
         workspacesListTitle = findViewById(R.id.workspaces_list_title)
         workspacesListRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
         workspacesAppsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        
+        // Optimize scrolling performance
+        workspacesListRecyclerView.setHasFixedSize(true)
+        workspacesListRecyclerView.setItemViewCacheSize(20)
+        workspacesListRecyclerView.setRecycledViewPool(androidx.recyclerview.widget.RecyclerView.RecycledViewPool().apply {
+            setMaxRecycledViews(0, 20)
+        })
+        
+        workspacesAppsRecyclerView.setHasFixedSize(true)
+        workspacesAppsRecyclerView.setItemViewCacheSize(20)
+        workspacesAppsRecyclerView.setRecycledViewPool(androidx.recyclerview.widget.RecyclerView.RecycledViewPool().apply {
+            setMaxRecycledViews(0, 20)
+        })
         
         backButton = findViewById(R.id.back_button)
         nextButton = findViewById(R.id.next_button)
@@ -306,7 +337,7 @@ class OnboardingActivity : ComponentActivity() {
     private fun showStep(step: OnboardingStep) {
         currentStep = step
         
-        // Hide all steps
+        // Hide all steps first
         welcomeStep.visibility = View.GONE
         permissionsStep.visibility = View.GONE
         defaultLauncherStep.visibility = View.GONE
@@ -350,6 +381,11 @@ class OnboardingActivity : ComponentActivity() {
                 setupBackupImportButtons()
                 // Setup backup import buttons
                 setupBackupImportButtons()
+                
+                // Ensure app list is preloading (start if not already)
+                if (cachedAppsList == null && !isPreloadingApps) {
+                    preloadAppList()
+                }
             }
             OnboardingStep.DISPLAY_STYLE -> {
                 displayStyleStep.visibility = View.VISIBLE
@@ -357,6 +393,12 @@ class OnboardingActivity : ComponentActivity() {
                 nextButton.text = if (displayStyleSelected) "Continue" else "Select Style First"
                 nextButton.isEnabled = displayStyleSelected
                 updateProgressIndicator(4)
+                
+                // Preload app list when user reaches display style step
+                // This gives us time to load before favorites step
+                if (cachedAppsList == null && !isPreloadingApps) {
+                    preloadAppList()
+                }
             }
             OnboardingStep.FAVORITES -> {
                 favoritesStep.visibility = View.VISIBLE
@@ -378,6 +420,17 @@ class OnboardingActivity : ComponentActivity() {
                 // Load apps and setup RecyclerView
                 loadAppsForWorkspacesSelection()
                 setupWorkspaceButtons()
+                
+                // Scroll to top of workspaces step after layout is complete
+                // Wait for RecyclerView to finish calculating height
+                workspacesAppsRecyclerView.postDelayed({
+                    workspacesStep.post {
+                        val scrollY = workspacesStep.top
+                        onboardingScrollView.post {
+                            onboardingScrollView.scrollTo(0, maxOf(0, scrollY))
+                        }
+                    }
+                }, 200) // Give RecyclerView time to calculate height
             }
             OnboardingStep.WEATHER_API_KEY -> {
                 weatherApiKeyStep.visibility = View.VISIBLE
@@ -867,28 +920,179 @@ class OnboardingActivity : ComponentActivity() {
         nextButton.text = "Continue"
     }
     
-    private fun loadAppsForFavoritesSelection() {
+    /**
+     * Preloads the app list early in the background to avoid delays when needed
+     * This loads and sorts apps asynchronously so it's ready when needed
+     */
+    private fun preloadAppList() {
+        if (cachedAppsList != null) {
+            return // Already cached
+        }
+        if (isPreloadingApps) {
+            return // Already preloading
+        }
+        
+        isPreloadingApps = true
+        Thread {
+            try {
+                val packageManager = packageManager
+                val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                
+                // Load all apps (fast operation)
+                val allApps = packageManager.queryIntentActivities(mainIntent, 0)
+                    .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+                
+                // Sort by label in background (this is the expensive operation)
+                // Use parallel processing if possible, or optimize sorting
+                val sortedApps = allApps.sortedWith(compareBy { app ->
+                    try {
+                        app.loadLabel(packageManager).toString().lowercase()
+                    } catch (e: Exception) {
+                        app.activityInfo.packageName.lowercase()
+                    }
+                })
+                
+                // Cache the sorted app list
+                cachedAppsList = sortedApps
+            } catch (e: Exception) {
+                // If preload fails, will load on demand
+            } finally {
+                isPreloadingApps = false
+            }
+        }.start()
+    }
+    
+    /**
+     * Gets the app list, using cached version if available, otherwise loading it
+     * Note: This is called from background thread, so sorting is OK
+     */
+    private fun getAppList(): List<android.content.pm.ResolveInfo> {
+        // If cached, return immediately
+        if (cachedAppsList != null) {
+            return cachedAppsList!!
+        }
+        
+        // If not cached, load it (this is in background thread, so OK)
         val packageManager = packageManager
         val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        val allApps = packageManager.queryIntentActivities(mainIntent, 0)
+        val apps = packageManager.queryIntentActivities(mainIntent, 0)
             .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
         
-        // Load existing favorites
-        val favoriteAppManager = FavoriteAppManager(prefs)
-        selectedFavorites = favoriteAppManager.getFavoriteApps().toMutableSet()
-        
-        // Create and set adapter
-        favoritesAdapter = FavoritesOnboardingAdapter(allApps, selectedFavorites) { packageName, isChecked ->
-            if (isChecked) {
-                selectedFavorites.add(packageName)
-            } else {
-                selectedFavorites.remove(packageName)
+        // Sort by label (expensive but in background thread)
+        val sortedApps = apps.sortedWith(compareBy { app ->
+            try {
+                app.loadLabel(packageManager).toString().lowercase()
+            } catch (e: Exception) {
+                app.activityInfo.packageName.lowercase()
             }
+        })
+        
+        cachedAppsList = sortedApps
+        return sortedApps
+    }
+    
+    private fun loadAppsForFavoritesSelection() {
+        // Show loading state initially
+        favoritesRecyclerView.visibility = View.GONE
+        
+        // Check if cache is ready, if not wait a bit for preload
+        if (cachedAppsList == null && isPreloadingApps) {
+            // Wait for preload to complete (max 1 second)
+            Thread {
+                var waited = 0
+                while (cachedAppsList == null && waited < 1000 && isPreloadingApps) {
+                    Thread.sleep(50)
+                    waited += 50
+                }
+                // Continue with loading
+                loadAppsForFavoritesSelectionInternal()
+            }.start()
+        } else {
+            // Load immediately
+            loadAppsForFavoritesSelectionInternal()
         }
-        favoritesRecyclerView.adapter = favoritesAdapter
+    }
+    
+    private fun loadAppsForFavoritesSelectionInternal() {
+        // Load apps asynchronously to avoid blocking UI
+        Thread {
+            try {
+                val packageManager = packageManager
+                val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                
+                // Phase 1: Show apps immediately with fast sort by package name
+                val quickApps = packageManager.queryIntentActivities(mainIntent, 0)
+                    .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+                    .sortedBy { it.activityInfo.packageName.lowercase() } // Fast sort
+                
+                // Load existing favorites
+                val favoriteAppManager = FavoriteAppManager(prefs)
+                val existingFavorites = favoriteAppManager.getFavoriteApps().toMutableSet()
+                
+                // Show apps immediately (fast)
+                runOnUiThread {
+                    selectedFavorites = existingFavorites
+                    favoritesAdapter = FavoritesOnboardingAdapter(quickApps, selectedFavorites) { packageName, isChecked ->
+                        if (isChecked) {
+                            selectedFavorites.add(packageName)
+                        } else {
+                            selectedFavorites.remove(packageName)
+                        }
+                    }
+                    favoritesRecyclerView.adapter = favoritesAdapter
+                    favoritesRecyclerView.visibility = View.VISIBLE
+                    favoritesRecyclerView.post {
+                        favoritesRecyclerView.requestLayout()
+                    }
+                }
+                
+                // Phase 2: Sort properly by label in background and update
+                if (cachedAppsList == null) {
+                    val sortedApps = quickApps.sortedWith(compareBy { app ->
+                        try {
+                            app.loadLabel(packageManager).toString().lowercase()
+                        } catch (e: Exception) {
+                            app.activityInfo.packageName.lowercase()
+                        }
+                    })
+                    cachedAppsList = sortedApps
+                    
+                    // Update with properly sorted list
+                    runOnUiThread {
+                        favoritesAdapter = FavoritesOnboardingAdapter(sortedApps, selectedFavorites) { packageName, isChecked ->
+                            if (isChecked) {
+                                selectedFavorites.add(packageName)
+                            } else {
+                                selectedFavorites.remove(packageName)
+                            }
+                        }
+                        favoritesRecyclerView.adapter = favoritesAdapter
+                    }
+                } else {
+                    // Use cached sorted list
+                    runOnUiThread {
+                        favoritesAdapter = FavoritesOnboardingAdapter(cachedAppsList!!, selectedFavorites) { packageName, isChecked ->
+                            if (isChecked) {
+                                selectedFavorites.add(packageName)
+                            } else {
+                                selectedFavorites.remove(packageName)
+                            }
+                        }
+                        favoritesRecyclerView.adapter = favoritesAdapter
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    favoritesRecyclerView.visibility = View.VISIBLE
+                }
+            }
+        }.start()
     }
     
     private fun saveSelectedFavorites() {
@@ -900,29 +1104,54 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun loadAppsForWorkspacesSelection() {
-        val packageManager = packageManager
-        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        allAppsList = packageManager.queryIntentActivities(mainIntent, 0)
-            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        // Show loading state
+        workspacesAppsRecyclerView.visibility = View.GONE
         
-        // Update available apps (filter out apps already in workspaces)
-        updateAvailableAppsForWorkspace()
-        
-        // Initialize workspaces list adapter
-        workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
-            // Remove workspace
-            createdWorkspaces.removeAt(position)
-            workspacesListAdapter.notifyDataSetChanged()
-            updateWorkspacesListVisibility()
-            // Refresh available apps when workspace is deleted
-            updateAvailableAppsForWorkspace()
-        }
-        workspacesListRecyclerView.adapter = workspacesListAdapter
-        
-        updateWorkspacesListVisibility()
+        // Load apps asynchronously to avoid blocking UI
+        Thread {
+            try {
+                // Use cached app list if available, otherwise load quickly
+                val apps = if (cachedAppsList != null) {
+                    cachedAppsList!!
+                } else {
+                    // Quick load without expensive sorting
+                    val packageManager = packageManager
+                    val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                    }
+                    packageManager.queryIntentActivities(mainIntent, 0)
+                        .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+                        .sortedBy { it.activityInfo.packageName.lowercase() }
+                }
+                
+                // Update UI on main thread
+                runOnUiThread {
+                    allAppsList = apps
+                    
+                    // Update available apps (filter out apps already in workspaces)
+                    updateAvailableAppsForWorkspace()
+                    
+                    // Initialize workspaces list adapter
+                    workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
+                        // Remove workspace
+                        createdWorkspaces.removeAt(position)
+                        workspacesListAdapter.notifyDataSetChanged()
+                        updateWorkspacesListVisibility()
+                        // Refresh available apps when workspace is deleted
+                        updateAvailableAppsForWorkspace()
+                    }
+                    workspacesListRecyclerView.adapter = workspacesListAdapter
+                    
+                    updateWorkspacesListVisibility()
+                    workspacesAppsRecyclerView.visibility = View.VISIBLE
+                }
+            } catch (e: Exception) {
+                // If loading fails, show empty state
+                runOnUiThread {
+                    workspacesAppsRecyclerView.visibility = View.VISIBLE
+                }
+            }
+        }.start()
     }
     
     private fun updateAvailableAppsForWorkspace() {
@@ -934,6 +1163,9 @@ class OnboardingActivity : ComponentActivity() {
             it.activityInfo.packageName !in usedApps 
         }
         
+        // Also remove apps that are currently selected for this workspace from usedApps check
+        // (so they can be selected, but once workspace is created, they'll be filtered)
+        
         // Create and set adapter for apps selection
         workspacesAppsAdapter = WorkspacesAppsAdapter(availableApps, currentWorkspaceApps) { packageName, isChecked ->
             if (isChecked) {
@@ -941,15 +1173,47 @@ class OnboardingActivity : ComponentActivity() {
             } else {
                 currentWorkspaceApps.remove(packageName)
             }
+            // Update button state based on selection
+            updateAddWorkspaceButtonState()
         }
         workspacesAppsRecyclerView.adapter = workspacesAppsAdapter
+        
+        // Update button state
+        updateAddWorkspaceButtonState()
+        
+        // Force RecyclerView to recalculate height after adapter is set
+        workspacesAppsRecyclerView.post {
+            workspacesAppsRecyclerView.requestLayout()
+        }
+    }
+    
+    private fun updateAddWorkspaceButtonState() {
+        val hasName = workspaceNameInput.text.toString().trim().isNotEmpty()
+        val hasApps = currentWorkspaceApps.isNotEmpty()
+        addWorkspaceButton.isEnabled = hasName && hasApps
+        addWorkspaceButton.alpha = if (hasName && hasApps) 1.0f else 0.5f
     }
     
     private fun setupWorkspaceButtons() {
+        // Add text change listener to workspace name input
+        workspaceNameInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateAddWorkspaceButtonState()
+            }
+            override fun afterTextChanged(s: Editable?) {
+                updateAddWorkspaceButtonState()
+            }
+        })
+        
+        // Initialize button state
+        updateAddWorkspaceButtonState()
+        
         addWorkspaceButton.setOnClickListener {
             val workspaceName = workspaceNameInput.text.toString().trim()
             if (workspaceName.isEmpty()) {
                 Toast.makeText(this, "Please enter a workspace name", Toast.LENGTH_SHORT).show()
+                workspaceNameInput.requestFocus()
                 return@setOnClickListener
             }
             
@@ -970,6 +1234,16 @@ class OnboardingActivity : ComponentActivity() {
             updateAvailableAppsForWorkspace()
             
             updateWorkspacesListVisibility()
+            
+            // Scroll to show the created workspace
+            onboardingScrollView.post {
+                workspacesListRecyclerView.let {
+                    if (it.visibility == View.VISIBLE) {
+                        val targetY = it.top - 100 // Scroll to show workspace list
+                        onboardingScrollView.smoothScrollTo(0, targetY)
+                    }
+                }
+            }
             
             Toast.makeText(this, "Workspace '$workspaceName' created with ${createdWorkspaces.last().second.size} apps", Toast.LENGTH_SHORT).show()
         }
