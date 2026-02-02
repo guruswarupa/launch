@@ -11,10 +11,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -36,6 +33,7 @@ class PhysicalActivityWidget(
     private lateinit var distanceText: TextView
     private lateinit var permissionButton: Button
     private lateinit var viewToggleButton: Button
+    private lateinit var calibrationButton: ImageButton
     private lateinit var statsViewContainer: LinearLayout
     private lateinit var calendarViewContainer: FrameLayout
     
@@ -65,6 +63,7 @@ class PhysicalActivityWidget(
         distanceText = widgetView.findViewById(R.id.distance_text)
         permissionButton = widgetView.findViewById(R.id.request_permission_button)
         viewToggleButton = widgetView.findViewById(R.id.view_toggle_button)
+        calibrationButton = widgetView.findViewById(R.id.calibration_button)
         statsViewContainer = widgetView.findViewById(R.id.stats_view_container)
         calendarViewContainer = widgetView.findViewById(R.id.calendar_view_container)
         
@@ -76,6 +75,10 @@ class PhysicalActivityWidget(
         // Setup toggle button
         viewToggleButton.setOnClickListener {
             toggleView()
+        }
+
+        calibrationButton.setOnClickListener {
+            showCalibrationDialog()
         }
         
         // Initialize calendar view
@@ -195,6 +198,7 @@ class PhysicalActivityWidget(
     private fun setupWithPermission() {
         permissionButton.visibility = View.GONE
         viewToggleButton.visibility = View.VISIBLE
+        calibrationButton.visibility = View.VISIBLE
         
         // Start foreground service for background tracking
         startTrackingService()
@@ -227,6 +231,7 @@ class PhysicalActivityWidget(
     private fun setupWithoutPermission() {
         permissionButton.visibility = View.VISIBLE
         viewToggleButton.visibility = View.GONE
+        calibrationButton.visibility = View.GONE
         // Show stats container but with default/empty values
         statsViewContainer.visibility = View.VISIBLE
         calendarViewContainer.visibility = View.GONE
@@ -310,6 +315,90 @@ class PhysicalActivityWidget(
         } catch (e: Exception) {
             // Handle error silently
         }
+    }
+
+    private fun showCalibrationDialog() {
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_physical_activity_calibration, null)
+        val heightInput = dialogView.findViewById<EditText>(R.id.height_input)
+        val strideLengthInput = dialogView.findViewById<EditText>(R.id.stride_length_input)
+        val currentStrideDisplay = dialogView.findViewById<TextView>(R.id.current_stride_display)
+        val resetButton = dialogView.findViewById<Button>(R.id.reset_calibration_button)
+
+        val currentHeight = activityManager.getUserHeightCm()
+        val currentStride = activityManager.getStrideLengthMeters()
+
+        if (currentHeight > 0) {
+            heightInput.setText(currentHeight.toString())
+        }
+        currentStrideDisplay.text = String.format(Locale.getDefault(), "Current stride length: %.2f m", currentStride)
+
+        heightInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus && heightInput.text.isNotEmpty()) {
+                val height = heightInput.text.toString().toIntOrNull()
+                if (height != null && height > 0) {
+                    val calculatedStride = (height * 0.43) / 100.0
+                    strideLengthInput.setText(String.format(Locale.getDefault(), "%.2f", calculatedStride))
+                }
+            }
+        }
+
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Calibrate Stride Length")
+            .setView(dialogView)
+            .setPositiveButton("Save", null) // Set to null to handle manually below
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        resetButton.setOnClickListener {
+            activityManager.resetStrideLengthToDefault()
+            heightInput.setText("")
+            strideLengthInput.setText("")
+            val defaultStride = activityManager.getStrideLengthMeters()
+            currentStrideDisplay.text = String.format(Locale.getDefault(), "Current stride length: %.2f m", defaultStride)
+            updateDisplay()
+            Toast.makeText(context, "Calibration reset to default", Toast.LENGTH_SHORT).show()
+        }
+
+        dialog.setOnShowListener {
+            val saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            saveButton.setOnClickListener {
+                var saved = false
+                
+                val heightText = heightInput.text.toString().trim()
+                if (heightText.isNotEmpty()) {
+                    val height = heightText.toIntOrNull()
+                    if (height != null && height > 0 && height < 300) {
+                        activityManager.setUserHeightCm(height)
+                        saved = true
+                    } else {
+                        Toast.makeText(context, "Please enter a valid height (1-299 cm)", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
+                }
+                
+                val strideText = strideLengthInput.text.toString().trim()
+                if (strideText.isNotEmpty()) {
+                    val stride = strideText.toDoubleOrNull()
+                    if (stride != null && stride > 0 && stride < 2.0) {
+                        activityManager.setStrideLengthMeters(stride)
+                        saved = true
+                    } else {
+                        Toast.makeText(context, "Please enter a valid stride length (0.1-2.0 m)", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
+                }
+                
+                if (saved) {
+                    Toast.makeText(context, "Calibration saved", Toast.LENGTH_SHORT).show()
+                    updateDisplay()
+                    dialog.dismiss()
+                } else {
+                    Toast.makeText(context, "Please enter either height or stride length", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        dialog.show()
     }
     
     fun onResume() {
