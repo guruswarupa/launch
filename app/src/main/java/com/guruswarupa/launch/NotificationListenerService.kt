@@ -88,8 +88,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         }
     }
     
-    // Helper method to cancel notification - just calls parent method
-    // We use this to avoid confusion, but it directly calls the parent's cancelNotification
+    // Helper method to cancel notification using package, tag and id
     fun dismissNotification(pkg: String, tag: String?, id: Int) {
         try {
             if (isListenerConnected) {
@@ -102,15 +101,11 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         }
     }
     
-    // Alternative method using notification key (more reliable)
+    // Reliable method using notification key
     fun dismissNotificationByKey(key: String) {
         try {
             if (isListenerConnected) {
-                val activeNotifications = getActiveNotifications()
-                val sbn = activeNotifications.find { it.key == key }
-                if (sbn != null) {
-                    cancelNotification(sbn.packageName, sbn.tag, sbn.id)
-                }
+                cancelNotification(key)
             }
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException dismissing notification by key", e)

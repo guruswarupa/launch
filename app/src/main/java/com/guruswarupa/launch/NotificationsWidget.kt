@@ -159,20 +159,12 @@ class NotificationsWidget(private val rootView: View) {
             if (service != null) {
                 // Dismiss all merged notifications if this is a merged notification
                 if (item.mergedKeys.isNotEmpty()) {
-                    val activeNotifications = service.getActiveNotifications()
                     item.mergedKeys.forEach { key ->
-                        val sbn = activeNotifications.find { it.key == key }
-                        if (sbn != null) {
-                            try {
-                                service.dismissNotification(sbn.packageName, sbn.tag, sbn.id)
-                            } catch (e: Exception) {
-                                // Continue with other notifications even if one fails
-                            }
-                        }
+                        service.dismissNotificationByKey(key)
                     }
                 } else {
                     // Dismiss single notification
-                    service.dismissNotification(item.packageName, item.tag, item.id)
+                    service.dismissNotificationByKey(item.key)
                 }
             }
         } catch (e: Exception) {
@@ -535,21 +527,12 @@ class NotificationsWidget(private val rootView: View) {
             if (service != null) {
                 // Dismiss all merged notifications if this is a merged notification
                 if (item.mergedKeys.isNotEmpty()) {
-                    // Get all active notifications to find the ones to dismiss
-                    val activeNotifications = service.getActiveNotifications()
                     item.mergedKeys.forEach { key ->
-                        val sbn = activeNotifications.find { it.key == key }
-                        if (sbn != null) {
-                            try {
-                                service.dismissNotification(sbn.packageName, sbn.tag, sbn.id)
-                            } catch (e: Exception) {
-                                // Continue with other notifications even if one fails
-                            }
-                        }
+                        service.dismissNotificationByKey(key)
                     }
                 } else {
                     // Dismiss single notification
-                    service.dismissNotification(item.packageName, item.tag, item.id)
+                    service.dismissNotificationByKey(item.key)
                 }
                 // Small delay to let the system process the cancellation
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
