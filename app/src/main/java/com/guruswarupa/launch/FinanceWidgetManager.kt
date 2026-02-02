@@ -1,12 +1,9 @@
 package com.guruswarupa.launch
 
+import android.app.AlertDialog
 import android.content.SharedPreferences
 import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -41,6 +38,41 @@ class FinanceWidgetManager(
         // Also make the balance card clickable
         activity.findViewById<LinearLayout>(R.id.balance_card)?.setOnClickListener {
             showTransactionHistory()
+        }
+
+        setupCurrencySpinner()
+    }
+
+    private fun setupCurrencySpinner() {
+        val spinner = activity.findViewById<Spinner>(R.id.finance_currency_spinner) ?: return
+        
+        val currencies = FinanceManager.SUPPORTED_CURRENCIES.map { (code, symbol) ->
+            "$code ($symbol)"
+        }.toTypedArray()
+        
+        val adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_item, currencies)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = adapter
+
+        // Set current selection
+        val currentCurrency = financeManager.getCurrencyCode()
+        val index = FinanceManager.SUPPORTED_CURRENCIES.keys.indexOf(currentCurrency)
+        if (index >= 0) {
+            spinner.setSelection(index)
+        }
+
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val codes = FinanceManager.SUPPORTED_CURRENCIES.keys.toList()
+                if (position >= 0 && position < codes.size) {
+                    val selectedCode = codes[position]
+                    if (selectedCode != financeManager.getCurrencyCode()) {
+                        financeManager.setCurrency(selectedCode)
+                        updateDisplay()
+                    }
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
     
@@ -101,46 +133,79 @@ class FinanceWidgetManager(
     }
     
     private fun showTransactionHistory() {
-        val allPrefs = sharedPreferences.all
         val currencySymbol = financeManager.getCurrency()
         
-        // Parse transactions with timestamps from SharedPreferences
-        val transactionList = mutableListOf<Transaction>()
-        allPrefs.keys.filter { it.startsWith("transaction_") }.forEach { key ->
-            val transactionData = sharedPreferences.getString(key, "") ?: ""
-            val parts = transactionData.split(":")
-            if (parts.size >= 3) {
-                val type = parts[0]
-                val amount = parts[1].toDoubleOrNull() ?: 0.0
-                val timestamp = key.substringAfter("transaction_").toLongOrNull() ?: 0L
-                val description = if (parts.size > 3) parts[3] else ""
-                transactionList.add(Transaction(type, amount, description, timestamp))
-            }
-        }
-        
-        // Sort by timestamp descending (newest first)
-        val sortedTransactions = transactionList.sortedByDescending { it.timestamp }
-
-        if (sortedTransactions.isEmpty()) {
-            Toast.makeText(activity, "No transactions found", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         // Create custom dialog
         val dialogView = activity.layoutInflater.inflate(R.layout.dialog_transaction_history, null)
         val recyclerView = dialogView.findViewById<RecyclerView>(R.id.transaction_recycler_view)
         val closeButton = dialogView.findViewById<Button>(R.id.close_button)
+        val clearAllButton = dialogView.findViewById<ImageButton>(R.id.clear_all_transactions_button)
         
         recyclerView.layoutManager = LinearLayoutManager(activity)
-        val adapter = TransactionAdapter(sortedTransactions, currencySymbol)
+        
+        fun getLatestTransactions(): MutableList<Transaction> {
+            val allPrefs = sharedPreferences.all
+            val list = mutableListOf<Transaction>()
+            allPrefs.keys.filter { it.startsWith("transaction_") }.forEach { key ->
+                val transactionData = sharedPreferences.getString(key, "") ?: ""
+                val parts = transactionData.split(":")
+                if (parts.size >= 3) {
+                    val type = parts[0]
+                    val amount = parts[1].toDoubleOrNull() ?: 0.0
+                    val timestamp = key.substringAfter("transaction_").toLongOrNull() ?: 0L
+                    val description = if (parts.size > 3) parts[3] else ""
+                    list.add(Transaction(type, amount, description, timestamp))
+                }
+            }
+            return list.sortedByDescending { it.timestamp }.toMutableList()
+        }
+
+        var sortedTransactions = getLatestTransactions()
+        
+        val adapter = TransactionAdapter(sortedTransactions, currencySymbol) { transactionToDelete ->
+            AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+                .setTitle("Delete Transaction")
+                .setMessage("Are you sure you want to delete this transaction?")
+                .setPositiveButton("Delete") { _, _ ->
+                    financeManager.deleteTransaction(transactionToDelete.timestamp)
+                    updateDisplay()
+                    // Refresh dialog list
+                    val newList = getLatestTransactions()
+                    (recyclerView.adapter as TransactionAdapter).updateData(newList)
+                    if (newList.isEmpty()) {
+                        Toast.makeText(activity, "No transactions remaining", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
         recyclerView.adapter = adapter
 
-        val dialog = android.app.AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setView(dialogView)
             .create()
 
         closeButton.setOnClickListener {
             dialog.dismiss()
+        }
+
+        clearAllButton?.setOnClickListener {
+            AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+                .setTitle("Reset Finance Data")
+                .setMessage("Are you sure you want to reset all finance data? This will clear your balance, transaction history, and monthly records. This action cannot be undone.")
+                .setPositiveButton("Reset") { _, _ ->
+                    financeManager.resetData()
+                    updateDisplay()
+                    (recyclerView.adapter as TransactionAdapter).updateData(mutableListOf())
+                    dialog.dismiss()
+                    Toast.makeText(activity, "Finance data reset successfully", Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+
+        if (sortedTransactions.isEmpty()) {
+            Toast.makeText(activity, "No transactions found", Toast.LENGTH_SHORT).show()
         }
 
         dialog.show()
