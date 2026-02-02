@@ -4,6 +4,7 @@
     <dimen name="squircle_corner_radius">16dp</dimen>
     <dimen name="group_icon_size">24dp</dimen>
     <dimen name="group_popup_padding">8dp</dimen>
+    <dimen name="widget_elevation">4dp</dimen>
     <!-- Onboarding responsive dimensions -->
     <dimen name="onboarding_recycler_height">400dp</dimen>
     <dimen name="onboarding_recycler_min_height">300dp</dimen>

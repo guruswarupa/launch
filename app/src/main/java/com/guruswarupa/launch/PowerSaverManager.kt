@@ -1,9 +1,12 @@
 package com.guruswarupa.launch
 
+import android.graphics.Color
 import android.os.Handler
 import android.view.View
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -40,17 +43,7 @@ class PowerSaverManager(
             activity.window?.setWindowAnimations(android.R.style.Animation_Toast)
             
             // Refresh adapter efficiently (only visible items)
-            // Use efficient update that only refreshes visible items
-            handler.post {
-                val layoutManager = recyclerView.layoutManager
-                if (layoutManager is LinearLayoutManager) {
-                    val firstVisible = layoutManager.findFirstVisibleItemPosition()
-                    val lastVisible = layoutManager.findLastVisibleItemPosition()
-                    if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
-                        adapter.notifyItemRangeChanged(firstVisible, lastVisible - firstVisible + 1)
-                    }
-                }
-            }
+            refreshAdapter()
             
         } else {
             // Fast operations first - show widgets immediately
@@ -69,22 +62,25 @@ class PowerSaverManager(
             // Restore normal animations
             activity.window?.setWindowAnimations(0)
             
-            // Refresh adapter efficiently with small delay to let UI render first
-            handler.postDelayed({
-                val layoutManager = recyclerView.layoutManager
-                if (layoutManager is LinearLayoutManager) {
-                    val firstVisible = layoutManager.findFirstVisibleItemPosition()
-                    val lastVisible = layoutManager.findLastVisibleItemPosition()
-                    if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
-                        adapter.notifyItemRangeChanged(firstVisible, lastVisible - firstVisible + 1)
-                    } else {
-                        // Fallback to full update if positions not available
-                        adapter.notifyDataSetChanged()
-                    }
+            // Refresh adapter efficiently
+            refreshAdapter()
+        }
+    }
+
+    private fun refreshAdapter() {
+        handler.post {
+            val layoutManager = recyclerView.layoutManager
+            if (layoutManager is LinearLayoutManager) {
+                val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
+                if (firstVisible != RecyclerView.NO_POSITION && lastVisible != RecyclerView.NO_POSITION) {
+                    adapter.notifyItemRangeChanged(firstVisible, lastVisible - firstVisible + 1)
                 } else {
                     adapter.notifyDataSetChanged()
                 }
-            }, 100) // Small delay to ensure UI is responsive
+            } else {
+                adapter.notifyDataSetChanged()
+            }
         }
     }
     
@@ -151,7 +147,6 @@ class PowerSaverManager(
         activity.findViewById<View>(R.id.weekly_usage_widget)?.visibility = View.VISIBLE
 
         // Show the wallpaper background when power saver mode is disabled
-        // (Wallpaper will be reloaded asynchronously by setWallpaperBackground() called from applyPowerSaverMode)
         activity.findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
         activity.findViewById<ImageView>(R.id.drawer_wallpaper_background)?.visibility = View.VISIBLE
 
@@ -164,18 +159,58 @@ class PowerSaverManager(
     }
 
     private fun setPitchBlackBackground() {
-        // Don't modify root view if activity is finishing or destroyed
-        if (activity.isFinishing || activity.isDestroyed) {
-            return
-        }
-        activity.findViewById<android.view.View>(android.R.id.content)?.setBackgroundColor(android.graphics.Color.BLACK)
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        // Set root backgrounds to pure black
+        activity.findViewById<View>(R.id.drawer_layout)?.setBackgroundColor(Color.BLACK)
+        activity.findViewById<View>(R.id.main_content)?.setBackgroundColor(Color.BLACK)
+        activity.findViewById<View>(android.R.id.content)?.setBackgroundColor(Color.BLACK)
+        
+        // Remove widget container background and elevation for pitch black look
+        val topWidget = activity.findViewById<View>(R.id.top_widget_container)
+        topWidget?.background = null
+        topWidget?.elevation = 0f
+        
+        // Set search box to be completely transparent/minimal
+        val searchBox = activity.findViewById<EditText>(R.id.search_box)
+        searchBox?.setBackgroundColor(Color.TRANSPARENT)
+        
+        // Drawer content background
+        activity.findViewById<View>(R.id.widgets_drawer)?.setBackgroundColor(Color.BLACK)
+        val settingsHeader = activity.findViewById<View>(R.id.widget_settings_header)
+        settingsHeader?.background = null
+        settingsHeader?.elevation = 0f
+
+        // Ensure status bar and navigation bar are black or transparent over black
+        activity.window?.statusBarColor = Color.BLACK
+        activity.window?.navigationBarColor = Color.BLACK
     }
 
     private fun restoreOriginalBackground() {
-        // Don't modify root view if activity is finishing or destroyed
-        if (activity.isFinishing || activity.isDestroyed) {
-            return
-        }
-        activity.findViewById<android.view.View>(android.R.id.content)?.setBackgroundResource(R.drawable.wallpaper_background)
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        val backgroundColor = ContextCompat.getColor(activity, R.color.background)
+        activity.findViewById<View>(R.id.drawer_layout)?.setBackgroundColor(backgroundColor)
+        activity.findViewById<View>(R.id.main_content)?.setBackgroundColor(backgroundColor)
+        activity.findViewById<View>(android.R.id.content)?.setBackgroundResource(R.drawable.wallpaper_background)
+        
+        // Restore widget container background and elevation
+        val topWidget = activity.findViewById<View>(R.id.top_widget_container)
+        topWidget?.setBackgroundResource(R.drawable.widget_background)
+        topWidget?.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
+        
+        // Restore search box background
+        val searchBox = activity.findViewById<EditText>(R.id.search_box)
+        searchBox?.setBackgroundResource(R.drawable.search_box_transparent_bg)
+        
+        // Restore drawer content background
+        activity.findViewById<View>(R.id.widgets_drawer)?.setBackgroundColor(backgroundColor)
+        val settingsHeader = activity.findViewById<View>(R.id.widget_settings_header)
+        settingsHeader?.setBackgroundResource(R.drawable.widget_background)
+        settingsHeader?.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
+
+        // Restore transparent system bars (SystemBarManager will handle icons)
+        activity.window?.statusBarColor = Color.TRANSPARENT
+        activity.window?.navigationBarColor = Color.TRANSPARENT
     }
 }
