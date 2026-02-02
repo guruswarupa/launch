@@ -54,6 +54,14 @@ class WidgetSetupManager(
         }
         weatherIcon.setOnClickListener(weatherClickListener)
         weatherText.setOnClickListener(weatherClickListener)
+
+        // Add long click listener to show API settings
+        val weatherLongClickListener = View.OnLongClickListener {
+            weatherManager.showWeatherSettings(weatherIcon, weatherText)
+            true
+        }
+        weatherIcon.setOnLongClickListener(weatherLongClickListener)
+        weatherText.setOnLongClickListener(weatherLongClickListener)
     }
     
     fun setupNotificationsWidget(): NotificationsWidget {

@@ -48,8 +48,6 @@ class SettingsActivity : ComponentActivity() {
             makeSystemBarsTransparent()
         }
 
-        val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
-        val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
         val gridOption = findViewById<Button>(R.id.grid_option)
         val listOption = findViewById<Button>(R.id.list_option)
         val saveButton = findViewById<Button>(R.id.save_settings_button)
@@ -84,10 +82,10 @@ class SettingsActivity : ComponentActivity() {
         val feedbackButton = findViewById<Button>(R.id.feedback_button)
 
         // Load current settings
-        loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, gridOption, listOption)
+        loadCurrentSettings(gridOption, listOption)
 
         saveButton.setOnClickListener {
-            saveSettings(weatherApiKeyInput, weatherLocationInput, selectedStyleRef.value)
+            saveSettings(selectedStyleRef.value)
         }
 
         exportButton.setOnClickListener {
@@ -174,12 +172,6 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun setupExpandableSections() {
-        // Weather API Key Section
-        val weatherHeader = findViewById<LinearLayout>(R.id.weather_api_key_header)
-        val weatherContent = findViewById<LinearLayout>(R.id.weather_api_key_content)
-        val weatherArrow = findViewById<TextView>(R.id.weather_api_key_arrow)
-        setupSectionToggle(weatherHeader, weatherContent, weatherArrow)
-        
         // Display Style Section
         val displayStyleHeader = findViewById<LinearLayout>(R.id.display_style_header)
         val displayStyleContent = findViewById<LinearLayout>(R.id.display_style_content)
@@ -266,17 +258,9 @@ class SettingsActivity : ComponentActivity() {
     }
     
     private fun loadCurrentSettings(
-        weatherApiKeyInput: EditText,
-        weatherLocationInput: EditText,
         gridOption: Button,
         listOption: Button
     ) {
-        val currentApiKey = prefs.getString("weather_api_key", "") ?: ""
-        weatherApiKeyInput.setText(currentApiKey)
-
-        val currentLocation = prefs.getString("weather_stored_city_name", "") ?: ""
-        weatherLocationInput.setText(currentLocation)
-
         val currentStyle = prefs.getString("view_preference", "list") ?: "list"
         updateDisplayStyleButtons(gridOption, listOption, currentStyle)
     }
@@ -291,17 +275,8 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun saveSettings(weatherApiKeyInput: EditText, weatherLocationInput: EditText, selectedDisplayStyle: String) {
+    private fun saveSettings(selectedDisplayStyle: String) {
         val editor = prefs.edit()
-
-        val apiKey = weatherApiKeyInput.text.toString().trim()
-        editor.putString("weather_api_key", apiKey)
-        if (apiKey.isNotEmpty()) {
-            editor.putBoolean("weather_api_key_rejected", false)
-        }
-
-        val location = weatherLocationInput.text.toString().trim()
-        editor.putString("weather_stored_city_name", location)
 
         editor.putString("view_preference", selectedDisplayStyle)
 
@@ -487,11 +462,9 @@ class SettingsActivity : ComponentActivity() {
                     editor.apply()
                 }
 
-                val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
-                val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
                 val gridOption = findViewById<Button>(R.id.grid_option)
                 val listOption = findViewById<Button>(R.id.list_option)
-                loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, gridOption, listOption)
+                loadCurrentSettings(gridOption, listOption)
 
                 Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }
