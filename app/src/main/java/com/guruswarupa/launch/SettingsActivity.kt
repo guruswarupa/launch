@@ -50,7 +50,6 @@ class SettingsActivity : ComponentActivity() {
 
         val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
         val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
-        val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
         val gridOption = findViewById<Button>(R.id.grid_option)
         val listOption = findViewById<Button>(R.id.list_option)
         val saveButton = findViewById<Button>(R.id.save_settings_button)
@@ -75,7 +74,6 @@ class SettingsActivity : ComponentActivity() {
         }
         val exportButton = findViewById<Button>(R.id.export_settings_button)
         val importButton = findViewById<Button>(R.id.import_settings_button)
-        val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
         val appLockButton = findViewById<Button>(R.id.app_lock_button)
         val checkPermissionsButton = findViewById<Button>(R.id.check_permissions_button)
         val showTutorialButton = findViewById<Button>(R.id.show_tutorial_button)
@@ -85,14 +83,11 @@ class SettingsActivity : ComponentActivity() {
         val changeWallpaperButton = findViewById<Button>(R.id.change_wallpaper_button)
         val feedbackButton = findViewById<Button>(R.id.feedback_button)
 
-        // Setup currency spinner
-        setupCurrencySpinner(currencySpinner)
-        
         // Load current settings
-        loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
+        loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, gridOption, listOption)
 
         saveButton.setOnClickListener {
-            saveSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, selectedStyleRef.value)
+            saveSettings(weatherApiKeyInput, weatherLocationInput, selectedStyleRef.value)
         }
 
         exportButton.setOnClickListener {
@@ -103,9 +98,6 @@ class SettingsActivity : ComponentActivity() {
             importSettings()
         }
 
-        resetFinanceButton.setOnClickListener {
-            resetFinanceData()
-        }
         appLockButton.setOnClickListener {
             startActivity(Intent(this, AppLockSettingsActivity::class.java))
         }
@@ -188,12 +180,6 @@ class SettingsActivity : ComponentActivity() {
         val weatherArrow = findViewById<TextView>(R.id.weather_api_key_arrow)
         setupSectionToggle(weatherHeader, weatherContent, weatherArrow)
         
-        // Currency Section
-        val currencyHeader = findViewById<LinearLayout>(R.id.currency_header)
-        val currencyContent = findViewById<LinearLayout>(R.id.currency_content)
-        val currencyArrow = findViewById<TextView>(R.id.currency_arrow)
-        setupSectionToggle(currencyHeader, currencyContent, currencyArrow)
-        
         // Display Style Section
         val displayStyleHeader = findViewById<LinearLayout>(R.id.display_style_header)
         val displayStyleContent = findViewById<LinearLayout>(R.id.display_style_content)
@@ -205,12 +191,6 @@ class SettingsActivity : ComponentActivity() {
         val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
         val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
         setupSectionToggle(backupHeader, backupContent, backupArrow)
-        
-        // Finance Data Section
-        val financeHeader = findViewById<LinearLayout>(R.id.finance_data_header)
-        val financeContent = findViewById<LinearLayout>(R.id.finance_data_content)
-        val financeArrow = findViewById<TextView>(R.id.finance_data_arrow)
-        setupSectionToggle(financeHeader, financeContent, financeArrow)
         
         // App Lock Section
         val appLockHeader = findViewById<LinearLayout>(R.id.app_lock_header)
@@ -371,20 +351,9 @@ class SettingsActivity : ComponentActivity() {
         textView.text = String.format(Locale.getDefault(), "Current stride length: %.2f m", strideLength)
     }
 
-    private fun setupCurrencySpinner(spinner: Spinner) {
-        val currencies = FinanceManager.SUPPORTED_CURRENCIES.map { (code, symbol) ->
-            "$code ($symbol)"
-        }.toTypedArray()
-        
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, currencies)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner.adapter = adapter
-    }
-    
     private fun loadCurrentSettings(
         weatherApiKeyInput: EditText,
         weatherLocationInput: EditText,
-        currencySpinner: Spinner,
         gridOption: Button,
         listOption: Button
     ) {
@@ -393,12 +362,6 @@ class SettingsActivity : ComponentActivity() {
 
         val currentLocation = prefs.getString("weather_stored_city_name", "") ?: ""
         weatherLocationInput.setText(currentLocation)
-
-        val currentCurrency = prefs.getString("finance_currency", "USD") ?: "USD"
-        val currencyIndex = FinanceManager.SUPPORTED_CURRENCIES.keys.indexOf(currentCurrency)
-        if (currencyIndex >= 0) {
-            currencySpinner.setSelection(currencyIndex)
-        }
 
         val currentStyle = prefs.getString("view_preference", "list") ?: "list"
         updateDisplayStyleButtons(gridOption, listOption, currentStyle)
@@ -414,7 +377,7 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun saveSettings(weatherApiKeyInput: EditText, weatherLocationInput: EditText, currencySpinner: Spinner, selectedDisplayStyle: String) {
+    private fun saveSettings(weatherApiKeyInput: EditText, weatherLocationInput: EditText, selectedDisplayStyle: String) {
         val editor = prefs.edit()
 
         val apiKey = weatherApiKeyInput.text.toString().trim()
@@ -425,12 +388,6 @@ class SettingsActivity : ComponentActivity() {
 
         val location = weatherLocationInput.text.toString().trim()
         editor.putString("weather_stored_city_name", location)
-
-        val selectedCurrencyIndex = currencySpinner.selectedItemPosition
-        val currencyCodes = FinanceManager.SUPPORTED_CURRENCIES.keys.toList()
-        if (selectedCurrencyIndex >= 0 && selectedCurrencyIndex < currencyCodes.size) {
-            editor.putString("finance_currency", currencyCodes[selectedCurrencyIndex])
-        }
 
         editor.putString("view_preference", selectedDisplayStyle)
 
@@ -618,10 +575,9 @@ class SettingsActivity : ComponentActivity() {
 
                 val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
                 val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
-                val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
                 val gridOption = findViewById<Button>(R.id.grid_option)
                 val listOption = findViewById<Button>(R.id.list_option)
-                loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
+                loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, gridOption, listOption)
 
                 Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }
@@ -654,29 +610,6 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-
-    private fun resetFinanceData() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Reset Finance Data")
-            .setMessage("Are you sure you want to reset all finance data? This will clear your balance, transaction history, and monthly records. This action cannot be undone.")
-            .setPositiveButton("Reset") { _, _ ->
-                val editor = prefs.edit()
-                val allPrefs = prefs.all
-                for (key in allPrefs.keys) {
-                    if (key.startsWith("finance_") || key.startsWith("transaction_")) {
-                        editor.remove(key)
-                    }
-                }
-                editor.apply()
-
-                Toast.makeText(this, "Finance data reset successfully", Toast.LENGTH_SHORT).show()
-
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                sendBroadcast(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
     
     private var permissionsDialog: AlertDialog? = null
     

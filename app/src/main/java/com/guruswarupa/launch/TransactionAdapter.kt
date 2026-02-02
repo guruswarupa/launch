@@ -3,6 +3,7 @@ package com.guruswarupa.launch
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
@@ -16,8 +17,9 @@ data class Transaction(
 )
 
 class TransactionAdapter(
-    private val transactions: List<Transaction>,
-    private val currencySymbol: String
+    private var transactions: MutableList<Transaction>,
+    private val currencySymbol: String,
+    private val onDeleteClick: (Transaction) -> Unit
 ) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
@@ -28,6 +30,7 @@ class TransactionAdapter(
         val descriptionText: TextView = itemView.findViewById(R.id.transaction_description)
         val dateText: TextView = itemView.findViewById(R.id.transaction_date)
         val amountText: TextView = itemView.findViewById(R.id.transaction_amount)
+        val deleteButton: ImageButton = itemView.findViewById(R.id.delete_transaction_button)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
@@ -63,7 +66,16 @@ class TransactionAdapter(
         } else {
             "-$formattedAmount"
         }
+
+        holder.deleteButton.setOnClickListener {
+            onDeleteClick(transaction)
+        }
     }
 
     override fun getItemCount(): Int = transactions.size
+
+    fun updateData(newTransactions: List<Transaction>) {
+        this.transactions = newTransactions.toMutableList()
+        notifyDataSetChanged()
+    }
 }

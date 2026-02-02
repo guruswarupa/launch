@@ -118,6 +118,56 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
         cleanupOldTransactions()
     }
 
+    fun deleteTransaction(timestamp: Long) {
+        val allPrefs = sharedPreferences.all
+        val key = "transaction_$timestamp"
+        val transactionData = sharedPreferences.getString(key, "") ?: ""
+        
+        if (transactionData.isNotEmpty()) {
+            val parts = transactionData.split(":")
+            if (parts.size >= 2) {
+                val type = parts[0]
+                val amount = parts[1].toDoubleOrNull() ?: 0.0
+                
+                // Adjust balance
+                val currentBalance = getBalance()
+                val newBalance = if (type == "income") currentBalance - amount else currentBalance - amount
+                // Actually if type is 'income', amount is positive. If 'expense', amount is negative in transactionData (based on addTransaction call)
+                // Wait, addIncome calls addTransaction(amount, "income") where amount is positive.
+                // addExpense calls addTransaction(-amount, "expense") where amount is negative.
+                // So balance = balance - amount always reverses it?
+                // Let's re-check addIncome: balance = balance + amount, addTransaction(amount, "income")
+                // delete income: balance = balance - amount. Correct.
+                // addExpense: balance = balance - amount, addTransaction(-amount, "expense")
+                // delete expense: balance = balance - (-amount) = balance + amount. Correct.
+                sharedPreferences.edit().putFloat(BALANCE_KEY, (currentBalance - amount).toFloat()).apply()
+                
+                // Adjust monthly records
+                val date = Date(timestamp)
+                val monthStr = dateFormat.format(date)
+                if (type == "income") {
+                    val monthlyIncome = sharedPreferences.getFloat("finance_income_$monthStr", 0.0f).toDouble()
+                    sharedPreferences.edit().putFloat("finance_income_$monthStr", (monthlyIncome - amount).toFloat()).apply()
+                } else {
+                    val monthlyExpenses = sharedPreferences.getFloat("finance_expenses_$monthStr", 0.0f).toDouble()
+                    // amount is negative for expenses, so we subtract it (which adds the positive absolute value back)
+                    // Wait, monthlyExpenses stores POSITIVE total of expenses usually.
+                    // Let's check addExpense: monthlyExpenses = monthlyExpenses + amount (where amount is positive parameter)
+                    // But addTransaction receives -amount.
+                    // So in parts[1] we have -amount.
+                    // monthlyExpenses = monthlyExpenses - (-amount) = monthlyExpenses + amount.
+                    // Wait, if parts[1] is -5.0 (expense of 5), monthlyExpenses was increased by 5.0.
+                    // To reverse: monthlyExpenses = monthlyExpenses - 5.0.
+                    // So if parts[1] is -5.0, amount is -5.0.
+                    // monthlyExpenses = monthlyExpenses - abs(amount)
+                    sharedPreferences.edit().putFloat("finance_expenses_$monthStr", (monthlyExpenses - kotlin.math.abs(amount)).toFloat()).apply()
+                }
+                
+                sharedPreferences.edit().remove(key).apply()
+            }
+        }
+    }
+
     fun getTransactionHistory(): List<Triple<String, Double, String>> {
         val allPrefs = sharedPreferences.all
         val transactions = mutableListOf<Triple<String, Double, String>>()
@@ -162,5 +212,16 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
             }
             editor.apply() // Single apply() call instead of multiple
         }
+    }
+
+    fun resetData() {
+        val editor = sharedPreferences.edit()
+        val allPrefs = sharedPreferences.all
+        for (key in allPrefs.keys) {
+            if (key.startsWith("finance_") || key.startsWith("transaction_")) {
+                editor.remove(key)
+            }
+        }
+        editor.apply()
     }
 }
