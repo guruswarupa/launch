@@ -8,13 +8,17 @@
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
-        <!-- Don't use primary colors for system bars -->
+        <!-- Show system wallpaper behind the window to avoid black flash during load -->
+        <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
     </style>
     
     <style name="Theme.Launch.Settings" parent="Theme.Launch">
         <!-- Use dark background to match settings screen overlay -->
         <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowShowWallpaper">false</item>
         <!-- Make status bar and navigation bar transparent from the start -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
