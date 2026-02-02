@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.DiffUtil
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
+import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.provider.ContactsContract
 import kotlin.apply
@@ -272,6 +273,22 @@ class AppAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
+        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
+
+        // Handle pitch black UI for app items in power saver mode
+        if (isPowerSaverActive) {
+            holder.itemView.background = null
+            holder.itemView.elevation = 0f
+            holder.appIcon.background = null
+        } else {
+            if (!isGridMode) {
+                holder.itemView.setBackgroundResource(R.drawable.rounded_background)
+                holder.itemView.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
+            } else {
+                holder.itemView.setBackgroundResource(android.R.drawable.list_selector_background)
+            }
+            holder.appIcon.setBackgroundResource(R.drawable.circular_background)
+        }
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
@@ -279,7 +296,6 @@ class AppAdapter(
         // Show usage time only in list mode and when power saver is disabled
         // Hide usage time in power saver mode to save battery (no usage queries)
         // Defer usage stats loading on initial render for better performance
-        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
         
         if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
             // OPTIMIZATION: Always defer usage stats loading for first 30 items to improve initial render
