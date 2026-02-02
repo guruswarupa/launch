@@ -25,6 +25,18 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <ImageButton
+            android:id="@+id/calibration_button"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_settings_icon"
+            android:tint="@color/white"
+            android:contentDescription="Calibrate"
+            android:padding="6dp"
+            android:scaleType="centerInside"
+            android:layout_marginEnd="8dp"/>
+
         <Button
             android:id="@+id/view_toggle_button"
             android:layout_width="wrap_content"
