@@ -152,7 +152,7 @@ class NotificationsWidget(private val rootView: View) {
         
         itemTouchHelper.attachToRecyclerView(notificationRecyclerView)
     }
-    
+
     private fun dismissNotificationImmediate(item: NotificationItem) {
         try {
             val service = LaunchNotificationListenerService.instance
@@ -765,26 +765,25 @@ class NotificationAdapter(
                             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
                         }
                     }
-                    
+
                     actionButton.setOnClickListener {
+                        holder.replySendButton?.isEnabled = false
                         if (action.remoteInputs != null && action.remoteInputs.isNotEmpty()) {
                             // Show reply input
                             holder.replyContainer?.visibility = View.VISIBLE
                             holder.replyEditText?.requestFocus()
-                            
+
                             // Handle send button click
                             holder.replySendButton?.setOnClickListener {
-                                sendReply(item, action, holder.replyEditText?.text?.toString() ?: "")
+                                sendReply(item, action, holder.replyEditText?.text?.toString() ?: "", holder)
                             }
-                            
+
                             // Handle keyboard send action
                             holder.replyEditText?.setOnEditorActionListener { _, actionId, _ ->
                                 if (actionId == EditorInfo.IME_ACTION_SEND) {
-                                    sendReply(item, action, holder.replyEditText?.text?.toString() ?: "")
+                                    sendReply(item, action, holder.replyEditText?.text?.toString() ?: "", holder)
                                     true
-                                } else {
-                                    false
-                                }
+                                } else false
                             }
                         } else {
                             // Execute action intent
@@ -795,36 +794,35 @@ class NotificationAdapter(
                             }
                         }
                     }
-                    
                     container.addView(actionButton)
+                    }
+                } else {
+                    container.visibility = View.GONE
                 }
-            } else {
-                container.visibility = View.GONE
             }
-        }
-        
-        // Handle reply container
-        holder.replyContainer?.visibility = View.GONE
-        
-        // Click to open app (actions are always visible now)
-        holder.itemView.setOnClickListener {
-            try {
-                val pm = context.packageManager
-                val intent = pm.getLaunchIntentForPackage(item.packageName)
-                intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Could not open app", Toast.LENGTH_SHORT).show()
-            }
+
+            holder.replyContainer?.visibility = View.GONE
+
+            // Click to open app (actions are always visible now)
+            holder.itemView.setOnClickListener {
+                try {
+                    val pm = context.packageManager
+                    val intent = pm.getLaunchIntentForPackage(item.packageName)
+                    intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Could not open app", Toast.LENGTH_SHORT).show()
+                }
         }
     }
-    
-    private fun sendReply(item: NotificationItem, action: NotificationAction, replyText: String) {
+
+    private fun sendReply(item: NotificationItem, action: NotificationAction, replyText: String, holder: NotificationAdapter.NotificationViewHolder) {
+        holder.replySendButton?.isEnabled = false
         if (replyText.isEmpty()) {
             Toast.makeText(context, "Please enter a reply", Toast.LENGTH_SHORT).show()
             return
         }
-        
+
         try {
             // Use androidx RemoteInputs if available, otherwise use android.app version
             val remoteInputs = action.remoteInputs
@@ -833,10 +831,10 @@ class NotificationAdapter(
                 remoteInputs.forEach { remoteInput ->
                     results.putCharSequence(remoteInput.resultKey, replyText)
                 }
-                
+
                 val intent = Intent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 RemoteInput.addResultsToIntent(remoteInputs, intent, results)
-                
+
                 action.actionIntent?.send(context, 0, intent)
                 Toast.makeText(context, "Reply sent", Toast.LENGTH_SHORT).show()
             } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
@@ -847,12 +845,12 @@ class NotificationAdapter(
                     androidRemoteInputs.forEach { androidRemoteInput ->
                         results.putCharSequence(androidRemoteInput.resultKey, replyText)
                     }
-                    
+
                     val intent = Intent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
                         android.app.RemoteInput.addResultsToIntent(androidRemoteInputs, intent, results)
                     }
-                    
+
                     action.actionIntent?.send(context, 0, intent)
                     Toast.makeText(context, "Reply sent", Toast.LENGTH_SHORT).show()
                 }
@@ -860,6 +858,9 @@ class NotificationAdapter(
         } catch (e: Exception) {
             Toast.makeText(context, "Could not send reply", Toast.LENGTH_SHORT).show()
         }
+        holder.replyEditText?.text?.clear()
+        holder.replyContainer?.visibility = View.GONE
+        holder.replySendButton?.postDelayed({ holder.replySendButton?.isEnabled = true }, 500)
     }
     
     override fun getItemCount() = notifications.size

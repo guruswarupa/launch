@@ -11,14 +11,14 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         var instance: LaunchNotificationListenerService? = null
             private set
     }
-    
+
     private var isListenerConnected = false
-    
+
     override fun onCreate() {
         super.onCreate()
         instance = this
     }
-    
+
     override fun onDestroy() {
         try {
             // Clear instance before calling super to prevent issues
@@ -29,7 +29,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             super.onDestroy()
         }
     }
-    
+
     override fun onListenerConnected() {
         super.onListenerConnected()
         isListenerConnected = true
