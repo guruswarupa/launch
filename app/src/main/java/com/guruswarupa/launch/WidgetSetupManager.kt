@@ -112,6 +112,27 @@ class WidgetSetupManager(
         return temperatureWidget
     }
     
+    fun setupNoiseDecibelWidget(sharedPreferences: android.content.SharedPreferences): NoiseDecibelWidget {
+        val noiseContainer = activity.findViewById<android.widget.LinearLayout>(R.id.noise_decibel_widget_container)
+        val noiseWidget = NoiseDecibelWidget(activity, noiseContainer, sharedPreferences)
+        noiseWidget.initialize()
+        return noiseWidget
+    }
+    
+    fun setupCalendarEventsWidget(sharedPreferences: android.content.SharedPreferences): CalendarEventsWidget {
+        val calendarContainer = activity.findViewById<android.widget.LinearLayout>(R.id.calendar_events_widget_container)
+        val calendarWidget = CalendarEventsWidget(activity, calendarContainer, sharedPreferences)
+        calendarWidget.initialize()
+        return calendarWidget
+    }
+    
+    fun setupCountdownWidget(sharedPreferences: android.content.SharedPreferences): CountdownWidget {
+        val countdownContainer = activity.findViewById<android.widget.LinearLayout>(R.id.countdown_widget_container)
+        val countdownWidget = CountdownWidget(activity, countdownContainer, sharedPreferences)
+        countdownWidget.initialize()
+        return countdownWidget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }

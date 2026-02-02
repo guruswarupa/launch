@@ -56,7 +56,7 @@ class MainActivity : FragmentActivity() {
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
 
     // Core managers
-    private lateinit var cacheManager: CacheManager
+    internal lateinit var cacheManager: CacheManager
     private lateinit var permissionManager: PermissionManager
     private lateinit var systemBarManager: SystemBarManager
     private lateinit var gestureHandler: GestureHandler
@@ -87,6 +87,9 @@ class MainActivity : FragmentActivity() {
     private lateinit var pressureWidget: PressureWidget
     private lateinit var proximityWidget: ProximityWidget
     private lateinit var temperatureWidget: TemperatureWidget
+    private lateinit var noiseDecibelWidget: NoiseDecibelWidget
+    private lateinit var calendarEventsWidget: CalendarEventsWidget
+    private lateinit var countdownWidget: CountdownWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
@@ -253,6 +256,9 @@ class MainActivity : FragmentActivity() {
         pressureWidget = widgetSetupManager.setupPressureWidget(sharedPreferences)
         proximityWidget = widgetSetupManager.setupProximityWidget(sharedPreferences)
         temperatureWidget = widgetSetupManager.setupTemperatureWidget(sharedPreferences)
+        noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
+        calendarEventsWidget = widgetSetupManager.setupCalendarEventsWidget(sharedPreferences)
+        countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -466,7 +472,18 @@ class MainActivity : FragmentActivity() {
         
         // Setup widget configuration button
         val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
+        val widgetSettingsHeader = findViewById<LinearLayout>(R.id.widget_settings_header)
+        val widgetSettingsText = findViewById<TextView>(R.id.widget_settings_text)
+        
         widgetConfigButton.setOnClickListener {
+            showWidgetConfigurationDialog()
+        }
+        
+        widgetSettingsHeader.setOnClickListener {
+            showWidgetConfigurationDialog()
+        }
+        
+        widgetSettingsText.setOnClickListener {
             showWidgetConfigurationDialog()
         }
 
@@ -825,6 +842,21 @@ class MainActivity : FragmentActivity() {
             temperatureWidget.cleanup()
         }
         
+        // Cleanup noise decibel widget
+        if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.cleanup()
+        }
+        
+        // Cleanup calendar events widget
+        if (::calendarEventsWidget.isInitialized) {
+            calendarEventsWidget.cleanup()
+        }
+        
+        // Cleanup countdown widget
+        if (::countdownWidget.isInitialized) {
+            countdownWidget.cleanup()
+        }
+        
         // Stop shake detection service
         stopShakeDetectionService()
     }
@@ -922,6 +954,21 @@ class MainActivity : FragmentActivity() {
             temperatureWidget.onResume()
         }
         
+        // Resume noise decibel tracking
+        if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.onResume()
+        }
+        
+        // Resume calendar events widget
+        if (::calendarEventsWidget.isInitialized) {
+            calendarEventsWidget.onResume()
+        }
+        
+        // Resume countdown widget
+        if (::countdownWidget.isInitialized) {
+            countdownWidget.onResume()
+        }
+        
         // Shake detection service runs in background, no need to start/stop here
         
         // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
@@ -982,6 +1029,21 @@ class MainActivity : FragmentActivity() {
         // Pause temperature tracking
         if (::temperatureWidget.isInitialized) {
             temperatureWidget.onPause()
+        }
+        
+        // Pause noise decibel tracking
+        if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.onPause()
+        }
+        
+        // Pause calendar events widget
+        if (::calendarEventsWidget.isInitialized) {
+            calendarEventsWidget.onPause()
+        }
+        
+        // Pause countdown widget
+        if (::countdownWidget.isInitialized) {
+            countdownWidget.onPause()
         }
         
         // Shake detection service runs in background, no need to stop here
@@ -1058,6 +1120,10 @@ class MainActivity : FragmentActivity() {
             if (::voiceSearchManager.isInitialized) {
                 voiceSearchManager.startVoiceSearch()
             }
+            // Also notify noise decibel widget if permission was granted
+            if (::noiseDecibelWidget.isInitialized) {
+                noiseDecibelWidget.onPermissionGranted()
+            }
         }
         
         // Handle physical activity permission
@@ -1065,6 +1131,22 @@ class MainActivity : FragmentActivity() {
             grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             if (::physicalActivityWidget.isInitialized) {
                 physicalActivityWidget.onPermissionGranted()
+            }
+        }
+        
+        // Handle calendar permission
+        if (requestCode == CalendarEventsWidget.REQUEST_CODE_CALENDAR_PERMISSION && 
+            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (::calendarEventsWidget.isInitialized) {
+                calendarEventsWidget.onPermissionGranted()
+            }
+        }
+        
+        // Handle calendar permission for countdown widget
+        if (requestCode == CountdownWidget.REQUEST_CODE_CALENDAR_PERMISSION && 
+            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (::countdownWidget.isInitialized) {
+                countdownWidget.onPermissionGranted()
             }
         }
     }
@@ -1117,6 +1199,20 @@ class MainActivity : FragmentActivity() {
     private fun showWidgetConfigurationDialog() {
         val dialog = WidgetConfigurationDialog(this, widgetConfigurationManager) {
             updateWidgetVisibility()
+            // Refresh calendar widget when it becomes visible
+            if (::calendarEventsWidget.isInitialized) {
+                val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
+                if (isEnabled) {
+                    calendarEventsWidget.refresh()
+                }
+            }
+            // Refresh countdown widget when it becomes visible
+            if (::countdownWidget.isInitialized) {
+                val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
+                if (isEnabled) {
+                    countdownWidget.refresh()
+                }
+            }
         }
         dialog.show()
     }
@@ -1130,6 +1226,11 @@ class MainActivity : FragmentActivity() {
         // Create a map for quick lookup
         val widgetMap = widgets.associateBy { it.id }
         
+        // Check if any widgets are enabled
+        val hasEnabledWidgets = widgets.any { it.enabled }
+        val emptyState = findViewById<View>(R.id.widgets_empty_state)
+        emptyState?.visibility = if (hasEnabledWidgets) View.GONE else View.VISIBLE
+        
         // Update visibility for each widget
         findViewById<View>(R.id.widgets_section)?.visibility = 
             if (widgetMap["widgets_section"]?.enabled == true) View.VISIBLE else View.GONE
@@ -1137,6 +1238,14 @@ class MainActivity : FragmentActivity() {
         // Notifications widget - the parent LinearLayout contains the container
         val notificationsParent = findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? ViewGroup
         notificationsParent?.visibility = if (widgetMap["notifications_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Calendar Events widget
+        findViewById<View>(R.id.calendar_events_widget_container)?.visibility = 
+            if (widgetMap["calendar_events_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        // Countdown widget
+        findViewById<View>(R.id.countdown_widget_container)?.visibility = 
+            if (widgetMap["countdown_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         findViewById<View>(R.id.physical_activity_widget_container)?.visibility = 
             if (widgetMap["physical_activity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
@@ -1152,6 +1261,9 @@ class MainActivity : FragmentActivity() {
         
         findViewById<View>(R.id.temperature_widget_container)?.visibility = 
             if (widgetMap["temperature_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.noise_decibel_widget_container)?.visibility = 
+            if (widgetMap["noise_decibel_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         // Workout widget - the parent LinearLayout contains the container
         val workoutParent = findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? ViewGroup
@@ -1175,7 +1287,7 @@ class MainActivity : FragmentActivity() {
         // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
         val drawer = findViewById<FrameLayout>(R.id.widgets_drawer)
         val scrollView = drawer?.let { view ->
-            // Find NestedScrollView (it's the second child after wallpaper ImageView and gear icon)
+            // Find NestedScrollView (it's a child of the FrameLayout)
             for (i in 0 until view.childCount) {
                 val child = view.getChildAt(i)
                 if (child is androidx.core.widget.NestedScrollView) {
@@ -1194,11 +1306,14 @@ class MainActivity : FragmentActivity() {
                 val view = when (widget.id) {
                     "widgets_section" -> findViewById<View>(R.id.widgets_section)
                     "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
+                    "calendar_events_widget_container" -> findViewById<View>(R.id.calendar_events_widget_container)
+                    "countdown_widget_container" -> findViewById<View>(R.id.countdown_widget_container)
                     "physical_activity_widget_container" -> findViewById<View>(R.id.physical_activity_widget_container)
                     "compass_widget_container" -> findViewById<View>(R.id.compass_widget_container)
                     "pressure_widget_container" -> findViewById<View>(R.id.pressure_widget_container)
                     "proximity_widget_container" -> findViewById<View>(R.id.proximity_widget_container)
                     "temperature_widget_container" -> findViewById<View>(R.id.temperature_widget_container)
+                    "noise_decibel_widget_container" -> findViewById<View>(R.id.noise_decibel_widget_container)
                     "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
                     "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
                     "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
@@ -1209,15 +1324,20 @@ class MainActivity : FragmentActivity() {
                 view?.let { viewMap[widget.id] = it }
             }
             
-            // Remove all views from layout
-            viewMap.values.forEach { view ->
-                (view.parent as? ViewGroup)?.removeView(view)
+            // Remove only the widgets we're managing (in reverse order to avoid index issues)
+            val viewsToRemove = viewMap.values.filter { it.parent == layout }.toList()
+            viewsToRemove.reversed().forEach { view ->
+                layout.removeView(view)
             }
             
-            // Add views back in the configured order
+            // Add views back in the exact configured order from widgets list
+            // This preserves the order set by the user, regardless of enabled/disabled state
             widgets.forEach { widget ->
                 viewMap[widget.id]?.let { view ->
-                    layout.addView(view)
+                    // View should have no parent after removal, add it back
+                    if (view.parent == null) {
+                        layout.addView(view)
+                    }
                 }
             }
         }

@@ -122,57 +122,9 @@ class FeatureTutorialManager(
         ),
         DRAWER_GESTURE(
             "Widgets Drawer",
-            "Swipe from the left edge of the screen to open the widgets drawer. Here you'll find calculator, todo list, workout tracker, finance tracker, and more widgets.",
+            "Swipe from the left edge of the screen to open the widgets drawer. Tap 'Widget Settings' to add and configure widgets.",
             R.id.widgets_drawer,
             HighlightPosition.CENTER
-        ),
-        ANDROID_WIDGETS(
-            "Android Widgets",
-            "Add third-party widgets from other apps to your launcher. Tap 'Add Widget' to browse and add widgets from installed apps.",
-            R.id.widgets_section,
-            HighlightPosition.BOTTOM
-        ),
-        NOTIFICATIONS_WIDGET(
-            "Notifications Widget",
-            "View and manage notifications directly from your launcher. Swipe to dismiss.",
-            R.id.notifications_widget_container,
-            HighlightPosition.BOTTOM
-        ),
-        PHYSICAL_ACTIVITY_WIDGET(
-            "Physical Activity Widget",
-            "Track your daily steps and distance walked. View your activity history in calendar view. Grant activity permission to start tracking.",
-            R.id.physical_activity_widget_container,
-            HighlightPosition.BOTTOM
-        ),
-        WORKOUT_WIDGET(
-            "Workout Tracker",
-            "Track your daily workouts and exercises. Add exercises, increment counts, view your workout calendar, and track your streak. Tap the + button to add exercises.",
-            R.id.workout_widget_container,
-            HighlightPosition.BOTTOM
-        ),
-        CALCULATOR_WIDGET(
-            "Calculator Widget",
-            "Perform calculations directly on your home screen. Switch between basic, scientific, and converter modes.",
-            R.id.calculator_widget_container,
-            HighlightPosition.BOTTOM
-        ),
-        TODO_WIDGET(
-            "Todo List Widget",
-            "Manage your daily tasks. Tap the + button to add tasks with due times and priorities.",
-            R.id.add_todo_button,
-            HighlightPosition.BOTTOM
-        ),
-        FINANCE_WIDGET(
-            "Finance Tracker",
-            "Track your income and expenses. Long press the balance to view transaction history.",
-            R.id.finance_widget,
-            HighlightPosition.BOTTOM
-        ),
-        WEEKLY_USAGE(
-            "Usage Statistics",
-            "View your weekly app usage. Tap on any day to see detailed usage for that day.",
-            R.id.weekly_usage_graph,
-            HighlightPosition.TOP
         )
     }
     
@@ -729,17 +681,7 @@ class FeatureTutorialManager(
      * Check if a tutorial step is in the drawer
      */
     private fun isDrawerStep(step: TutorialStep): Boolean {
-        return step in listOf(
-            TutorialStep.DRAWER_GESTURE,
-            TutorialStep.ANDROID_WIDGETS,
-            TutorialStep.TODO_WIDGET,
-            TutorialStep.WORKOUT_WIDGET,
-            TutorialStep.CALCULATOR_WIDGET,
-            TutorialStep.FINANCE_WIDGET,
-            TutorialStep.WEEKLY_USAGE,
-            TutorialStep.NOTIFICATIONS_WIDGET,
-            TutorialStep.PHYSICAL_ACTIVITY_WIDGET
-        )
+        return step == TutorialStep.DRAWER_GESTURE
     }
     
     /**

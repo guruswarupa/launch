@@ -132,24 +132,5 @@
             android:textSize="14sp"
             android:imeOptions="actionSend"
             android:inputType="text" />
-
-        <TextView
-            android:id="@+id/notification_reply_send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Send"
-            android:textColor="@color/white"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/notification_send_button"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center" />
     </LinearLayout>
-
 </LinearLayout>

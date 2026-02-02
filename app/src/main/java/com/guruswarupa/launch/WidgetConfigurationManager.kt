@@ -17,19 +17,23 @@ class WidgetConfigurationManager(
         private const val PREF_WIDGET_ORDER = "widget_order"
         
         // Widget IDs that correspond to container IDs in the layout
+        // All widgets are disabled by default - users can enable them from Widget Settings
         val ALL_WIDGETS = listOf(
-            WidgetInfo("widgets_section", "Android Widgets", true),
-            WidgetInfo("notifications_widget_container", "Notifications", true),
-            WidgetInfo("physical_activity_widget_container", "Physical Activity", true),
-            WidgetInfo("compass_widget_container", "Compass", true),
-            WidgetInfo("pressure_widget_container", "Pressure", true),
-            WidgetInfo("proximity_widget_container", "Proximity", true),
-            WidgetInfo("temperature_widget_container", "Temperature", true),
-            WidgetInfo("workout_widget_container", "Workout Tracker", true),
-            WidgetInfo("calculator_widget_container", "Calculator", true),
-            WidgetInfo("todo_recycler_view", "Todo List", true),
-            WidgetInfo("finance_widget", "Finance Tracker", true),
-            WidgetInfo("weekly_usage_widget", "Weekly Usage", true)
+            WidgetInfo("widgets_section", "Android Widgets", false),
+            WidgetInfo("notifications_widget_container", "Notifications", false),
+            WidgetInfo("calendar_events_widget_container", "Calendar Events", false),
+            WidgetInfo("countdown_widget_container", "Countdown", false),
+            WidgetInfo("physical_activity_widget_container", "Physical Activity", false),
+            WidgetInfo("compass_widget_container", "Compass", false),
+            WidgetInfo("pressure_widget_container", "Pressure", false),
+            WidgetInfo("proximity_widget_container", "Proximity", false),
+            WidgetInfo("temperature_widget_container", "Temperature", false),
+            WidgetInfo("noise_decibel_widget_container", "Noise Decibel Analyzer", false),
+            WidgetInfo("workout_widget_container", "Workout Tracker", false),
+            WidgetInfo("calculator_widget_container", "Calculator", false),
+            WidgetInfo("todo_recycler_view", "Todo List", false),
+            WidgetInfo("finance_widget", "Finance Tracker", false),
+            WidgetInfo("weekly_usage_widget", "Weekly Usage", false)
         )
     }
     
@@ -41,10 +45,11 @@ class WidgetConfigurationManager(
     
     /**
      * Get the current widget order
+     * Preserves saved order, and merges in any new widgets from ALL_WIDGETS
      */
     fun getWidgetOrder(): List<WidgetInfo> {
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null)
-        if (orderJson != null) {
+        val savedWidgetsList = if (orderJson != null) {
             try {
                 val jsonArray = JSONArray(orderJson)
                 val widgets = mutableListOf<WidgetInfo>()
@@ -55,13 +60,34 @@ class WidgetConfigurationManager(
                     val enabled = jsonObject.getBoolean("enabled")
                     widgets.add(WidgetInfo(id, name, enabled))
                 }
-                return widgets
+                widgets
             } catch (e: Exception) {
-                // If parsing fails, return default order
+                // If parsing fails, return empty list
+                mutableListOf()
             }
+        } else {
+            mutableListOf()
         }
-        // Return default order if no saved configuration
-        return ALL_WIDGETS
+        
+        // If we have saved widgets, use them in the saved order
+        if (savedWidgetsList.isNotEmpty()) {
+            val savedWidgetIds = savedWidgetsList.map { it.id }.toSet()
+            val savedWidgetsMap = savedWidgetsList.associateBy { it.id }
+            
+            // Add any new widgets from ALL_WIDGETS that aren't in saved list
+            val result = savedWidgetsList.toMutableList()
+            ALL_WIDGETS.forEach { defaultWidget ->
+                if (!savedWidgetIds.contains(defaultWidget.id)) {
+                    // New widget not in saved list, add it at the end
+                    result.add(defaultWidget)
+                }
+            }
+            
+            return result
+        }
+        
+        // No saved order, return default order
+        return ALL_WIDGETS.toList()
     }
     
     /**

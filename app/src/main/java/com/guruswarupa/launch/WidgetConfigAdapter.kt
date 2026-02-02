@@ -44,19 +44,15 @@ class WidgetConfigAdapter(
     }
 
     fun moveItem(fromPosition: Int, toPosition: Int) {
-        if (fromPosition < toPosition) {
-            for (i in fromPosition until toPosition) {
-                val temp = widgets[i]
-                widgets[i] = widgets[i + 1]
-                widgets[i + 1] = temp
-            }
-        } else {
-            for (i in fromPosition downTo toPosition + 1) {
-                val temp = widgets[i]
-                widgets[i] = widgets[i - 1]
-                widgets[i - 1] = temp
-            }
-        }
+        if (fromPosition == toPosition) return
+        
+        // Remove the item from its current position
+        val item = widgets.removeAt(fromPosition)
+        
+        // Insert it at the new position
+        widgets.add(toPosition, item)
+        
+        // Notify RecyclerView of the move
         notifyItemMoved(fromPosition, toPosition)
     }
 

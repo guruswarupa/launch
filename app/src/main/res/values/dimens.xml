@@ -4,4 +4,14 @@
     <dimen name="squircle_corner_radius">16dp</dimen>
     <dimen name="group_icon_size">24dp</dimen>
     <dimen name="group_popup_padding">8dp</dimen>
+    <!-- Onboarding responsive dimensions -->
+    <dimen name="onboarding_recycler_height">400dp</dimen>
+    <dimen name="onboarding_recycler_min_height">300dp</dimen>
+    <dimen name="onboarding_recycler_max_height">500dp</dimen>
+    <dimen name="onboarding_workspaces_list_height">150dp</dimen>
+    <dimen name="onboarding_workspaces_list_min_height">100dp</dimen>
+    <dimen name="onboarding_workspaces_list_max_height">200dp</dimen>
+    <dimen name="onboarding_workspaces_apps_height">350dp</dimen>
+    <dimen name="onboarding_workspaces_apps_min_height">250dp</dimen>
+    <dimen name="onboarding_workspaces_apps_max_height">450dp</dimen>
 </resources>

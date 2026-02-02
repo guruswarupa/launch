@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Onboarding responsive dimensions for tablets (sw600dp) -->
+    <dimen name="onboarding_recycler_height">500dp</dimen>
+    <dimen name="onboarding_recycler_min_height">400dp</dimen>
+    <dimen name="onboarding_recycler_max_height">600dp</dimen>
+    <dimen name="onboarding_workspaces_list_height">200dp</dimen>
+    <dimen name="onboarding_workspaces_list_min_height">150dp</dimen>
+    <dimen name="onboarding_workspaces_list_max_height">250dp</dimen>
+    <dimen name="onboarding_workspaces_apps_height">450dp</dimen>
+    <dimen name="onboarding_workspaces_apps_min_height">350dp</dimen>
+    <dimen name="onboarding_workspaces_apps_max_height">550dp</dimen>
+</resources>
