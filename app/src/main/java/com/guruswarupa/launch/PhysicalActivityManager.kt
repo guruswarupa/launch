@@ -79,7 +79,27 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
     
     init {
         initializeSensors()
-        loadSavedData()
+        // Data loading moved to initializeAsync to avoid blocking main thread
+    }
+    
+    /**
+     * Initializes data and starts tracking asynchronously.
+     * This avoids blocking the main thread during service startup.
+     */
+    fun initializeAsync(onComplete: (() -> Unit)? = null) {
+        Thread {
+            try {
+                loadSavedData()
+                handler.post {
+                    if (hasActivityRecognitionPermission()) {
+                        startTracking()
+                    }
+                    onComplete?.invoke()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during async initialization", e)
+            }
+        }.start()
     }
     
     private fun initializeSensors() {

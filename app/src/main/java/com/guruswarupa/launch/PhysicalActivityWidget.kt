@@ -71,6 +71,14 @@ class PhysicalActivityWidget(
         
         // Initialize activity manager
         activityManager = PhysicalActivityManager(context)
+        activityManager.initializeAsync {
+            // Check permission and setup UI once initialized
+            if (activityManager.hasActivityRecognitionPermission()) {
+                setupWithPermission()
+            } else {
+                setupWithoutPermission()
+            }
+        }
         
         // Setup toggle button
         viewToggleButton.setOnClickListener {
@@ -83,13 +91,6 @@ class PhysicalActivityWidget(
         
         // Initialize calendar view
         initializeCalendarView()
-        
-        // Check permission and setup UI
-        if (activityManager.hasActivityRecognitionPermission()) {
-            setupWithPermission()
-        } else {
-            setupWithoutPermission()
-        }
         
         isInitialized = true
     }
@@ -295,8 +296,6 @@ class PhysicalActivityWidget(
     fun onPermissionGranted() {
         if (isInitialized) {
             setupWithPermission()
-            // Start the service when permission is granted
-            startTrackingService()
         }
     }
     

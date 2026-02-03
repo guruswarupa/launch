@@ -25,6 +25,7 @@ object Constants {
         const val ACTIVE_WORKSPACE_KEY = "active_workspace_id"
         const val SAVED_WIDGETS_KEY = "saved_widgets"
         const val SHAKE_TORCH_ENABLED = "shake_torch_enabled"
+        const val SHAKE_SENSITIVITY = "shake_sensitivity"
     }
     
     // FileProvider

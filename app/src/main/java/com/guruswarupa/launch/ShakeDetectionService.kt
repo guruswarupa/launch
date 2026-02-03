@@ -25,6 +25,7 @@ class ShakeDetectionService : Service() {
     private var torchManager: TorchManager? = null
     private var isRunning = false
     private var screenOnReceiver: BroadcastReceiver? = null
+    private var settingsReceiver: BroadcastReceiver? = null
     private val powerManager: PowerManager by lazy {
         getSystemService(Context.POWER_SERVICE) as PowerManager
     }
@@ -44,6 +45,9 @@ class ShakeDetectionService : Service() {
         try {
             createNotificationChannel()
             
+            // Start foreground immediately in onCreate
+            startForeground(NOTIFICATION_ID, createNotification())
+            
             // Initialize torch manager
             torchManager = TorchManager(this)
             
@@ -61,8 +65,20 @@ class ShakeDetectionService : Service() {
         }
     }
     
+    private fun applySensitivity() {
+        val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        val sensitivity = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5)
+        shakeDetector?.updateSensitivity(sensitivity)
+    }
+    
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         return try {
+            // Re-assert foreground state
+            startForeground(NOTIFICATION_ID, createNotification())
+            
+            // Apply current sensitivity
+            applySensitivity()
+
             when (intent?.action) {
                 ACTION_STOP -> {
                     stopSelf()
@@ -70,8 +86,8 @@ class ShakeDetectionService : Service() {
                 }
                 ACTION_START, null -> {
                     if (!isRunning) {
-                        startForeground(NOTIFICATION_ID, createNotification())
                         registerScreenReceiver()
+                        registerSettingsReceiver()
                         updateShakeDetectionState()
                         isRunning = true
                     }
@@ -129,6 +145,26 @@ class ShakeDetectionService : Service() {
         registerReceiver(screenOnReceiver, filter)
     }
     
+    /**
+     * Registers receiver to monitor settings updates
+     */
+    private fun registerSettingsReceiver() {
+        if (settingsReceiver != null) return
+        
+        settingsReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                applySensitivity()
+            }
+        }
+        
+        val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(settingsReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(settingsReceiver, filter)
+        }
+    }
+    
     override fun onDestroy() {
         super.onDestroy()
         try {
@@ -141,6 +177,16 @@ class ShakeDetectionService : Service() {
                 }
             }
             screenOnReceiver = null
+            
+            settingsReceiver?.let {
+                try {
+                    unregisterReceiver(it)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error unregistering settings receiver", e)
+                }
+            }
+            settingsReceiver = null
+            
             shakeDetector?.cleanup()
             torchManager?.turnOffTorch() // Turn off torch when service stops
         } catch (e: Exception) {

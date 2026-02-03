@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Wallpaper Background -->
+    <ImageView
+        android:id="@+id/wallpaper_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/wallpaper_background"
+        android:contentDescription="Background"/>
+
+    <!-- Semi-transparent overlay for better text visibility -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"/>
+
+    <!-- Content Container -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:gravity="center_horizontal">
+
+            <!-- Title -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Permissions"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:gravity="center"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="32dp"/>
+
+            <!-- Description -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Enable permissions to unlock all features of the launcher. Some permissions are required for core functionality."
+                android:textSize="14sp"
+                android:textColor="@android:color/white"
+                android:alpha="0.8"
+                android:gravity="center"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Permissions List Container -->
+            <LinearLayout
+                android:id="@+id/permissions_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"/>
+
+            <!-- Apply Button (Optional, usually toggles take effect immediately) -->
+            <Button
+                android:id="@+id/done_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Done"
+                android:textAllCaps="false"
+                android:background="@drawable/button_background"
+                android:textColor="@android:color/white"
+                android:padding="16dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="32dp"/>
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</FrameLayout>

@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 
 /**
  * Detects shake gestures using the accelerometer sensor.
@@ -21,8 +22,8 @@ class ShakeDetector(
     private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     
     // Shake detection parameters
-    private val shakeThreshold = 12.0f // Minimum acceleration change to detect a shake
-    private val shakeTimeWindow = 800L // Time window in ms to detect three shakes
+    private var shakeThreshold = 12.0f // Initial value, will be updated by updateSensitivity
+    private val shakeTimeWindow = 800L
     private val minTimeBetweenShakes = 200L // Minimum time between shakes in ms
     
     private var lastShakeTime = 0L
@@ -47,6 +48,15 @@ class ShakeDetector(
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
             isListening = true
         }
+    }
+    
+    /**
+     * Updates shake sensitivity (1-10, where 10 is most sensitive)
+     */
+    fun updateSensitivity(sensitivity: Int) {
+        // Map 1-10 to threshold 20 - 8 (lower threshold = more sensitive)
+        shakeThreshold = 20f - (sensitivity.coerceIn(1, 10) - 1) * 1.33f
+        Log.d("ShakeDetector", "Updated sensitivity to $sensitivity, threshold set to $shakeThreshold")
     }
     
     /**
