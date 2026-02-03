@@ -786,6 +786,24 @@ class MainActivity : FragmentActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION && resultCode == Activity.RESULT_OK) {
+            updateWidgetVisibility()
+            // Refresh calendar widget when it becomes visible
+            if (::calendarEventsWidget.isInitialized) {
+                val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
+                if (isEnabled) {
+                    calendarEventsWidget.refresh()
+                }
+            }
+            // Refresh countdown widget when it becomes visible
+            if (::countdownWidget.isInitialized) {
+                val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
+                if (isEnabled) {
+                    countdownWidget.refresh()
+                }
+            }
+        }
+        
         if (::activityResultHandler.isInitialized) {
             // Initialize voice command handler if needed for voice search result
             if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && resultCode == Activity.RESULT_OK) {
@@ -1182,27 +1200,11 @@ class MainActivity : FragmentActivity() {
     
 
     /**
-     * Shows the widget configuration dialog
+     * Shows the widget configuration activity
      */
     private fun showWidgetConfigurationDialog() {
-        val dialog = WidgetConfigurationDialog(this, widgetConfigurationManager) {
-            updateWidgetVisibility()
-            // Refresh calendar widget when it becomes visible
-            if (::calendarEventsWidget.isInitialized) {
-                val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
-                if (isEnabled) {
-                    calendarEventsWidget.refresh()
-                }
-            }
-            // Refresh countdown widget when it becomes visible
-            if (::countdownWidget.isInitialized) {
-                val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
-                if (isEnabled) {
-                    countdownWidget.refresh()
-                }
-            }
-        }
-        dialog.show()
+        val intent = Intent(this, WidgetConfigurationActivity::class.java)
+        startActivityForResult(intent, ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION)
     }
     
     /**
