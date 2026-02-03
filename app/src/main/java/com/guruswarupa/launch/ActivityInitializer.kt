@@ -89,8 +89,12 @@ class ActivityInitializer(
 
     fun setupVoiceSearchButton(voiceSearchButton: ImageButton, voiceSearchManager: VoiceSearchManager) {
         voiceSearchButton.setOnClickListener {
-            android.widget.Toast.makeText(activity, "Voice search button clicked", android.widget.Toast.LENGTH_SHORT).show()
             voiceSearchManager.startVoiceSearch()
+        }
+        
+        voiceSearchButton.setOnLongClickListener {
+            voiceSearchManager.triggerSystemAssistant()
+            true
         }
     }
 }
