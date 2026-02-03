@@ -1269,7 +1269,7 @@ class MainActivity : FragmentActivity() {
             if (widgetMap["finance_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
-            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.GONE else View.VISIBLE
+            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
             
         findViewById<View>(R.id.network_stats_widget_container)?.visibility = 
             if (widgetMap["network_stats_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
