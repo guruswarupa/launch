@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/network_stats_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="16dp"
+    android:layout_marginBottom="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Network Stats"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/run_speedtest_button"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="Run Speedtest"
+            android:textSize="12sp"
+            android:textColor="@color/white"
+            android:background="@drawable/button_neutral_ripple"
+            android:paddingHorizontal="12dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <!-- Speed Section -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingEnd="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Download"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/download_speed_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 Mbps"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Upload"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/upload_speed_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 Mbps"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- Latency Section -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="8dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ping"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/ping_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 ms"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Jitter"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/jitter_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 ms"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#33FFFFFF"
+        android:layout_marginVertical="12dp"/>
+
+    <!-- Data Usage Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mobile Data"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/mobile_usage_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 MB"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wi-Fi Data"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/wifi_usage_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0 MB"
+                android:textColor="@color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- IP Address Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Wi-Fi IP: "
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:id="@+id/wifi_ip_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Loading..."
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/network_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ready"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>

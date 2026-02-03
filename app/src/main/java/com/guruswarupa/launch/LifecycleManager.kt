@@ -24,6 +24,8 @@ class LifecycleManager(
     private var adapter: AppAdapter? = null
     private var appList: MutableList<android.content.pm.ResolveInfo>? = null
     private var widgetManager: WidgetManager? = null
+    private var deviceInfoWidget: DeviceInfoWidget? = null
+    private var networkStatsWidget: NetworkStatsWidget? = null
     private var usageStatsManager: AppUsageStatsManager? = null
     private var timeDateManager: TimeDateManager? = null
     private var wallpaperManagerHelper2: WallpaperManagerHelper? = null
@@ -75,6 +77,14 @@ class LifecycleManager(
     
     fun setWidgetManager(manager: WidgetManager) {
         this.widgetManager = manager
+    }
+    
+    fun setDeviceInfoWidget(widget: DeviceInfoWidget) {
+        this.deviceInfoWidget = widget
+    }
+    
+    fun setNetworkStatsWidget(widget: NetworkStatsWidget) {
+        this.networkStatsWidget = widget
     }
     
     fun setUsageStatsManager(manager: AppUsageStatsManager) {
@@ -173,6 +183,8 @@ class LifecycleManager(
         
         // Start widget managers (fast operations)
         widgetManager?.onStart()
+        deviceInfoWidget?.onResume()
+        networkStatsWidget?.onResume()
         
         // PRIORITY 2: Load lightweight data in background (non-blocking)
         usageStatsManager?.invalidateCache()
@@ -230,6 +242,8 @@ class LifecycleManager(
         
         // Stop widget manager listening
         widgetManager?.onStop()
+        deviceInfoWidget?.onPause()
+        networkStatsWidget?.onPause()
         
         // Execute custom callbacks
         onPauseCallbacks.forEach { it.invoke() }

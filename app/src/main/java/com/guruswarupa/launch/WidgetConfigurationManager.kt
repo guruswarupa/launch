@@ -33,7 +33,9 @@ class WidgetConfigurationManager(
             WidgetInfo("calculator_widget_container", "Calculator", false),
             WidgetInfo("todo_recycler_view", "Todo List", false),
             WidgetInfo("finance_widget", "Finance Tracker", false),
-            WidgetInfo("weekly_usage_widget", "Weekly Usage", false)
+            WidgetInfo("weekly_usage_widget", "Weekly Usage", false),
+            WidgetInfo("network_stats_widget_container", "Network Stats", false),
+            WidgetInfo("device_info_widget_container", "Device Info", false)
         )
     }
     

@@ -259,6 +259,14 @@ class MainActivity : FragmentActivity() {
         noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
         calendarEventsWidget = widgetSetupManager.setupCalendarEventsWidget(sharedPreferences)
         countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
+        
+        // Initialize new widgets
+        val networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget(sharedPreferences)
+        val deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget(sharedPreferences)
+        
+        lifecycleManager.setNetworkStatsWidget(networkStatsWidget)
+        lifecycleManager.setDeviceInfoWidget(deviceInfoWidget)
+        
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -1262,6 +1270,12 @@ class MainActivity : FragmentActivity() {
         
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.GONE else View.VISIBLE
+            
+        findViewById<View>(R.id.network_stats_widget_container)?.visibility = 
+            if (widgetMap["network_stats_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+            
+        findViewById<View>(R.id.device_info_widget_container)?.visibility = 
+            if (widgetMap["device_info_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         // Reorder widgets - get the parent LinearLayout that contains all widgets
         // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
@@ -1299,6 +1313,8 @@ class MainActivity : FragmentActivity() {
                     "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
                     "finance_widget" -> findViewById<View>(R.id.finance_widget)
                     "weekly_usage_widget" -> findViewById<View>(R.id.weekly_usage_widget)
+                    "network_stats_widget_container" -> findViewById<View>(R.id.network_stats_widget_container)
+                    "device_info_widget_container" -> findViewById<View>(R.id.device_info_widget_container)
                     else -> null
                 }
                 view?.let { viewMap[widget.id] = it }

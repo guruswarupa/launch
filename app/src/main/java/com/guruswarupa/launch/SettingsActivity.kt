@@ -242,6 +242,7 @@ class SettingsActivity : ComponentActivity() {
         val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
         val launcherArrow = findViewById<TextView>(R.id.launcher_arrow)
         setupSectionToggle(launcherHeader, launcherContent, launcherArrow)
+        
     }
     
     private fun setupSectionToggle(header: LinearLayout, content: LinearLayout, arrow: TextView) {
