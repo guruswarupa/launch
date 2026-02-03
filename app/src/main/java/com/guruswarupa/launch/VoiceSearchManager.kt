@@ -47,4 +47,32 @@ class VoiceSearchManager(
             Toast.makeText(activity, "Voice recognition not available", Toast.LENGTH_SHORT).show()
         }
     }
+
+    /**
+     * Triggers the system's voice command assistant (Google Assistant or Gemini).
+     * This is the "free" integration that leverages the system's built-in capabilities.
+     */
+    fun triggerSystemAssistant() {
+        val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        
+        if (intent.resolveActivity(packageManager) != null) {
+            try {
+                activity.startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(activity, "Could not launch system assistant", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            // Fallback for devices without a dedicated voice command activity
+            val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            if (searchIntent.resolveActivity(packageManager) != null) {
+                activity.startActivity(searchIntent)
+            } else {
+                Toast.makeText(activity, "No voice assistant found on this device", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 }
