@@ -3,6 +3,29 @@
     <string name="settings_app_name">Launch Settings</string>
     <string name="search_text"> Search...</string>
     
+    <!-- App Search Strings -->
+    <string name="search_on_play_store">Search %1$s on Play Store</string>
+    <string name="search_in_google_maps">Search %1$s in Google Maps</string>
+    <string name="search_on_youtube">Search %1$s on YouTube</string>
+    <string name="search_in_browser">Search %1$s in Browser</string>
+    <string name="google_maps_not_installed">Google Maps not installed.</string>
+    <string name="youtube_not_installed_opening_browser">YouTube app not installed. Opening in browser.</string>
+    <string name="cannot_launch_app">Cannot launch app</string>
+    <string name="hidden_apps_feature_not_available">Hidden apps feature not available</string>
+    <string name="removed_from_favorites">Removed %1$s from favorites</string>
+    <string name="added_to_favorites">Added %1$s to favorites</string>
+    <string name="unhid_app">Unhid %1$s</string>
+    <string name="hid_app">Hid %1$s</string>
+    <string name="call_contact_title">Call %1$s?</string>
+    <string name="call_contact_message">Phone: %1$s\nDo you want to proceed?</string>
+    <string name="call_button">Call</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="timer_zero">00:00</string>
+
+    <!-- App Lock Strings -->
+    <string name="set_pin">Set PIN</string>
+    <string name="change_pin">Change PIN</string>
+
     <!-- Share Manager strings -->
     <string name="share_dialog_title">What would you like to share?</string>
     <string name="share_app_apk">Share an App (APK)</string>

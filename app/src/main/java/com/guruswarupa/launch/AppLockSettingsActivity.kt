@@ -1,16 +1,22 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.widget.SwitchCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -18,8 +24,8 @@ class AppLockSettingsActivity : ComponentActivity() {
 
     private lateinit var appLockManager: AppLockManager
     private lateinit var appsRecyclerView: RecyclerView
-    private lateinit var enableAppLockSwitch: Switch
-    private lateinit var fingerprintSwitch: Switch
+    private lateinit var enableAppLockSwitch: SwitchCompat
+    private lateinit var fingerprintSwitch: SwitchCompat
     private lateinit var fingerprintLayout: LinearLayout
     private lateinit var changePinButton: Button
     private lateinit var resetAppLockButton: Button
@@ -28,18 +34,19 @@ class AppLockSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Make status bar and navigation bar transparent BEFORE setContentView
-        // This prevents the blue flash on activity start
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        }
+        // Use modern edge-to-edge API with transparent bars and white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
         
         setContentView(R.layout.activity_app_lock_settings)
         
-        // Ensure system bars are fully configured after view is created
-        window.decorView.post {
-            makeSystemBarsTransparent()
+        // Handle window insets for edge-to-edge
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout)) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
         }
 
         appLockManager = AppLockManager(this)
@@ -64,7 +71,7 @@ class AppLockSettingsActivity : ComponentActivity() {
                     if (!success) {
                         enableAppLockSwitch.isChecked = false
                     } else {
-                        changePinButton.text = "Change PIN"
+                        changePinButton.text = getString(R.string.change_pin)
                     }
                 }
             } else if (!isChecked && appLockManager.isPinSet()) {
@@ -86,7 +93,7 @@ class AppLockSettingsActivity : ComponentActivity() {
 
         // Fingerprint authentication switch (only show if available)
         if (appLockManager.isFingerprintAvailable()) {
-            fingerprintLayout.visibility = View.VISIBLE
+            fingerprintLayout.isVisible = true
             fingerprintSwitch.isChecked = appLockManager.isFingerprintEnabled()
             fingerprintSwitch.setOnCheckedChangeListener { _, isChecked ->
                 if (appLockManager.isPinSet()) {
@@ -102,22 +109,22 @@ class AppLockSettingsActivity : ComponentActivity() {
                 }
             }
         } else {
-            fingerprintLayout.visibility = View.GONE
+            fingerprintLayout.isVisible = false
         }
 
         // Change PIN button
-        changePinButton.text = if (appLockManager.isPinSet()) "Change PIN" else "Set PIN"
+        changePinButton.text = if (appLockManager.isPinSet()) getString(R.string.change_pin) else getString(R.string.set_pin)
         changePinButton.setOnClickListener {
             if (appLockManager.isPinSet()) {
                 appLockManager.changePin { success ->
                     if (success) {
-                        changePinButton.text = "Change PIN"
+                        changePinButton.text = getString(R.string.change_pin)
                     }
                 }
             } else {
                 appLockManager.setupPin { success ->
                     if (success) {
-                        changePinButton.text = "Change PIN"
+                        changePinButton.text = getString(R.string.change_pin)
                         enableAppLockSwitch.isChecked = true
                     }
                 }
@@ -134,7 +141,7 @@ class AppLockSettingsActivity : ComponentActivity() {
                         if (success) {
                             enableAppLockSwitch.isChecked = false
                             fingerprintSwitch.isChecked = false
-                            changePinButton.text = "Set PIN"
+                            changePinButton.text = getString(R.string.set_pin)
                             recreateAppsList()
                         }
                     }
@@ -165,70 +172,13 @@ class AppLockSettingsActivity : ComponentActivity() {
     
     private fun setupSectionToggle(header: LinearLayout, content: View, arrow: TextView) {
         header.setOnClickListener {
-            val isExpanded = content.visibility == View.VISIBLE
+            val isExpanded = content.isVisible
             if (isExpanded) {
-                content.visibility = View.GONE
+                content.isVisible = false
                 arrow.text = "▼"
             } else {
-                content.visibility = View.VISIBLE
+                content.isVisible = true
                 arrow.text = "▲"
-            }
-        }
-    }
-    
-    private fun makeSystemBarsTransparent() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11+ (API 30+)
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                window.setDecorFitsSystemWindows(false)
-                
-                // Use decorView to get insetsController safely
-                val decorView = window.decorView
-                if (decorView != null) {
-                    val insetsController = decorView.windowInsetsController
-                    if (insetsController != null) {
-                        // Always use white/light icons regardless of mode
-                        insetsController.setSystemBarsAppearance(
-                            0,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        )
-                    }
-                }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // Android 5.0+ (API 21+)
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                
-                @Suppress("DEPRECATION")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val decorView = window.decorView
-                    if (decorView != null) {
-                        var flags = decorView.systemUiVisibility
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        
-                        // Always use white/light icons regardless of mode (don't set LIGHT_STATUS_BAR flag)
-                        // When LIGHT_STATUS_BAR is NOT set, icons are light/white
-                        
-                        decorView.systemUiVisibility = flags
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // If anything fails, at least try to set the colors
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                }
-            } catch (ex: Exception) {
-                // Ignore if even this fails
             }
         }
     }
@@ -258,20 +208,26 @@ class AppLockSettingsActivity : ComponentActivity() {
         appsRecyclerView.adapter = adapter
     }
 
+    @SuppressLint("QueryPermissionsNeeded")
     private fun getInstalledApps(): List<AppInfo> {
-        val packageManager = packageManager
-        val apps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-            .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 } // Only user apps
+        val pm = packageManager
+        
+        val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        }
+        
+        return apps.filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 } // Only user apps
             .map { appInfo ->
                 AppInfo(
                     packageName = appInfo.packageName,
-                    appName = appInfo.loadLabel(packageManager).toString(),
-                    icon = appInfo.loadIcon(packageManager)
+                    appName = appInfo.loadLabel(pm).toString(),
+                    icon = appInfo.loadIcon(pm)
                 )
             }
             .sortedBy { it.appName }
-
-        return apps
     }
 
     data class AppInfo(
@@ -290,7 +246,7 @@ class AppLockSettingsActivity : ComponentActivity() {
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val icon: ImageView = view.findViewById(R.id.app_icon)
             val name: TextView = view.findViewById(R.id.app_name)
-            val lockSwitch: Switch = view.findViewById(R.id.lock_switch)
+            val lockSwitch: SwitchCompat = view.findViewById(R.id.lock_switch)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

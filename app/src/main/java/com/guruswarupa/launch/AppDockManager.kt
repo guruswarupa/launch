@@ -1,52 +1,35 @@
 package com.guruswarupa.launch
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
 import android.content.SharedPreferences
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.GridLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
+import androidx.core.content.edit
+import java.util.Locale
 
 class AppDockManager(
     activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
     private val packageManager: PackageManager,
-    private val appLockManager: AppLockManager,
     private val favoriteAppManager: FavoriteAppManager
 ) {
     private val context: Context = activity
-    private val DOCK_APPS_KEY = "dock_apps"
-    private val FOCUS_MODE_KEY = "focus_mode_enabled"
-    private val FOCUS_MODE_HIDDEN_APPS_KEY = "focus_mode_hidden_apps"
-    private val FOCUS_MODE_END_TIME_KEY = "focus_mode_end_time"
-    private val POWER_SAVER_MODE_KEY = "power_saver_mode_enabled"
+    private val focusModeKey = "focus_mode_enabled"
+    private val focusModeHiddenAppsKey = "focus_mode_hidden_apps"
+    private val focusModeEndTimeKey = "focus_mode_end_time"
+    private val powerSaverModeKey = "power_saver_mode_enabled"
 
-    private lateinit var addIcon: ImageView
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
-    private lateinit var restartButton: ImageView
     private lateinit var apkShareButton: ImageView
     private lateinit var powerSaverToggle: ImageView
     private lateinit var favoriteToggle: ImageView
@@ -54,11 +37,11 @@ class AppDockManager(
     private var isPowerSaverMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
-    private lateinit var workspaceManager: WorkspaceManager
+    private val workspaceManager: WorkspaceManager
 
     init {
-        isFocusMode = sharedPreferences.getBoolean(FOCUS_MODE_KEY, false)
-        isPowerSaverMode = sharedPreferences.getBoolean(POWER_SAVER_MODE_KEY, false)
+        isFocusMode = sharedPreferences.getBoolean(focusModeKey, false)
+        isPowerSaverMode = sharedPreferences.getBoolean(powerSaverModeKey, false)
         workspaceManager = WorkspaceManager(sharedPreferences)
 
         if (isPowerSaverMode) {
@@ -66,14 +49,14 @@ class AppDockManager(
         }
 
         // Handle focus mode expiry
-        val focusEndTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+        val focusEndTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
         if (isFocusMode && focusEndTime > 0 && System.currentTimeMillis() > focusEndTime) {
             // Just update the state without calling methods that depend on MainActivity
             isFocusMode = false
-            sharedPreferences.edit()
-                .putBoolean(FOCUS_MODE_KEY, false)
-                .remove(FOCUS_MODE_END_TIME_KEY)
-                .apply()
+            sharedPreferences.edit {
+                putBoolean(focusModeKey, false)
+                remove(focusModeEndTimeKey)
+            }
         }
 
         // Initialize dock with all components
@@ -84,7 +67,7 @@ class AppDockManager(
 
         // Check if focus mode timer should be restored
         if (isFocusMode) {
-            val endTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+            val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
             if (endTime > System.currentTimeMillis()) {
                 startTimerDisplay()
                 startFocusModeTimer(endTime)
@@ -95,35 +78,11 @@ class AppDockManager(
         }
     }
 
-    fun launchAppWithLockCheck(packageName: String) {
-        (context as MainActivity).launchAppWithTimerCheck(packageName) {
-            if (appLockManager.isAppLocked(packageName)) {
-                appLockManager.verifyPin { isAuthenticated ->
-                    if (isAuthenticated) {
-                        launchApp(packageName)
-                    }
-                }
-            } else {
-                launchApp(packageName)
-            }
-        }
-    }
-
-    private fun launchApp(packageName: String) {
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-        if (intent != null) {
-            context.startActivity(intent)
-        } else {
-            Toast.makeText(context, "App not found", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-
     private fun ensureApkShareButton() {
         if (appDock.findViewWithTag<ImageView>("apk_share_button") == null) {
             apkShareButton = ImageView(context).apply {
                 tag = "apk_share_button"
-                setImageResource(R.drawable.ic_share) // You'll need to create this drawable
+                setImageResource(R.drawable.ic_share)
                 layoutParams = LinearLayout.LayoutParams(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
@@ -155,7 +114,7 @@ class AppDockManager(
 
     private fun togglePowerSaverMode() {
         isPowerSaverMode = !isPowerSaverMode
-        sharedPreferences.edit().putBoolean(POWER_SAVER_MODE_KEY, isPowerSaverMode).apply()
+        sharedPreferences.edit { putBoolean(powerSaverModeKey, isPowerSaverMode) }
 
         // Update power saver toggle icon
         powerSaverToggle.setImageResource(
@@ -227,7 +186,7 @@ class AppDockManager(
             focusTimerText = TextView(context).apply {
                 tag = "focus_timer_text"
                 textSize = 12f
-                setTextColor(context.resources.getColor(android.R.color.white))
+                setTextColor(ContextCompat.getColor(context, android.R.color.white))
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.MATCH_PARENT
@@ -417,7 +376,6 @@ class AppDockManager(
             }
             // Add at the beginning (index 0)
             appDock.addView(settingsButton, 0)
-        } else {
         }
     }
 
@@ -500,59 +458,19 @@ class AppDockManager(
         Toast.makeText(context, "Showing: $modeText", Toast.LENGTH_SHORT).show()
     }
 
-    private fun ensureRestartButton() {
-        if (appDock.findViewWithTag<ImageView>("restart_button") == null) {
-            restartButton = ImageView(context).apply {
-                tag = "restart_button"
-                setImageResource(R.drawable.ic_restart)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(12, 12, 12, 12)
-                }
-                setOnClickListener { restartLauncher() }
-                setOnLongClickListener {
-                    Toast.makeText(context, "Restart Launcher", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            // Add at the beginning (index 0)
-            appDock.addView(restartButton, 0)
-        }
-    }
-
-    private fun restartLauncher() {
-        try {
-            val packageManager = context.packageManager
-            val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-            val componentName = intent!!.component
-            val mainIntent = Intent.makeRestartActivityTask(componentName)
-            context.startActivity(mainIntent)
-            Runtime.getRuntime().exit(0)
-        } catch (e: Exception) {
-            Toast.makeText(context, "Failed to restart launcher", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun loadFocusMode() {
-        isFocusMode = sharedPreferences.getBoolean(FOCUS_MODE_KEY, false)
-    }
-
     private fun saveFocusMode() {
-        sharedPreferences.edit().putBoolean(FOCUS_MODE_KEY, isFocusMode).apply()
+        sharedPreferences.edit { putBoolean(focusModeKey, isFocusMode) }
     }
 
     private fun toggleFocusMode() {
         if (isFocusMode) {
             // Check if timer has expired
-            val endTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+            val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
             val currentTime = System.currentTimeMillis()
 
             if (currentTime < endTime) {
                 val remainingMinutes = (endTime - currentTime) / (1000 * 60)
-                Toast.makeText(context, "Focus mode active for ${remainingMinutes} more minutes", Toast.LENGTH_LONG).show()
-                return
+                Toast.makeText(context, "Focus mode active for $remainingMinutes more minutes", Toast.LENGTH_LONG).show()
             } else {
                 // Timer expired, allow switching to normal mode
                 disableFocusMode()
@@ -607,7 +525,7 @@ class AppDockManager(
         val endTime = System.currentTimeMillis() + (durationMinutes * 60 * 1000)
 
         saveFocusMode()
-        sharedPreferences.edit().putLong(FOCUS_MODE_END_TIME_KEY, endTime).apply()
+        sharedPreferences.edit { putLong(focusModeEndTimeKey, endTime) }
 
         updateFocusModeIcon()
         updateDockVisibility()
@@ -623,7 +541,7 @@ class AppDockManager(
     private fun disableFocusMode() {
         isFocusMode = false
         saveFocusMode()
-        sharedPreferences.edit().remove(FOCUS_MODE_END_TIME_KEY).apply()
+        sharedPreferences.edit { remove(focusModeEndTimeKey) }
 
         updateFocusModeIcon()
         updateDockVisibility()
@@ -691,7 +609,7 @@ class AppDockManager(
         timerRunnable = object : Runnable {
             override fun run() {
                 if (isFocusMode) {
-                    val endTime = sharedPreferences.getLong(FOCUS_MODE_END_TIME_KEY, 0)
+                    val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
                     val currentTime = System.currentTimeMillis()
 
                     if (endTime > currentTime) {
@@ -699,10 +617,10 @@ class AppDockManager(
                         val minutes = (remainingTime / (1000 * 60)).toInt()
                         val seconds = ((remainingTime % (1000 * 60)) / 1000).toInt()
 
-                        focusTimerText.text = String.format("%02d:%02d", minutes, seconds)
+                        focusTimerText.text = String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
                         timerHandler?.postDelayed(this, 1000)
                     } else {
-                        focusTimerText.text = "00:00"
+                        focusTimerText.text = context.getString(R.string.timer_zero)
                     }
                 }
             }
@@ -754,19 +672,19 @@ class AppDockManager(
     }
 
     private fun getHiddenAppsInFocusMode(): Set<String> {
-        return sharedPreferences.getStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, mutableSetOf()) ?: mutableSetOf()
+        return sharedPreferences.getStringSet(focusModeHiddenAppsKey, mutableSetOf()) ?: mutableSetOf()
     }
 
     private fun addAppToHiddenList(packageName: String) {
         val hiddenApps = getHiddenAppsInFocusMode().toMutableSet()
         hiddenApps.add(packageName)
-        sharedPreferences.edit().putStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, hiddenApps).apply()
+        sharedPreferences.edit { putStringSet(focusModeHiddenAppsKey, hiddenApps) }
     }
 
     private fun removeAppFromHiddenList(packageName: String) {
         val hiddenApps = getHiddenAppsInFocusMode().toMutableSet()
         hiddenApps.remove(packageName)
-        sharedPreferences.edit().putStringSet(FOCUS_MODE_HIDDEN_APPS_KEY, hiddenApps).apply()
+        sharedPreferences.edit { putStringSet(focusModeHiddenAppsKey, hiddenApps) }
     }
 
     fun isAppHiddenInFocusMode(packageName: String): Boolean {
@@ -786,11 +704,5 @@ class AppDockManager(
 
     private fun showApkShareDialog() {
         shareManager.showApkSharingDialog()
-    }
-}
-
-fun Activity.dismissPopupWindow() {
-    if (currentFocus != null && currentFocus!!.parent is PopupWindow) {
-        (currentFocus!!.parent as PopupWindow).dismiss()
     }
 }
