@@ -169,6 +169,12 @@
             android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
 
+        <activity
+            android:name=".PermissionsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
     </application>
 
 </manifest>

@@ -559,6 +559,76 @@
 
                     </LinearLayout>
 
+                    <LinearLayout
+                        android:id="@+id/shake_sensitivity_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Shake Sensitivity"
+                                android:textSize="16sp"
+                                android:textColor="@android:color/white"
+                                android:alpha="0.9"/>
+
+                            <TextView
+                                android:id="@+id/sensitivity_value_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="5"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="@android:color/white"/>
+
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/shake_sensitivity_seekbar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:max="9"
+                            android:progress="4"
+                            android:layout_marginTop="8dp"
+                            android:thumbTint="@android:color/white"
+                            android:progressTint="@android:color/white"
+                            android:progressBackgroundTint="@android:color/white"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="4dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Less Sensitive"
+                                android:textSize="10sp"
+                                android:textColor="@android:color/white"
+                                android:alpha="0.6"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="More Sensitive"
+                                android:textSize="10sp"
+                                android:textColor="@android:color/white"
+                                android:alpha="0.6"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
