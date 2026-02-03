@@ -109,6 +109,11 @@ class SettingsActivity : ComponentActivity() {
             checkAndRequestPermissions()
         }
         
+        val privacyDashboardButton = findViewById<Button>(R.id.privacy_dashboard_button)
+        privacyDashboardButton.setOnClickListener {
+            startActivity(Intent(this, PrivacyDashboardActivity::class.java))
+        }
+        
         showTutorialButton.setOnClickListener {
             showTutorial()
         }
@@ -189,12 +194,6 @@ class SettingsActivity : ComponentActivity() {
         val appLockContent = findViewById<LinearLayout>(R.id.app_lock_content)
         val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
         setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
-        
-        // Hidden Apps Section
-        val hiddenAppsHeader = findViewById<LinearLayout>(R.id.hidden_apps_header)
-        val hiddenAppsContent = findViewById<LinearLayout>(R.id.hidden_apps_content)
-        val hiddenAppsArrow = findViewById<TextView>(R.id.hidden_apps_arrow)
-        setupSectionToggle(hiddenAppsHeader, hiddenAppsContent, hiddenAppsArrow)
         
         // Permissions Section
         val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)

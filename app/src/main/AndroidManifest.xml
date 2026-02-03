@@ -163,6 +163,12 @@
             android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
 
+        <activity
+            android:name=".PrivacyDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
     </application>
 
 </manifest>

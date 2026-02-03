@@ -295,7 +295,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="App Lock"
+                        android:text="Security &amp; Privacy"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@android:color/white"/>
@@ -327,67 +327,8 @@
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
-                        android:padding="16dp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <!-- Hidden Apps Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/hidden_apps_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Hidden Apps"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
-
-                    <TextView
-                        android:id="@+id/hidden_apps_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.7"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/hidden_apps_content"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="View and manage apps that are hidden from the app list. Long press any app in the app list to hide it."
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.8"
-                        android:layout_marginBottom="12dp"/>
+                        android:padding="16dp"
+                        android:layout_marginBottom="8dp"/>
 
                     <Button
                         android:id="@+id/hidden_apps_button"
@@ -397,11 +338,23 @@
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
+                        android:padding="16dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <Button
+                        android:id="@+id/privacy_dashboard_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Privacy &amp; Security Dashboard"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
                         android:padding="16dp"/>
 
                 </LinearLayout>
 
             </LinearLayout>
+
 
             <!-- Permissions Section -->
             <LinearLayout
@@ -426,7 +379,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Permissions"
+                        android:text="Launcher Permissions"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@android:color/white"/>
@@ -454,7 +407,7 @@
                         android:id="@+id/check_permissions_button"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Handle Permissions"
+                        android:text="Handle Internal Permissions"
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
