@@ -1,42 +1,65 @@
 package com.guruswarupa.launch
 
-import android.app.AlertDialog
 import android.content.Context
-import android.view.LayoutInflater
+import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.guruswarupa.launch.Constants
 
-class WidgetConfigurationDialog(
-    private val context: Context,
-    private val widgetConfigManager: WidgetConfigurationManager,
-    private val onConfigurationSaved: () -> Unit
-) {
-    
-    private var dialog: AlertDialog? = null
+class WidgetConfigurationActivity : AppCompatActivity() {
+
+    private lateinit var widgetConfigManager: WidgetConfigurationManager
     private var adapter: WidgetConfigAdapter? = null
-    
-    fun show() {
-        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_widget_configuration, null)
-        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.widgets_recycler_view)
-        val closeButton = dialogView.findViewById<ImageButton>(R.id.close_button)
-        val cancelButton = dialogView.findViewById<Button>(R.id.cancel_button)
-        val saveButton = dialogView.findViewById<Button>(R.id.save_button)
+    private val prefsName = "com.guruswarupa.launch.PREFS"
+    private lateinit var wallpaperManagerHelper: WallpaperManagerHelper
+    private val backgroundExecutor = java.util.concurrent.Executors.newFixedThreadPool(2)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         
+        // Make system bars transparent
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        }
+        
+        supportRequestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        supportActionBar?.hide()
+        
+        setContentView(R.layout.activity_widget_configuration)
+
+        val sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        widgetConfigManager = WidgetConfigurationManager(this, sharedPreferences)
+
+        val wallpaperBackground = findViewById<android.widget.ImageView>(R.id.wallpaper_background)
+        wallpaperManagerHelper = WallpaperManagerHelper(this, wallpaperBackground, null, backgroundExecutor)
+        wallpaperManagerHelper.setWallpaperBackground()
+
+        val recyclerView = findViewById<RecyclerView>(R.id.widgets_recycler_view)
+        val backButton = findViewById<ImageButton>(R.id.back_button)
+        val cancelButton = findViewById<Button>(R.id.cancel_button)
+        val saveButton = findViewById<Button>(R.id.save_button)
+        
+        // Ensure buttons are dark tinted to match theme
+        cancelButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#33000000"))
+        saveButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#33000000"))
+
         // Load current widget configuration
         val widgets = widgetConfigManager.getWidgetOrder().toMutableList()
-        
+
         // Setup RecyclerView
         adapter = WidgetConfigAdapter(widgets) { position, isChecked ->
             widgets[position] = widgets[position].copy(enabled = isChecked)
         }
-        
-        recyclerView.layoutManager = LinearLayoutManager(context)
+
+        recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
-        
+
         // Setup drag to reorder
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
@@ -55,57 +78,47 @@ class WidgetConfigurationDialog(
                 adapter?.moveItem(fromPos, toPos)
                 return true
             }
-            
+
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 // Not used
             }
-            
+
             override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(viewHolder, actionState)
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
                     viewHolder?.itemView?.alpha = 0.7f
                 }
             }
-            
+
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
                 viewHolder.itemView.alpha = 1.0f
             }
         })
         itemTouchHelper.attachToRecyclerView(recyclerView)
-        
-        // Create dialog
-        dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-        
-        // Make dialog window scrollable with proper sizing
-        dialog?.window?.setLayout(
-            (context.resources.displayMetrics.widthPixels * 0.9).toInt(),
-            (context.resources.displayMetrics.heightPixels * 0.75).toInt()
-        )
-        
+
         // Setup button listeners
-        closeButton.setOnClickListener {
-            dialog?.dismiss()
+        backButton.setOnClickListener {
+            finish()
         }
-        
+
         cancelButton.setOnClickListener {
-            dialog?.dismiss()
+            finish()
         }
-        
+
         saveButton.setOnClickListener {
             val updatedWidgets = adapter?.getWidgets() ?: widgets
             widgetConfigManager.saveWidgetOrder(updatedWidgets)
-            onConfigurationSaved()
-            dialog?.dismiss()
+            setResult(RESULT_OK)
+            finish()
         }
-        
-        dialog?.show()
     }
-    
-    fun dismiss() {
-        dialog?.dismiss()
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::wallpaperManagerHelper.isInitialized) {
+            wallpaperManagerHelper.cleanup()
+        }
+        backgroundExecutor.shutdown()
     }
 }
