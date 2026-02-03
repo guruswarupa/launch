@@ -140,6 +140,20 @@ class WidgetSetupManager(
         countdownWidget.initialize()
         return countdownWidget
     }
+
+    fun setupNetworkStatsWidget(sharedPreferences: android.content.SharedPreferences): NetworkStatsWidget {
+        val container = activity.findViewById<android.widget.LinearLayout>(R.id.network_stats_widget_container)
+        val widget = NetworkStatsWidget(activity, container, sharedPreferences)
+        widget.initialize()
+        return widget
+    }
+
+    fun setupDeviceInfoWidget(sharedPreferences: android.content.SharedPreferences): DeviceInfoWidget {
+        val container = activity.findViewById<android.widget.LinearLayout>(R.id.device_info_widget_container)
+        val widget = DeviceInfoWidget(activity, container, sharedPreferences)
+        widget.initialize()
+        return widget
+    }
     
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()

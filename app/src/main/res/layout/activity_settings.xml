@@ -126,6 +126,7 @@
 
             </LinearLayout>
 
+
             <!-- Wallpaper Section -->
             <LinearLayout
                 android:layout_width="match_parent"
