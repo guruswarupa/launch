@@ -28,10 +28,16 @@ class WidgetConfigAdapter(
     override fun onBindViewHolder(holder: WidgetViewHolder, position: Int) {
         val widget = widgets[position]
         holder.widgetName.text = widget.name
+        
+        // Nullify listener before setting isChecked to prevent unwanted triggers during binding
+        holder.widgetToggle.setOnCheckedChangeListener(null)
         holder.widgetToggle.isChecked = widget.enabled
         
         holder.widgetToggle.setOnCheckedChangeListener { _, isChecked ->
-            onToggleChanged(position, isChecked)
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                onToggleChanged(currentPos, isChecked)
+            }
         }
     }
 
