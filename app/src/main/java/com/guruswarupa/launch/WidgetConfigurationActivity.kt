@@ -22,16 +22,27 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Make system bars transparent
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        val systemBarManager = SystemBarManager(this)
+        window.decorView.post {
+            systemBarManager.makeSystemBarsTransparent()
         }
         
         supportRequestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
         supportActionBar?.hide()
         
         setContentView(R.layout.activity_widget_configuration)
+
+        val mainContent = findViewById<View>(R.id.main_content)
+        mainContent.setOnApplyWindowInsetsListener { view, insets ->
+            val systemBars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
+            view.setPadding(
+                view.paddingLeft,
+                systemBars.top + 16.toPx(),
+                view.paddingRight,
+                systemBars.bottom + 16.toPx()
+            )
+            insets
+        }
 
         val sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         widgetConfigManager = WidgetConfigurationManager(this, sharedPreferences)
@@ -120,5 +131,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             wallpaperManagerHelper.cleanup()
         }
         backgroundExecutor.shutdown()
+    }
+    private fun Int.toPx(): Int {
+        return (this * resources.displayMetrics.density).toInt()
     }
 }
