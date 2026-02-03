@@ -4,8 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Locale
 
 data class AppUsageItem(
     val appName: String,
@@ -44,7 +44,7 @@ class AppUsageAdapter(
         holder.usageTime.text = formatUsageTime(item.usageTime)
         
         // Set percentage
-        holder.usagePercentage.text = String.format("%.1f%%", item.percentage)
+        holder.usagePercentage.text = String.format(Locale.getDefault(), "%.1f%%", item.percentage)
     }
 
     override fun getItemCount(): Int = appUsages.size

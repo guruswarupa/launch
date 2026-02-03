@@ -13,7 +13,6 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -21,6 +20,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.core.view.isVisible
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.GridLayoutManager
@@ -33,7 +34,7 @@ class MainActivity : FragmentActivity() {
 
     // Core dependencies
     private lateinit var sharedPreferences: SharedPreferences
-    private val PREFS_NAME = "com.guruswarupa.launch.PREFS"
+    private val prefsName = "com.guruswarupa.launch.PREFS"
     private val handler = Handler(Looper.getMainLooper())
     private val backgroundExecutor = Executors.newFixedThreadPool(4)
 
@@ -118,14 +119,14 @@ class MainActivity : FragmentActivity() {
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
         appTimerManager = AppTimerManager(this)
-        appCategoryManager = AppCategoryManager(packageManager)
+        appCategoryManager = AppCategoryManager()
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
         isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
         featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
         
         // Initialize new modular managers
-        appLauncher = AppLauncher(this, packageManager, appLockManager, appTimerManager, appCategoryManager)
+        appLauncher = AppLauncher(this, packageManager, appLockManager)
     }
     
     /**
@@ -181,10 +182,9 @@ class MainActivity : FragmentActivity() {
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
         
-        activityInitializer = ActivityInitializer(this, sharedPreferences, handler, appLauncher)
+        activityInitializer = ActivityInitializer(this, sharedPreferences, appLauncher)
         activityInitializer.initializeViews(
-            searchBox, recyclerView, voiceSearchButton, appDock,
-            wallpaperBackground, weeklyUsageGraph, weatherIcon, weatherText,
+            searchBox, recyclerView,
             timeTextView, dateTextView
         )
         
@@ -219,9 +219,9 @@ class MainActivity : FragmentActivity() {
      */
     private fun requestInitialPermissions() {
         permissionManager.requestContactsPermission { 
-            contactManager.loadContacts { contacts ->
+            contactManager.loadContacts {
                 if (::appSearchManager.isInitialized) {
-                    appSearchManager.updateContactsList(contacts)
+                    appSearchManager.updateContactsList()
                 } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                     updateAppSearchManager()
                 }
@@ -312,7 +312,6 @@ class MainActivity : FragmentActivity() {
         // Always reinitialize to get fresh data (app list, contacts, etc.)
         appSearchManager = AppSearchManager(
             packageManager = packageManager,
-            appList = appList,
             fullAppList = fullAppList,
             adapter = adapter,
             searchBox = searchBox,
@@ -336,7 +335,7 @@ class MainActivity : FragmentActivity() {
             systemBarManager.makeSystemBarsTransparent()
         }
 
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
         
         // Initialize widget configuration manager
         widgetConfigurationManager = WidgetConfigurationManager(this, sharedPreferences)
@@ -382,14 +381,14 @@ class MainActivity : FragmentActivity() {
             initializeDeferredWidgets()
         }, 100) // Defer by 100ms to let UI render first
 
-        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
+        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, favoriteAppManager)
         
         // Initialize appList before using it (must be initialized before appListLoader)
         appList = mutableListOf()
         fullAppList = mutableListOf()
         
         // Initialize app list manager
-        appListManager = AppListManager(packageManager, appDockManager, favoriteAppManager, hiddenAppManager, cacheManager, backgroundExecutor)
+        appListManager = AppListManager(appDockManager, favoriteAppManager, hiddenAppManager, cacheManager)
         
         // Initialize app list loader
         appListLoader = AppListLoader(
@@ -436,7 +435,7 @@ class MainActivity : FragmentActivity() {
         // Load weekly usage data lazily (only when graph is visible)
         // Defer to avoid blocking initial load
         handler.postDelayed({
-            if (::weeklyUsageGraph.isInitialized && weeklyUsageGraph.visibility == View.VISIBLE) {
+            if (::weeklyUsageGraph.isInitialized && weeklyUsageGraph.isVisible) {
                 usageStatsDisplayManager.loadWeeklyUsageData()
             }
         }, 300)
@@ -536,6 +535,17 @@ class MainActivity : FragmentActivity() {
         
         // Initialize lifecycle manager
         initializeLifecycleManager()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (::navigationManager.isInitialized) {
+                    navigationManager.handleBackPressed { 
+                        // If navigation manager says we can proceed with standard back
+                        // but it's the home screen, we usually don't want to do anything
+                    }
+                }
+            }
+        })
     }
     
     /**
@@ -736,8 +746,7 @@ class MainActivity : FragmentActivity() {
                 appListLoader.clearCache()
             }
             if (::adapter.isInitialized) {
-                adapter.appList = appList
-                adapter.notifyDataSetChanged()
+                adapter.updateAppList(appList)
             }
         }
         
@@ -782,10 +791,6 @@ class MainActivity : FragmentActivity() {
     }
 
     // WhatsApp and SMS methods moved to VoiceCommandHandler
-
-    fun showApkSharingDialog() {
-        shareManager.showApkSharingDialog()
-    }
 
     // Voice command handling moved to VoiceCommandHandler
 
@@ -863,28 +868,9 @@ class MainActivity : FragmentActivity() {
 
     // Broadcast receivers moved to BroadcastReceiverManager
 
-    private fun chooseWallpaper() {
-        val intent = Intent(Intent.ACTION_SET_WALLPAPER)
-        startActivityForResult(intent, ActivityResultHandler.WALLPAPER_REQUEST_CODE)
-    }
-
     // App launching methods - delegated to AppLauncher
     internal fun launchAppWithLockCheck(packageName: String, appName: String) {
         appLauncher.launchAppWithLockCheck(packageName, appName)
-    }
-
-    internal fun launchAppWithTimerCheck(packageName: String, onTimerSet: () -> Unit) {
-        appLauncher.launchAppWithTimerCheck(packageName) {
-            if (appLockManager.isAppLocked(packageName)) {
-                appLockManager.verifyPin { isAuthenticated ->
-                    if (isAuthenticated) {
-                        onTimerSet()
-                    }
-                }
-            } else {
-                onTimerSet()
-            }
-        }
     }
 
     // Package receiver moved to BroadcastReceiverManager
@@ -900,12 +886,6 @@ class MainActivity : FragmentActivity() {
     private fun updateUsageInBackground() {
         if (::usageStatsRefreshManager.isInitialized) {
             usageStatsRefreshManager.updateUsageInBackground()
-        }
-    }
-    
-    private fun refreshUsageDataInBackground(deferExpensive: Boolean = false) {
-        if (::usageStatsRefreshManager.isInitialized) {
-            usageStatsRefreshManager.refreshUsageDataInBackground(deferExpensive)
         }
     }
 
@@ -985,7 +965,7 @@ class MainActivity : FragmentActivity() {
                     if (::appListLoader.isInitialized) {
                         loadApps(forceRefresh = false)
                     }
-                } catch (e: UninitializedPropertyAccessException) {
+                } catch (_: UninitializedPropertyAccessException) {
                     // Managers not initialized yet, skip refresh
                 }
             }
@@ -1098,7 +1078,7 @@ class MainActivity : FragmentActivity() {
                 onContactsGranted = { 
                     contactManager.loadContacts { contacts ->
                         if (::appSearchManager.isInitialized) {
-                            appSearchManager.updateContactsList(contacts)
+                            appSearchManager.updateContactsList()
                         } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                             // Initialize AppSearchManager if not already initialized
                             updateAppSearchManager()
@@ -1281,7 +1261,7 @@ class MainActivity : FragmentActivity() {
             if (widgetMap["finance_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
-            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
+            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.GONE else View.VISIBLE
         
         // Reorder widgets - get the parent LinearLayout that contains all widgets
         // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
@@ -1340,14 +1320,6 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
-        }
-    }
-    
-    override fun onBackPressed() {
-        if (::navigationManager.isInitialized) {
-            navigationManager.handleBackPressed { super.onBackPressed() }
-        } else {
-            super.onBackPressed()
         }
     }
     

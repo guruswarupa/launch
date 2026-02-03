@@ -1,6 +1,5 @@
 package com.guruswarupa.launch
 
-import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
@@ -12,7 +11,6 @@ import java.util.concurrent.Executors
 
 class AppSearchManager(
     private val packageManager: PackageManager,
-    private val appList: MutableList<ResolveInfo>,
     private val fullAppList: MutableList<ResolveInfo>,
     private val adapter: AppAdapter,
     private val searchBox: EditText,
@@ -31,10 +29,6 @@ class AppSearchManager(
     }
 
     private val appLabelCache = mutableMapOf<String, String>()
-
-    private val contactNames: Set<String> by lazy {
-        contactsList.map { it.lowercase() }.toSet()
-    }
 
     private var appLabelMap: Map<ResolveInfo, String> = emptyMap()
     private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
@@ -56,7 +50,7 @@ class AppSearchManager(
         })
     }
 
-    fun updateContactsList(newContactsList: List<String>) {
+    fun updateContactsList() {
         // Update contacts list and clear search cache
         searchCache.clear()
         // Refresh app list in background
@@ -77,17 +71,14 @@ class AppSearchManager(
             val packageName = resolveInfo.activityInfo.packageName
             // Use pre-loaded metadata cache if available
             val cachedMetadata = appMetadataCache?.get(packageName)
-            if (cachedMetadata != null) {
-                cachedMetadata.label.lowercase()
-            } else {
-                appLabelCache.getOrPut(packageName) {
+            cachedMetadata?.label?.lowercase()
+                ?: appLabelCache.getOrPut(packageName) {
                     try {
                         resolveInfo.loadLabel(packageManager).toString().lowercase()
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         packageName.lowercase()
                     }
                 }
-            }
         }
         searchCache.clear()
     }
@@ -98,16 +89,7 @@ class AppSearchManager(
 
         val newFilteredList = ArrayList<ResolveInfo>()
         
-        // Pre-load all SharedPreferences values in one call for better performance
-        val prefs = searchBox.context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-        val allPrefs = prefs.all
-        val usageCache = mutableMapOf<String, Int>()
-        for ((key, value) in allPrefs) {
-            if (key.startsWith("usage_") && value is Int) {
-                val packageName = key.removePrefix("usage_")
-                usageCache[packageName] = value
-            }
-        }
+        // Removed unused usageCache population
 
         if (queryLower.isNotEmpty()) {
             evaluateMathExpression(query)?.let { result ->
@@ -189,18 +171,15 @@ class AppSearchManager(
                     appLabelMap[it]?.lowercase() ?: run {
                         // Use pre-loaded metadata cache if available
                         val cachedMetadata = appMetadataCache?.get(it.activityInfo.packageName)
-                        if (cachedMetadata != null) {
-                            cachedMetadata.label.lowercase()
-                        } else {
-                            // Fallback: load label only if not in cache
+                        cachedMetadata?.label?.lowercase()
+                            ?: // Fallback: load label only if not in cache
                             try {
                                 appLabelCache.getOrPut(it.activityInfo.packageName) {
                                     it.loadLabel(packageManager).toString().lowercase()
                                 }.lowercase()
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 it.activityInfo.packageName.lowercase()
                             }
-                        }
                     }
                 }
                 newFilteredList.addAll(sorted)
@@ -220,7 +199,7 @@ class AppSearchManager(
         return try {
             val result = ExpressionBuilder(expression).build().evaluate()
             result.toString()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null // Return null if it's not a valid math expression
         }
     }

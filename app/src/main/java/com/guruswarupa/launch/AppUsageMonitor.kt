@@ -6,8 +6,6 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.Handler
 import android.os.Looper
-import android.app.usage.UsageStatsManager
-import android.content.Context
 import android.app.ActivityManager
 
 class AppUsageMonitor : Service() {
@@ -50,7 +48,7 @@ class AppUsageMonitor : Service() {
 
     private fun getForegroundApp(): String? {
         try {
-            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            val activityManager = getSystemService(ACTIVITY_SERVICE) as? ActivityManager
             if (activityManager != null && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
                 @Suppress("DEPRECATION")
                 val tasks = activityManager.getRunningTasks(1)
@@ -64,10 +62,10 @@ class AppUsageMonitor : Service() {
                 // This is a simplified fallback - for production, use UsageStatsManager
                 return null
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             // Requires GET_TASKS permission which is deprecated
             return null
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return null
         }
     }

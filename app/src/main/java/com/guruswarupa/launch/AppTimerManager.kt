@@ -1,21 +1,19 @@
 package com.guruswarupa.launch
 
 import android.app.ActivityManager
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.Build
 import android.os.CountDownTimer
 import android.os.Handler
 import android.os.Looper
-import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import java.util.concurrent.Executors
 
 class AppTimerManager(private val context: Context) {
@@ -33,9 +31,9 @@ class AppTimerManager(private val context: Context) {
         const val NO_TIMER = 0L
     }
 
-    fun showTimerDialog(packageName: String, appName: String, onTimerSet: (Long) -> Unit) {
+    fun showTimerDialog(appName: String, onTimerSet: (Long) -> Unit) {
         // Prevent multiple dialogs from opening - if one is already showing, ignore
-        if (currentDialog != null && currentDialog!!.isShowing) {
+        if (currentDialog?.isShowing == true) {
             return
         }
 
@@ -53,9 +51,9 @@ class AppTimerManager(private val context: Context) {
                     4 -> onTimerSet(NO_TIMER)
                 }
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
+            .setNegativeButton("Cancel") { d, _ ->
                 currentDialog = null // Clear reference when dialog is dismissed
-                dialog.dismiss()
+                d.dismiss()
             }
             .setOnDismissListener {
                 currentDialog = null // Clear reference when dialog is dismissed
@@ -86,8 +84,8 @@ class AppTimerManager(private val context: Context) {
                                 findTextViewsAndSetColor(itemView, whiteColor)
                             }
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    } catch (_: Exception) {
+                        // Ignore
                     }
                 }
                 
@@ -102,14 +100,13 @@ class AppTimerManager(private val context: Context) {
                                 findTextViewsAndSetColor(itemView, whiteColor)
                             }
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    } catch (_: Exception) {
+                        // Ignore
                     }
                 }, 100)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // If we can't fix it, that's okay - at least try
-            e.printStackTrace()
         }
     }
     
@@ -136,13 +133,16 @@ class AppTimerManager(private val context: Context) {
             .setView(input)
             .setPositiveButton("Set") { _, _ ->
                 try {
-                    val minutes = input.text.toString().toInt()
-                    if (minutes > 0) {
-                        onTimerSet(minutes * 60000L)
-                    } else {
-                        Toast.makeText(context, "Please enter a valid time", Toast.LENGTH_SHORT).show()
+                    val minutesString = input.text.toString()
+                    if (minutesString.isNotEmpty()) {
+                        val minutes = minutesString.toInt()
+                        if (minutes > 0) {
+                            onTimerSet(minutes * 60000L)
+                        } else {
+                            Toast.makeText(context, "Please enter a valid time", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                } catch (e: NumberFormatException) {
+                } catch (_: NumberFormatException) {
                     Toast.makeText(context, "Please enter a valid number", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -160,20 +160,20 @@ class AppTimerManager(private val context: Context) {
         }
 
         currentPackageName = packageName
-        prefs.edit().putLong("timer_remaining_$packageName", duration).apply()
+        prefs.edit { putLong("timer_remaining_$packageName", duration) }
 
         currentTimer = object : CountDownTimer(duration, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 // Write to SharedPreferences in background to prevent UI freezing
                 backgroundExecutor.execute {
-                    prefs.edit().putLong("timer_remaining_$packageName", millisUntilFinished).apply()
+                    prefs.edit { putLong("timer_remaining_$packageName", millisUntilFinished) }
                 }
             }
 
             override fun onFinish() {
                 // Clean up timer state
                 backgroundExecutor.execute {
-                    prefs.edit().remove("timer_remaining_$packageName").apply()
+                    prefs.edit { remove("timer_remaining_$packageName") }
                 }
                 
                 // Return to launcher and close app on main thread
@@ -197,7 +197,7 @@ class AppTimerManager(private val context: Context) {
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 context.startActivity(intent)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(context, "Error launching app", Toast.LENGTH_SHORT).show()
         }
     }
@@ -224,7 +224,7 @@ class AppTimerManager(private val context: Context) {
                     }, 800)
                     return
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Fall through to HOME intent
             }
             
@@ -241,7 +241,7 @@ class AppTimerManager(private val context: Context) {
             mainHandler.postDelayed({
                 forceCloseApp(packageName)
             }, 800)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Last resort: simpler HOME intent
             try {
                 val intent = Intent(Intent.ACTION_MAIN)
@@ -252,8 +252,8 @@ class AppTimerManager(private val context: Context) {
                 mainHandler.postDelayed({
                     forceCloseApp(packageName)
                 }, 800)
-            } catch (e2: Exception) {
-                e2.printStackTrace()
+            } catch (_: Exception) {
+                // Ignore
             }
         }
     }
@@ -263,9 +263,7 @@ class AppTimerManager(private val context: Context) {
         backgroundExecutor.execute {
             try {
                 val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                if (activityManager == null) {
-                    return@execute
-                }
+                    ?: return@execute
                 
                 // Kill all background processes for this package
                 // Since we've already brought launcher to foreground, the app should be in background
@@ -275,51 +273,47 @@ class AppTimerManager(private val context: Context) {
                 mainHandler.postDelayed({
                     try {
                         activityManager.killBackgroundProcesses(packageName)
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // Ignore
                     }
                 }, 500)
                 
                 // Try to remove from recent tasks if possible
-                // Note: This requires special permissions on newer Android versions
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                    try {
-                        // Try using getRecentTasks (may require special permission)
-                        @Suppress("DEPRECATION")
-                        val recentTasks = activityManager.getRecentTasks(50, ActivityManager.RECENT_WITH_EXCLUDED)
-                        for (taskInfo in recentTasks) {
-                            val baseIntent = taskInfo.baseIntent
-                            val component = baseIntent?.component
-                            if (component != null && component.packageName == packageName) {
-                                // Try to remove this task
-                                try {
-                                    // Kill processes first
-                                    activityManager.killBackgroundProcesses(packageName)
-                                } catch (e: Exception) {
-                                    // Ignore - we don't have permission to manipulate tasks
-                                }
+                try {
+                    // Try using getRecentTasks (may require special permission)
+                    @Suppress("DEPRECATION")
+                    val recentTasks = activityManager.getRecentTasks(50, ActivityManager.RECENT_WITH_EXCLUDED)
+                    for (taskInfo in recentTasks) {
+                        val baseIntent = taskInfo.baseIntent
+                        val component = baseIntent.component
+                        if (component != null && component.packageName == packageName) {
+                            // Try to remove this task
+                            try {
+                                // Kill processes first
+                                activityManager.killBackgroundProcesses(packageName)
+                            } catch (_: Exception) {
+                                // Ignore - we don't have permission to manipulate tasks
                             }
                         }
-                    } catch (e: SecurityException) {
-                        // getRecentTasks requires special permission, that's okay
-                        // killBackgroundProcesses should still work
-                    } catch (e: Exception) {
-                        // Ignore other exceptions
                     }
+                } catch (_: SecurityException) {
+                    // getRecentTasks requires special permission, that's okay
+                    // killBackgroundProcesses should still work
+                } catch (_: Exception) {
+                    // Ignore other exceptions
                 }
-                
-            } catch (e: SecurityException) {
+
+            } catch (_: SecurityException) {
                 // If we don't have permission, at least the app is in background
                 // Android will manage it
                 try {
                     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                     activityManager?.killBackgroundProcesses(packageName)
-                } catch (e2: Exception) {
+                } catch (_: Exception) {
                     // Ignore
                 }
-            } catch (e: Exception) {
-                // Handle any other exceptions
-                e.printStackTrace()
+            } catch (_: Exception) {
+                // Ignore
             }
         }
     }
@@ -330,17 +324,13 @@ class AppTimerManager(private val context: Context) {
         currentPackageName?.let { packageName ->
             // Clean up in background
             backgroundExecutor.execute {
-                prefs.edit().remove("timer_remaining_$packageName").apply()
+                prefs.edit { remove("timer_remaining_$packageName") }
             }
         }
         currentPackageName = null
     }
 
-    fun isTimerActive(): Boolean {
-        return currentTimer != null
-    }
-
-    fun getCurrentTimerPackage(): String? {
-        return currentPackageName
+    fun cleanup() {
+        backgroundExecutor.shutdown()
     }
 }

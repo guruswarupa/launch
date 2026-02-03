@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.EditText
@@ -25,6 +24,7 @@ class AppListLoader(
     private val packageManager: PackageManager,
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
+    @Suppress("unused")
     private val favoriteAppManager: FavoriteAppManager,
     private val cacheManager: CacheManager?,
     private val backgroundExecutor: Executor,
@@ -36,7 +36,7 @@ class AppListLoader(
 ) {
     private var cachedUnsortedList: List<ResolveInfo>? = null
     private var lastCacheTime = 0L
-    private val CACHE_DURATION = 300000L // Cache for 5 minutes
+    private val cacheDuration = 300000L // Cache for 5 minutes
     
     // Callbacks
     var onAppListUpdated: ((List<ResolveInfo>, List<ResolveInfo>) -> Unit)? = null
@@ -100,7 +100,7 @@ class AppListLoader(
                         
                         // Verify version in background (non-blocking) - refresh if changed
                         safeExecute {
-                            if (cacheManager != null && !cacheManager.isVersionCurrent()) {
+                            if (!cacheManager.isVersionCurrent()) {
                                 handler.post {
                                     if (!activity.isFinishing && !activity.isDestroyed) {
                                         loadApps(forceRefresh = false, fullAppList, appList, adapter) // Refresh without clearing cache
@@ -112,7 +112,7 @@ class AppListLoader(
                         updateSearchVisibility()
                         return // Exit early - cached list shown, version check happens in background
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Continue to load fresh apps
                 }
             }
@@ -120,7 +120,7 @@ class AppListLoader(
         
         // STEP 0.5: Show in-memory cached app list if available (fallback)
         if (!forceRefresh && cachedUnsortedList != null && 
-            (currentTime - lastCacheTime) < CACHE_DURATION && 
+            (currentTime - lastCacheTime) < cacheDuration && 
             fullAppList.isNotEmpty()) {
             try {
                 val focusMode = appDockManager.getCurrentMode()
@@ -137,7 +137,7 @@ class AppListLoader(
                         onAppListUpdated?.invoke(sorted, cachedUnsortedList!!)
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Continue to load fresh apps
             }
         }
@@ -164,7 +164,7 @@ class AppListLoader(
                 // Use cached list if available and not forcing refresh
                 val unsortedList = if (!forceRefresh && 
                     cachedUnsortedList != null && 
-                    (currentTime - lastCacheTime) < CACHE_DURATION) {
+                    (currentTime - lastCacheTime) < cacheDuration) {
                     cachedUnsortedList!!
                 } else {
                     // Reload from package manager - use flag 0 to get all launcher activities
@@ -182,7 +182,7 @@ class AppListLoader(
                                 cm.saveAppListToCache(list)
                                 // Pre-load metadata in background
                                 cm.preloadAppMetadata(list)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                             }
                         }
                     }
@@ -270,7 +270,7 @@ class AppListLoader(
                                                 label = label,
                                                 lastUpdated = System.currentTimeMillis()
                                             ))
-                                        } catch (e: Exception) {
+                                        } catch (_: Exception) {
                                             labelCache[packageName] = packageName.lowercase()
                                         }
                                     }
@@ -297,7 +297,7 @@ class AppListLoader(
                                     // Pass unsortedList (all apps) as second parameter, not sortedApps
                                     onAppListUpdated?.invoke(sortedFinalList, unsortedList)
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                             }
                         }
                     }, 200) // Small delay to let UI render first

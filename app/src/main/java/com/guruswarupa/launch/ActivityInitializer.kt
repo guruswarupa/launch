@@ -1,21 +1,17 @@
 package com.guruswarupa.launch
 
 import android.content.Intent
-import android.os.Handler
-import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.net.toUri
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import android.net.Uri
 
 /**
  * Handles MainActivity initialization logic.
@@ -24,18 +20,11 @@ import android.net.Uri
 class ActivityInitializer(
     private val activity: FragmentActivity,
     private val sharedPreferences: android.content.SharedPreferences,
-    private val handler: Handler,
     private val appLauncher: AppLauncher
 ) {
     fun initializeViews(
         searchBox: EditText,
         recyclerView: RecyclerView,
-        voiceSearchButton: ImageButton,
-        appDock: LinearLayout,
-        wallpaperBackground: ImageView,
-        weeklyUsageGraph: WeeklyUsageGraphView,
-        weatherIcon: ImageView,
-        weatherText: TextView,
         timeTextView: TextView,
         dateTextView: TextView
     ) {
@@ -48,11 +37,11 @@ class ActivityInitializer(
         }
 
         searchBox.setOnLongClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+            val intent = Intent(Intent.ACTION_VIEW, "https://www.google.com".toUri())
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {
                 searchBox.context.startActivity(intent)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 android.widget.Toast.makeText(searchBox.context, "No browser found!", android.widget.Toast.LENGTH_SHORT).show()
             }
             true
