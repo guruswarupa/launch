@@ -7,7 +7,6 @@ import android.os.Environment
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
-import java.io.IOException
 
 class DeviceInfoManager(private val context: Context) {
 
@@ -30,7 +29,7 @@ class DeviceInfoManager(private val context: Context) {
                 return Build.BOARD
             }
             model
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Build.BOARD
         }
     }
@@ -60,7 +59,7 @@ class DeviceInfoManager(private val context: Context) {
                         return temp
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 continue
             }
         }
@@ -92,7 +91,7 @@ class DeviceInfoManager(private val context: Context) {
             val usedStorage = totalStorage - availableStorage
             
             usedStorage to totalStorage
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0L to 0L
         }
     }
@@ -109,7 +108,7 @@ class DeviceInfoManager(private val context: Context) {
     fun getKernelVersion(): String {
         return try {
             System.getProperty("os.version") ?: "Unknown"
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "Unknown"
         }
     }

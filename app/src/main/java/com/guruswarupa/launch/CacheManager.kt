@@ -18,7 +18,9 @@ class CacheManager(
     private val packageManager: PackageManager,
     private val backgroundExecutor: java.util.concurrent.ExecutorService
 ) {
-    private val CACHE_DURATION = 300000L // 5 minutes
+    companion object {
+        private const val CACHE_DURATION = 300000L // 5 minutes
+    }
 
     private val appListCacheFile: File = File(context.cacheDir, "app_list_cache.dat")
     private val appListCacheTimeFile: File = File(context.cacheDir, "app_list_cache_time.txt")
@@ -29,12 +31,16 @@ class CacheManager(
     private var cachedAppListVersion: String? = null
 
     /**
-     * Get app list version based on installed packages
+     * Get app list version based on installed launcher activities
      */
     fun getAppListVersion(): String {
         return try {
-            val packages = packageManager.getInstalledPackages(0)
-                .map { it.packageName }
+            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            val apps = packageManager.queryIntentActivities(mainIntent, 0)
+            val packages = apps
+                .map { it.activityInfo.packageName + "|" + it.activityInfo.name }
                 .sorted()
                 .joinToString("")
             packages.hashCode().toString()

@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -180,13 +181,13 @@ class CalendarEventsWidget(
             // Show calendar, hide list
             listViewContainer.visibility = View.GONE
             calendarViewContainer.visibility = View.VISIBLE
-            viewToggleButton.text = "List"
+            viewToggleButton.text = context.getString(R.string.calendar_view_list)
             calendarView?.updateEvents(allEvents)
         } else {
             // Show list, hide calendar
             listViewContainer.visibility = View.VISIBLE
             calendarViewContainer.visibility = View.GONE
-            viewToggleButton.text = "Calendar"
+            viewToggleButton.text = context.getString(R.string.calendar_view_calendar)
         }
     }
     
@@ -196,6 +197,7 @@ class CalendarEventsWidget(
         handler.post(updateRunnable)
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     private fun setupWithoutPermission() {
         permissionButton.visibility = View.VISIBLE
         emptyState.visibility = View.VISIBLE
@@ -252,6 +254,7 @@ class CalendarEventsWidget(
         }
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     private fun updateEvents() {
         if (!hasCalendarPermission()) {
             setupWithoutPermission()

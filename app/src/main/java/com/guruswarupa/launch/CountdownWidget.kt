@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.content.pm.PackageManager
@@ -17,7 +18,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -26,6 +26,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.content.edit
 
 data class CountdownItem(
     val id: String,
@@ -132,7 +133,7 @@ class CountdownWidget(
         addButton = widgetView.findViewById(R.id.add_countdown_button)
         widgetContainer = widgetView.findViewById(R.id.countdown_widget_container)
         
-        adapter = CountdownAdapter(countdowns, this, 
+        adapter = CountdownAdapter(countdowns, 
             onCountdownClick = { countdown ->
                 // Only allow editing custom countdowns on click
                 if (!countdown.isFromCalendar) {
@@ -151,7 +152,7 @@ class CountdownWidget(
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean = false
             
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.adapterPosition
+                val position = viewHolder.bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     val countdown = countdowns[position]
                     deleteCountdown(countdown)
@@ -193,9 +194,9 @@ class CountdownWidget(
             countdowns.forEach { countdown ->
                 jsonArray.put(countdown.toJson())
             }
-            sharedPreferences.edit()
-                .putString(PREFS_COUNTDOWNS_KEY, jsonArray.toString())
-                .apply()
+            sharedPreferences.edit {
+                putString(PREFS_COUNTDOWNS_KEY, jsonArray.toString())
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -257,6 +258,7 @@ class CountdownWidget(
             .show()
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     private fun updateCountdowns() {
         // Remove expired countdowns
         val expiredCountdowns = countdowns.filter { it.isExpired() }
@@ -525,8 +527,7 @@ class CountdownWidget(
                 val locationIndex = it.getColumnIndex(CalendarContract.Instances.EVENT_LOCATION)
                 val allDayIndex = it.getColumnIndex(CalendarContract.Instances.ALL_DAY)
                 val calendarIdIndex = it.getColumnIndex(CalendarContract.Instances.CALENDAR_ID)
-                val calendarDisplayNameIndex = it.getColumnIndex(CalendarContract.Instances.CALENDAR_DISPLAY_NAME)
-                
+
                 while (it.moveToNext()) {
                     val eventId = it.getLong(idIndex)
                     val title = it.getString(titleIndex) ?: "No Title"
@@ -535,8 +536,7 @@ class CountdownWidget(
                     val location = it.getString(locationIndex)
                     val allDay = it.getInt(allDayIndex) == 1
                     val calendarId = it.getLong(calendarIdIndex)
-                    val calendarDisplayName = it.getString(calendarDisplayNameIndex) ?: ""
-                    
+
                     // Only include future events
                     if (startTime < now) continue
                     
@@ -578,7 +578,7 @@ class CountdownWidget(
                     }
                 }
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             // Permission denied
         } catch (e: Exception) {
             e.printStackTrace()
@@ -651,7 +651,6 @@ class CountdownWidget(
 
 class CountdownAdapter(
     private val countdowns: List<CountdownItem>,
-    private val widget: CountdownWidget,
     private val onCountdownClick: (CountdownItem) -> Unit,
     private val onCountdownLongPress: (CountdownItem) -> Unit
 ) : RecyclerView.Adapter<CountdownAdapter.CountdownViewHolder>() {
