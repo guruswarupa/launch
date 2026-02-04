@@ -44,4 +44,20 @@
     <string name="error_creating_cache_directory">Error creating cache directory</string>
     <string name="sharing_apk">Sharing %1$s APK</string>
     <string name="share_apk_title">Share %1$s APK</string>
+    
+    <!-- Calculator Strings -->
+    <string name="calculator_result_format">=\u0020%1$s</string>
+    <string name="calculator_error">Error</string>
+    <string name="calculator_zero">0</string>
+    <string name="converter_result_format">%1$s %2$s</string>
+
+    <!-- Calendar Widget Strings -->
+    <string name="calendar_view_list">List</string>
+    <string name="calendar_view_calendar">Calendar</string>
+
+    <!-- Compass Widget Strings -->
+    <string name="compass_disable">Disable</string>
+    <string name="compass_enable">Enable</string>
+    <string name="compass_no_sensors">Compass sensors not available on this device</string>
+    <string name="compass_azimuth_format">%1$d°</string>
 </resources>

@@ -25,7 +25,7 @@ class CalculatorHistoryAdapter(
     override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) {
         val item = historyItems[position]
         holder.expressionText.text = item.expression
-        holder.resultText.text = "= ${item.result}"
+        holder.resultText.text = holder.itemView.context.getString(R.string.calculator_result_format, item.result)
         
         holder.itemView.setOnClickListener {
             onItemClick(item)

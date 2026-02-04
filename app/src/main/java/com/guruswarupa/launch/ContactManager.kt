@@ -56,7 +56,7 @@ class ContactManager(
                 contactsList.addAll(tempContactsList)
                 
                 onComplete?.invoke(contactsList)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Handle error silently or log
                 onComplete?.invoke(contactsList)
             }
@@ -64,9 +64,4 @@ class ContactManager(
     }
     
     fun getContactsList(): List<String> = contactsList.toList()
-    
-    fun updateContactsList(newList: List<String>) {
-        contactsList.clear()
-        contactsList.addAll(newList)
-    }
 }

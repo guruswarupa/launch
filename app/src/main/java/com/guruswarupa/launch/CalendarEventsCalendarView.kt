@@ -8,13 +8,14 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.DiffUtil
 import java.text.SimpleDateFormat
 import java.util.*
 
 class CalendarEventsCalendarView(
-    private val rootView: View,
+    rootView: View,
     private var events: List<CalendarEvent>,
-    private val onDayClick: ((String, List<CalendarEvent>) -> Unit)? = null
+    onDayClick: ((String, List<CalendarEvent>) -> Unit)? = null
 ) {
     private val context: Context = rootView.context
     private val calendarRecyclerView: RecyclerView = rootView.findViewById(R.id.calendar_events_calendar_recycler_view)
@@ -71,15 +72,34 @@ class CalendarEventsCalendarAdapter(
     }
     
     fun updateCalendar(newCalendar: Calendar) {
+        val oldDays = ArrayList(days)
         calendar = newCalendar.clone() as Calendar
         updateDays()
-        notifyDataSetChanged()
+        val diffResult = DiffUtil.calculateDiff(CalendarDiffCallback(oldDays, days))
+        diffResult.dispatchUpdatesTo(this)
     }
     
     fun updateEvents(newEvents: List<CalendarEvent>) {
+        val oldDays = ArrayList(days)
         events = newEvents
         updateDays()
-        notifyDataSetChanged()
+        val diffResult = DiffUtil.calculateDiff(CalendarDiffCallback(oldDays, days))
+        diffResult.dispatchUpdatesTo(this)
+    }
+
+    private class CalendarDiffCallback(
+        private val oldList: List<DayItem>,
+        private val newList: List<DayItem>
+    ) : DiffUtil.Callback() {
+        override fun getOldListSize(): Int = oldList.size
+        override fun getNewListSize(): Int = newList.size
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            return oldList[oldItemPosition].dateString == newList[newItemPosition].dateString &&
+                   oldList[oldItemPosition].day == newList[newItemPosition].day
+        }
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            return oldList[oldItemPosition] == newList[newItemPosition]
+        }
     }
     
     private fun updateDays() {
@@ -96,8 +116,8 @@ class CalendarEventsCalendarAdapter(
         // Calculate offset - Sunday = 1, Monday = 2, etc.
         // We want Sunday to be first column (index 0)
         val startOffset = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
-        for (i in 0 until startOffset) {
-            days.add(DayItem(null, false, false, null, emptyList()))
+        repeat(startOffset) {
+            days.add(DayItem(day = null, hasEvents = false, isToday = false, dateString = null, events = emptyList()))
         }
         
         // Get events for this month
@@ -136,7 +156,7 @@ class CalendarEventsCalendarAdapter(
                           calendar.get(Calendar.MONTH) == currentMonth && 
                           calendar.get(Calendar.YEAR) == currentYear
             
-            days.add(DayItem(day, hasEvents, isToday, dateStr, dayEvents))
+            days.add(DayItem(day = day, hasEvents = hasEvents, isToday = isToday, dateString = dateStr, events = dayEvents))
         }
     }
     

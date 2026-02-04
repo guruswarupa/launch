@@ -54,20 +54,6 @@ class ActivityResultHandler(
         results?.get(0)?.let { result ->
             searchBox.setText(result)
             searchBox.setSelection(result.length)
-            
-            // Try handling locally first
-            val handledLocally = voiceCommandHandler?.handleCommand(result) ?: false
-            
-            if (!handledLocally) {
-                // If not handled locally, and it's not a generic app-opening/search command,
-                // we could trigger the system assistant or search.
-                // For now, let's keep the text in the box and maybe provide a Toast or just let it be.
-                // Alternatively, we can trigger the official assistant if the user wants "powerful" search.
-                
-                // Let's check with VoiceSearchManager if it's available
-                // To do this properly, we should probably pass VoiceSearchManager to ActivityResultHandler
-                // or just rely on the searchBox text for manual triggers.
-            }
         }
     }
 }

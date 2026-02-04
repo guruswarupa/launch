@@ -217,7 +217,7 @@ class CalculatorWidget(private val rootView: View) {
     private fun performUnitConversion() {
         val inputText = converterInput.text.toString()
         if (inputText.isEmpty()) {
-            converterResult.text = "0"
+            converterResult.text = rootView.context.getString(R.string.calculator_zero)
             return
         }
         
@@ -239,16 +239,16 @@ class CalculatorWidget(private val rootView: View) {
                 else -> value
             }
             
-            converterResult.text = result.stripTrailingZeros().toPlainString() + " $toUnit"
-        } catch (e: Exception) {
-            converterResult.text = "Error"
+            converterResult.text = rootView.context.getString(R.string.converter_result_format, result.stripTrailingZeros().toPlainString(), toUnit)
+        } catch (_: Exception) {
+            converterResult.text = rootView.context.getString(R.string.calculator_error)
         }
     }
 
     private fun convertToBase(targetBase: Int) {
         val inputText = baseInput.text.toString().trim()
         if (inputText.isEmpty()) {
-            baseResult.text = "0"
+            baseResult.text = rootView.context.getString(R.string.calculator_zero)
             return
         }
         
@@ -268,11 +268,11 @@ class CalculatorWidget(private val rootView: View) {
                 8 -> NumberBaseConverter.decimalToOctal(decimalValue)
                 16 -> NumberBaseConverter.decimalToHex(decimalValue)
                 10 -> decimalValue.toString()
-                else -> "Error"
+                else -> rootView.context.getString(R.string.calculator_error)
             }
             baseResult.text = result
-        } catch (e: Exception) {
-            baseResult.text = "Error"
+        } catch (_: Exception) {
+            baseResult.text = rootView.context.getString(R.string.calculator_error)
         }
     }
     
@@ -344,7 +344,8 @@ class CalculatorWidget(private val rootView: View) {
     }
 
     private fun applyScientificFunction(func: String) {
-        if (currentInput == "Error") return
+        val errorText = rootView.context.getString(R.string.calculator_error)
+        if (currentInput == errorText) return
         
         try {
             val value = currentInput.toDouble()
@@ -379,15 +380,15 @@ class CalculatorWidget(private val rootView: View) {
             }
             
             if (result.isNaN() || result.isInfinite()) {
-                currentInput = "Error"
+                currentInput = errorText
             } else {
                 currentInput = BigDecimal(result).stripTrailingZeros().toPlainString()
                 historyAdapter.addItem(CalculatorHistoryItem("$func($value)", currentInput))
             }
             shouldResetDisplay = true
             updateDisplay()
-        } catch (e: Exception) {
-            currentInput = "Error"
+        } catch (_: Exception) {
+            currentInput = errorText
             updateDisplay()
         }
     }
@@ -458,6 +459,8 @@ class CalculatorWidget(private val rootView: View) {
             return
         }
 
+        val errorText = rootView.context.getString(R.string.calculator_error)
+
         try {
             val prev = BigDecimal(previousInput)
             val curr = BigDecimal(currentInput)
@@ -469,7 +472,7 @@ class CalculatorWidget(private val rootView: View) {
                 "×" -> result = prev * curr
                 "÷" -> {
                     if (curr.compareTo(BigDecimal.ZERO) == 0) {
-                        currentInput = "Error"
+                        currentInput = errorText
                         updateDisplay()
                         reset()
                         return
@@ -477,9 +480,9 @@ class CalculatorWidget(private val rootView: View) {
                     result = prev.divide(curr, 10, RoundingMode.HALF_UP)
                 }
                 "^" -> {
-                    val powResult = Math.pow(prev.toDouble(), curr.toDouble())
+                    val powResult = prev.toDouble().pow(curr.toDouble())
                     if (powResult.isNaN() || powResult.isInfinite()) {
-                        currentInput = "Error"
+                        currentInput = errorText
                         updateDisplay()
                         reset()
                         return
@@ -506,23 +509,24 @@ class CalculatorWidget(private val rootView: View) {
             operation = null
             shouldResetDisplay = true
             updateDisplay()
-        } catch (e: Exception) {
-            currentInput = "Error"
+        } catch (_: Exception) {
+            currentInput = errorText
             updateDisplay()
             reset()
         }
     }
 
     private fun clear() {
+        val zeroText = rootView.context.getString(R.string.calculator_zero)
         if (currentMode == CalculatorMode.CONVERTER) {
             converterInput.setText("")
-            converterResult.text = "0"
+            converterResult.text = zeroText
             baseInput.setText("")
-            baseResult.text = "0"
+            baseResult.text = zeroText
             return
         }
         
-        currentInput = "0"
+        currentInput = zeroText
         previousInput = ""
         operation = null
         shouldResetDisplay = false
@@ -532,11 +536,11 @@ class CalculatorWidget(private val rootView: View) {
     private fun backspace() {
         if (currentMode == CalculatorMode.CONVERTER) return
         if (shouldResetDisplay) return
-        
-        if (currentInput.length > 1) {
-            currentInput = currentInput.dropLast(1)
+
+        currentInput = if (currentInput.length > 1) {
+            currentInput.dropLast(1)
         } else {
-            currentInput = "0"
+            rootView.context.getString(R.string.calculator_zero)
         }
         updateDisplay()
     }

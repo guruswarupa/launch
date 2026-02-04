@@ -29,8 +29,8 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
-import androidx.core.view.get
 import androidx.core.view.size
+import androidx.core.view.get
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -44,7 +44,6 @@ class AppAdapter(
     private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
     private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
     private val labelCache = mutableMapOf<String, String>() // packageName to label
-    private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
     private val specialAppIconCache = mutableMapOf<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
     private val cacheDuration = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
@@ -156,15 +155,8 @@ class AppAdapter(
                 // Pre-load icon if not cached
                 if (!iconCache.containsKey(packageName)) {
                     try {
-                        val isValidApp = packageValidityCache.getOrPut(packageName) {
-                            @Suppress("SENSELESS_COMPARISON")
-                            app.activityInfo.applicationInfo != null
-                        }
-                        
-                        if (isValidApp) {
-                            val icon = app.loadIcon(activity.packageManager)
-                            iconCache[packageName] = icon
-                        }
+                        val icon = app.loadIcon(activity.packageManager)
+                        iconCache[packageName] = icon
                     } catch (_: Exception) {
                         // Ignore errors during pre-loading
                     }
@@ -173,15 +165,8 @@ class AppAdapter(
                 // Pre-load label if not cached
                 if (!labelCache.containsKey(packageName)) {
                     try {
-                        val isValidApp = packageValidityCache.getOrPut(packageName) {
-                            @Suppress("SENSELESS_COMPARISON")
-                            app.activityInfo.applicationInfo != null
-                        }
-                        
-                        if (isValidApp) {
-                            val label = app.loadLabel(activity.packageManager).toString()
-                            labelCache[packageName] = label
-                        }
+                        val label = app.loadLabel(activity.packageManager).toString()
+                        labelCache[packageName] = label
                     } catch (_: Exception) {
                         // Ignore errors during pre-loading
                     }
@@ -201,15 +186,8 @@ class AppAdapter(
                     
                     if (!iconCache.containsKey(packageName)) {
                         try {
-                            val isValidApp = packageValidityCache.getOrPut(packageName) {
-                                @Suppress("SENSELESS_COMPARISON")
-                                app.activityInfo.applicationInfo != null
-                            }
-                            
-                            if (isValidApp) {
-                                val icon = app.loadIcon(activity.packageManager)
-                                iconCache[packageName] = icon
-                            }
+                            val icon = app.loadIcon(activity.packageManager)
+                            iconCache[packageName] = icon
                         } catch (_: Exception) {
                             // Ignore errors
                         }
@@ -539,12 +517,6 @@ class AppAdapter(
 
             else -> {
                 // For real apps, use aggressive caching to improve performance
-                // Check app validity once and cache result
-                val isValidApp = packageValidityCache.getOrPut(packageName) {
-                    @Suppress("SENSELESS_COMPARISON")
-                    appInfo.activityInfo.applicationInfo != null
-                }
-
                 // Use cached label first (fast path)
                 val cachedLabel = labelCache[packageName]
                 if (cachedLabel != null) {
@@ -552,7 +524,7 @@ class AppAdapter(
                 } else {
                     // Try to load label synchronously for visible items (first 50) to avoid showing package name
                     // For items beyond position 50, load asynchronously
-                    if (position < 50 && isValidApp) {
+                    if (position < 50) {
                         try {
                             val label = appInfo.loadLabel(activity.packageManager).toString()
                             labelCache[packageName] = label
@@ -560,12 +532,12 @@ class AppAdapter(
                         } catch (_: Exception) {
                             // If synchronous load fails, fall back to async loading
                             holder.appName?.text = appInfo.activityInfo.packageName
-                            loadLabelAsync(holder, position, appInfo, packageName, isValidApp)
+                            loadLabelAsync(holder, position, appInfo, packageName)
                         }
                     } else {
                         // For items beyond position 50, load asynchronously
                         holder.appName?.text = appInfo.activityInfo.packageName
-                        loadLabelAsync(holder, position, appInfo, packageName, isValidApp)
+                        loadLabelAsync(holder, position, appInfo, packageName)
                     }
                 }
 
@@ -582,11 +554,8 @@ class AppAdapter(
                     
                     executorToUse.execute {
                         try {
-                            val icon = if (isValidApp) {
-                                appInfo.loadIcon(activity.packageManager)
-                            } else {
-                                AppCompatResources.getDrawable(activity, R.drawable.ic_default_app_icon)
-                            } ?: AppCompatResources.getDrawable(activity, R.drawable.ic_default_app_icon)!!
+                            val icon = appInfo.loadIcon(activity.packageManager)
+                                ?: AppCompatResources.getDrawable(activity, R.drawable.ic_default_app_icon)!!
                             iconCache[packageName] = icon
                             // Update UI on main thread
                             (context as? Activity)?.runOnUiThread {
@@ -692,16 +661,11 @@ class AppAdapter(
         holder: ViewHolder,
         position: Int,
         appInfo: ResolveInfo,
-        packageName: String,
-        isValidApp: Boolean
+        packageName: String
     ) {
         executor.execute {
             try {
-                val label = if (isValidApp) {
-                    appInfo.loadLabel(activity.packageManager).toString()
-                } else {
-                    appInfo.activityInfo.name
-                }
+                val label = appInfo.loadLabel(activity.packageManager).toString()
                 labelCache[packageName] = label
                 
                 // Update metadata cache if available
@@ -911,10 +875,7 @@ class AppAdapter(
                     override fun onGlobalLayout() {
                         try {
                             for (i in 0 until lv.childCount) {
-                                fixTextColors(lv.childCount.let { lv.getChildAt(it - 1) }) // This was just a dummy use to avoid warning, but let's actually fix it
-                                for (j in 0 until lv.childCount) {
-                                    fixTextColors(lv.getChildAt(j))
-                                }
+                                fixTextColors(lv.getChildAt(i))
                             }
                         } catch (_: Exception) {
                             // Ignore
