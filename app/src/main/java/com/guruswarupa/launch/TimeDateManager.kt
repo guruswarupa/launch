@@ -12,11 +12,17 @@ import java.util.Locale
  */
 class TimeDateManager(
     private val timeTextView: TextView,
-    private val dateTextView: TextView
+    private val dateTextView: TextView,
+    private val rightDrawerTime: TextView? = null,
+    private val rightDrawerDate: TextView? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val timeFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
+    
+    // Artistic formats for right drawer
+    private val artisticTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val artisticDateFormat = SimpleDateFormat("EEEE, dd MMM", Locale.getDefault())
     
     private val updateRunnable = object : Runnable {
         override fun run() {
@@ -52,13 +58,19 @@ class TimeDateManager(
     }
     
     fun updateTime() {
-        val currentTime = timeFormat.format(Date())
+        val now = Date()
+        val currentTime = timeFormat.format(now)
         timeTextView.text = currentTime
+        
+        rightDrawerTime?.text = artisticTimeFormat.format(now)
     }
     
     fun updateDate() {
-        val currentTime = dateFormat.format(Date())
+        val now = Date()
+        val currentTime = dateFormat.format(now)
         dateTextView.text = currentTime
+        
+        rightDrawerDate?.text = artisticDateFormat.format(now).uppercase()
     }
     
     fun setPowerSaverMode(enabled: Boolean) {

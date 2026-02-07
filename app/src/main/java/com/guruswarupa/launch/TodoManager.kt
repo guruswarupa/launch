@@ -33,6 +33,9 @@ class TodoManager(
     
     fun initialize() {
         todoRecyclerView.layoutManager = LinearLayoutManager(activity)
+        // Disable animations to prevent "Tmp detached view" crash during rapid updates
+        todoRecyclerView.itemAnimator = null
+        
         todoAdapter = TodoAdapter(todoItems, { todoItem ->
             removeTodoItem(todoItem)
         }, {
