@@ -2,8 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/background">
+    android:layout_height="match_parent">
 
     <!-- Main Content -->
     <FrameLayout
@@ -197,13 +196,15 @@
         </androidx.core.widget.NestedScrollView>
     </FrameLayout>
 
-    <!-- Sidebar Drawer for Widgets -->
+    <!-- Sidebar Drawer for Widgets (Left Drawer) -->
     <FrameLayout
         android:id="@+id/widgets_drawer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="@color/background">
+        android:background="@color/background"
+        android:clickable="true"
+        android:focusable="true">
 
         <!-- Wallpaper Background for Drawer -->
         <ImageView
@@ -709,6 +710,64 @@
             </LinearLayout>
         </LinearLayout>
         </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
+
+    <!-- Right Drawer for Wallpaper Only -->
+    <FrameLayout
+        android:id="@+id/wallpaper_drawer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- Wallpaper Image View -->
+        <ImageView
+            android:id="@+id/right_drawer_wallpaper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:layout_gravity="center"/>
+
+        <!-- Clock Art Container -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginTop="64dp"
+            android:padding="24dp">
+
+            <TextView
+                android:id="@+id/right_drawer_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="80sp"
+                android:textColor="@color/white"
+                android:fontFamily="sans-serif-thin"
+                android:letterSpacing="0.1"
+                android:shadowColor="#80000000"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="4"
+                android:text="00:00"/>
+
+            <TextView
+                android:id="@+id/right_drawer_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:textColor="@color/white"
+                android:fontFamily="sans-serif-light"
+                android:letterSpacing="0.2"
+                android:textAllCaps="true"
+                android:layout_marginTop="-8dp"
+                android:shadowColor="#80000000"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:text="MONDAY, 01 JAN"/>
+        </LinearLayout>
     </FrameLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>

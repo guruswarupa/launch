@@ -13,6 +13,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -56,11 +57,16 @@ class MainActivity : FragmentActivity() {
     private lateinit var topWidgetContainer: LinearLayout
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
 
+    // Right Drawer Views
+    private lateinit var rightDrawerWallpaper: ImageView
+    private lateinit var rightDrawerTime: TextView
+    private lateinit var rightDrawerDate: TextView
+
     // Core managers
     internal lateinit var cacheManager: CacheManager
     private lateinit var permissionManager: PermissionManager
     private lateinit var systemBarManager: SystemBarManager
-    private lateinit var gestureHandler: GestureHandler
+    internal lateinit var gestureHandler: GestureHandler
     private lateinit var broadcastReceiverManager: BroadcastReceiverManager
     private lateinit var wallpaperManagerHelper: WallpaperManagerHelper
     private lateinit var appListManager: AppListManager
@@ -169,6 +175,8 @@ class MainActivity : FragmentActivity() {
     private fun initializeViews() {
         searchBox = findViewById(R.id.search_box)
         recyclerView = findViewById(R.id.app_list)
+        // Disable animations to prevent "Tmp detached view" crash during rapid updates
+        recyclerView.itemAnimator = null
         voiceSearchButton = findViewById(R.id.voice_search_button)
         appDock = findViewById(R.id.app_dock)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
@@ -178,6 +186,11 @@ class MainActivity : FragmentActivity() {
         timeTextView = findViewById(R.id.time_widget)
         dateTextView = findViewById(R.id.date_widget)
         topWidgetContainer = findViewById(R.id.top_widget_container)
+        
+        // Right Drawer Views
+        rightDrawerWallpaper = findViewById(R.id.right_drawer_wallpaper)
+        rightDrawerTime = findViewById(R.id.right_drawer_time)
+        rightDrawerDate = findViewById(R.id.right_drawer_date)
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
@@ -235,9 +248,8 @@ class MainActivity : FragmentActivity() {
      * Initializes time/date and weather widgets.
      */
     private fun initializeTimeDateAndWeather() {
-        timeDateManager = TimeDateManager(timeTextView, dateTextView)
-        timeDateManager.updateTime()
-        timeDateManager.updateDate()
+        timeDateManager = TimeDateManager(timeTextView, dateTextView, rightDrawerTime, rightDrawerDate)
+        timeDateManager.startUpdates()
         
         widgetSetupManager = WidgetSetupManager(this, handler, usageStatsManager, weatherManager, permissionManager)
         widgetSetupManager.setupWeather(weatherIcon, weatherText)
@@ -336,15 +348,32 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
+        
+        // Check power saver mode immediately before setting content view to prevent flicker
+        val isPowerSaverMode = sharedPreferences.getBoolean("power_saver_mode_enabled", false)
+        if (isPowerSaverMode) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            // Set window background to black immediately
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
+        }
+        
         setContentView(R.layout.activity_main)
+        
+        // If in power saver mode, hide wallpaper views immediately after inflation to prevent flicker
+        if (isPowerSaverMode) {
+            findViewById<View>(R.id.wallpaper_background)?.visibility = View.GONE
+            findViewById<View>(R.id.drawer_wallpaper_background)?.visibility = View.GONE
+            findViewById<View>(R.id.right_drawer_wallpaper)?.visibility = View.GONE
+            findViewById<View>(R.id.drawer_layout)?.setBackgroundColor(android.graphics.Color.BLACK)
+        }
         
         // Make status bar and navigation bar transparent (after setContentView, post to ensure window is ready)
         window.decorView.post {
             systemBarManager.makeSystemBarsTransparent()
         }
 
-        sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
-        
         // Initialize widget configuration manager
         widgetConfigurationManager = WidgetConfigurationManager(this, sharedPreferences)
         
@@ -498,6 +527,20 @@ class MainActivity : FragmentActivity() {
         val drawerWallpaper = findViewById<ImageView>(R.id.drawer_wallpaper_background)
         wallpaperManagerHelper = WallpaperManagerHelper(this, wallpaperBackground, drawerWallpaper, backgroundExecutor)
         wallpaperManagerHelper.setWallpaperBackground()
+        
+        // Set wallpaper for the new right drawer
+        handler.postDelayed({
+            if (::rightDrawerWallpaper.isInitialized && ::wallpaperManagerHelper.isInitialized) {
+                // Since WallpaperManagerHelper currently supports two ImageViews (main and left drawer),
+                // we'll manually set the bitmap for the right drawer.
+                // In a production app, we should update WallpaperManagerHelper to handle multiple ImageViews.
+                try {
+                    val wallpaperManager = android.app.WallpaperManager.getInstance(this)
+                    val drawable = wallpaperManager.drawable
+                    rightDrawerWallpaper.setImageDrawable(drawable)
+                } catch (_: Exception) {}
+            }
+        }, 500)
 
         // Initialize voice search manager
         voiceSearchManager = VoiceSearchManager(this, packageManager, searchBox, permissionManager)
@@ -554,6 +597,11 @@ class MainActivity : FragmentActivity() {
                 }
             }
         })
+        
+        // Apply power saver mode immediately on launch if active
+        if (isPowerSaverMode) {
+            applyPowerSaverMode(true)
+        }
     }
     
     /**
@@ -730,6 +778,13 @@ class MainActivity : FragmentActivity() {
         if (::wallpaperManagerHelper.isInitialized) {
             wallpaperManagerHelper.clearCache()
             wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
+            
+            // Update right drawer wallpaper as well
+            try {
+                val wallpaperManager = android.app.WallpaperManager.getInstance(this)
+                val drawable = wallpaperManager.drawable
+                rightDrawerWallpaper.setImageDrawable(drawable)
+            } catch (_: Exception) {}
         }
     }
     
@@ -962,6 +1017,7 @@ class MainActivity : FragmentActivity() {
         
         // Resume noise decibel tracking
         if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.onPause() // Ensure it's not double-started
             noiseDecibelWidget.onResume()
         }
         
@@ -1192,7 +1248,8 @@ class MainActivity : FragmentActivity() {
                 timeDateManager,
                 usageStatsDisplayManager,
                 { usageStatsRefreshManager.updateBatteryInBackground() },
-                { usageStatsRefreshManager.updateUsageInBackground() }
+                { usageStatsRefreshManager.updateUsageInBackground() },
+                { enabled -> if (::gestureHandler.isInitialized) gestureHandler.setGesturesEnabled(enabled) }
             )
         }
         powerSaverManager.applyPowerSaverMode(isEnabled)

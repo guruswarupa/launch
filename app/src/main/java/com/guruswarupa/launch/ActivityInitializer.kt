@@ -69,16 +69,27 @@ class ActivityInitializer(
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
-            val drawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
-            drawerView?.let {
+            
+            // Left drawer
+            val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
+            leftDrawerView?.let {
+                val params = it.layoutParams as DrawerLayout.LayoutParams
+                params.width = drawerWidth
+                it.layoutParams = params
+            }
+            
+            // Right drawer
+            val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
+            rightDrawerView?.let {
                 val params = it.layoutParams as DrawerLayout.LayoutParams
                 params.width = drawerWidth
                 it.layoutParams = params
             }
         }
 
-        // Enable edge swipe for DrawerLayout (this is the default, but making it explicit)
+        // Enable edge swipe for DrawerLayout
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.START)
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.END)
     }
 
     fun setupAddWidgetButton(addWidgetButton: Button, widgetManager: WidgetManager, requestCode: Int) {

@@ -3,10 +3,12 @@ package com.guruswarupa.launch
 import android.graphics.Color
 import android.os.Handler
 import android.view.View
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -24,7 +26,8 @@ class PowerSaverManager(
     private val timeDateManager: TimeDateManager,
     private val usageStatsDisplayManager: UsageStatsDisplayManager,
     private val onUpdateBattery: () -> Unit,
-    private val onUpdateUsage: () -> Unit
+    private val onUpdateUsage: () -> Unit,
+    private val onSetGesturesEnabled: (Boolean) -> Unit
 ) {
     private var isInPowerSaverMode = false
     
@@ -36,6 +39,9 @@ class PowerSaverManager(
             setPitchBlackBackground()
             hideNonEssentialWidgets()
             
+            // Disable drawers and gestures in battery saver mode
+            disableDrawersAndGestures()
+            
             // Stop or slow down background updates to save battery
             stopBackgroundUpdates()
             
@@ -45,7 +51,17 @@ class PowerSaverManager(
             // Refresh adapter efficiently (only visible items)
             refreshAdapter()
             
+            // Set FLAG_SECURE to hide app preview in recent apps (Overview) on Samsung/Android
+            // This prevents the system from taking a screenshot for the preview
+            activity.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            
         } else {
+            // Remove FLAG_SECURE when disabling power saver mode
+            activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            
+            // Enable drawers and gestures
+            enableDrawersAndGestures()
+            
             // Fast operations first - show widgets immediately
             showNonEssentialWidgets()
             
@@ -65,6 +81,21 @@ class PowerSaverManager(
             // Refresh adapter efficiently
             refreshAdapter()
         }
+    }
+
+    private fun disableDrawersAndGestures() {
+        activity.drawerLayout.let { drawer ->
+            drawer.closeDrawers()
+            drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+        }
+        onSetGesturesEnabled(false)
+    }
+
+    private fun enableDrawersAndGestures() {
+        activity.drawerLayout.let { drawer ->
+            drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+        }
+        onSetGesturesEnabled(true)
     }
 
     private fun refreshAdapter() {
@@ -116,6 +147,12 @@ class PowerSaverManager(
         // Hide the wallpaper background in power saver mode
         activity.findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.GONE
         activity.findViewById<ImageView>(R.id.drawer_wallpaper_background)?.visibility = View.GONE
+        activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.visibility = View.GONE
+        
+        // Hide the clock container in the right drawer
+        activity.findViewById<View>(R.id.right_drawer_time)?.parent?.let {
+            if (it is View) it.visibility = View.GONE
+        }
 
         // Hide the todo widget (the LinearLayout containing todo list)
         todoRecyclerView.parent?.let { parent ->
@@ -149,6 +186,12 @@ class PowerSaverManager(
         // Show the wallpaper background when power saver mode is disabled
         activity.findViewById<ImageView>(R.id.wallpaper_background)?.visibility = View.VISIBLE
         activity.findViewById<ImageView>(R.id.drawer_wallpaper_background)?.visibility = View.VISIBLE
+        activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.visibility = View.VISIBLE
+        
+        // Show the clock container in the right drawer
+        activity.findViewById<View>(R.id.right_drawer_time)?.parent?.let {
+            if (it is View) it.visibility = View.VISIBLE
+        }
 
         // Show the todo widget (the LinearLayout containing todo list)
         todoRecyclerView.parent?.let { parent ->
@@ -177,6 +220,7 @@ class PowerSaverManager(
         
         // Drawer content background
         activity.findViewById<View>(R.id.widgets_drawer)?.setBackgroundColor(Color.BLACK)
+        activity.findViewById<View>(R.id.wallpaper_drawer)?.setBackgroundColor(Color.BLACK)
         val settingsHeader = activity.findViewById<View>(R.id.widget_settings_header)
         settingsHeader?.background = null
         settingsHeader?.elevation = 0f
@@ -205,6 +249,7 @@ class PowerSaverManager(
         
         // Restore drawer content background
         activity.findViewById<View>(R.id.widgets_drawer)?.setBackgroundColor(backgroundColor)
+        activity.findViewById<View>(R.id.wallpaper_drawer)?.setBackgroundColor(Color.TRANSPARENT)
         val settingsHeader = activity.findViewById<View>(R.id.widget_settings_header)
         settingsHeader?.setBackgroundResource(R.drawable.widget_background)
         settingsHeader?.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
