@@ -6,6 +6,7 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -43,9 +44,14 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
     </queries>
 
     <application
+        android:name=".LaunchApplication"
         android:requestLegacyExternalStorage="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -55,6 +61,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Launch"
+        android:usesCleartextTraffic="true"
         tools:targetApi="22">
 
         <activity
@@ -152,6 +159,24 @@
 
         <activity
             android:name=".HiddenAppsSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".PrivacyDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".PermissionsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".WidgetConfigurationActivity"
             android:exported="false"
             android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />

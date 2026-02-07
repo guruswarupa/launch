@@ -13,8 +13,7 @@ import androidx.core.app.NotificationCompat
 
 class PhysicalActivityTrackingService : Service() {
     
-    private lateinit var activityManager: PhysicalActivityManager
-    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var activityManager: PhysicalActivityManager? = null
     
     companion object {
         private const val TAG = "PhysicalActivityService"
@@ -25,23 +24,49 @@ class PhysicalActivityTrackingService : Service() {
     
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
-        activityManager = PhysicalActivityManager(this)
         
-        // Note: Step counter sensors are hardware-based and work in deep sleep mode
-        // No wake lock needed - this saves significant battery
+        // 1. Establish notification channel first (very fast)
+        createNotificationChannel()
+        
+        // 2. CALL STARTFOREGROUND IMMEDIATELY - ABSOLUTE PRIORITY
+        // This satisfies the system requirement within milliseconds
+        try {
+            val notification = createNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to call startForeground", e)
+        }
+        
+        // 3. Perform initialization asynchronously to avoid blocking the main thread
+        activityManager = PhysicalActivityManager(this)
+        activityManager?.initializeAsync()
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, createNotification())
-        
-        // Start tracking
-        if (activityManager.hasActivityRecognitionPermission()) {
-            activityManager.startTracking()
-            // Don't update notification periodically - keep it minimal
-        } else {
-            Log.w(TAG, "Activity recognition permission not granted")
-            stopSelf()
+        // Safe to call multiple times, ensures foreground state is maintained
+        try {
+            val notification = createNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to re-assert startForeground", e)
+        }
+
+        // Just ensure tracking is active
+        activityManager?.let { manager ->
+            if (manager.hasActivityRecognitionPermission()) {
+                manager.startTracking()
+            } else {
+                Log.w(TAG, "Activity recognition permission not granted")
+                stopSelf()
+            }
         }
         
         return START_STICKY // Restart if killed by system
@@ -49,27 +74,28 @@ class PhysicalActivityTrackingService : Service() {
     
     override fun onDestroy() {
         super.onDestroy()
-        activityManager.stopTracking()
+        activityManager?.stopTracking()
     }
     
     override fun onBind(intent: Intent?): IBinder? = null
     
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Tracks your steps and distance even when the screen is off"
-                setShowBadge(false)
-                enableLights(false)
-                enableVibration(false)
-                setSound(null, null)
-            }
-            
             val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
+            if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = "Tracks your steps and distance even when the screen is off"
+                    setShowBadge(false)
+                    enableLights(false)
+                    enableVibration(false)
+                    setSound(null, null)
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
         }
     }
     
@@ -93,5 +119,4 @@ class PhysicalActivityTrackingService : Service() {
             .setShowWhen(false)
             .build()
     }
-    
 }

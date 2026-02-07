@@ -8,7 +8,7 @@ import android.hardware.SensorManager
 import android.util.Log
 import kotlin.math.*
 
-class CompassManager(private val context: Context) : SensorEventListener {
+class CompassManager(context: Context) : SensorEventListener {
     
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var accelerometerSensor: Sensor? = null
@@ -127,17 +127,19 @@ class CompassManager(private val context: Context) : SensorEventListener {
     fun getCurrentDirection(): Float {
         return currentAzimuth
     }
-    
+
     fun getDirectionName(azimuth: Float): String {
-        return when {
-            azimuth >= 337.5 || azimuth < 22.5 -> "N"
-            azimuth >= 22.5 && azimuth < 67.5 -> "NE"
-            azimuth >= 67.5 && azimuth < 112.5 -> "E"
-            azimuth >= 112.5 && azimuth < 157.5 -> "SE"
-            azimuth >= 157.5 && azimuth < 202.5 -> "S"
-            azimuth >= 202.5 && azimuth < 247.5 -> "SW"
-            azimuth >= 247.5 && azimuth < 292.5 -> "W"
-            azimuth >= 292.5 && azimuth < 337.5 -> "NW"
+        val a = (azimuth + 22.5f) % 360f
+
+        return when (a) {
+            in 0f..45f -> "N"
+            in 45f..90f -> "NE"
+            in 90f..135f -> "E"
+            in 135f..180f -> "SE"
+            in 180f..225f -> "S"
+            in 225f..270f -> "SW"
+            in 270f..315f -> "W"
+            in 315f..360f -> "NW"
             else -> "N"
         }
     }

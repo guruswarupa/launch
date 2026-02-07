@@ -1,8 +1,6 @@
 package com.guruswarupa.launch
 
-import android.content.pm.PackageManager
-
-class AppCategoryManager(private val packageManager: PackageManager) {
+class AppCategoryManager {
     
     enum class AppCategory {
         SOCIAL_MEDIA,

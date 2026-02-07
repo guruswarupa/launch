@@ -43,163 +43,6 @@
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="32dp"/>
 
-            <!-- Weather API Key Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/weather_api_key_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Weather API Key"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
-
-                    <TextView
-                        android:id="@+id/weather_api_key_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.7"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/weather_api_key_content"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp">
-
-                    <EditText
-                        android:id="@+id/weather_api_key_input"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Enter your OpenWeatherMap API key"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="@android:color/white"
-                        android:alpha="0.7"
-                        android:background="@drawable/rounded_background"
-                        android:padding="16dp"
-                        android:inputType="text"
-                        android:singleLine="true"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Get a free API key at: openweathermap.org/api"
-                        android:textSize="11sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.6"
-                        android:layout_marginTop="4dp"/>
-
-                    <EditText
-                        android:id="@+id/weather_location_input"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Enter city name (e.g., London, New York)"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="@android:color/white"
-                        android:alpha="0.7"
-                        android:background="@drawable/rounded_background"
-                        android:padding="16dp"
-                        android:inputType="text"
-                        android:singleLine="true"
-                        android:layout_marginTop="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Enter the name of the city for weather information"
-                        android:textSize="11sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.6"
-                        android:layout_marginTop="4dp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <!-- Currency Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/currency_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Currency"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
-
-                    <TextView
-                        android:id="@+id/currency_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.7"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/currency_content"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp">
-
-                    <Spinner
-                        android:id="@+id/currency_spinner"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/rounded_background"
-                        android:padding="16dp"
-                        android:minHeight="48dp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
             <!-- Display Style Section -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -282,6 +125,7 @@
                 </LinearLayout>
 
             </LinearLayout>
+
 
             <!-- Wallpaper Section -->
             <LinearLayout
@@ -428,67 +272,6 @@
 
             </LinearLayout>
 
-            <!-- Finance Data Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/finance_data_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Finance Data"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
-
-                    <TextView
-                        android:id="@+id/finance_data_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.7"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/finance_data_content"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp">
-
-                    <Button
-                        android:id="@+id/reset_finance_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Reset Finance Data"
-                        android:textAllCaps="false"
-                        android:background="@drawable/button_background"
-                        android:textColor="@android:color/white"
-                        android:padding="16dp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
             <!-- App Lock Section -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -512,7 +295,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="App Lock"
+                        android:text="Security &amp; Privacy"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@android:color/white"/>
@@ -544,67 +327,8 @@
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
-                        android:padding="16dp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <!-- Hidden Apps Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/hidden_apps_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Hidden Apps"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
-
-                    <TextView
-                        android:id="@+id/hidden_apps_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.7"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/hidden_apps_content"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="View and manage apps that are hidden from the app list. Long press any app in the app list to hide it."
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.8"
-                        android:layout_marginBottom="12dp"/>
+                        android:padding="16dp"
+                        android:layout_marginBottom="8dp"/>
 
                     <Button
                         android:id="@+id/hidden_apps_button"
@@ -614,11 +338,23 @@
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
+                        android:padding="16dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <Button
+                        android:id="@+id/privacy_dashboard_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Privacy &amp; Security Dashboard"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
                         android:padding="16dp"/>
 
                 </LinearLayout>
 
             </LinearLayout>
+
 
             <!-- Permissions Section -->
             <LinearLayout
@@ -643,7 +379,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Permissions"
+                        android:text="Launcher Permissions"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="@android:color/white"/>
@@ -671,146 +407,7 @@
                         android:id="@+id/check_permissions_button"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Handle Permissions"
-                        android:textAllCaps="false"
-                        android:background="@drawable/button_background"
-                        android:textColor="@android:color/white"
-                        android:padding="16dp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <!-- Physical Activity Calibration Section -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/physical_activity_calibration_header"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Physical Activity Calibration"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
-
-                    <TextView
-                        android:id="@+id/physical_activity_calibration_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.7"/>
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/physical_activity_calibration_content"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Calibrate your stride length for more accurate distance measurements. You can set your height (auto-calculates stride) or manually set stride length."
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.8"
-                        android:layout_marginBottom="12dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Height (cm)"
-                        android:textSize="16sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.9"
-                        android:layout_marginBottom="4dp"/>
-
-                    <EditText
-                        android:id="@+id/height_input"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Enter your height in cm"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="@android:color/white"
-                        android:alpha="0.7"
-                        android:background="@drawable/rounded_background"
-                        android:padding="16dp"
-                        android:inputType="number"
-                        android:singleLine="true"
-                        android:layout_marginBottom="16dp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Or set stride length manually (meters)"
-                        android:textSize="16sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.9"
-                        android:layout_marginBottom="4dp"/>
-
-                    <EditText
-                        android:id="@+id/stride_length_input"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Enter stride length in meters (e.g., 0.75)"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="@android:color/white"
-                        android:alpha="0.7"
-                        android:background="@drawable/rounded_background"
-                        android:padding="16dp"
-                        android:inputType="numberDecimal"
-                        android:singleLine="true"
-                        android:layout_marginBottom="12dp"/>
-
-                    <TextView
-                        android:id="@+id/current_stride_display"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Current stride length: 0.75 m"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:alpha="0.7"
-                        android:layout_marginBottom="12dp"/>
-
-                    <Button
-                        android:id="@+id/save_calibration_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Save Calibration"
-                        android:textAllCaps="false"
-                        android:background="@drawable/button_background"
-                        android:textColor="@android:color/white"
-                        android:padding="16dp"
-                        android:layout_marginBottom="8dp"/>
-
-                    <Button
-                        android:id="@+id/reset_calibration_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Reset to Default"
+                        android:text="Handle Internal Permissions"
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
@@ -962,6 +559,76 @@
 
                     </LinearLayout>
 
+                    <LinearLayout
+                        android:id="@+id/shake_sensitivity_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Shake Sensitivity"
+                                android:textSize="16sp"
+                                android:textColor="@android:color/white"
+                                android:alpha="0.9"/>
+
+                            <TextView
+                                android:id="@+id/sensitivity_value_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="5"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="@android:color/white"/>
+
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/shake_sensitivity_seekbar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:max="9"
+                            android:progress="4"
+                            android:layout_marginTop="8dp"
+                            android:thumbTint="@android:color/white"
+                            android:progressTint="@android:color/white"
+                            android:progressBackgroundTint="@android:color/white"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="4dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Less Sensitive"
+                                android:textSize="10sp"
+                                android:textColor="@android:color/white"
+                                android:alpha="0.6"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="More Sensitive"
+                                android:textSize="10sp"
+                                android:textColor="@android:color/white"
+                                android:alpha="0.6"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -970,6 +637,76 @@
                         android:textColor="@android:color/white"
                         android:alpha="0.7"
                         android:layout_marginTop="8dp"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Support & Feedback Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/rounded_background"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:id="@+id/support_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Support &amp; Feedback"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"/>
+
+                    <TextView
+                        android:id="@+id/support_arrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="▼"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:alpha="0.7"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/support_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Have a suggestion, found a bug, or want a new feature? Mail the developer directly!"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/white"
+                        android:alpha="0.8"
+                        android:layout_marginBottom="12dp"/>
+
+                    <Button
+                        android:id="@+id/feedback_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Send Feedback / Report Bug"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
+                        android:padding="16dp"/>
 
                 </LinearLayout>
 

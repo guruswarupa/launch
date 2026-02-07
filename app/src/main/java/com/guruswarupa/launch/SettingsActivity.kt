@@ -16,6 +16,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.view.LayoutInflater
 import android.widget.*
+import androidx.appcompat.widget.SwitchCompat
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -36,7 +37,6 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         // Make status bar and navigation bar transparent before setContentView
-        // This prevents the blue flash on activity start
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
             window.statusBarColor = android.graphics.Color.TRANSPARENT
             window.navigationBarColor = android.graphics.Color.TRANSPARENT
@@ -49,14 +49,11 @@ class SettingsActivity : ComponentActivity() {
             makeSystemBarsTransparent()
         }
 
-        val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
-        val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
-        val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
         val gridOption = findViewById<Button>(R.id.grid_option)
         val listOption = findViewById<Button>(R.id.list_option)
         val saveButton = findViewById<Button>(R.id.save_settings_button)
         
-        // Track selected display style (use a mutable variable that can be accessed in saveSettings)
+        // Track selected display style
         val selectedStyleRef = object {
             var value = prefs.getString("view_preference", "list") ?: "list"
         }
@@ -76,7 +73,6 @@ class SettingsActivity : ComponentActivity() {
         }
         val exportButton = findViewById<Button>(R.id.export_settings_button)
         val importButton = findViewById<Button>(R.id.import_settings_button)
-        val resetFinanceButton = findViewById<Button>(R.id.reset_finance_button)
         val appLockButton = findViewById<Button>(R.id.app_lock_button)
         val checkPermissionsButton = findViewById<Button>(R.id.check_permissions_button)
         val showTutorialButton = findViewById<Button>(R.id.show_tutorial_button)
@@ -84,15 +80,13 @@ class SettingsActivity : ComponentActivity() {
         val clearCacheButton = findViewById<Button>(R.id.clear_cache_button)
         val clearDataButton = findViewById<Button>(R.id.clear_data_button)
         val changeWallpaperButton = findViewById<Button>(R.id.change_wallpaper_button)
+        val feedbackButton = findViewById<Button>(R.id.feedback_button)
 
-        // Setup currency spinner
-        setupCurrencySpinner(currencySpinner)
-        
         // Load current settings
-        loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
+        loadCurrentSettings(gridOption, listOption)
 
         saveButton.setOnClickListener {
-            saveSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, selectedStyleRef.value)
+            saveSettings(selectedStyleRef.value)
         }
 
         exportButton.setOnClickListener {
@@ -103,9 +97,6 @@ class SettingsActivity : ComponentActivity() {
             importSettings()
         }
 
-        resetFinanceButton.setOnClickListener {
-            resetFinanceData()
-        }
         appLockButton.setOnClickListener {
             startActivity(Intent(this, AppLockSettingsActivity::class.java))
         }
@@ -116,7 +107,12 @@ class SettingsActivity : ComponentActivity() {
         }
         
         checkPermissionsButton.setOnClickListener {
-            checkAndRequestPermissions()
+            startActivity(Intent(this, PermissionsActivity::class.java))
+        }
+        
+        val privacyDashboardButton = findViewById<Button>(R.id.privacy_dashboard_button)
+        privacyDashboardButton.setOnClickListener {
+            startActivity(Intent(this, PrivacyDashboardActivity::class.java))
         }
         
         showTutorialButton.setOnClickListener {
@@ -138,24 +134,50 @@ class SettingsActivity : ComponentActivity() {
         changeWallpaperButton.setOnClickListener {
             chooseWallpaper()
         }
+
+        feedbackButton.setOnClickListener {
+            sendFeedback()
+        }
         
         // Setup expandable sections
         setupExpandableSections()
     }
     
+    private fun sendFeedback() {
+        val deviceInfo = """
+            
+            
+            --- Device Info ---
+            Device: ${Build.MANUFACTURER} ${Build.MODEL}
+            Android Version: ${Build.VERSION.RELEASE}
+            SDK: ${Build.VERSION.SDK_INT}
+            App Version: ${getAppVersion()}
+        """.trimIndent()
+
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_EMAIL, arrayOf("msgswarupa@gmail.com"))
+            putExtra(Intent.EXTRA_SUBJECT, "Launch App Feedback")
+            putExtra(Intent.EXTRA_TEXT, deviceInfo)
+        }
+
+        try {
+            startActivity(Intent.createChooser(intent, "Send Feedback"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "No mail app found", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun getAppVersion(): String {
+        return try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            "${pInfo.versionName} (${if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo.longVersionCode else pInfo.versionCode})"
+        } catch (e: Exception) {
+            "Unknown"
+        }
+    }
+
     private fun setupExpandableSections() {
-        // Weather API Key Section
-        val weatherHeader = findViewById<LinearLayout>(R.id.weather_api_key_header)
-        val weatherContent = findViewById<LinearLayout>(R.id.weather_api_key_content)
-        val weatherArrow = findViewById<TextView>(R.id.weather_api_key_arrow)
-        setupSectionToggle(weatherHeader, weatherContent, weatherArrow)
-        
-        // Currency Section
-        val currencyHeader = findViewById<LinearLayout>(R.id.currency_header)
-        val currencyContent = findViewById<LinearLayout>(R.id.currency_content)
-        val currencyArrow = findViewById<TextView>(R.id.currency_arrow)
-        setupSectionToggle(currencyHeader, currencyContent, currencyArrow)
-        
         // Display Style Section
         val displayStyleHeader = findViewById<LinearLayout>(R.id.display_style_header)
         val displayStyleContent = findViewById<LinearLayout>(R.id.display_style_content)
@@ -168,23 +190,11 @@ class SettingsActivity : ComponentActivity() {
         val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
         setupSectionToggle(backupHeader, backupContent, backupArrow)
         
-        // Finance Data Section
-        val financeHeader = findViewById<LinearLayout>(R.id.finance_data_header)
-        val financeContent = findViewById<LinearLayout>(R.id.finance_data_content)
-        val financeArrow = findViewById<TextView>(R.id.finance_data_arrow)
-        setupSectionToggle(financeHeader, financeContent, financeArrow)
-        
         // App Lock Section
         val appLockHeader = findViewById<LinearLayout>(R.id.app_lock_header)
         val appLockContent = findViewById<LinearLayout>(R.id.app_lock_content)
         val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
         setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
-        
-        // Hidden Apps Section
-        val hiddenAppsHeader = findViewById<LinearLayout>(R.id.hidden_apps_header)
-        val hiddenAppsContent = findViewById<LinearLayout>(R.id.hidden_apps_content)
-        val hiddenAppsArrow = findViewById<TextView>(R.id.hidden_apps_arrow)
-        setupSectionToggle(hiddenAppsHeader, hiddenAppsContent, hiddenAppsArrow)
         
         // Permissions Section
         val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)
@@ -197,13 +207,6 @@ class SettingsActivity : ComponentActivity() {
         val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
         setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
-        
-        // Physical Activity Calibration Section
-        val calibrationHeader = findViewById<LinearLayout>(R.id.physical_activity_calibration_header)
-        val calibrationContent = findViewById<LinearLayout>(R.id.physical_activity_calibration_content)
-        val calibrationArrow = findViewById<TextView>(R.id.physical_activity_calibration_arrow)
-        setupSectionToggle(calibrationHeader, calibrationContent, calibrationArrow)
-        setupPhysicalActivityCalibration()
         
         // Tutorial Section
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
@@ -224,16 +227,48 @@ class SettingsActivity : ComponentActivity() {
         
         shakeTorchSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked).apply()
-            // Send broadcast to update service state
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
             sendBroadcast(intent)
+            
+            // Show/hide sensitivity container
+            findViewById<View>(R.id.shake_sensitivity_container).visibility = if (isChecked) View.VISIBLE else View.GONE
         }
+        
+        // Setup sensitivity seekbar
+        val sensitivitySeekBar = findViewById<SeekBar>(R.id.shake_sensitivity_seekbar)
+        val sensitivityValueText = findViewById<TextView>(R.id.sensitivity_value_text)
+        val currentSensitivity = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5)
+        
+        sensitivitySeekBar.progress = currentSensitivity - 1
+        sensitivityValueText.text = currentSensitivity.toString()
+        findViewById<View>(R.id.shake_sensitivity_container).visibility = if (isTorchEnabled) View.VISIBLE else View.GONE
+        
+        sensitivitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val sensitivity = progress + 1
+                sensitivityValueText.text = sensitivity.toString()
+                if (fromUser) {
+                    prefs.edit().putInt(Constants.Prefs.SHAKE_SENSITIVITY, sensitivity).apply()
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Support & Feedback Section
+        val supportHeader = findViewById<LinearLayout>(R.id.support_header)
+        val supportContent = findViewById<LinearLayout>(R.id.support_content)
+        val supportArrow = findViewById<TextView>(R.id.support_arrow)
+        setupSectionToggle(supportHeader, supportContent, supportArrow)
         
         // Launcher Section
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
         val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
         val launcherArrow = findViewById<TextView>(R.id.launcher_arrow)
         setupSectionToggle(launcherHeader, launcherContent, launcherArrow)
+        
     }
     
     private fun setupSectionToggle(header: LinearLayout, content: LinearLayout, arrow: TextView) {
@@ -249,127 +284,10 @@ class SettingsActivity : ComponentActivity() {
         }
     }
     
-    private fun setupPhysicalActivityCalibration() {
-        val activityManager = PhysicalActivityManager(this)
-        val heightInput = findViewById<EditText>(R.id.height_input)
-        val strideLengthInput = findViewById<EditText>(R.id.stride_length_input)
-        val currentStrideDisplay = findViewById<TextView>(R.id.current_stride_display)
-        val saveButton = findViewById<Button>(R.id.save_calibration_button)
-        val resetButton = findViewById<Button>(R.id.reset_calibration_button)
-        
-        // Load current values
-        val currentHeight = activityManager.getUserHeightCm()
-        val currentStride = activityManager.getStrideLengthMeters()
-        
-        if (currentHeight > 0) {
-            heightInput.setText(currentHeight.toString())
-        }
-        
-        // Update current stride display
-        updateStrideDisplay(currentStrideDisplay, currentStride)
-        
-        // When height changes, auto-calculate stride
-        heightInput.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus && heightInput.text.isNotEmpty()) {
-                val height = heightInput.text.toString().toIntOrNull()
-                if (height != null && height > 0) {
-                    // Calculate stride: stride ≈ height * 0.43
-                    val calculatedStride = (height * 0.43) / 100.0
-                    strideLengthInput.setText(String.format(Locale.getDefault(), "%.2f", calculatedStride))
-                }
-            }
-        }
-        
-        // Save calibration
-        saveButton.setOnClickListener {
-            var saved = false
-            
-            // Check if height is set
-            val heightText = heightInput.text.toString().trim()
-            if (heightText.isNotEmpty()) {
-                val height = heightText.toIntOrNull()
-                if (height != null && height > 0 && height < 300) {
-                    activityManager.setUserHeightCm(height)
-                    saved = true
-                    Toast.makeText(this, "Calibration saved (height-based)", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Please enter a valid height (1-299 cm)", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-            }
-            
-            // Check if stride length is manually set (overrides height)
-            val strideText = strideLengthInput.text.toString().trim()
-            if (strideText.isNotEmpty()) {
-                val stride = strideText.toDoubleOrNull()
-                if (stride != null && stride > 0 && stride < 2.0) {
-                    activityManager.setStrideLengthMeters(stride)
-                    saved = true
-                    Toast.makeText(this, "Calibration saved (manual stride)", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Please enter a valid stride length (0.1-2.0 m)", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-            }
-            
-            if (!saved) {
-                Toast.makeText(this, "Please enter either height or stride length", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            
-            // Update display
-            val newStride = activityManager.getStrideLengthMeters()
-            updateStrideDisplay(currentStrideDisplay, newStride)
-        }
-        
-        // Reset to default
-        resetButton.setOnClickListener {
-            activityManager.resetStrideLengthToDefault()
-            heightInput.setText("")
-            strideLengthInput.setText("")
-            val defaultStride = activityManager.getStrideLengthMeters()
-            updateStrideDisplay(currentStrideDisplay, defaultStride)
-            Toast.makeText(this, "Calibration reset to default", Toast.LENGTH_SHORT).show()
-        }
-    }
-    
-    private fun updateStrideDisplay(textView: TextView, strideLength: Double) {
-        textView.text = String.format(Locale.getDefault(), "Current stride length: %.2f m", strideLength)
-    }
-
-    private fun setupCurrencySpinner(spinner: Spinner) {
-        val currencies = FinanceManager.SUPPORTED_CURRENCIES.map { (code, symbol) ->
-            "$code ($symbol)"
-        }.toTypedArray()
-        
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, currencies)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner.adapter = adapter
-    }
-    
     private fun loadCurrentSettings(
-        weatherApiKeyInput: EditText,
-        weatherLocationInput: EditText,
-        currencySpinner: Spinner,
         gridOption: Button,
         listOption: Button
     ) {
-        // Load weather API key
-        val currentApiKey = prefs.getString("weather_api_key", "") ?: ""
-        weatherApiKeyInput.setText(currentApiKey)
-
-        // Load weather location
-        val currentLocation = prefs.getString("weather_stored_city_name", "") ?: ""
-        weatherLocationInput.setText(currentLocation)
-
-        // Load currency
-        val currentCurrency = prefs.getString("finance_currency", "USD") ?: "USD"
-        val currencyIndex = FinanceManager.SUPPORTED_CURRENCIES.keys.indexOf(currentCurrency)
-        if (currencyIndex >= 0) {
-            currencySpinner.setSelection(currencyIndex)
-        }
-
-        // Load display style
         val currentStyle = prefs.getString("view_preference", "list") ?: "list"
         updateDisplayStyleButtons(gridOption, listOption, currentStyle)
     }
@@ -384,36 +302,15 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun saveSettings(weatherApiKeyInput: EditText, weatherLocationInput: EditText, currencySpinner: Spinner, selectedDisplayStyle: String) {
+    private fun saveSettings(selectedDisplayStyle: String) {
         val editor = prefs.edit()
 
-        // Save weather API key
-        val apiKey = weatherApiKeyInput.text.toString().trim()
-        editor.putString("weather_api_key", apiKey)
-        if (apiKey.isNotEmpty()) {
-            editor.putBoolean("weather_api_key_rejected", false)
-        }
-
-        // Save weather location - always save the value (even if empty)
-        val location = weatherLocationInput.text.toString().trim()
-        editor.putString("weather_stored_city_name", location)
-
-        // Save currency
-        val selectedCurrencyIndex = currencySpinner.selectedItemPosition
-        val currencyCodes = FinanceManager.SUPPORTED_CURRENCIES.keys.toList()
-        if (selectedCurrencyIndex >= 0 && selectedCurrencyIndex < currencyCodes.size) {
-            editor.putString("finance_currency", currencyCodes[selectedCurrencyIndex])
-        }
-
-        // Save display style
         editor.putString("view_preference", selectedDisplayStyle)
 
-        // Use commit() instead of apply() to ensure immediate save
         editor.commit()
 
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()
 
-        // Send broadcast to refresh main activity if needed
         val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
         sendBroadcast(intent)
 
@@ -469,19 +366,16 @@ class SettingsActivity : ComponentActivity() {
                     }
                 }
                 HIDDEN_APPS_REQUEST_CODE -> {
-                    // Hidden apps changed - send broadcast to refresh MainActivity
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
                     sendBroadcast(intent)
                 }
                 WALLPAPER_REQUEST_CODE -> {
-                    // Wallpaper changed - send broadcast to refresh MainActivity
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
                     sendBroadcast(intent)
                     Toast.makeText(this, "Wallpaper changed", Toast.LENGTH_SHORT).show()
                 }
             }
         } else if (requestCode == WALLPAPER_REQUEST_CODE) {
-            // User may have cancelled, but we still send the broadcast in case they changed it
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
             sendBroadcast(intent)
         }
@@ -491,52 +385,16 @@ class SettingsActivity : ComponentActivity() {
         try {
             val settingsJson = JSONObject()
             
-            // Export main preferences (com.guruswarupa.launch.PREFS)
-            // This includes:
-            // - Favorite apps (favorite_apps)
-            // - Workspaces (workspaces)
-            // - Active workspace ID (active_workspace_id)
-            // - Show all apps mode (show_all_apps_mode)
-            // - Weather API key (weather_api_key)
-            // - Weather location (weather_stored_city_name)
-            // - Currency preference (finance_currency)
-            // - Display style (view_preference)
-            // - Todo items (todo_items)
-            // - Workout widget data (workout_exercises, workout_streak, workout_last_reset_date, workout_last_streak_date)
-            // - Android widgets (saved_widgets)
-            // - Transaction data
-            // - All other preferences
             val mainPrefs = prefs.all
             val mainPrefsJson = JSONObject()
             for ((key, value) in mainPrefs) {
                 when (value) {
-                    is String -> {
-                        mainPrefsJson.put(key, value)
-                        // Special handling for todo_items to ensure proper format
-                        if (key == "todo_items" && value.isNotEmpty()) {
-                            // Validate todo items format before export
-                            val todoArray = value.split("|")
-                            var isValidFormat = true
-                            for (todoString in todoArray) {
-                                if (todoString.isNotEmpty()) {
-                                    val parts = todoString.split(":")
-                                    if (parts.size < 7) {
-                                        isValidFormat = false
-                                        break
-                                    }
-                                }
-                            }
-                            if (!isValidFormat) {
-                                Toast.makeText(this, "Warning: Todo items may not export correctly due to format issues", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
+                    is String -> mainPrefsJson.put(key, value)
                     is Boolean -> mainPrefsJson.put(key, value)
                     is Int -> mainPrefsJson.put(key, value)
                     is Long -> mainPrefsJson.put(key, value)
                     is Float -> mainPrefsJson.put(key, value)
                     is Set<*> -> {
-                        // This includes favorite_apps and other Set preferences
                         val jsonArray = JSONArray()
                         value.forEach { jsonArray.put(it) }
                         mainPrefsJson.put(key, jsonArray)
@@ -545,7 +403,6 @@ class SettingsActivity : ComponentActivity() {
             }
             settingsJson.put("main_preferences", mainPrefsJson)
             
-            // Export app timer preferences
             val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
             val appTimerAll = appTimerPrefs.all
             if (appTimerAll.isNotEmpty()) {
@@ -567,7 +424,6 @@ class SettingsActivity : ComponentActivity() {
                 settingsJson.put("app_timer_prefs", appTimerJson)
             }
             
-            // Export app lock preferences
             val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
             val appLockAll = appLockPrefs.all
             if (appLockAll.isNotEmpty()) {
@@ -604,22 +460,15 @@ class SettingsActivity : ComponentActivity() {
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 val jsonString = inputStream.bufferedReader().use { it.readText() }
                 val settingsJson = JSONObject(jsonString)
-                
-                // Check if this is the new format (with separate SharedPreferences files)
-                // or the old format (all at root level)
                 val isNewFormat = settingsJson.has("main_preferences")
                 
                 if (isNewFormat) {
-                    // New format: organized by SharedPreferences file
-                    // Import main preferences
                     if (settingsJson.has("main_preferences")) {
                         val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
                         val editor = prefs.edit()
                         importPreferences(mainPrefsJson, editor)
                         editor.apply()
                     }
-                    
-                    // Import app timer preferences
                     if (settingsJson.has("app_timer_prefs")) {
                         val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
                         val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
@@ -627,8 +476,6 @@ class SettingsActivity : ComponentActivity() {
                         importPreferences(appTimerJson, editor)
                         editor.apply()
                     }
-                    
-                    // Import app lock preferences
                     if (settingsJson.has("app_lock_prefs")) {
                         val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
                         val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
@@ -637,19 +484,14 @@ class SettingsActivity : ComponentActivity() {
                         editor.apply()
                     }
                 } else {
-                    // Old format: all preferences at root level (backward compatibility)
                     val editor = prefs.edit()
                     importPreferences(settingsJson, editor)
                     editor.apply()
                 }
 
-                // Reload current settings in UI
-                val weatherApiKeyInput = findViewById<EditText>(R.id.weather_api_key_input)
-                val weatherLocationInput = findViewById<EditText>(R.id.weather_location_input)
-                val currencySpinner = findViewById<Spinner>(R.id.currency_spinner)
                 val gridOption = findViewById<Button>(R.id.grid_option)
                 val listOption = findViewById<Button>(R.id.list_option)
-                loadCurrentSettings(weatherApiKeyInput, weatherLocationInput, currencySpinner, gridOption, listOption)
+                loadCurrentSettings(gridOption, listOption)
 
                 Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }
@@ -682,378 +524,13 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-
-    private fun resetFinanceData() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Reset Finance Data")
-            .setMessage("Are you sure you want to reset all finance data? This will clear your balance, transaction history, and monthly records. This action cannot be undone.")
-            .setPositiveButton("Reset") { _, _ ->
-                // Reset all finance-related data
-                val editor = prefs.edit()
-                val allPrefs = prefs.all
-                for (key in allPrefs.keys) {
-                    if (key.startsWith("finance_") || key.startsWith("transaction_")) {
-                        editor.remove(key)
-                    }
-                }
-                editor.apply()
-
-                Toast.makeText(this, "Finance data reset successfully", Toast.LENGTH_SHORT).show()
-
-                // Send broadcast to refresh MainActivity
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                sendBroadcast(intent)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
-    private var permissionsDialog: AlertDialog? = null
-    
-    private fun checkAndRequestPermissions() {
-        // Create custom dialog
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_permissions, null)
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-        
-        permissionsDialog = dialog
-        
-        // Make dialog window scrollable with proper sizing
-        dialog.window?.setLayout(
-            (resources.displayMetrics.widthPixels * 0.9).toInt(),
-            (resources.displayMetrics.heightPixels * 0.75).toInt()
-        )
-        
-        val permissionsList = dialogView.findViewById<LinearLayout>(R.id.permissions_list)
-        val closeButton = dialogView.findViewById<ImageButton>(R.id.close_button)
-        val cancelButton = dialogView.findViewById<Button>(R.id.cancel_button)
-        val applyButton = dialogView.findViewById<Button>(R.id.apply_button)
-        
-        // Permission data structure
-        data class PermissionItem(
-            val permission: String?,
-            val name: String,
-            val description: String,
-            val isGranted: Boolean,
-            val isSpecial: Boolean = false, // For Usage Stats which needs special handling
-            val isLauncher: Boolean = false // For Default Launcher which needs special handling
-        )
-        
-        val allPermissions = mutableListOf<PermissionItem>()
-        val permissionToggles = mutableMapOf<String, Switch>()
-        
-        // Check Contacts permission - always show
-        val contactsGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            Manifest.permission.READ_CONTACTS,
-            "Contacts",
-            "Access your contacts to search and call them",
-            contactsGranted
-        ))
-        
-        // Check Call Phone permission - always show
-        val callGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            Manifest.permission.CALL_PHONE,
-            "Phone Calls",
-            "Make phone calls directly from the launcher",
-            callGranted
-        ))
-        
-        // Check SMS permission - always show
-        val smsGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            Manifest.permission.SEND_SMS,
-            "SMS",
-            "Send text messages directly from the launcher",
-            smsGranted
-        ))
-        
-        // Check Storage permission - always show (different for different Android versions)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ (API 33+) uses READ_MEDIA_IMAGES
-            val storageGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                Manifest.permission.READ_MEDIA_IMAGES,
-                "Storage (Images)",
-                "Access images to set custom wallpapers",
-                storageGranted
-            ))
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11-12 (API 30-32) - no permission needed for scoped storage, but check if we can still request
-            // For these versions, we might not need explicit permission, but let's check READ_EXTERNAL_STORAGE
-            val storageGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                "Storage",
-                "Access storage to set custom wallpapers",
-                storageGranted
-            ))
-        } else {
-            // Android 10 and below
-            val storageGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                Manifest.permission.READ_EXTERNAL_STORAGE,
-                "Storage",
-                "Access storage to set custom wallpapers",
-                storageGranted
-            ))
-        }
-        
-        // Check Notification permission - always show (Android 13+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val notificationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                Manifest.permission.POST_NOTIFICATIONS,
-                "Notifications",
-                "Show notifications in the notifications widget",
-                notificationGranted
-            ))
-        }
-        
-        // Check Record Audio permission - always show
-        val recordAudioGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            Manifest.permission.RECORD_AUDIO,
-            "Microphone",
-            "Record audio for voice search functionality",
-            recordAudioGranted
-        ))
-        
-        // Check Activity Recognition permission - always show (Android 10+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val activityRecognitionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                Manifest.permission.ACTIVITY_RECOGNITION,
-                "Physical Activity",
-                "Track your steps and distance walked",
-                activityRecognitionGranted
-            ))
-        }
-        
-        // Check Usage Stats permission - always show
-        val usageStatsGranted = hasUsageStatsPermission()
-        allPermissions.add(PermissionItem(
-            null,
-            "Usage Stats",
-            "Show app usage time and statistics",
-            usageStatsGranted,
-            true
-        ))
-        
-        // Check Default Launcher - always show
-        val isDefaultLauncher = isDefaultLauncher()
-        allPermissions.add(PermissionItem(
-            null,
-            "Default Launcher",
-            "Set this app as your default home launcher",
-            isDefaultLauncher,
-            false,
-            true // Mark as launcher type
-        ))
-        
-        // Populate permissions list
-        for (perm in allPermissions) {
-            val itemView = LayoutInflater.from(this).inflate(R.layout.item_permission, permissionsList, false)
-            val nameText = itemView.findViewById<TextView>(R.id.permission_name)
-            val descText = itemView.findViewById<TextView>(R.id.permission_description)
-            val toggle = itemView.findViewById<Switch>(R.id.permission_switch)
-            
-            nameText.text = perm.name
-            descText.text = perm.description
-            toggle.isChecked = perm.isGranted
-            toggle.isEnabled = true
-            
-            // Set toggle listener to request permission immediately when toggled on
-            toggle.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked && !perm.isGranted) {
-                    // User wants to enable this permission - request it immediately
-                    if (perm.isSpecial) {
-                        // Usage Stats needs special handling
-                        requestUsageStatsPermission()
-                    } else if (perm.isLauncher) {
-                        // Default Launcher needs special handling
-                        openDefaultLauncherSettings()
-                    } else if (perm.permission != null) {
-                        // Request the permission immediately
-                        // Special handling for READ_MEDIA_IMAGES on Android 13+
-                        if (perm.permission == Manifest.permission.READ_MEDIA_IMAGES && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            ActivityCompat.requestPermissions(
-                                this,
-                                arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
-                                PERMISSION_REQUEST_CODE
-                            )
-                        } else {
-                            ActivityCompat.requestPermissions(
-                                this,
-                                arrayOf(perm.permission),
-                                PERMISSION_REQUEST_CODE
-                            )
-                        }
-                    }
-                } else if (!isChecked && perm.isGranted) {
-                    // User wants to disable - redirect to app permissions page
-                    if (perm.isLauncher) {
-                        // For launcher, open home settings
-                        openDefaultLauncherSettings()
-                    } else {
-                        // For other permissions, open app's permissions page in system settings
-                        try {
-                            // Try to open permissions page directly (Android 6.0+)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", packageName, null)
-                                }
-                                startActivity(intent)
-                                Toast.makeText(this, "Navigate to Permissions and disable ${perm.name}", Toast.LENGTH_LONG).show()
-                            } else {
-                                // Fallback for older Android versions
-                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                    data = Uri.fromParts("package", packageName, null)
-                                }
-                                startActivity(intent)
-                                Toast.makeText(this, "Please disable ${perm.name} permission in system settings", Toast.LENGTH_LONG).show()
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(this, "Cannot revoke permissions. Please disable in system settings.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    // Reset toggle to checked state after a delay to show the redirect
-                    toggle.postDelayed({
-                        toggle.isChecked = true
-                    }, 500)
-                }
-            }
-            
-            if (perm.permission != null) {
-                permissionToggles[perm.permission] = toggle
-            } else if (perm.isSpecial) {
-                permissionToggles["USAGE_STATS"] = toggle
-            } else if (perm.isLauncher) {
-                permissionToggles["DEFAULT_LAUNCHER"] = toggle
-            } else if (perm.isLauncher) {
-                permissionToggles["DEFAULT_LAUNCHER"] = toggle
-            }
-            
-            permissionsList.addView(itemView)
-        }
-        
-        // Close button
-        closeButton.setOnClickListener {
-            dialog.dismiss()
-        }
-        
-        // Cancel button
-        cancelButton.setOnClickListener {
-            dialog.dismiss()
-        }
-        
-        // Apply button - just closes the dialog since permissions are requested immediately on toggle
-        applyButton.setOnClickListener {
-            dialog.dismiss()
-            Toast.makeText(this, "Permissions updated", Toast.LENGTH_SHORT).show()
-        }
-        
-        dialog.show()
-    }
-    
-    private fun hasUsageStatsPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val appOps = getSystemService(APP_OPS_SERVICE) as AppOpsManager
-            val mode = appOps.checkOpNoThrow(
-                AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(),
-                packageName
-            )
-            mode == AppOpsManager.MODE_ALLOWED
-        } else {
-            true
-        }
-    }
-    
-    private fun requestUsageStatsPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                hasRequestedUsageStats = true
-                startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-            } catch (e: Exception) {
-                Toast.makeText(this, "Could not open usage stats settings", Toast.LENGTH_SHORT).show()
-                hasRequestedUsageStats = false
-            }
-        }
-    }
-    
-    override fun onResume() {
-        super.onResume()
-        
-        // Check if user returned from usage stats settings
-        if (hasRequestedUsageStats) {
-            hasRequestedUsageStats = false
-            if (hasUsageStatsPermission()) {
-                Toast.makeText(this, "Usage Stats permission granted", Toast.LENGTH_SHORT).show()
-                // Update toggle in dialog if still open
-                updatePermissionToggle("USAGE_STATS", true)
-            } else {
-                // User might have denied it
-                if (!prefs.getBoolean("usage_stats_permission_denied", false)) {
-                    // Ask if they want to try again
-                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                        .setTitle("Usage Stats Permission")
-                        .setMessage("Usage Stats permission is required to show app usage time. Would you like to try again?")
-                        .setPositiveButton("Try Again") { _, _ ->
-                            requestUsageStatsPermission()
-                        }
-                        .setNegativeButton("Skip") { _, _ ->
-                            prefs.edit().putBoolean("usage_stats_permission_denied", true).apply()
-                        }
-                        .show()
-                } else {
-                    updatePermissionToggle("USAGE_STATS", false)
-                }
-            }
-        }
-        
-        // Check if user returned from default launcher settings
-        if (permissionsDialog?.isShowing == true) {
-            updatePermissionToggle("DEFAULT_LAUNCHER", isDefaultLauncher())
-        }
-    }
-    
-    private fun updatePermissionToggle(key: String, isGranted: Boolean) {
-        if (permissionsDialog?.isShowing == true) {
-            val dialogView = permissionsDialog?.window?.decorView
-            dialogView?.post {
-                val permissionsList = dialogView.findViewById<LinearLayout>(R.id.permissions_list)
-                if (permissionsList != null) {
-                    for (j in 0 until permissionsList.childCount) {
-                        val itemView = permissionsList.getChildAt(j)
-                        val toggle = itemView.findViewById<Switch>(R.id.permission_switch)
-                        val nameText = itemView.findViewById<TextView>(R.id.permission_name)
-                        val expectedName = when (key) {
-                            "USAGE_STATS" -> "Usage Stats"
-                            "DEFAULT_LAUNCHER" -> "Default Launcher"
-                            else -> null
-                        }
-                        if (nameText?.text == expectedName) {
-                            toggle?.isChecked = isGranted
-                            break
-                        }
-                    }
-                }
-            }
-        }
-    }
     
     private fun showTutorial() {
-        // Reset tutorial preferences to show it again
         val editor = prefs.edit()
         editor.putBoolean("feature_tutorial_shown", false)
         editor.putInt("feature_tutorial_current_step", 0)
         editor.apply()
         
-        // Navigate to MainActivity with intent to start tutorial
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("start_tutorial", true)
@@ -1095,7 +572,6 @@ class SettingsActivity : ComponentActivity() {
                     var deletedCount = 0
                     var totalSize = 0L
                     
-                    // Helper function to calculate directory size recursively
                     fun getDirectorySize(dir: File): Long {
                         var size = 0L
                         if (dir.isDirectory) {
@@ -1112,7 +588,6 @@ class SettingsActivity : ComponentActivity() {
                         return size
                     }
                     
-                    // Clear cache directory
                     if (cacheDir.exists() && cacheDir.isDirectory) {
                         val files = cacheDir.listFiles()
                         files?.forEach { file ->
@@ -1123,12 +598,10 @@ class SettingsActivity : ComponentActivity() {
                                     totalSize += size
                                 }
                             } catch (e: Exception) {
-                                // Ignore individual file deletion errors
                             }
                         }
                     }
                     
-                    // Clear external cache if available
                     externalCacheDir?.let { extCacheDir ->
                         if (extCacheDir.exists() && extCacheDir.isDirectory) {
                             val files = extCacheDir.listFiles()
@@ -1140,7 +613,6 @@ class SettingsActivity : ComponentActivity() {
                                         totalSize += size
                                     }
                                 } catch (e: Exception) {
-                                    // Ignore individual file deletion errors
                                 }
                             }
                         }
@@ -1167,7 +639,6 @@ class SettingsActivity : ComponentActivity() {
             .setMessage("WARNING: This will delete ALL launcher data including:\n\n• All settings and preferences\n• Favorite apps\n• Workspaces\n• App locks and timers\n• Todo items\n• Workout data\n• Finance data\n• Widget configurations\n• All other app data\n\nThis action CANNOT be undone. The launcher will restart after clearing data.\n\nAre you absolutely sure?")
             .setPositiveButton("Clear All Data") { _, _ ->
                 try {
-                    // Clear all SharedPreferences
                     val allPrefs = listOf(
                         "com.guruswarupa.launch.PREFS",
                         "app_timer_prefs",
@@ -1179,11 +650,9 @@ class SettingsActivity : ComponentActivity() {
                             val prefs = getSharedPreferences(prefName, MODE_PRIVATE)
                             prefs.edit().clear().commit()
                         } catch (e: Exception) {
-                            // Ignore individual preference clearing errors
                         }
                     }
                     
-                    // Clear cache
                     try {
                         if (cacheDir.exists() && cacheDir.isDirectory) {
                             cacheDir.listFiles()?.forEach { it.deleteRecursively() }
@@ -1194,10 +663,8 @@ class SettingsActivity : ComponentActivity() {
                             }
                         }
                     } catch (e: Exception) {
-                        // Ignore cache clearing errors
                     }
                     
-                    // Clear databases
                     try {
                         val databasesDir = File(filesDir.parent, "databases")
                         if (databasesDir.exists() && databasesDir.isDirectory) {
@@ -1208,26 +675,21 @@ class SettingsActivity : ComponentActivity() {
                             }
                         }
                     } catch (e: Exception) {
-                        // Ignore database clearing errors
                     }
                     
-                    // Clear internal files (except important system files)
                     try {
                         if (filesDir.exists() && filesDir.isDirectory) {
                             filesDir.listFiles()?.forEach { file ->
-                                // Don't delete critical system files
                                 if (!file.name.startsWith(".") && file.name != "shared_prefs") {
                                     file.deleteRecursively()
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        // Ignore file clearing errors
                     }
                     
                     Toast.makeText(this, "All data cleared. Launcher will restart.", Toast.LENGTH_LONG).show()
                     
-                    // Restart launcher after a short delay
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         try {
                             val packageManager = packageManager
@@ -1236,7 +698,7 @@ class SettingsActivity : ComponentActivity() {
                             if (componentName != null) {
                                 val mainIntent = Intent.makeRestartActivityTask(componentName)
                                 startActivity(mainIntent)
-                                Runtime.getRuntime().exit(0)
+                                java.lang.Runtime.getRuntime().exit(0)
                             } else {
                                 finish()
                             }
@@ -1262,112 +724,17 @@ class SettingsActivity : ComponentActivity() {
         startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
     }
     
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            for (i in permissions.indices) {
-                val permission = permissions[i]
-                val granted = grantResults[i] == PackageManager.PERMISSION_GRANTED
-                
-                val permissionName = when (permission) {
-                    Manifest.permission.READ_CONTACTS -> "Contacts"
-                    Manifest.permission.CALL_PHONE -> "Phone Calls"
-                    Manifest.permission.SEND_SMS -> "SMS"
-                    Manifest.permission.READ_EXTERNAL_STORAGE -> "Storage"
-                    Manifest.permission.READ_MEDIA_IMAGES -> "Storage (Images)"
-                    Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
-                    Manifest.permission.RECORD_AUDIO -> "Microphone"
-                    Manifest.permission.ACTIVITY_RECOGNITION -> "Physical Activity"
-                    else -> null
-                }
-                
-                if (granted) {
-                    // Permission granted - update toggle state in dialog if still open
-                    if (permissionsDialog?.isShowing == true) {
-                        val dialogView = permissionsDialog?.window?.decorView
-                        dialogView?.post {
-                            // Refresh the dialog by finding the toggle and updating it
-                            val permissionsList = dialogView.findViewById<LinearLayout>(R.id.permissions_list)
-                            if (permissionsList != null) {
-                                for (j in 0 until permissionsList.childCount) {
-                                    val itemView = permissionsList.getChildAt(j)
-                                    val toggle = itemView.findViewById<Switch>(R.id.permission_switch)
-                                    val nameText = itemView.findViewById<TextView>(R.id.permission_name)
-                                    if (nameText?.text == permissionName) {
-                                        toggle?.isChecked = true
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (permissionName != null) {
-                        Toast.makeText(this, "$permissionName permission granted", Toast.LENGTH_SHORT).show()
-                        
-                        // Send broadcast to MainActivity to update physical activity widget if permission was granted
-                        if (permission == Manifest.permission.ACTIVITY_RECOGNITION) {
-                            val intent = Intent("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
-                            sendBroadcast(intent)
-                        }
-                    }
-                } else {
-                    // Permission denied - update toggle state
-                    if (permissionsDialog?.isShowing == true) {
-                        val dialogView = permissionsDialog?.window?.decorView
-                        dialogView?.post {
-                            val permissionsList = dialogView.findViewById<LinearLayout>(R.id.permissions_list)
-                            if (permissionsList != null) {
-                                for (j in 0 until permissionsList.childCount) {
-                                    val itemView = permissionsList.getChildAt(j)
-                                    val toggle = itemView.findViewById<Switch>(R.id.permission_switch)
-                                    val nameText = itemView.findViewById<TextView>(R.id.permission_name)
-                                    if (nameText?.text == permissionName) {
-                                        toggle?.isChecked = false
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Mark as denied if user permanently denied
-                    if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
-                        when (permission) {
-                            Manifest.permission.READ_CONTACTS -> {
-                                prefs.edit().putBoolean("contacts_permission_denied", true).apply()
-                            }
-                            Manifest.permission.SEND_SMS -> {
-                                prefs.edit().putBoolean("sms_permission_denied", true).apply()
-                            }
-                            Manifest.permission.ACTIVITY_RECOGNITION -> {
-                                prefs.edit().putBoolean("activity_recognition_permission_denied", true).apply()
-                            }
-                        }
-                    }
-                    
-                    if (permissionName != null) {
-                        Toast.makeText(this, "$permissionName permission denied", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-    }
-    
     private fun makeSystemBarsTransparent() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11+ (API 30+)
                 window.statusBarColor = android.graphics.Color.TRANSPARENT
                 window.navigationBarColor = android.graphics.Color.TRANSPARENT
                 window.setDecorFitsSystemWindows(false)
                 
-                // Use decorView to get insetsController safely
                 val decorView = window.decorView
                 if (decorView != null) {
                     val insetsController = decorView.windowInsetsController
                     if (insetsController != null) {
-                        // Always use white/light icons regardless of mode
                         insetsController.setSystemBarsAppearance(
                             0,
                             WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
@@ -1375,7 +742,6 @@ class SettingsActivity : ComponentActivity() {
                     }
                 }
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // Android 5.0+ (API 21+)
                 window.statusBarColor = android.graphics.Color.TRANSPARENT
                 window.navigationBarColor = android.graphics.Color.TRANSPARENT
                 window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
@@ -1390,23 +756,17 @@ class SettingsActivity : ComponentActivity() {
                         flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        
-                        // Always use white/light icons regardless of mode (don't set LIGHT_STATUS_BAR flag)
-                        // When LIGHT_STATUS_BAR is NOT set, icons are light/white
-                        
                         decorView.systemUiVisibility = flags
                     }
                 }
             }
         } catch (e: Exception) {
-            // If anything fails, at least try to set the colors
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     window.statusBarColor = android.graphics.Color.TRANSPARENT
                     window.navigationBarColor = android.graphics.Color.TRANSPARENT
                 }
             } catch (ex: Exception) {
-                // Ignore if even this fails
             }
         }
     }

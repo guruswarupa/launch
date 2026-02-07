@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
+import androidx.core.content.edit
 
 class DailyUsageManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("daily_usage_prefs", Context.MODE_PRIVATE)
@@ -31,7 +32,7 @@ class DailyUsageManager(private val context: Context) {
      * Enable or disable daily usage timer for an app
      */
     fun setTimerEnabled(packageName: String, enabled: Boolean) {
-        prefs.edit().putBoolean("${PREF_TIMER_ENABLED_PREFIX}$packageName", enabled).apply()
+        prefs.edit { putBoolean("${PREF_TIMER_ENABLED_PREFIX}$packageName", enabled) }
     }
 
     /**
@@ -45,7 +46,7 @@ class DailyUsageManager(private val context: Context) {
      * Set daily usage limit for an app in milliseconds
      */
     fun setDailyLimit(packageName: String, limitMs: Long) {
-        prefs.edit().putLong("${PREF_DAILY_LIMIT_PREFIX}$packageName", limitMs).apply()
+        prefs.edit { putLong("${PREF_DAILY_LIMIT_PREFIX}$packageName", limitMs) }
     }
 
     /**
@@ -61,7 +62,7 @@ class DailyUsageManager(private val context: Context) {
         
         // Store it for quick access (though we'll always use the manager for accuracy)
         if (usageFromStats > 0) {
-            prefs.edit().putLong("${PREF_DAILY_USAGE_PREFIX}$packageName", usageFromStats).apply()
+            prefs.edit { putLong("${PREF_DAILY_USAGE_PREFIX}$packageName", usageFromStats) }
         }
         
         return usageFromStats
@@ -74,7 +75,7 @@ class DailyUsageManager(private val context: Context) {
         resetIfNewDay()
         // Usage is tracked via UsageStatsManager, but we can store a timestamp
         // to track when the app was last used
-        prefs.edit().putLong("last_used_$packageName", System.currentTimeMillis()).apply()
+        prefs.edit { putLong("last_used_$packageName", System.currentTimeMillis()) }
     }
 
     /**
@@ -158,7 +159,7 @@ class DailyUsageManager(private val context: Context) {
                         if (limitMs > 0) "Daily limit set to ${formatTime(limitMs)}" else "Daily limit disabled",
                         Toast.LENGTH_SHORT
                     ).show()
-                } catch (e: NumberFormatException) {
+                } catch (_: NumberFormatException) {
                     Toast.makeText(context, "Please enter a valid number", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -183,14 +184,15 @@ class DailyUsageManager(private val context: Context) {
         
         if (lastResetDate != today) {
             // New day - clear all usage data
-            val editor = prefs.edit()
-            val allPrefs = prefs.all
-            for (key in allPrefs.keys) {
-                if (key.startsWith(PREF_DAILY_USAGE_PREFIX)) {
-                    editor.remove(key)
+            prefs.edit {
+                val allPrefs = prefs.all
+                for (key in allPrefs.keys) {
+                    if (key.startsWith(PREF_DAILY_USAGE_PREFIX)) {
+                        remove(key)
+                    }
                 }
+                putLong(PREF_LAST_RESET_DATE, today)
             }
-            editor.putLong(PREF_LAST_RESET_DATE, today).apply()
         }
     }
 
@@ -198,7 +200,7 @@ class DailyUsageManager(private val context: Context) {
      * Reset usage for a specific app (for testing or manual reset)
      */
     fun resetUsage(packageName: String) {
-        prefs.edit().remove("${PREF_DAILY_USAGE_PREFIX}$packageName").apply()
+        prefs.edit { remove("${PREF_DAILY_USAGE_PREFIX}$packageName") }
     }
 
     /**

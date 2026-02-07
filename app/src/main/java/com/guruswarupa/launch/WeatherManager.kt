@@ -4,14 +4,17 @@ import android.app.AlertDialog
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import org.json.JSONObject
 import java.net.URL
 import java.util.concurrent.Executors
+import com.guruswarupa.launch.R
+
 class WeatherManager(private val context: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -87,8 +90,7 @@ class WeatherManager(private val context: Context) {
         val timestamp: Long
     )
 
-    private var isPromptingForApiKey = false
-    private var isPromptingForCityName = false
+    private var isPrompting = false
 
     fun updateWeather(weatherIcon: ImageView, weatherText: TextView, forcePrompt: Boolean = false) {
         val apiKey = getApiKey()
@@ -100,18 +102,7 @@ class WeatherManager(private val context: Context) {
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
 
                     val clickListener = View.OnClickListener {
-                        if (!isPromptingForApiKey) {
-                            isPromptingForApiKey = true
-                            promptForApiKey { key ->
-                                isPromptingForApiKey = false
-                                if (key != null) {
-                                    saveApiKey(key)
-                                    setUserRejectedApiKey(false)
-                                    // After API key is set, prompt for city name
-                                    promptForCityNameAndFetchWeather(weatherIcon, weatherText, key)
-                                }
-                            }
-                        }
+                        showWeatherSettings(weatherIcon, weatherText)
                     }
                     weatherIcon.setOnClickListener(clickListener)
                     weatherText.setOnClickListener(clickListener)
@@ -119,77 +110,24 @@ class WeatherManager(private val context: Context) {
                 return
             }
 
-            // Only prompt if not already prompting
-            if (!isPromptingForApiKey) {
-                isPromptingForApiKey = true
-                promptForApiKey { key ->
-                    isPromptingForApiKey = false
-                    if (key != null) {
-                        saveApiKey(key)
-                        setUserRejectedApiKey(false)
-                        // After API key is set, prompt for city name
-                        promptForCityNameAndFetchWeather(weatherIcon, weatherText, key)
-                    } else {
-                        setUserRejectedApiKey(true)
-                        handler.post {
-                            weatherText.text = "Tap to set weather API key"
-                            weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
-
-                            val clickListener = View.OnClickListener {
-                                if (!isPromptingForApiKey) {
-                                    isPromptingForApiKey = true
-                                    promptForApiKey { key ->
-                                        isPromptingForApiKey = false
-                                        if (key != null) {
-                                            saveApiKey(key)
-                                            setUserRejectedApiKey(false)
-                                            // After API key is set, prompt for city name
-                                            promptForCityNameAndFetchWeather(weatherIcon, weatherText, key)
-                                        }
-                                    }
-                                }
-                            }
-                            weatherIcon.setOnClickListener(clickListener)
-                            weatherText.setOnClickListener(clickListener)
-                        }
-                    }
-                }
+            if (!isPrompting) {
+                showWeatherSettings(weatherIcon, weatherText)
             }
         } else {
-            // API key exists, check for cached weather first
             val cachedWeather = getCachedWeather()
-            if (cachedWeather != null) {
-                if (isCacheValid(cachedWeather)) {
-                    // Show cached weather immediately (cache is still fresh)
-                    handler.post {
-                        weatherText.text = "${cachedWeather.temperature}°C ${cachedWeather.description}"
-                        setWeatherIcon(weatherIcon, cachedWeather.weatherId)
-                        setupRefreshListeners(weatherIcon, weatherText)
-                    }
-                    return
-                } else {
-                    // Cache expired, show cached data but indicate it needs refresh
-                    handler.post {
-                        weatherText.text = "${cachedWeather.temperature}°C ${cachedWeather.description} (tap to refresh)"
-                        setWeatherIcon(weatherIcon, cachedWeather.weatherId)
-                        setupRefreshListeners(weatherIcon, weatherText)
-                    }
-                    return
-                }
-            }
-            
-            // No cache at all, check for city name
-            val storedCityName = getStoredCityName()
-            if (storedCityName != null && storedCityName.isNotEmpty()) {
-                // Show placeholder and allow user to tap to fetch
+            if (cachedWeather != null && isCacheValid(cachedWeather)) {
                 handler.post {
-                    weatherText.text = "Tap to load weather"
-                    weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+                    weatherText.text = "${cachedWeather.temperature}°C ${cachedWeather.description}"
+                    setWeatherIcon(weatherIcon, cachedWeather.weatherId)
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
+                return
+            }
+            
+            val storedCityName = getStoredCityName()
+            if (storedCityName != null && storedCityName.isNotEmpty()) {
+                fetchWeatherData(weatherIcon, weatherText, storedCityName, apiKey)
             } else {
-                // No city name stored, show placeholder instead of prompting
-                // User can tap to enter location when they want
                 handler.post {
                     weatherText.text = "Tap to enter location"
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
@@ -199,79 +137,12 @@ class WeatherManager(private val context: Context) {
         }
     }
 
-    private fun promptForCityNameAndFetchWeather(weatherIcon: ImageView, weatherText: TextView, apiKey: String) {
-        handler.post {
-            if (isPromptingForCityName) return@post
-            isPromptingForCityName = true
-            
-            val builder = AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            val input = EditText(context)
-            input.hint = "Enter city name (e.g., London, New York)"
-            
-            // Pre-fill with stored city name if available
-            val storedCityName = getStoredCityName()
-            if (storedCityName != null && storedCityName.isNotEmpty()) {
-                input.setText(storedCityName)
-            }
-
-            builder.setTitle("Enter Location")
-                .setMessage("Enter the name of the city for weather information")
-                .setView(input)
-                .setPositiveButton("Get Weather") { _, _ ->
-                    val cityName = input.text.toString().trim()
-                    if (cityName.isNotEmpty()) {
-                        saveCityName(cityName)
-                        isPromptingForCityName = false
-                        fetchWeatherData(weatherIcon, weatherText, cityName, apiKey)
-                    } else {
-                        isPromptingForCityName = false
-                        handler.post {
-                            weatherText.text = "Tap to enter location"
-                            weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
-                            setupRefreshListeners(weatherIcon, weatherText)
-                        }
-                    }
-                }
-                .setNegativeButton("Cancel") { _, _ -> 
-                    isPromptingForCityName = false
-                    handler.post {
-                        weatherText.text = "Tap to enter location"
-                        weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
-                        setupRefreshListeners(weatherIcon, weatherText)
-                    }
-                }
-                .setOnDismissListener {
-                    isPromptingForCityName = false
-                }
-                .show()
-        }
-    }
-
-    private fun promptForApiKey(callback: (String?) -> Unit) {
-        handler.post {
-            val builder = AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            val input = EditText(context)
-            input.hint = "Enter your OpenWeatherMap API key"
-
-            builder.setTitle("Weather API Key Required")
-                .setMessage("To display weather information, please enter your OpenWeatherMap API key.\n\nGet one free at: openweathermap.org/api")
-                .setView(input)
-                .setPositiveButton("Save") { _, _ ->
-                    val apiKey = input.text.toString().trim()
-                    if (apiKey.isNotEmpty()) {
-                        callback(apiKey)
-                    } else {
-                        callback(null)
-                    }
-                }
-                .setNegativeButton("Cancel") { _, _ -> callback(null) }
-                .show()
-        }
-    }
-
     private fun fetchWeatherData(weatherIcon: ImageView, weatherText: TextView, cityName: String, apiKey: String) {
-        // URL encode the city name to handle spaces and special characters
-        val encodedCityName = java.net.URLEncoder.encode(cityName, "UTF-8")
+        val encodedCityName = try {
+            java.net.URLEncoder.encode(cityName, "UTF-8")
+        } catch (e: Exception) {
+            cityName
+        }
         val url = "https://api.openweathermap.org/data/2.5/weather?q=$encodedCityName&appid=$apiKey&units=metric"
 
         executor.execute {
@@ -284,15 +155,14 @@ class WeatherManager(private val context: Context) {
                 val temperature = main.getInt("temp")
                 val description = weather.getString("main")
                 val weatherId = weather.getInt("id")
-                val cityName = jsonObject.getString("name")
+                val actualCityName = jsonObject.getString("name")
 
-                // Save to cache
                 saveCachedWeather(temperature, description, weatherId)
+                saveCityName(actualCityName)
                 
                 handler.post {
                     weatherText.text = "$temperature°C $description"
                     setWeatherIcon(weatherIcon, weatherId)
-                    // Set up refresh click listeners after successfully displaying weather
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
 
@@ -300,7 +170,6 @@ class WeatherManager(private val context: Context) {
                 handler.post {
                     weatherText.text = "Weather unavailable"
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
-                    // Set up click listeners even when weather is unavailable so user can tap to enter location
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
             }
@@ -309,14 +178,14 @@ class WeatherManager(private val context: Context) {
 
     private fun setWeatherIcon(weatherIcon: ImageView, weatherId: Int) {
         val iconResource = when (weatherId) {
-            in 200..232 -> R.drawable.ic_weather_rainy // Thunderstorm
-            in 300..321 -> R.drawable.ic_weather_rainy // Drizzle
-            in 500..531 -> R.drawable.ic_weather_rainy // Rain
-            in 600..622 -> R.drawable.ic_weather_snowy // Snow
-            in 701..781 -> R.drawable.ic_weather_cloudy // Atmosphere (mist, smoke, etc.)
-            800 -> R.drawable.ic_weather_sunny // Clear sky
-            in 801..804 -> R.drawable.ic_weather_cloudy // Clouds
-            else -> R.drawable.ic_weather_cloudy // Default
+            in 200..232 -> R.drawable.ic_weather_rainy
+            in 300..321 -> R.drawable.ic_weather_rainy
+            in 500..531 -> R.drawable.ic_weather_rainy
+            in 600..622 -> R.drawable.ic_weather_snowy
+            in 701..781 -> R.drawable.ic_weather_cloudy
+            800 -> R.drawable.ic_weather_sunny
+            in 801..804 -> R.drawable.ic_weather_cloudy
+            else -> R.drawable.ic_weather_cloudy
         }
         weatherIcon.setImageResource(iconResource)
     }
@@ -324,74 +193,64 @@ class WeatherManager(private val context: Context) {
     private fun setupRefreshListeners(weatherIcon: ImageView, weatherText: TextView) {
         val refreshClickListener = View.OnClickListener {
             val apiKey = getApiKey()
-            if (apiKey == null) {
-                // No API key, prompt for it
-                updateWeather(weatherIcon, weatherText)
+            val storedCityName = getStoredCityName()
+            if (apiKey == null || storedCityName == null) {
+                showWeatherSettings(weatherIcon, weatherText)
             } else {
-                val storedCityName = getStoredCityName()
-                if (storedCityName != null && storedCityName.isNotEmpty()) {
-                    // Clear expired cache and fetch fresh weather
-                    val cachedWeather = getCachedWeather()
-                    if (cachedWeather != null && !isCacheValid(cachedWeather)) {
-                        // Clear expired cache
-                        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-                        prefs.edit()
-                            .remove("weather_cached_temperature")
-                            .remove("weather_cached_description")
-                            .remove("weather_cached_weather_id")
-                            .remove("weather_cached_timestamp")
-                            .apply()
-                    }
-                    // Fetch fresh weather with stored city name
-                    fetchWeatherData(weatherIcon, weatherText, storedCityName, apiKey)
-                } else {
-                    // No city name, prompt for it
-                    promptForCityNameAndFetchWeather(weatherIcon, weatherText, apiKey)
-                }
+                fetchWeatherData(weatherIcon, weatherText, storedCityName, apiKey)
             }
         }
         weatherIcon.setOnClickListener(refreshClickListener)
         weatherText.setOnClickListener(refreshClickListener)
     }
     
-    /**
-     * Shows weather API settings dialog.
-     * Extracted from MainActivity.
-     */
     fun showWeatherSettings(
         weatherIcon: ImageView? = null,
         weatherText: TextView? = null,
         onApiKeyUpdated: (() -> Unit)? = null
     ) {
         handler.post {
-            val currentApiKey = getApiKey() ?: ""
+            isPrompting = true
+            val inflater = LayoutInflater.from(context)
+            val dialogView = inflater.inflate(R.layout.dialog_weather_settings, null)
+            val apiKeyInput = dialogView.findViewById<EditText>(R.id.weather_api_key_input)
+            val locationInput = dialogView.findViewById<EditText>(R.id.weather_location_input)
+            
+            apiKeyInput.setText(getApiKey() ?: "")
+            locationInput.setText(getStoredCityName() ?: "")
             
             val builder = AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            val input = EditText(context)
-            input.setText(currentApiKey)
-            input.hint = "Enter your OpenWeatherMap API key"
-            
-            builder.setTitle("Weather API Settings")
-                .setMessage("Update your OpenWeatherMap API key.\n\nGet one free at: openweathermap.org/api")
-                .setView(input)
+            builder.setTitle("Weather Settings")
+                .setView(dialogView)
                 .setPositiveButton("Save") { _, _ ->
-                    val apiKey = input.text.toString().trim()
+                    val apiKey = apiKeyInput.text.toString().trim()
+                    val location = locationInput.text.toString().trim()
+                    
                     if (apiKey.isNotEmpty()) {
                         saveApiKey(apiKey)
                         setUserRejectedApiKey(false)
-                        android.widget.Toast.makeText(context, "API key saved", android.widget.Toast.LENGTH_SHORT).show()
-                        // Refresh weather if views are provided
-                        if (weatherIcon != null && weatherText != null) {
-                            updateWeather(weatherIcon, weatherText)
+                        if (location.isNotEmpty()) {
+                            saveCityName(location)
+                            if (weatherIcon != null && weatherText != null) {
+                                fetchWeatherData(weatherIcon, weatherText, location, apiKey)
+                            }
                         }
+                        Toast.makeText(context, "Settings saved", Toast.LENGTH_SHORT).show()
                         onApiKeyUpdated?.invoke()
                     } else {
-                        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-                        prefs.edit().remove("weather_api_key").apply()
-                        android.widget.Toast.makeText(context, "API key removed", android.widget.Toast.LENGTH_SHORT).show()
+                        saveApiKey("") // Effectively remove it
+                        setUserRejectedApiKey(true)
+                        Toast.makeText(context, "API key removed", Toast.LENGTH_SHORT).show()
                     }
+                    isPrompting = false
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Cancel") { dialog, _ ->
+                    isPrompting = false
+                    dialog.dismiss()
+                }
+                .setOnCancelListener {
+                    isPrompting = false
+                }
                 .show()
         }
     }

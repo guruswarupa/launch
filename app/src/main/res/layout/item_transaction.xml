@@ -3,7 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="16dp"
+    android:padding="12dp"
+    android:gravity="center_vertical"
     android:background="?android:attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
@@ -20,8 +21,9 @@
             android:layout_height="wrap_content"
             android:text="Income"
             android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            android:layout_marginBottom="4dp" />
+            android:textSize="10sp"
+            android:textAllCaps="true"
+            android:layout_marginBottom="2dp" />
 
         <TextView
             android:id="@+id/transaction_description"
@@ -38,7 +40,7 @@
             android:text="Jan 1, 2024"
             android:textColor="@color/text_secondary"
             android:textSize="11sp"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="2dp" />
     </LinearLayout>
 
     <TextView
@@ -49,6 +51,18 @@
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"
+        android:layout_marginEnd="12dp"
         android:gravity="end" />
+
+    <ImageButton
+        android:id="@+id/delete_transaction_button"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_delete"
+        android:tint="@color/text_secondary"
+        android:contentDescription="Delete transaction"
+        android:padding="6dp"
+        android:scaleType="centerInside"/>
 
 </LinearLayout>

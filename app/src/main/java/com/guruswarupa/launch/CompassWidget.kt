@@ -1,17 +1,14 @@
 package com.guruswarupa.launch
 
-import android.app.AlertDialog
 import android.content.Context
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.fragment.app.FragmentActivity
+import androidx.core.content.edit
 
 class CompassWidget(
     private val context: Context,
@@ -86,7 +83,7 @@ class CompassWidget(
     private fun toggleCompass() {
         val currentState = sharedPreferences.getBoolean(PREF_COMPASS_ENABLED, false)
         val newState = !currentState
-        sharedPreferences.edit().putBoolean(PREF_COMPASS_ENABLED, newState).apply()
+        sharedPreferences.edit { putBoolean(PREF_COMPASS_ENABLED, newState) }
         updateUI(newState)
     }
     
@@ -94,7 +91,7 @@ class CompassWidget(
         if (isEnabled) {
             // Show compass
             compassContainer.visibility = View.VISIBLE
-            toggleButton.text = "Disable"
+            toggleButton.text = context.getString(R.string.compass_disable)
             
             // Check if sensors are available
             if (compassManager.hasRequiredSensors()) {
@@ -105,7 +102,7 @@ class CompassWidget(
         } else {
             // Hide compass
             compassContainer.visibility = View.GONE
-            toggleButton.text = "Enable"
+            toggleButton.text = context.getString(R.string.compass_enable)
             
             // Stop tracking
             handler.removeCallbacks(updateRunnable)
@@ -135,7 +132,7 @@ class CompassWidget(
         directionText.visibility = View.GONE
         azimuthText.visibility = View.GONE
         
-        noSensorText.text = "Compass sensors not available on this device"
+        noSensorText.text = context.getString(R.string.compass_no_sensors)
     }
     
     private fun updateDisplay() {
@@ -146,7 +143,7 @@ class CompassWidget(
     
     private fun updateCompassDisplay(azimuth: Float, directionName: String) {
         directionText.text = directionName
-        azimuthText.text = "${azimuth.toInt()}°"
+        azimuthText.text = context.getString(R.string.compass_azimuth_format, azimuth.toInt())
         compassView.setDirection(azimuth, directionName)
     }
     

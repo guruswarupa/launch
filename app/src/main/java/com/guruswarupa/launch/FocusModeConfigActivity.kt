@@ -24,6 +24,8 @@ class FocusModeConfigActivity : ComponentActivity() {
 
         recyclerView = findViewById(R.id.focus_mode_app_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
+        // Disable animations to prevent "Tmp detached view" crash during rapid updates
+        recyclerView.itemAnimator = null
 
         loadApps()
 

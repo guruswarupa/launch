@@ -13,7 +13,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -21,6 +21,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.core.view.isVisible
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.GridLayoutManager
@@ -33,7 +35,7 @@ class MainActivity : FragmentActivity() {
 
     // Core dependencies
     private lateinit var sharedPreferences: SharedPreferences
-    private val PREFS_NAME = "com.guruswarupa.launch.PREFS"
+    private val prefsName = "com.guruswarupa.launch.PREFS"
     private val handler = Handler(Looper.getMainLooper())
     private val backgroundExecutor = Executors.newFixedThreadPool(4)
 
@@ -55,11 +57,16 @@ class MainActivity : FragmentActivity() {
     private lateinit var topWidgetContainer: LinearLayout
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
 
+    // Right Drawer Views
+    private lateinit var rightDrawerWallpaper: ImageView
+    private lateinit var rightDrawerTime: TextView
+    private lateinit var rightDrawerDate: TextView
+
     // Core managers
     internal lateinit var cacheManager: CacheManager
     private lateinit var permissionManager: PermissionManager
     private lateinit var systemBarManager: SystemBarManager
-    private lateinit var gestureHandler: GestureHandler
+    internal lateinit var gestureHandler: GestureHandler
     private lateinit var broadcastReceiverManager: BroadcastReceiverManager
     private lateinit var wallpaperManagerHelper: WallpaperManagerHelper
     private lateinit var appListManager: AppListManager
@@ -118,14 +125,14 @@ class MainActivity : FragmentActivity() {
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
         appTimerManager = AppTimerManager(this)
-        appCategoryManager = AppCategoryManager(packageManager)
+        appCategoryManager = AppCategoryManager()
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
         isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
         featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
         
         // Initialize new modular managers
-        appLauncher = AppLauncher(this, packageManager, appLockManager, appTimerManager, appCategoryManager)
+        appLauncher = AppLauncher(this, packageManager, appLockManager)
     }
     
     /**
@@ -168,6 +175,8 @@ class MainActivity : FragmentActivity() {
     private fun initializeViews() {
         searchBox = findViewById(R.id.search_box)
         recyclerView = findViewById(R.id.app_list)
+        // Disable animations to prevent "Tmp detached view" crash during rapid updates
+        recyclerView.itemAnimator = null
         voiceSearchButton = findViewById(R.id.voice_search_button)
         appDock = findViewById(R.id.app_dock)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
@@ -177,14 +186,18 @@ class MainActivity : FragmentActivity() {
         timeTextView = findViewById(R.id.time_widget)
         dateTextView = findViewById(R.id.date_widget)
         topWidgetContainer = findViewById(R.id.top_widget_container)
+        
+        // Right Drawer Views
+        rightDrawerWallpaper = findViewById(R.id.right_drawer_wallpaper)
+        rightDrawerTime = findViewById(R.id.right_drawer_time)
+        rightDrawerDate = findViewById(R.id.right_drawer_date)
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
         
-        activityInitializer = ActivityInitializer(this, sharedPreferences, handler, appLauncher)
+        activityInitializer = ActivityInitializer(this, sharedPreferences, appLauncher)
         activityInitializer.initializeViews(
-            searchBox, recyclerView, voiceSearchButton, appDock,
-            wallpaperBackground, weeklyUsageGraph, weatherIcon, weatherText,
+            searchBox, recyclerView,
             timeTextView, dateTextView
         )
         
@@ -219,9 +232,9 @@ class MainActivity : FragmentActivity() {
      */
     private fun requestInitialPermissions() {
         permissionManager.requestContactsPermission { 
-            contactManager.loadContacts { contacts ->
+            contactManager.loadContacts {
                 if (::appSearchManager.isInitialized) {
-                    appSearchManager.updateContactsList(contacts)
+                    appSearchManager.updateContactsList()
                 } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                     updateAppSearchManager()
                 }
@@ -235,9 +248,8 @@ class MainActivity : FragmentActivity() {
      * Initializes time/date and weather widgets.
      */
     private fun initializeTimeDateAndWeather() {
-        timeDateManager = TimeDateManager(timeTextView, dateTextView)
-        timeDateManager.updateTime()
-        timeDateManager.updateDate()
+        timeDateManager = TimeDateManager(timeTextView, dateTextView, rightDrawerTime, rightDrawerDate)
+        timeDateManager.startUpdates()
         
         widgetSetupManager = WidgetSetupManager(this, handler, usageStatsManager, weatherManager, permissionManager)
         widgetSetupManager.setupWeather(weatherIcon, weatherText)
@@ -259,6 +271,14 @@ class MainActivity : FragmentActivity() {
         noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
         calendarEventsWidget = widgetSetupManager.setupCalendarEventsWidget(sharedPreferences)
         countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
+        
+        // Initialize new widgets
+        val networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget(sharedPreferences)
+        val deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget(sharedPreferences)
+        
+        lifecycleManager.setNetworkStatsWidget(networkStatsWidget)
+        lifecycleManager.setDeviceInfoWidget(deviceInfoWidget)
+        
         todoAlarmManager = TodoAlarmManager(this)
         widgetSetupManager.requestNotificationPermission()
 
@@ -312,7 +332,6 @@ class MainActivity : FragmentActivity() {
         // Always reinitialize to get fresh data (app list, contacts, etc.)
         appSearchManager = AppSearchManager(
             packageManager = packageManager,
-            appList = appList,
             fullAppList = fullAppList,
             adapter = adapter,
             searchBox = searchBox,
@@ -329,15 +348,32 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
+        
+        // Check power saver mode immediately before setting content view to prevent flicker
+        val isPowerSaverMode = sharedPreferences.getBoolean("power_saver_mode_enabled", false)
+        if (isPowerSaverMode) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            // Set window background to black immediately
+            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
+        }
+        
         setContentView(R.layout.activity_main)
+        
+        // If in power saver mode, hide wallpaper views immediately after inflation to prevent flicker
+        if (isPowerSaverMode) {
+            findViewById<View>(R.id.wallpaper_background)?.visibility = View.GONE
+            findViewById<View>(R.id.drawer_wallpaper_background)?.visibility = View.GONE
+            findViewById<View>(R.id.right_drawer_wallpaper)?.visibility = View.GONE
+            findViewById<View>(R.id.drawer_layout)?.setBackgroundColor(android.graphics.Color.BLACK)
+        }
         
         // Make status bar and navigation bar transparent (after setContentView, post to ensure window is ready)
         window.decorView.post {
             systemBarManager.makeSystemBarsTransparent()
         }
 
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        
         // Initialize widget configuration manager
         widgetConfigurationManager = WidgetConfigurationManager(this, sharedPreferences)
         
@@ -382,14 +418,14 @@ class MainActivity : FragmentActivity() {
             initializeDeferredWidgets()
         }, 100) // Defer by 100ms to let UI render first
 
-        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, appLockManager, favoriteAppManager)
+        appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, favoriteAppManager)
         
         // Initialize appList before using it (must be initialized before appListLoader)
         appList = mutableListOf()
         fullAppList = mutableListOf()
         
         // Initialize app list manager
-        appListManager = AppListManager(packageManager, appDockManager, favoriteAppManager, hiddenAppManager, cacheManager, backgroundExecutor)
+        appListManager = AppListManager(appDockManager, favoriteAppManager, hiddenAppManager, cacheManager)
         
         // Initialize app list loader
         appListLoader = AppListLoader(
@@ -436,7 +472,7 @@ class MainActivity : FragmentActivity() {
         // Load weekly usage data lazily (only when graph is visible)
         // Defer to avoid blocking initial load
         handler.postDelayed({
-            if (::weeklyUsageGraph.isInitialized && weeklyUsageGraph.visibility == View.VISIBLE) {
+            if (::weeklyUsageGraph.isInitialized && weeklyUsageGraph.isVisible) {
                 usageStatsDisplayManager.loadWeeklyUsageData()
             }
         }, 300)
@@ -491,6 +527,20 @@ class MainActivity : FragmentActivity() {
         val drawerWallpaper = findViewById<ImageView>(R.id.drawer_wallpaper_background)
         wallpaperManagerHelper = WallpaperManagerHelper(this, wallpaperBackground, drawerWallpaper, backgroundExecutor)
         wallpaperManagerHelper.setWallpaperBackground()
+        
+        // Set wallpaper for the new right drawer
+        handler.postDelayed({
+            if (::rightDrawerWallpaper.isInitialized && ::wallpaperManagerHelper.isInitialized) {
+                // Since WallpaperManagerHelper currently supports two ImageViews (main and left drawer),
+                // we'll manually set the bitmap for the right drawer.
+                // In a production app, we should update WallpaperManagerHelper to handle multiple ImageViews.
+                try {
+                    val wallpaperManager = android.app.WallpaperManager.getInstance(this)
+                    val drawable = wallpaperManager.drawable
+                    rightDrawerWallpaper.setImageDrawable(drawable)
+                } catch (_: Exception) {}
+            }
+        }, 500)
 
         // Initialize voice search manager
         voiceSearchManager = VoiceSearchManager(this, packageManager, searchBox, permissionManager)
@@ -536,6 +586,22 @@ class MainActivity : FragmentActivity() {
         
         // Initialize lifecycle manager
         initializeLifecycleManager()
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (::navigationManager.isInitialized) {
+                    navigationManager.handleBackPressed { 
+                        // If navigation manager says we can proceed with standard back
+                        // but it's the home screen, we usually don't want to do anything
+                    }
+                }
+            }
+        })
+        
+        // Apply power saver mode immediately on launch if active
+        if (isPowerSaverMode) {
+            applyPowerSaverMode(true)
+        }
     }
     
     /**
@@ -712,6 +778,13 @@ class MainActivity : FragmentActivity() {
         if (::wallpaperManagerHelper.isInitialized) {
             wallpaperManagerHelper.clearCache()
             wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
+            
+            // Update right drawer wallpaper as well
+            try {
+                val wallpaperManager = android.app.WallpaperManager.getInstance(this)
+                val drawable = wallpaperManager.drawable
+                rightDrawerWallpaper.setImageDrawable(drawable)
+            } catch (_: Exception) {}
         }
     }
     
@@ -736,8 +809,7 @@ class MainActivity : FragmentActivity() {
                 appListLoader.clearCache()
             }
             if (::adapter.isInitialized) {
-                adapter.appList = appList
-                adapter.notifyDataSetChanged()
+                adapter.updateAppList(appList)
             }
         }
         
@@ -769,6 +841,24 @@ class MainActivity : FragmentActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION && resultCode == Activity.RESULT_OK) {
+            updateWidgetVisibility()
+            // Refresh calendar widget when it becomes visible
+            if (::calendarEventsWidget.isInitialized) {
+                val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
+                if (isEnabled) {
+                    calendarEventsWidget.refresh()
+                }
+            }
+            // Refresh countdown widget when it becomes visible
+            if (::countdownWidget.isInitialized) {
+                val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
+                if (isEnabled) {
+                    countdownWidget.refresh()
+                }
+            }
+        }
+        
         if (::activityResultHandler.isInitialized) {
             // Initialize voice command handler if needed for voice search result
             if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && resultCode == Activity.RESULT_OK) {
@@ -782,10 +872,6 @@ class MainActivity : FragmentActivity() {
     }
 
     // WhatsApp and SMS methods moved to VoiceCommandHandler
-
-    fun showApkSharingDialog() {
-        shareManager.showApkSharingDialog()
-    }
 
     // Voice command handling moved to VoiceCommandHandler
 
@@ -863,28 +949,9 @@ class MainActivity : FragmentActivity() {
 
     // Broadcast receivers moved to BroadcastReceiverManager
 
-    private fun chooseWallpaper() {
-        val intent = Intent(Intent.ACTION_SET_WALLPAPER)
-        startActivityForResult(intent, ActivityResultHandler.WALLPAPER_REQUEST_CODE)
-    }
-
     // App launching methods - delegated to AppLauncher
     internal fun launchAppWithLockCheck(packageName: String, appName: String) {
         appLauncher.launchAppWithLockCheck(packageName, appName)
-    }
-
-    internal fun launchAppWithTimerCheck(packageName: String, onTimerSet: () -> Unit) {
-        appLauncher.launchAppWithTimerCheck(packageName) {
-            if (appLockManager.isAppLocked(packageName)) {
-                appLockManager.verifyPin { isAuthenticated ->
-                    if (isAuthenticated) {
-                        onTimerSet()
-                    }
-                }
-            } else {
-                onTimerSet()
-            }
-        }
     }
 
     // Package receiver moved to BroadcastReceiverManager
@@ -900,12 +967,6 @@ class MainActivity : FragmentActivity() {
     private fun updateUsageInBackground() {
         if (::usageStatsRefreshManager.isInitialized) {
             usageStatsRefreshManager.updateUsageInBackground()
-        }
-    }
-    
-    private fun refreshUsageDataInBackground(deferExpensive: Boolean = false) {
-        if (::usageStatsRefreshManager.isInitialized) {
-            usageStatsRefreshManager.refreshUsageDataInBackground(deferExpensive)
         }
     }
 
@@ -956,6 +1017,7 @@ class MainActivity : FragmentActivity() {
         
         // Resume noise decibel tracking
         if (::noiseDecibelWidget.isInitialized) {
+            noiseDecibelWidget.onPause() // Ensure it's not double-started
             noiseDecibelWidget.onResume()
         }
         
@@ -985,7 +1047,7 @@ class MainActivity : FragmentActivity() {
                     if (::appListLoader.isInitialized) {
                         loadApps(forceRefresh = false)
                     }
-                } catch (e: UninitializedPropertyAccessException) {
+                } catch (_: UninitializedPropertyAccessException) {
                     // Managers not initialized yet, skip refresh
                 }
             }
@@ -1098,7 +1160,7 @@ class MainActivity : FragmentActivity() {
                 onContactsGranted = { 
                     contactManager.loadContacts { contacts ->
                         if (::appSearchManager.isInitialized) {
-                            appSearchManager.updateContactsList(contacts)
+                            appSearchManager.updateContactsList()
                         } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                             // Initialize AppSearchManager if not already initialized
                             updateAppSearchManager()
@@ -1186,7 +1248,8 @@ class MainActivity : FragmentActivity() {
                 timeDateManager,
                 usageStatsDisplayManager,
                 { usageStatsRefreshManager.updateBatteryInBackground() },
-                { usageStatsRefreshManager.updateUsageInBackground() }
+                { usageStatsRefreshManager.updateUsageInBackground() },
+                { enabled -> if (::gestureHandler.isInitialized) gestureHandler.setGesturesEnabled(enabled) }
             )
         }
         powerSaverManager.applyPowerSaverMode(isEnabled)
@@ -1194,27 +1257,11 @@ class MainActivity : FragmentActivity() {
     
 
     /**
-     * Shows the widget configuration dialog
+     * Shows the widget configuration activity
      */
     private fun showWidgetConfigurationDialog() {
-        val dialog = WidgetConfigurationDialog(this, widgetConfigurationManager) {
-            updateWidgetVisibility()
-            // Refresh calendar widget when it becomes visible
-            if (::calendarEventsWidget.isInitialized) {
-                val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
-                if (isEnabled) {
-                    calendarEventsWidget.refresh()
-                }
-            }
-            // Refresh countdown widget when it becomes visible
-            if (::countdownWidget.isInitialized) {
-                val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
-                if (isEnabled) {
-                    countdownWidget.refresh()
-                }
-            }
-        }
-        dialog.show()
+        val intent = Intent(this, WidgetConfigurationActivity::class.java)
+        startActivityForResult(intent, ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION)
     }
     
     /**
@@ -1282,6 +1329,12 @@ class MainActivity : FragmentActivity() {
         
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
+            
+        findViewById<View>(R.id.network_stats_widget_container)?.visibility = 
+            if (widgetMap["network_stats_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+            
+        findViewById<View>(R.id.device_info_widget_container)?.visibility = 
+            if (widgetMap["device_info_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         // Reorder widgets - get the parent LinearLayout that contains all widgets
         // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
@@ -1319,6 +1372,8 @@ class MainActivity : FragmentActivity() {
                     "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
                     "finance_widget" -> findViewById<View>(R.id.finance_widget)
                     "weekly_usage_widget" -> findViewById<View>(R.id.weekly_usage_widget)
+                    "network_stats_widget_container" -> findViewById<View>(R.id.network_stats_widget_container)
+                    "device_info_widget_container" -> findViewById<View>(R.id.device_info_widget_container)
                     else -> null
                 }
                 view?.let { viewMap[widget.id] = it }
@@ -1340,14 +1395,6 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
-        }
-    }
-    
-    override fun onBackPressed() {
-        if (::navigationManager.isInitialized) {
-            navigationManager.handleBackPressed { super.onBackPressed() }
-        } else {
-            super.onBackPressed()
         }
     }
     

@@ -5,16 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
-import java.util.Calendar
 
 /**
  * Manages all broadcast receivers for the launcher
  */
 class BroadcastReceiverManager(
     private val activity: FragmentActivity,
-    private val sharedPreferences: android.content.SharedPreferences,
+    @Suppress("UNUSED_PARAMETER") private val sharedPreferences: android.content.SharedPreferences,
     private val onSettingsUpdated: () -> Unit,
     private val onNotificationsUpdated: () -> Unit,
     private val onPackageChanged: (String?, Boolean) -> Unit, // packageName, isRemoved
@@ -67,6 +66,7 @@ class BroadcastReceiverManager(
     
     private val wallpaperChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            @Suppress("DEPRECATION")
             if (intent?.action == Intent.ACTION_WALLPAPER_CHANGED) {
                 activity.runOnUiThread {
                     onWallpaperChanged()
@@ -99,19 +99,11 @@ class BroadcastReceiverManager(
     fun registerReceivers() {
         // Settings update receiver
         val settingsFilter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            activity.registerReceiver(settingsUpdateReceiver, settingsFilter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            activity.registerReceiver(settingsUpdateReceiver, settingsFilter)
-        }
+        registerReceiverCompat(settingsUpdateReceiver, settingsFilter, exported = false)
         
         // Notification update receiver
         val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            activity.registerReceiver(notificationUpdateReceiver, notificationFilter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            activity.registerReceiver(notificationUpdateReceiver, notificationFilter)
-        }
+        registerReceiverCompat(notificationUpdateReceiver, notificationFilter, exported = false)
         
         // Package receiver
         val packageFilter = IntentFilter().apply {
@@ -120,20 +112,32 @@ class BroadcastReceiverManager(
             addAction(Intent.ACTION_PACKAGE_REPLACED)
             addDataScheme("package")
         }
-        activity.registerReceiver(packageReceiver, packageFilter)
+        registerReceiverCompat(packageReceiver, packageFilter, exported = true)
         
         // Wallpaper change receiver
-        activity.registerReceiver(wallpaperChangeReceiver, IntentFilter(Intent.ACTION_WALLPAPER_CHANGED))
+        @Suppress("DEPRECATION")
+        val wallpaperFilter = IntentFilter(Intent.ACTION_WALLPAPER_CHANGED)
+        registerReceiverCompat(wallpaperChangeReceiver, wallpaperFilter, exported = true)
         
         // Battery change receiver
-        activity.registerReceiver(batteryChangeReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        registerReceiverCompat(batteryChangeReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED), exported = true)
         
         // Activity recognition permission receiver
         val activityRecognitionFilter = IntentFilter("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
+        registerReceiverCompat(activityRecognitionPermissionReceiver, activityRecognitionFilter, exported = false)
+    }
+
+    private fun registerReceiverCompat(receiver: BroadcastReceiver, filter: IntentFilter, exported: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            activity.registerReceiver(activityRecognitionPermissionReceiver, activityRecognitionFilter, Context.RECEIVER_NOT_EXPORTED)
+            val flags = if (exported) Context.RECEIVER_EXPORTED else Context.RECEIVER_NOT_EXPORTED
+            activity.registerReceiver(receiver, filter, flags)
         } else {
-            activity.registerReceiver(activityRecognitionPermissionReceiver, activityRecognitionFilter)
+            ContextCompat.registerReceiver(
+                activity,
+                receiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
         }
     }
     
@@ -141,35 +145,21 @@ class BroadcastReceiverManager(
      * Unregister all receivers
      */
     fun unregisterReceivers() {
-        try {
-            activity.unregisterReceiver(settingsUpdateReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver was not registered
-        }
-        try {
-            activity.unregisterReceiver(notificationUpdateReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver was not registered
-        }
-        try {
-            activity.unregisterReceiver(packageReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver was not registered
-        }
-        try {
-            activity.unregisterReceiver(wallpaperChangeReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver was not registered
-        }
-        try {
-            activity.unregisterReceiver(batteryChangeReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver was not registered
-        }
-        try {
-            activity.unregisterReceiver(activityRecognitionPermissionReceiver)
-        } catch (e: IllegalArgumentException) {
-            // Receiver was not registered
+        val receivers = listOf(
+            settingsUpdateReceiver,
+            notificationUpdateReceiver,
+            packageReceiver,
+            wallpaperChangeReceiver,
+            batteryChangeReceiver,
+            activityRecognitionPermissionReceiver
+        )
+
+        for (receiver in receivers) {
+            try {
+                activity.unregisterReceiver(receiver)
+            } catch (_: IllegalArgumentException) {
+                // Receiver was not registered
+            }
         }
     }
 }

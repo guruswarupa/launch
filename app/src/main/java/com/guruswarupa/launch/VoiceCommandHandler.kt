@@ -20,17 +20,19 @@ class VoiceCommandHandler(
 ) {
     
     /**
-     * Handle voice command and execute appropriate action
+     * Handle voice command and execute appropriate action.
+     * @return true if the command was recognized and handled locally, false otherwise.
      */
-    fun handleCommand(command: String) {
-        when {
+    fun handleCommand(command: String): Boolean {
+        return when {
             command.startsWith("WhatsApp ", ignoreCase = true) -> {
                 val contactName = command.substringAfter("WhatsApp ", "").trim()
                 val phoneNumber = getPhoneNumberForContact(contactName)
                 phoneNumber?.let {
                     openWhatsAppChat(contactName)
                     searchBox.text.clear()
-                }
+                    true
+                } ?: false
             }
             command.startsWith("send ", ignoreCase = true) && command.contains(" to ", ignoreCase = true) -> {
                 val parts = command.split(" to ", ignoreCase = true)
@@ -42,8 +44,12 @@ class VoiceCommandHandler(
                     phoneNumber?.let {
                         sendWhatsAppMessage(it, message)
                         searchBox.text.clear()
-                    } ?: Toast.makeText(activity, "Contact not found", Toast.LENGTH_SHORT).show()
-                }
+                        true
+                    } ?: run {
+                        Toast.makeText(activity, "Contact not found", Toast.LENGTH_SHORT).show()
+                        false
+                    }
+                } else false
             }
             command.startsWith("message ", ignoreCase = true) -> {
                 val contactName = command.substringAfter("message ", "").trim()
@@ -51,7 +57,8 @@ class VoiceCommandHandler(
                 phoneNumber?.let {
                     openSMSChat(contactName)
                     searchBox.text.clear()
-                }
+                    true
+                } ?: false
             }
             command.startsWith("call ", ignoreCase = true) -> {
                 val contactName = command.substringAfter("call ", "").trim()
@@ -61,48 +68,44 @@ class VoiceCommandHandler(
                     callIntent.data = Uri.parse("tel:$it")
                     activity.startActivity(callIntent)
                     searchBox.text.clear()
-                }
+                    true
+                } ?: false
             }
             command.startsWith("search ", ignoreCase = true) -> {
                 val query = command.substringAfter("search ", "").trim()
                 val searchIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(query)}"))
                 activity.startActivity(searchIntent)
                 searchBox.text.clear()
+                true
             }
             command.startsWith("open ", ignoreCase = true) -> {
                 val appName = command.substringAfter("open ", "").trim()
                 if (appName.isNotEmpty()) {
+                    // Try exact match first, then container match
                     val matchingApp = appList.find { resolveInfo ->
-                        try {
-                            val label = resolveInfo.activityInfo?.applicationInfo?.let {
-                                resolveInfo.loadLabel(packageManager)?.toString()
-                            }
-                            label?.contains(appName, ignoreCase = true) ?: false
-                        } catch (e: Exception) {
-                            false
-                        }
+                        val label = resolveInfo.loadLabel(packageManager)?.toString()?.lowercase() ?: ""
+                        label == appName.lowercase()
+                    } ?: appList.find { resolveInfo ->
+                        val label = resolveInfo.loadLabel(packageManager)?.toString()?.lowercase() ?: ""
+                        label.contains(appName.lowercase())
                     }
+
                     matchingApp?.let {
                         val intent = packageManager.getLaunchIntentForPackage(it.activityInfo.packageName)
-                        intent?.let { activity.startActivity(it) }
-                        searchBox.text.clear()
-                    } ?: searchBox.setText(command)
-                } else {
-                    searchBox.setText(command)
-                }
+                        intent?.let { 
+                            activity.startActivity(it)
+                            searchBox.text.clear()
+                            true
+                        } ?: false
+                    } ?: false
+                } else false
             }
             command.startsWith("uninstall ", ignoreCase = true) -> {
                 val appName = command.substringAfter("uninstall ", "").trim()
                 if (appName.isNotEmpty()) {
                     val matchingApp = appList.find { resolveInfo ->
-                        try {
-                            val label = resolveInfo.activityInfo?.applicationInfo?.let {
-                                resolveInfo.loadLabel(packageManager)?.toString()
-                            }
-                            label?.contains(appName, ignoreCase = true) ?: false
-                        } catch (e: Exception) {
-                            false
-                        }
+                        val label = resolveInfo.loadLabel(packageManager)?.toString()?.lowercase() ?: ""
+                        label.contains(appName.lowercase())
                     }
                     
                     matchingApp?.let {
@@ -112,27 +115,32 @@ class VoiceCommandHandler(
                         }
                         activity.startActivity(intent)
                         searchBox.text.clear()
-                    } ?: searchBox.setText(command)
-                } else {
-                    searchBox.setText(command)
-                }
+                        true
+                    } ?: false
+                } else false
             }
             command.contains(" to ", ignoreCase = true) -> {
                 val locations = command.split(" to ", ignoreCase = true)
                 if (locations.size == 2) {
                     val origin = locations[0].trim()
                     val destination = locations[1].trim()
-                    val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=${Uri.encode(origin)}&destination=${Uri.encode(destination)}&travelmode=driving")
-                    val mapIntent = Intent(Intent.ACTION_VIEW, uri)
-                    mapIntent.setPackage("com.google.android.apps.maps")
-                    try {
-                        activity.startActivity(mapIntent)
-                        searchBox.text.clear()
-                    } catch (e: Exception) {
-                        Toast.makeText(activity, "Google Maps not installed", Toast.LENGTH_SHORT).show()
-                    }
-                }
+                    // Check if it's likely a navigation command (at least one location is not empty)
+                    if (origin.isNotEmpty() || destination.isNotEmpty()) {
+                        val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=${Uri.encode(origin)}&destination=${Uri.encode(destination)}&travelmode=driving")
+                        val mapIntent = Intent(Intent.ACTION_VIEW, uri)
+                        mapIntent.setPackage("com.google.android.apps.maps")
+                        try {
+                            activity.startActivity(mapIntent)
+                            searchBox.text.clear()
+                            true
+                        } catch (e: Exception) {
+                            Toast.makeText(activity, "Google Maps not installed", Toast.LENGTH_SHORT).show()
+                            false
+                        }
+                    } else false
+                } else false
             }
+            else -> false
         }
     }
     

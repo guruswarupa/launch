@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.ResolveInfo
@@ -18,14 +19,18 @@ import android.content.Context
 import android.database.Cursor
 import android.graphics.drawable.Drawable
 import android.provider.ContactsContract
-import kotlin.apply
 
 import android.provider.Settings
 import android.view.Gravity
 import android.widget.PopupMenu
 import java.util.concurrent.Executors
 import android.app.Activity
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.net.toUri
+import androidx.core.view.size
+import androidx.core.view.get
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -39,9 +44,8 @@ class AppAdapter(
     private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
     private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
     private val labelCache = mutableMapOf<String, String>() // packageName to label
-    private val packageValidityCache = mutableMapOf<String, Boolean>() // Cache for app validity checks
     private val specialAppIconCache = mutableMapOf<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
-    private val CACHE_DURATION = 30000L // 30 seconds cache (reduced for more frequent updates)
+    private val cacheDuration = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
     private var itemsRendered = 0 // Track how many items have been rendered
     private val iconPreloadExecutor = Executors.newFixedThreadPool(2) // Separate thread pool for icon preloading
@@ -62,6 +66,7 @@ class AppAdapter(
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
         val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
+        var lastClickTime = 0L
     }
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
@@ -81,7 +86,7 @@ class AppAdapter(
                     labelCache[packageName] = cachedMetadata.label
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // If cache is not available, labels will be loaded on-demand
         }
 
@@ -150,15 +155,9 @@ class AppAdapter(
                 // Pre-load icon if not cached
                 if (!iconCache.containsKey(packageName)) {
                     try {
-                        val isValidApp = packageValidityCache.getOrPut(packageName) {
-                            app.activityInfo?.applicationInfo != null
-                        }
-                        
-                        if (isValidApp) {
-                            val icon = app.loadIcon(activity.packageManager)
-                            iconCache[packageName] = icon
-                        }
-                    } catch (e: Exception) {
+                        val icon = app.loadIcon(activity.packageManager)
+                        iconCache[packageName] = icon
+                    } catch (_: Exception) {
                         // Ignore errors during pre-loading
                     }
                 }
@@ -166,16 +165,9 @@ class AppAdapter(
                 // Pre-load label if not cached
                 if (!labelCache.containsKey(packageName)) {
                     try {
-                        val isValidApp = packageValidityCache.getOrPut(packageName) {
-                            app.activityInfo?.applicationInfo != null
-                        }
-                        
-                        if (isValidApp) {
-                            val label = app.loadLabel(activity.packageManager)?.toString()
-                                ?: app.activityInfo.packageName
-                            labelCache[packageName] = label
-                        }
-                    } catch (e: Exception) {
+                        val label = app.loadLabel(activity.packageManager).toString()
+                        labelCache[packageName] = label
+                    } catch (_: Exception) {
                         // Ignore errors during pre-loading
                     }
                 }
@@ -194,15 +186,9 @@ class AppAdapter(
                     
                     if (!iconCache.containsKey(packageName)) {
                         try {
-                            val isValidApp = packageValidityCache.getOrPut(packageName) {
-                                app.activityInfo?.applicationInfo != null
-                            }
-                            
-                            if (isValidApp) {
-                                val icon = app.loadIcon(activity.packageManager)
-                                iconCache[packageName] = icon
-                            }
-                        } catch (e: Exception) {
+                            val icon = app.loadIcon(activity.packageManager)
+                            iconCache[packageName] = icon
+                        } catch (_: Exception) {
                             // Ignore errors
                         }
                     }
@@ -233,7 +219,7 @@ class AppAdapter(
                     try {
                         val icon = app.loadIcon(activity.packageManager)
                         iconCache[packageName] = icon
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // Ignore errors
                     }
                 }
@@ -250,7 +236,7 @@ class AppAdapter(
         val currentTime = System.currentTimeMillis()
         val cached = usageCache[packageName]
 
-        return if (cached != null && (currentTime - cached.second) < CACHE_DURATION) {
+        return if (cached != null && (currentTime - cached.second) < cacheDuration) {
             cached.first
         } else {
             val usageTime = usageStatsManager.getAppUsageTime(packageName)
@@ -272,6 +258,22 @@ class AppAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
+        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
+
+        // Handle pitch black UI for app items in power saver mode
+        if (isPowerSaverActive) {
+            holder.itemView.background = null
+            holder.itemView.elevation = 0f
+            holder.appIcon.background = null
+        } else {
+            if (!isGridMode) {
+                holder.itemView.setBackgroundResource(R.drawable.rounded_background)
+                holder.itemView.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
+            } else {
+                holder.itemView.setBackgroundResource(android.R.drawable.list_selector_background)
+            }
+            holder.appIcon.setBackgroundResource(R.drawable.circular_background)
+        }
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
@@ -279,14 +281,13 @@ class AppAdapter(
         // Show usage time only in list mode and when power saver is disabled
         // Hide usage time in power saver mode to save battery (no usage queries)
         // Defer usage stats loading on initial render for better performance
-        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
         
         if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
             // OPTIMIZATION: Always defer usage stats loading for first 30 items to improve initial render
             // This prevents blocking the UI thread during initial load
             if (position < 30 && itemsRendered < 30) {
-                holder.appUsageTime?.text = ""
-                holder.appUsageTime?.visibility = View.VISIBLE
+                holder.appUsageTime.text = ""
+                holder.appUsageTime.visibility = View.VISIBLE
                 // Load usage time asynchronously after initial render
                 executor.execute {
                     val usageTime = getUsageTimeWithCache(packageName)
@@ -294,7 +295,7 @@ class AppAdapter(
                     (context as? Activity)?.runOnUiThread {
                         // Only update if this holder still shows the same app
                         if (holder.bindingAdapterPosition == position) {
-                            holder.appUsageTime?.text = formattedTime
+                            holder.appUsageTime.text = formattedTime
                         }
                     }
                 }
@@ -302,8 +303,8 @@ class AppAdapter(
                 // Use cached usage time (cache lookup is fast, actual query only if cache expired)
                 val usageTime = getUsageTimeWithCache(packageName)
                 val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-                holder.appUsageTime?.text = formattedTime
-                holder.appUsageTime?.visibility = View.VISIBLE
+                holder.appUsageTime.text = formattedTime
+                holder.appUsageTime.visibility = View.VISIBLE
             }
         } else {
             holder.appUsageTime?.visibility = View.GONE
@@ -356,18 +357,18 @@ class AppAdapter(
                                     holder.appIcon.setImageDrawable(icon)
                                 }
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Icon already set to default, no need to update
                         }
                     }
                 }
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} on Play Store"
+                holder.appName?.text = activity.getString(R.string.search_on_play_store, appInfo.activityInfo.name)
                 holder.itemView.setOnClickListener {
                     val encodedQuery = Uri.encode(appInfo.activityInfo.name)
                     activity.startActivity(
                         Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://play.google.com/store/search?q=$encodedQuery")
+                            "https://play.google.com/store/search?q=$encodedQuery".toUri()
                         )
                     )
                     searchBox.text.clear()
@@ -391,22 +392,22 @@ class AppAdapter(
                                     holder.appIcon.setImageDrawable(icon)
                                 }
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Icon already set to default, no need to update
                         }
                     }
                 }
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} in Google Maps"
+                holder.appName?.text = activity.getString(R.string.search_in_google_maps, appInfo.activityInfo.name)
                 holder.itemView.setOnClickListener {
                     // Create an Intent to open Google Maps
                     val gmmIntentUri =
-                        Uri.parse("geo:0,0?q=${Uri.encode(appInfo.activityInfo.name)}")
+                        "geo:0,0?q=${Uri.encode(appInfo.activityInfo.name)}".toUri()
                     val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
                     mapIntent.setPackage("com.google.android.apps.maps")
                     try {
                         activity.startActivity(mapIntent)
-                    } catch (e: Exception) {
-                        Toast.makeText(activity, "Google Maps not installed.", Toast.LENGTH_SHORT)
+                    } catch (_: Exception) {
+                        Toast.makeText(activity, activity.getString(R.string.google_maps_not_installed), Toast.LENGTH_SHORT)
                             .show()
                     }
                     searchBox.text.clear()
@@ -435,7 +436,7 @@ class AppAdapter(
                                         holder.appIcon.setImageDrawable(icon)
                                     }
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 // Fall back to regular YouTube
                                 try {
                                     val icon = activity.packageManager.getApplicationIcon("com.google.android.youtube")
@@ -445,20 +446,20 @@ class AppAdapter(
                                             holder.appIcon.setImageDrawable(icon)
                                         }
                                     }
-                                } catch (e2: Exception) {
+                                } catch (_: Exception) {
                                     // Icon already set to default, no need to update
                                 }
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Icon already set to default, no need to update
                         }
                     }
                 }
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} on YouTube"
+                holder.appName?.text = activity.getString(R.string.search_on_youtube, appInfo.activityInfo.name)
                 holder.itemView.setOnClickListener {
                     // Create an Intent to open YouTube search
                     val ytIntentUri =
-                        Uri.parse("https://www.youtube.com/results?search_query=${Uri.encode(appInfo.activityInfo.name)}")
+                        "https://www.youtube.com/results?search_query=${Uri.encode(appInfo.activityInfo.name)}".toUri()
                     val ytIntent = Intent(Intent.ACTION_VIEW, ytIntentUri)
 
                     // Try Revanced first, then regular YouTube
@@ -467,12 +468,12 @@ class AppAdapter(
                         ytIntent.setPackage("app.revanced.android.youtube")
                         activity.startActivity(ytIntent)
                         appOpened = true
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         try {
                             ytIntent.setPackage("com.google.android.youtube")
                             activity.startActivity(ytIntent)
                             appOpened = true
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Neither app is installed
                         }
                     }
@@ -480,7 +481,7 @@ class AppAdapter(
                     if (!appOpened) {
                         Toast.makeText(
                             activity,
-                            "YouTube app not installed. Opening in browser.",
+                            activity.getString(R.string.youtube_not_installed_opening_browser),
                             Toast.LENGTH_SHORT
                         ).show()
                         activity.startActivity(
@@ -497,12 +498,12 @@ class AppAdapter(
             "browser_search" -> {
                 // Display browser search option
                 holder.appIcon.setImageResource(R.drawable.ic_browser)
-                holder.appName?.text = "Search ${appInfo.activityInfo.name} in Browser"
+                holder.appName?.text = activity.getString(R.string.search_in_browser, appInfo.activityInfo.name)
                 holder.itemView.setOnClickListener {
                     activity.startActivity(
                         Intent(
                             Intent.ACTION_VIEW,
-                            Uri.parse("https://www.google.com/search?q=${appInfo.activityInfo.name}")
+                            "https://www.google.com/search?q=${appInfo.activityInfo.name}".toUri()
                         )
                     )
                     searchBox.text.clear()
@@ -516,11 +517,6 @@ class AppAdapter(
 
             else -> {
                 // For real apps, use aggressive caching to improve performance
-                // Check app validity once and cache result
-                val isValidApp = packageValidityCache.getOrPut(packageName) {
-                    appInfo.activityInfo?.applicationInfo != null
-                }
-
                 // Use cached label first (fast path)
                 val cachedLabel = labelCache[packageName]
                 if (cachedLabel != null) {
@@ -528,21 +524,20 @@ class AppAdapter(
                 } else {
                     // Try to load label synchronously for visible items (first 50) to avoid showing package name
                     // For items beyond position 50, load asynchronously
-                    if (position < 50 && isValidApp) {
+                    if (position < 50) {
                         try {
-                            val label = appInfo.loadLabel(activity.packageManager)?.toString()
-                                ?: appInfo.activityInfo.packageName
+                            val label = appInfo.loadLabel(activity.packageManager).toString()
                             labelCache[packageName] = label
                             holder.appName?.text = label
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // If synchronous load fails, fall back to async loading
-                            holder.appName?.text = appInfo.activityInfo?.packageName ?: "Loading..."
-                            loadLabelAsync(holder, position, appInfo, packageName, isValidApp)
+                            holder.appName?.text = appInfo.activityInfo.packageName
+                            loadLabelAsync(holder, position, appInfo, packageName)
                         }
                     } else {
                         // For items beyond position 50, load asynchronously
-                        holder.appName?.text = appInfo.activityInfo?.packageName ?: "Loading..."
-                        loadLabelAsync(holder, position, appInfo, packageName, isValidApp)
+                        holder.appName?.text = appInfo.activityInfo.packageName
+                        loadLabelAsync(holder, position, appInfo, packageName)
                     }
                 }
 
@@ -559,11 +554,8 @@ class AppAdapter(
                     
                     executorToUse.execute {
                         try {
-                            val icon = if (isValidApp) {
-                                appInfo.loadIcon(activity.packageManager)
-                            } else {
-                                activity.getDrawable(R.drawable.ic_default_app_icon)
-                            } as? Drawable ?: activity.getDrawable(R.drawable.ic_default_app_icon)!!
+                            val icon = appInfo.loadIcon(activity.packageManager)
+                                ?: AppCompatResources.getDrawable(activity, R.drawable.ic_default_app_icon)!!
                             iconCache[packageName] = icon
                             // Update UI on main thread
                             (context as? Activity)?.runOnUiThread {
@@ -571,8 +563,8 @@ class AppAdapter(
                                     holder.appIcon.setImageDrawable(icon)
                                 }
                             }
-                        } catch (e: Exception) {
-                            val fallbackIcon = activity.getDrawable(R.drawable.ic_default_app_icon)!!
+                        } catch (_: Exception) {
+                            val fallbackIcon = AppCompatResources.getDrawable(activity, R.drawable.ic_default_app_icon)!!
                             iconCache[packageName] = fallbackIcon
                             (context as? Activity)?.runOnUiThread {
                                 if (holder.bindingAdapterPosition == position) {
@@ -589,32 +581,31 @@ class AppAdapter(
                 }
 
                 // Debounce clicks to prevent double-tap issues
-                var lastClickTime = 0L
-                val CLICK_DEBOUNCE_DELAY = 500L // 500ms debounce
+                val clickDebounceDelay = 500L // 500ms debounce
                 
                 holder.itemView.setOnClickListener {
                     val currentTime = System.currentTimeMillis()
                     // Ignore clicks that are too close together (double-tap prevention)
-                    if (currentTime - lastClickTime < CLICK_DEBOUNCE_DELAY) {
+                    if (currentTime - holder.lastClickTime < clickDebounceDelay) {
                         return@setOnClickListener
                     }
-                    lastClickTime = currentTime
+                    holder.lastClickTime = currentTime
                     
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                     if (intent != null) {
                         val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
                         val currentCount = prefs.getInt("usage_$packageName", 0)
-                        prefs.edit().putInt("usage_$packageName", currentCount + 1).apply()
+                        prefs.edit { putInt("usage_$packageName", currentCount + 1) }
 
                         // Use cached label or fallback to package name (avoid blocking loadLabel call)
-                        val appName = labelCache[packageName] ?: appInfo.activityInfo?.packageName ?: packageName
+                        val appName = labelCache[packageName] ?: appInfo.activityInfo.packageName
 
                         // Show timer dialog only for social media and entertainment apps
                         val shouldShowTimer = activity.appCategoryManager.shouldShowTimer(packageName, appName)
                         
                         if (shouldShowTimer) {
                             // Show timer dialog before launching app
-                            activity.appTimerManager.showTimerDialog(packageName, appName) { timerDuration ->
+                            activity.appTimerManager.showTimerDialog(appName) { timerDuration ->
                                 if (activity.appLockManager.isAppLocked(packageName)) {
                                     activity.appLockManager.verifyPin { isAuthenticated ->
                                         if (isAuthenticated) {
@@ -648,7 +639,7 @@ class AppAdapter(
                             }
                         }
                     } else {
-                        Toast.makeText(activity, "Cannot launch app", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(activity, activity.getString(R.string.cannot_launch_app), Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -670,17 +661,11 @@ class AppAdapter(
         holder: ViewHolder,
         position: Int,
         appInfo: ResolveInfo,
-        packageName: String,
-        isValidApp: Boolean
+        packageName: String
     ) {
         executor.execute {
             try {
-                val label = if (isValidApp) {
-                    appInfo.loadLabel(activity.packageManager)?.toString()
-                        ?: appInfo.activityInfo.packageName
-                } else {
-                    appInfo.activityInfo?.name ?: "Unknown"
-                }
+                val label = appInfo.loadLabel(activity.packageManager).toString()
                 labelCache[packageName] = label
                 
                 // Update metadata cache if available
@@ -694,7 +679,7 @@ class AppAdapter(
                             lastUpdated = System.currentTimeMillis()
                         )
                     )
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Ignore cache update errors (cacheManager might not be initialized)
                 }
                 
@@ -711,8 +696,8 @@ class AppAdapter(
                         notifyItemChanged(position)
                     }
                 }
-            } catch (e: Exception) {
-                val fallbackLabel = appInfo.activityInfo?.packageName ?: "Unknown"
+            } catch (_: Exception) {
+                val fallbackLabel = appInfo.activityInfo.packageName
                 labelCache[packageName] = fallbackLabel
                 (context as? Activity)?.runOnUiThread {
                     if (holder.bindingAdapterPosition == position && 
@@ -755,15 +740,15 @@ class AppAdapter(
                 val spannable = android.text.SpannableString(hideMenuItem.title)
                 spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 hideMenuItem.title = spannable
-            } catch (e: UninitializedPropertyAccessException) {
+            } catch (_: UninitializedPropertyAccessException) {
                 hideMenuItem.isVisible = false
             }
         }
         
         // Force white text for all menu items
         val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
-        for (i in 0 until popupMenu.menu.size()) {
-            val item = popupMenu.menu.getItem(i)
+        for (i in 0 until popupMenu.menu.size) {
+            val item = popupMenu.menu[i]
             val title = item.title?.toString() ?: continue
             val spannable = android.text.SpannableString(title)
             spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -803,6 +788,7 @@ class AppAdapter(
         fixPopupMenuTextColors(popupMenu)
     }
     
+    @SuppressLint("DiscouragedPrivateApi")
     private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
         try {
             val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
@@ -826,7 +812,7 @@ class AppAdapter(
                         listView = result
                         break
                     }
-                } catch (e: NoSuchFieldException) {
+                } catch (_: NoSuchFieldException) {
                     // Try next field name
                 }
             }
@@ -847,7 +833,7 @@ class AppAdapter(
                     for (i in 0 until lv.childCount) {
                         fixTextColors(lv.getChildAt(i))
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Ignore
                 }
                 
@@ -857,7 +843,7 @@ class AppAdapter(
                         for (i in 0 until lv.childCount) {
                             fixTextColors(lv.getChildAt(i))
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // Ignore
                     }
                 }
@@ -868,7 +854,7 @@ class AppAdapter(
                         for (i in 0 until lv.childCount) {
                             fixTextColors(lv.getChildAt(i))
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // Ignore
                     }
                 }, 50)
@@ -879,7 +865,7 @@ class AppAdapter(
                         for (i in 0 until lv.childCount) {
                             fixTextColors(lv.getChildAt(i))
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // Ignore
                     }
                 }, 150)
@@ -891,7 +877,7 @@ class AppAdapter(
                             for (i in 0 until lv.childCount) {
                                 fixTextColors(lv.getChildAt(i))
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // Ignore
                         }
                         // Remove listener after first layout to avoid performance issues
@@ -899,9 +885,8 @@ class AppAdapter(
                     }
                 })
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // If reflection fails, the style should still apply
-            e.printStackTrace()
         }
     }
     
@@ -918,7 +903,7 @@ class AppAdapter(
 
     private fun showAppInfo(packageName: String) {
         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.parse("package:$packageName")
+            data = "package:$packageName".toUri()
         }
         activity.startActivity(intent)
     }
@@ -927,8 +912,8 @@ class AppAdapter(
         // Use cached label or load async to avoid blocking
         val appName = labelCache[packageName] ?: run {
             try {
-                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
-            } catch (e: Exception) {
+                appInfo.loadLabel(activity.packageManager).toString()
+            } catch (_: Exception) {
                 packageName
             }
         }
@@ -937,8 +922,9 @@ class AppAdapter(
     }
 
     private fun uninstallApp(packageName: String) {
+        @Suppress("DEPRECATION")
         val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
-            data = Uri.parse("package:$packageName")
+            data = "package:$packageName".toUri()
         }
         activity.startActivity(intent)
     }
@@ -947,8 +933,8 @@ class AppAdapter(
         // Use cached label or fallback to avoid blocking
         val appName = labelCache[packageName] ?: run {
             try {
-                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
-            } catch (e: Exception) {
+                appInfo.loadLabel(activity.packageManager).toString()
+            } catch (_: Exception) {
                 packageName
             }
         }
@@ -956,10 +942,10 @@ class AppAdapter(
         
         if (isFavorite) {
             activity.favoriteAppManager.removeFavoriteApp(packageName)
-            Toast.makeText(activity, "Removed $appName from favorites", Toast.LENGTH_SHORT).show()
+            Toast.makeText(activity, activity.getString(R.string.removed_from_favorites, appName), Toast.LENGTH_SHORT).show()
         } else {
             activity.favoriteAppManager.addFavoriteApp(packageName)
-            Toast.makeText(activity, "Added $appName to favorites", Toast.LENGTH_SHORT).show()
+            Toast.makeText(activity, activity.getString(R.string.added_to_favorites, appName), Toast.LENGTH_SHORT).show()
         }
         
         // Optimize: Filter existing list instead of reloading everything
@@ -971,27 +957,27 @@ class AppAdapter(
     private fun toggleHideApp(packageName: String, appInfo: ResolveInfo) {
         try {
             // Use cached label or fallback to avoid blocking
-        val appName = labelCache[packageName] ?: run {
-            try {
-                appInfo.loadLabel(activity.packageManager)?.toString() ?: packageName
-            } catch (e: Exception) {
-                packageName
+            val appName = labelCache[packageName] ?: run {
+                try {
+                    appInfo.loadLabel(activity.packageManager).toString()
+                } catch (_: Exception) {
+                    packageName
+                }
             }
-        }
-        val isHidden = activity.hiddenAppManager.isAppHidden(packageName)
-        
-        if (isHidden) {
-            activity.hiddenAppManager.unhideApp(packageName)
-            Toast.makeText(activity, "Unhid $appName", Toast.LENGTH_SHORT).show()
-        } else {
-            activity.hiddenAppManager.hideApp(packageName)
-            Toast.makeText(activity, "Hid $appName", Toast.LENGTH_SHORT).show()
-        }
-        
-        // Reload app list to reflect changes
-        activity.filterAppsWithoutReload()
-        } catch (e: UninitializedPropertyAccessException) {
-            Toast.makeText(activity, "Hidden apps feature not available", Toast.LENGTH_SHORT).show()
+            val isHidden = activity.hiddenAppManager.isAppHidden(packageName)
+            
+            if (isHidden) {
+                activity.hiddenAppManager.unhideApp(packageName)
+                Toast.makeText(activity, activity.getString(R.string.unhid_app, appName), Toast.LENGTH_SHORT).show()
+            } else {
+                activity.hiddenAppManager.hideApp(packageName)
+                Toast.makeText(activity, activity.getString(R.string.hid_app, appName), Toast.LENGTH_SHORT).show()
+            }
+            
+            // Reload app list to reflect changes
+            activity.filterAppsWithoutReload()
+        } catch (_: UninitializedPropertyAccessException) {
+            Toast.makeText(activity, activity.getString(R.string.hidden_apps_feature_not_available), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -999,18 +985,18 @@ class AppAdapter(
         val phoneNumber = getPhoneNumberForContact(contactName) // Fetch phone number for the contact
 
         AlertDialog.Builder(activity, R.style.CustomDialogTheme)
-            .setTitle("Call $contactName?")
-            .setMessage("Phone: $phoneNumber\nDo you want to proceed?")
-            .setPositiveButton("Call") { _, _ ->
+            .setTitle(activity.getString(R.string.call_contact_title, contactName))
+            .setMessage(activity.getString(R.string.call_contact_message, phoneNumber))
+            .setPositiveButton(activity.getString(R.string.call_button)) { _, _ ->
                 call(phoneNumber)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(activity.getString(R.string.cancel_button), null)
             .show()
     }
 
     private fun call(phoneNumber: String) {
         val intent = Intent(Intent.ACTION_CALL).apply {
-            data = Uri.parse("tel:$phoneNumber")
+            data = "tel:$phoneNumber".toUri()
         }
         activity.startActivity(intent)
     }
