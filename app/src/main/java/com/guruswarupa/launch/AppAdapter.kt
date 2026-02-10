@@ -24,6 +24,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.widget.PopupMenu
 import java.util.concurrent.Executors
+import java.util.concurrent.ConcurrentHashMap
 import android.app.Activity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
@@ -41,10 +42,10 @@ class AppAdapter(
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     private val usageStatsManager = AppUsageStatsManager(activity)
-    private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
-    private val iconCache = mutableMapOf<String, Drawable>() // packageName to icon
-    private val labelCache = mutableMapOf<String, String>() // packageName to label
-    private val specialAppIconCache = mutableMapOf<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
+    private val usageCache = ConcurrentHashMap<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
+    private val iconCache = ConcurrentHashMap<String, Drawable>() // packageName to icon
+    private val labelCache = ConcurrentHashMap<String, String>() // packageName to label
+    private val specialAppIconCache = ConcurrentHashMap<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
     private val cacheDuration = 30000L // 30 seconds cache (reduced for more frequent updates)
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
     private var itemsRendered = 0 // Track how many items have been rendered
@@ -203,10 +204,18 @@ class AppAdapter(
      * Pre-load next N icons starting from position
      */
     private fun preloadNextIcons(startPosition: Int, endPosition: Int) {
-        if (startPosition >= appList.size) return
+        val size = appList.size
+        if (startPosition >= size) return
+        
+        // Create a copy of the sublist while on the main thread to avoid ConcurrentModificationException
+        // as appList may be modified in updateAppList on the main thread while this runs in background
+        val appsToPreload = try {
+            ArrayList(appList.subList(startPosition, minOf(endPosition, size)))
+        } catch (e: Exception) {
+            return
+        }
         
         iconPreloadExecutor.execute {
-            val appsToPreload = appList.subList(startPosition, minOf(endPosition, appList.size))
             for (app in appsToPreload) {
                 val packageName = app.activityInfo.packageName
                 
