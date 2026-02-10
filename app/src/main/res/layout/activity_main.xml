@@ -30,6 +30,15 @@
                 android:orientation="vertical"
                 android:padding="16dp"
                 android:gravity="top">
+                
+                <!-- Dummy view to take focus and prevent keyboard from opening by default -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
+                    <requestFocus />
+                </View>
 
                 <!-- Combined Widget Section -->
                 <LinearLayout
