@@ -2,6 +2,8 @@
 
 A clean, efficient, and minimalist Android launcher that prioritizes simplicity and functionality.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/guruswarupa/launch)
+
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
      alt="Get it on F-Droid"
      height="80">](https://f-droid.org/packages/com.guruswarupa.launchh/)
