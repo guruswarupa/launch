@@ -36,7 +36,7 @@ class TimeDateManager(
         override fun run() {
             updateTime()
             updateDate()
-            handler.postDelayed(this, 30000) // Update every 30 seconds in power saver mode
+            handler.postDelayed(this, 30000) // Update every 30 seconds
         }
     }
     

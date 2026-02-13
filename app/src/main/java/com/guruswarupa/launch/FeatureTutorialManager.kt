@@ -100,13 +100,7 @@ class FeatureTutorialManager(
             HighlightPosition.BOTTOM,
             "focus_mode_toggle"
         ),
-        DOCK_POWER_SAVER(
-            "Power Saver Mode",
-            "Enable power saver to save battery by keeping wallpaper black and hiding usage stats. Ideal for OLED displays.",
-            R.id.app_dock,
-            HighlightPosition.BOTTOM,
-            "power_saver_toggle"
-        ),
+
         DOCK_SHARE_APK(
             "Share APK",
             "Share APK files of installed apps. Useful for backing up apps or sharing with others.",
