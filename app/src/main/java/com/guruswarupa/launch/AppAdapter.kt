@@ -278,8 +278,6 @@ class AppAdapter(
                 
                 holder.itemView.setBackgroundResource(backgroundDrawable)
                 holder.itemView.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
-            } else {
-                holder.itemView.setBackgroundResource(android.R.drawable.list_selector_background)
             }
             holder.appIcon.setBackgroundResource(R.drawable.circular_background)
 
@@ -288,12 +286,12 @@ class AppAdapter(
 
         // Defer usage stats loading on initial render for better performance
         
-        if (!isGridMode && holder.appUsageTime != null) {
+        if (holder.appUsageTime != null) {
             // OPTIMIZATION: Always defer usage stats loading for first 30 items to improve initial render
             // This prevents blocking the UI thread during initial load
             if (position < 30 && itemsRendered < 30) {
                 holder.appUsageTime.text = ""
-                holder.appUsageTime.visibility = View.VISIBLE
+                holder.appUsageTime.visibility = View.GONE // Hide initially, show only when we have data
                 // Load usage time asynchronously after initial render
                 executor.execute {
                     val usageTime = getUsageTimeWithCache(packageName)
@@ -301,7 +299,12 @@ class AppAdapter(
                     (context as? Activity)?.runOnUiThread {
                         // Only update if this holder still shows the same app
                         if (holder.bindingAdapterPosition == position) {
-                            holder.appUsageTime.text = formattedTime
+                            if (formattedTime.isNotEmpty()) {
+                                holder.appUsageTime.text = formattedTime
+                                holder.appUsageTime.visibility = View.VISIBLE
+                            } else {
+                                holder.appUsageTime.visibility = View.GONE
+                            }
                         }
                     }
                 }
@@ -309,11 +312,13 @@ class AppAdapter(
                 // Use cached usage time (cache lookup is fast, actual query only if cache expired)
                 val usageTime = getUsageTimeWithCache(packageName)
                 val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-                holder.appUsageTime.text = formattedTime
-                holder.appUsageTime.visibility = View.VISIBLE
+                if (formattedTime.isNotEmpty()) {
+                    holder.appUsageTime.text = formattedTime
+                    holder.appUsageTime.visibility = View.VISIBLE
+                } else {
+                    holder.appUsageTime.visibility = View.GONE
+                }
             }
-        } else {
-            holder.appUsageTime?.visibility = View.GONE
         }
 
         when (packageName) {

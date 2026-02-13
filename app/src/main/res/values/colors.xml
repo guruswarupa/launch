@@ -51,4 +51,7 @@
     <color name="widget_divider">#33000000</color>
     <color name="widget_item_background">#1A000000</color>
     <color name="widget_item_stroke">#33000000</color>
+    
+    <!-- Grid Item Background Colors -->
+    <color name="grid_item_background">@color/grid_item_background_light</color>
 </resources>
