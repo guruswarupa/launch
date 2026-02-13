@@ -111,6 +111,23 @@ class AppDockManager(
         updateDockVisibility()
     }
     
+    fun updateDockIcons() {
+        // Update all dock icons to match current theme
+        if (::focusModeToggle.isInitialized) {
+            updateFocusModeIcon()
+        }
+        if (::workspaceToggle.isInitialized) {
+            updateWorkspaceIcon()
+        }
+        if (::favoriteToggle.isInitialized) {
+            updateFavoriteToggleIcon()
+        }
+        if (::apkShareButton.isInitialized) {
+            apkShareButton.setImageResource(R.drawable.ic_share)
+        }
+        // Settings button doesn't need re-setting since it's handled by the drawable resource
+    }
+    
     fun refreshWorkspaceToggle() {
         if (::workspaceToggle.isInitialized) {
             updateWorkspaceIcon()

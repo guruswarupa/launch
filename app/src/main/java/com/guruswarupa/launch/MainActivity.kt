@@ -208,6 +208,11 @@ class MainActivity : FragmentActivity() {
                 voiceSearchButton.setColorFilter(iconColor)
             }
         }
+        
+        // Update dock icons to match current theme
+        if (::appDockManager.isInitialized) {
+            appDockManager.updateDockIcons()
+        }
     }
     
     /**
