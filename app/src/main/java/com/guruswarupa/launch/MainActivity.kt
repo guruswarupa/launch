@@ -160,7 +160,6 @@ class MainActivity : FragmentActivity() {
         
         // Apply backgrounds to all widget containers
         findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
-        findViewById<View>(R.id.widget_settings_header)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.widgets_section)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.notifications_widget_container)?.parent?.let { parent ->
             if (parent is View) parent.setBackgroundResource(widgetBackground)
