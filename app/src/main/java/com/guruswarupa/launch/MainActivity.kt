@@ -990,6 +990,11 @@ class MainActivity : FragmentActivity() {
             }
         }
         
+        // Ensure search box doesn't gain focus when returning to home screen
+        if (::searchBox.isInitialized) {
+            searchBox.clearFocus()
+        }
+        
         // Resume physical activity tracking
         if (::physicalActivityWidget.isInitialized) {
             physicalActivityWidget.onResume()
