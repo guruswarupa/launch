@@ -88,7 +88,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var todoAlarmManager: TodoAlarmManager
     private lateinit var financeWidgetManager: FinanceWidgetManager
     private lateinit var usageStatsDisplayManager: UsageStatsDisplayManager
-    private lateinit var powerSaverManager: PowerSaverManager
+
     private lateinit var widgetSetupManager: WidgetSetupManager
     private lateinit var calculatorWidget: CalculatorWidget
     private lateinit var notificationsWidget: NotificationsWidget
@@ -442,23 +442,7 @@ class MainActivity : FragmentActivity() {
         
         sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
         
-        // Check power saver mode immediately before setting content view to prevent flicker
-        val isPowerSaverMode = sharedPreferences.getBoolean("power_saver_mode_enabled", false)
-        if (isPowerSaverMode) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-            // Set window background to black immediately
-            window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK))
-        }
-        
         setContentView(R.layout.activity_main)
-        
-        // If in power saver mode, hide wallpaper views immediately after inflation to prevent flicker
-        if (isPowerSaverMode) {
-            findViewById<View>(R.id.wallpaper_background)?.visibility = View.GONE
-            findViewById<View>(R.id.drawer_wallpaper_background)?.visibility = View.GONE
-            findViewById<View>(R.id.right_drawer_wallpaper)?.visibility = View.GONE
-            findViewById<View>(R.id.drawer_layout)?.setBackgroundColor(android.graphics.Color.BLACK)
-        }
         
         // Make status bar and navigation bar transparent (after setContentView, post to ensure window is ready)
         window.decorView.post {
@@ -703,10 +687,7 @@ class MainActivity : FragmentActivity() {
             }
         })
         
-        // Apply power saver mode immediately on launch if active
-        if (isPowerSaverMode) {
-            applyPowerSaverMode(true)
-        }
+
     }
     
     /**
@@ -1335,39 +1316,7 @@ class MainActivity : FragmentActivity() {
 
 
 
-    fun applyPowerSaverMode(isEnabled: Boolean) {
-        // Defer power saver mode application if required dependencies are not yet initialized
-        if (!::adapter.isInitialized || !::wallpaperManagerHelper.isInitialized || 
-            !::usageStatsDisplayManager.isInitialized || !::usageStatsRefreshManager.isInitialized ||
-            !::todoRecyclerView.isInitialized) {
-            handler.post {
-                if (!isFinishing && !isDestroyed && ::adapter.isInitialized && 
-                    ::wallpaperManagerHelper.isInitialized && ::usageStatsDisplayManager.isInitialized &&
-                    ::usageStatsRefreshManager.isInitialized && ::todoRecyclerView.isInitialized) {
-                    applyPowerSaverMode(isEnabled)
-                }
-            }
-            return
-        }
-        
-        if (!::powerSaverManager.isInitialized) {
-            powerSaverManager = PowerSaverManager(
-                this,
-                handler,
-                adapter,
-                recyclerView,
-                wallpaperManagerHelper,
-                weeklyUsageGraph,
-                todoRecyclerView,
-                timeDateManager,
-                usageStatsDisplayManager,
-                { usageStatsRefreshManager.updateBatteryInBackground() },
-                { usageStatsRefreshManager.updateUsageInBackground() },
-                { enabled -> if (::gestureHandler.isInitialized) gestureHandler.setGesturesEnabled(enabled) }
-            )
-        }
-        powerSaverManager.applyPowerSaverMode(isEnabled)
-    }
+
     
 
     /**

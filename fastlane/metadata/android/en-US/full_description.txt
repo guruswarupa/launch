@@ -100,13 +100,6 @@ Launch is a clean, efficient, and minimalist Android launcher designed to maximi
 
 ---
 
-🔋 Power Saver Mode
-- Keeps wallpaper black to save battery
-- Hides app usage stats and weather updates
-- Ideal for low-power or OLED displays
-
----
-
 🤏 Gestures
 - Tap or long-press widgets for quick actions
 - Long-press icons for uninstall or rename

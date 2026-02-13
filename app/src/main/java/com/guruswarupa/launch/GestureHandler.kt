@@ -33,7 +33,7 @@ class GestureHandler(
     }
     
     /**
-     * Enable or disable custom gestures (e.g. for power saver mode)
+     * Enable or disable custom gestures
      */
     fun setGesturesEnabled(enabled: Boolean) {
         isGesturesEnabled = enabled

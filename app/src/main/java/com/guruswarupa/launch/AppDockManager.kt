@@ -25,28 +25,19 @@ class AppDockManager(
     private val focusModeKey = "focus_mode_enabled"
     private val focusModeHiddenAppsKey = "focus_mode_hidden_apps"
     private val focusModeEndTimeKey = "focus_mode_end_time"
-    private val powerSaverModeKey = "power_saver_mode_enabled"
-
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
     private lateinit var apkShareButton: ImageView
-    private lateinit var powerSaverToggle: ImageView
     private lateinit var favoriteToggle: ImageView
     private var isFocusMode: Boolean = false
-    private var isPowerSaverMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
     private val workspaceManager: WorkspaceManager
 
     init {
         isFocusMode = sharedPreferences.getBoolean(focusModeKey, false)
-        isPowerSaverMode = sharedPreferences.getBoolean(powerSaverModeKey, false)
         workspaceManager = WorkspaceManager(sharedPreferences)
-
-        if (isPowerSaverMode) {
-            (context as MainActivity).applyPowerSaverMode(true)
-        }
 
         // Handle focus mode expiry
         val focusEndTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
@@ -95,11 +86,11 @@ class AppDockManager(
                     true
                 }
             }
-            // Find the position after power saver toggle
+            // Find the position after focus mode container
             var insertIndex = appDock.childCount
             for (i in 0 until appDock.childCount) {
                 val child = appDock.getChildAt(i)
-                if (child.tag == "power_saver_toggle") {
+                if (child.tag == "focus_mode_container") {
                     insertIndex = i + 1
                     break
                 }
@@ -108,24 +99,7 @@ class AppDockManager(
         }
     }
 
-    fun isPowerSaverActive(): Boolean {
-        return isPowerSaverMode
-    }
 
-    private fun togglePowerSaverMode() {
-        isPowerSaverMode = !isPowerSaverMode
-        sharedPreferences.edit { putBoolean(powerSaverModeKey, isPowerSaverMode) }
-
-        // Update power saver toggle icon
-        powerSaverToggle.setImageResource(
-            if (isPowerSaverMode) R.drawable.ic_power_saver_on else R.drawable.ic_power_saver_off
-        )
-
-        // Apply power saver mode changes
-        (context as MainActivity).applyPowerSaverMode(isPowerSaverMode)
-
-        updateDockVisibility()
-    }
 
     private fun refreshDock() {
         appDock.removeAllViews()
@@ -133,8 +107,7 @@ class AppDockManager(
         ensureFavoriteToggle()      // 2. Favorite/All apps toggle (after settings)
         ensureWorkspaceToggle()      // 3. Workspace toggle
         ensureFocusModeToggle()      // 4. Focus mode
-        ensurePowerSaverToggle()     // 5. Battery saver
-        ensureApkShareButton()       // 6. Share APK icon
+        ensureApkShareButton()       // 5. Share APK icon
         updateDockVisibility()
     }
     
@@ -323,35 +296,7 @@ class AppDockManager(
         return workspaceManager.isAppInActiveWorkspace(packageName)
     }
 
-    private fun ensurePowerSaverToggle() {
-        if (appDock.findViewWithTag<ImageView>("power_saver_toggle") == null) {
-            powerSaverToggle = ImageView(context).apply {
-                tag = "power_saver_toggle"
-                setImageResource(if (isPowerSaverMode) R.drawable.ic_power_saver_on else R.drawable.ic_power_saver_off)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(12, 12, 12, 12)
-                }
-                setOnClickListener { togglePowerSaverMode() }
-                setOnLongClickListener {
-                    Toast.makeText(context, if (isPowerSaverMode) "Power Saver: ON" else "Power Saver: OFF", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            // Find the position after focus mode container
-            var insertIndex = 4
-            for (i in 0 until appDock.childCount) {
-                val child = appDock.getChildAt(i)
-                if (child.tag == "focus_mode_container") {
-                    insertIndex = i + 1
-                    break
-                }
-            }
-            appDock.addView(powerSaverToggle, insertIndex)
-        }
-    }
+
 
     private fun ensureSettingsButton() {
         if (appDock.findViewWithTag<ImageView>("settings_button") == null) {
@@ -577,23 +522,23 @@ class AppDockManager(
     }
 
     private fun updateDockVisibility() {
-        // Hide/show all dock items except the focus mode container, workspace toggle, power saver toggle and restart button
+        // Hide/show all dock items except the focus mode container, workspace toggle and restart button
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
             when (child.tag) {
-                "focus_mode_container", "workspace_toggle", "power_saver_toggle", "favorite_toggle" -> {
+                "focus_mode_container", "workspace_toggle", "favorite_toggle" -> {
                     child.visibility = View.VISIBLE
                 }
                 "add_icon", "apk_share_button" -> {
-                    child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
+                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                 }
                 else -> {
-                    // Hide other dock items when in focus mode or power saver mode
+                    // Hide other dock items when in focus mode
                     // But keep settings button visible
                     if (child.tag == "settings_button") {
                         child.visibility = View.VISIBLE
                     } else {
-                        child.visibility = if (isFocusMode || isPowerSaverMode) View.GONE else View.VISIBLE
+                        child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                     }
                 }
             }

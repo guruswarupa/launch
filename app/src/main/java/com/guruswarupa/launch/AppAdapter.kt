@@ -237,11 +237,6 @@ class AppAdapter(
     }
 
     private fun getUsageTimeWithCache(packageName: String): Long {
-        // Skip usage queries in power saver mode to save battery
-        if (activity.appDockManager.isPowerSaverActive()) {
-            return 0L
-        }
-        
         val currentTime = System.currentTimeMillis()
         val cached = usageCache[packageName]
 
@@ -267,14 +262,7 @@ class AppAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
-        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
 
-        // Handle pitch black UI for app items in power saver mode
-        if (isPowerSaverActive) {
-            holder.itemView.background = null
-            holder.itemView.elevation = 0f
-            holder.appIcon.background = null
-        } else {
             if (!isGridMode) {
                 // Check if we're in night mode (dark theme)
                 val isNightMode = (activity.resources.configuration.uiMode and 
@@ -294,16 +282,13 @@ class AppAdapter(
                 holder.itemView.setBackgroundResource(android.R.drawable.list_selector_background)
             }
             holder.appIcon.setBackgroundResource(R.drawable.circular_background)
-        }
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
 
-        // Show usage time only in list mode and when power saver is disabled
-        // Hide usage time in power saver mode to save battery (no usage queries)
         // Defer usage stats loading on initial render for better performance
         
-        if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
+        if (!isGridMode && holder.appUsageTime != null) {
             // OPTIMIZATION: Always defer usage stats loading for first 30 items to improve initial render
             // This prevents blocking the UI thread during initial load
             if (position < 30 && itemsRendered < 30) {
