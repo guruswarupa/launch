@@ -236,7 +236,7 @@
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="20dp"
             android:layout_marginStart="16dp"
-            android:background="@drawable/widget_background"
+            android:background="@android:color/transparent"
             android:padding="12dp"
             android:clickable="true"
             android:focusable="true"
@@ -257,7 +257,6 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_settings_icon"
-                android:tint="@color/widget_text"
                 android:contentDescription="Configure Widgets" />
         </LinearLayout>
 
@@ -548,7 +547,6 @@
                         android:layout_height="40dp"
                         android:background="@drawable/button_neutral_ripple"
                         android:src="@drawable/ic_add"
-                        android:tint="@color/widget_text"
                         android:contentDescription="Add todo item"
                         android:padding="8dp" />
 
