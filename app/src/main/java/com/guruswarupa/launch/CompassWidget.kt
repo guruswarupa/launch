@@ -63,8 +63,18 @@ class CompassWidget(
         // Setup direction change listener
         compassManager.setOnDirectionChangedListener { azimuth ->
             val directionName = compassManager.getDirectionName(azimuth)
+            val accuracy = compassManager.getAccuracy()
             handler.post {
-                updateCompassDisplay(azimuth, directionName)
+                updateCompassDisplay(azimuth, directionName, accuracy)
+            }
+        }
+
+        // Setup accuracy change listener
+        compassManager.setOnAccuracyChangedListener { accuracy ->
+            val azimuth = compassManager.getCurrentDirection()
+            val directionName = compassManager.getDirectionName(azimuth)
+            handler.post {
+                updateCompassDisplay(azimuth, directionName, accuracy)
             }
         }
         
@@ -138,13 +148,14 @@ class CompassWidget(
     private fun updateDisplay() {
         val azimuth = compassManager.getCurrentDirection()
         val directionName = compassManager.getDirectionName(azimuth)
-        updateCompassDisplay(azimuth, directionName)
+        val accuracy = compassManager.getAccuracy()
+        updateCompassDisplay(azimuth, directionName, accuracy)
     }
     
-    private fun updateCompassDisplay(azimuth: Float, directionName: String) {
+    private fun updateCompassDisplay(azimuth: Float, directionName: String, accuracy: Int) {
         directionText.text = directionName
         azimuthText.text = context.getString(R.string.compass_azimuth_format, azimuth.toInt())
-        compassView.setDirection(azimuth, directionName)
+        compassView.setDirection(azimuth, directionName, accuracy)
     }
     
     fun onResume() {
