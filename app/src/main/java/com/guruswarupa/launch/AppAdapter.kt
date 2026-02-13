@@ -211,7 +211,7 @@ class AppAdapter(
         // as appList may be modified in updateAppList on the main thread while this runs in background
         val appsToPreload = try {
             ArrayList(appList.subList(startPosition, minOf(endPosition, size)))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return
         }
         
@@ -276,7 +276,19 @@ class AppAdapter(
             holder.appIcon.background = null
         } else {
             if (!isGridMode) {
-                holder.itemView.setBackgroundResource(R.drawable.rounded_background)
+                // Check if we're in night mode (dark theme)
+                val isNightMode = (activity.resources.configuration.uiMode and 
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES
+                
+                // Use light background in light mode, dark background in dark mode
+                val backgroundDrawable = if (isNightMode) {
+                    R.drawable.rounded_background // Semi-transparent black
+                } else {
+                    R.drawable.rounded_background_light // Semi-transparent white
+                }
+                
+                holder.itemView.setBackgroundResource(backgroundDrawable)
                 holder.itemView.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
             } else {
                 holder.itemView.setBackgroundResource(android.R.drawable.list_selector_background)

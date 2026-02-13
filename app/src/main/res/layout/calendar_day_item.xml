@@ -9,10 +9,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:text="1"
-        android:textColor="@color/white"
+        android:textColor="@color/widget_text"
         android:textSize="14sp"
-        android:gravity="center"
-        android:background="@drawable/widget_background" />
+        android:gravity="center" />
 
     <View
         android:id="@+id/workout_indicator"

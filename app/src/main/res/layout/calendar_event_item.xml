@@ -5,7 +5,6 @@
     android:orientation="vertical"
     android:padding="12dp"
     android:layout_marginBottom="8dp"
-    android:background="@drawable/widget_background"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground">
@@ -14,7 +13,7 @@
         android:id="@+id/event_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/white"
+        android:textColor="@color/widget_text"
         android:textSize="16sp"
         android:textStyle="bold"
         android:layout_marginBottom="4dp" />
@@ -23,7 +22,7 @@
         android:id="@+id/event_time"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/text_secondary"
+        android:textColor="@color/widget_text_secondary"
         android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
@@ -31,7 +30,7 @@
         android:id="@+id/event_location"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="@color/text_secondary"
+        android:textColor="@color/widget_text_secondary"
         android:textSize="12sp"
         android:visibility="gone" />
 

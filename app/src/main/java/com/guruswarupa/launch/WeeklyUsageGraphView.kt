@@ -5,6 +5,7 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
 import kotlin.math.*
 
 class WeeklyUsageGraphView @JvmOverloads constructor(
@@ -26,19 +27,16 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     private val cardPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
-        color = Color.parseColor("#1E1E1E")
     }
     
     private val cardStrokePaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
-        color = Color.parseColor("#333333")
         strokeWidth = 1.5f
     }
 
     private val dayTextPaint = Paint().apply {
         isAntiAlias = true
-        color = Color.WHITE
         textSize = 36f
         textAlign = Paint.Align.LEFT
         typeface = Typeface.DEFAULT_BOLD
@@ -46,7 +44,6 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     
     private val timeTextPaint = Paint().apply {
         isAntiAlias = true
-        color = Color.parseColor("#AAAAAA")
         textSize = 28f
         textAlign = Paint.Align.LEFT
         typeface = Typeface.DEFAULT_BOLD
@@ -54,11 +51,39 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     
     private val instructionPaint = Paint().apply {
         isAntiAlias = true
-        color = Color.parseColor("#666666")
         textSize = 14f
         textAlign = Paint.Align.CENTER
     }
 
+    private val dividerPaint = Paint().apply {
+        isAntiAlias = true
+        strokeWidth = 1f
+    }
+
+    init {
+        updatePaints()
+    }
+
+    private fun updatePaints() {
+        val widgetText = ContextCompat.getColor(context, R.color.widget_text)
+        val widgetTextSecondary = ContextCompat.getColor(context, R.color.widget_text_secondary)
+        val itemBackground = ContextCompat.getColor(context, R.color.widget_item_background)
+        val itemStroke = ContextCompat.getColor(context, R.color.widget_item_stroke)
+        val divider = ContextCompat.getColor(context, R.color.widget_divider)
+
+        cardPaint.color = itemBackground
+        cardStrokePaint.color = itemStroke
+        dayTextPaint.color = widgetText
+        timeTextPaint.color = widgetTextSecondary
+        instructionPaint.color = widgetTextSecondary
+        dividerPaint.color = divider
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration?) {
+        super.onConfigurationChanged(newConfig)
+        updatePaints()
+        invalidate()
+    }
 
     fun setUsageData(data: List<Pair<String, Long>>) {
         usageData = data
@@ -100,7 +125,8 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Don't draw background - let widget background show through
+        // Ensure paints are up to date
+        updatePaints()
 
         val dataToUse = if (appUsageData.isNotEmpty()) appUsageData else
             usageData.map { it.first to mapOf("Total" to it.second) }
@@ -108,7 +134,6 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         if (dataToUse.isEmpty()) {
             // Draw "No data" message
             instructionPaint.textSize = 32f
-            instructionPaint.color = Color.parseColor("#666666")
             canvas.drawText(
                 "No usage data available",
                 width / 2f,
@@ -123,8 +148,6 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         val cardHeight = 100f
         val topPadding = 4f
         val bottomPadding = 8f
-        val availableHeight = height - topPadding - bottomPadding
-        val totalCardHeight = (cardHeight + cardSpacing) * dataToUse.size - cardSpacing
         
         // Start drawing from top with minimal spacing
         val startY = topPadding
@@ -143,51 +166,41 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
             // Draw card background
             val cardRect = RectF(cardLeft, cardTop, cardRight, cardBottom)
             
-            // Draw subtle shadow
-            val shadowPaint = Paint().apply {
-                color = Color.parseColor("#15000000")
+            // Draw subtle shadow (only in dark mode or if appropriate)
+            val isNightMode = (resources.configuration.uiMode and 
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            
+            if (isNightMode) {
+                val shadowPaint = Paint().apply {
+                    color = Color.parseColor("#15000000")
+                }
+                canvas.drawRoundRect(
+                    RectF(cardLeft + 1f, cardTop + 2f, cardRight + 1f, cardBottom + 2f),
+                    14f, 14f, shadowPaint
+                )
             }
-            canvas.drawRoundRect(
-                RectF(cardLeft + 1f, cardTop + 2f, cardRight + 1f, cardBottom + 2f),
-                14f, 14f, shadowPaint
-            )
             
             // Draw card background
             canvas.drawRoundRect(cardRect, 14f, 14f, cardPaint)
             canvas.drawRoundRect(cardRect, 14f, 14f, cardStrokePaint)
             
-            // Draw day name (larger and bolder)
+            // Draw day name
             dayTextPaint.textAlign = Paint.Align.LEFT
             dayTextPaint.textSize = 36f
             val dayY = cardTop + cardHeight / 2f - 15f
             canvas.drawText(day, cardLeft + 24f, dayY, dayTextPaint)
             
-            // Draw usage time in hours (larger)
+            // Draw usage time in hours
             val usageText = formatUsageTimeInHours(totalUsage)
             timeTextPaint.textAlign = Paint.Align.RIGHT
             timeTextPaint.textSize = 28f
-            timeTextPaint.typeface = Typeface.DEFAULT_BOLD
             canvas.drawText(usageText, cardRight - 24f, dayY + 8f, timeTextPaint)
             
             // Draw subtle divider line
-            val dividerPaint = Paint().apply {
-                color = Color.parseColor("#2A2A2A")
-                strokeWidth = 1f
-            }
             val dividerY = cardTop + cardHeight - 1f
             canvas.drawLine(cardLeft + 24f, dividerY, cardRight - 24f, dividerY, dividerPaint)
         }
-        
-        // Draw instruction text at the bottom of the last card area
-        val lastCardBottom = if (dataToUse.isNotEmpty()) {
-            val lastCardY = startY + ((dataToUse.size - 1) * (cardHeight + cardSpacing))
-            lastCardY + cardHeight + 12f
-        } else {
-            height - 8f
-        }
-        
-        instructionPaint.textSize = 12f
-        instructionPaint.textAlign = Paint.Align.CENTER
     }
     
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -200,7 +213,6 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         val cardSpacing = 12f
         val cardHeight = 100f
         val topPadding = 4f
-        val bottomPadding = 8f
         val startY = topPadding
         
         when (event.action) {

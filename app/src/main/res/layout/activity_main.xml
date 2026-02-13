@@ -57,7 +57,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="32sp"
-                        android:textColor="@color/text"
+                        android:textColor="@color/widget_text"
                         android:gravity="center"
                         android:fontFamily="sans-serif-light"
                         android:letterSpacing="0.05"
@@ -69,7 +69,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="24sp"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="@color/widget_text_secondary"
                         android:gravity="center"
                         android:fontFamily="sans-serif-light"
                         android:paddingTop="8dp" />
@@ -95,7 +95,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:textSize="18sp"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="@color/widget_text_secondary"
                             android:fontFamily="sans-serif-light"/>
                     </LinearLayout>
 
@@ -122,7 +122,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="Battery: 100%"
                                 android:textSize="14sp"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="@color/widget_text_secondary"
                                 android:fontFamily="sans-serif-light"/>
                         </LinearLayout>
 
@@ -141,42 +141,43 @@
                                 android:layout_height="wrap_content"
                                 android:text="Usage: 0m"
                                 android:textSize="14sp"
-                                android:textColor="@color/text_secondary"
+                                android:textColor="@color/widget_text_secondary"
                                 android:fontFamily="sans-serif-light"/>
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
 
                 <!-- Search Box -->
-                <LinearLayout
+                <FrameLayout
+                    android:id="@+id/search_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/search_box_transparent_bg">
                     <EditText
                         android:id="@+id/search_box"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="@string/search_text"
                         android:textColor="@color/white"
                         android:textColorHint="@color/white"
                         android:padding="12dp"
-                        android:background="@drawable/search_box_transparent_bg"
+                        android:paddingEnd="48dp"
+                        android:background="@null"
                         android:drawableStart="@drawable/ic_search"
                         android:drawablePadding="8dp"
                         android:textSize="16sp"
-                        android:layout_marginBottom="16dp"
                         android:singleLine="true"
                         android:imeOptions="actionSearch"/>
                     <ImageButton
                         android:id="@+id/voice_search_button"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:layout_marginStart="8dp"
+                        android:layout_gravity="end|center_vertical"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_mic"
                         android:contentDescription="Voice Search"/>
-                </LinearLayout>
+                </FrameLayout>
 
                 <!-- App Dock -->
                 <HorizontalScrollView
@@ -246,7 +247,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Widget Settings"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="16sp"
                 android:textStyle="bold"/>
 
@@ -256,7 +257,7 @@
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_settings_icon"
-                android:tint="@color/white"
+                android:tint="@color/widget_text"
                 android:contentDescription="Configure Widgets" />
         </LinearLayout>
 
@@ -287,7 +288,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="No widgets enabled"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="18sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -296,7 +297,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tap 'Widget Settings' above to add and configure widgets"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="14sp"
                     android:gravity="center" />
             </LinearLayout>
@@ -324,7 +325,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Android Widgets"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
@@ -336,7 +337,7 @@
                         android:paddingHorizontal="20dp"
                         android:paddingVertical="10dp"
                         android:text="Add Widget"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="14sp" />
                 </LinearLayout>
 
@@ -349,6 +350,7 @@
 
             <!-- Notifications Widget -->
             <LinearLayout
+                android:id="@+id/notifications_widget_main_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -368,21 +370,30 @@
                 android:id="@+id/calendar_events_widget_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:layout_marginVertical="16dp" />
 
             <!-- Countdown Widget -->
             <LinearLayout
                 android:id="@+id/countdown_widget_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:layout_marginVertical="16dp" />
 
             <!-- Physical Activity Widget -->
             <LinearLayout
                 android:id="@+id/physical_activity_widget_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:layout_marginVertical="16dp" />
 
             <!-- Compass Widget -->
             <LinearLayout
@@ -390,6 +401,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
                 android:layout_marginVertical="16dp" />
 
             <!-- Pressure Widget -->
@@ -398,6 +411,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
                 android:layout_marginVertical="16dp" />
 
             <!-- Proximity Widget -->
@@ -406,6 +421,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
                 android:layout_marginVertical="16dp" />
 
             <!-- Temperature Widget -->
@@ -414,6 +431,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
                 android:layout_marginVertical="16dp" />
 
             <!-- Network Stats Widget -->
@@ -422,6 +441,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
                 android:layout_marginVertical="16dp" />
 
             <!-- Device Info Widget -->
@@ -430,6 +451,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
                 android:layout_marginVertical="16dp" />
 
             <!-- Noise Decibel Widget -->
@@ -438,10 +461,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
                 android:layout_marginVertical="16dp" />
 
             <!-- Workout Widget -->
             <LinearLayout
+                android:id="@+id/workout_widget_main_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -458,6 +484,7 @@
 
             <!-- Calculator Widget -->
             <LinearLayout
+                android:id="@+id/calculator_widget_main_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -477,7 +504,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Calculator"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -491,6 +518,7 @@
 
             <!-- To Do Widget -->
             <LinearLayout
+                android:id="@+id/todo_widget_main_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -510,7 +538,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Todo List"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
@@ -520,7 +548,7 @@
                         android:layout_height="40dp"
                         android:background="@drawable/button_neutral_ripple"
                         android:src="@drawable/ic_add"
-                        android:tint="@color/white"
+                        android:tint="@color/widget_text"
                         android:contentDescription="Add todo item"
                         android:padding="8dp" />
 
@@ -560,7 +588,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Finance Tracker"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
@@ -588,7 +616,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Total Balance"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="@color/widget_text_secondary"
                         android:textSize="12sp"
                         android:layout_marginBottom="4dp" />
 
@@ -597,7 +625,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="$0.00"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="12dp" />
@@ -613,7 +641,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="This Month: -$0.00"
-                            android:textColor="@color/text_secondary"
+                            android:textColor="@color/widget_text_secondary"
                             android:textSize="13sp" />
                     </LinearLayout>
                 </LinearLayout>
@@ -634,8 +662,8 @@
                         android:inputType="numberDecimal"
                         android:paddingStart="18dp"
                         android:paddingEnd="18dp"
-                        android:textColor="@color/white"
-                        android:textColorHint="@color/gray_light"
+                        android:textColor="@color/widget_text"
+                        android:textColorHint="@color/widget_text_secondary"
                         android:textSize="16sp"
                         android:layout_marginBottom="12dp" />
 
@@ -648,8 +676,8 @@
                         android:inputType="text"
                         android:paddingStart="18dp"
                         android:paddingEnd="18dp"
-                        android:textColor="@color/white"
-                        android:textColorHint="@color/gray_light"
+                        android:textColor="@color/widget_text"
+                        android:textColorHint="@color/widget_text_secondary"
                         android:textSize="14sp" />
                 </LinearLayout>
 
@@ -669,7 +697,7 @@
                         android:layout_marginEnd="8dp"
                         android:background="@drawable/button_neutral_ripple"
                         android:text="Add Income"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:elevation="4dp" />
@@ -682,7 +710,7 @@
                         android:layout_marginStart="8dp"
                         android:background="@drawable/button_neutral_ripple"
                         android:text="Add Expense"
-                        android:textColor="@color/white"
+                        android:textColor="@color/widget_text"
                         android:textSize="15sp"
                         android:textStyle="bold"
                         android:elevation="4dp" />
@@ -707,7 +735,7 @@
                     android:layout_height="wrap_content"
                     android:text="Weekly Usage"
                     android:textSize="18sp"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textStyle="bold"
                     android:gravity="start"
                     android:layout_marginBottom="16dp"/>

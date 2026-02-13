@@ -2,9 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/widget_background"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:orientation="vertical">
 
     <!-- Header -->
     <LinearLayout
@@ -26,7 +24,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Compass"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.02" />
@@ -37,7 +35,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enable"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="13sp"
             android:textStyle="bold"
             android:background="@drawable/button_neutral_ripple"
@@ -54,8 +52,7 @@
         android:orientation="vertical"
         android:padding="24dp"
         android:gravity="center"
-        android:visibility="gone"
-        android:elevation="4dp">
+        android:visibility="gone">
 
         <!-- Compass View with shadow effect -->
         <FrameLayout
@@ -84,7 +81,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Direction"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.05"
@@ -120,7 +117,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0°"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.02" />
@@ -132,7 +129,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Compass sensors not available"
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="16sp"
             android:gravity="center"
             android:visibility="gone" />

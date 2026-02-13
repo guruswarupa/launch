@@ -23,7 +23,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="@android:color/white"
+        android:textColor="@color/text"
         android:layout_marginTop="4dp"
         android:ellipsize="end"
         android:maxLines="1"
@@ -35,7 +35,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="10sp"
-        android:textColor="@android:color/white"
+        android:textColor="@color/text_secondary"
         android:alpha="0.7"
         android:layout_marginBottom="8dp"
         android:maxWidth="90dp" />

@@ -214,7 +214,9 @@ class PowerSaverManager(
         topWidget?.background = null
         topWidget?.elevation = 0f
         
-        // Set search box to be completely transparent/minimal
+        // Set search box container to be completely transparent/minimal
+        val searchContainer = activity.findViewById<View>(R.id.search_container)
+        searchContainer?.setBackgroundColor(Color.TRANSPARENT)
         val searchBox = activity.findViewById<EditText>(R.id.search_box)
         searchBox?.setBackgroundColor(Color.TRANSPARENT)
         
@@ -238,20 +240,16 @@ class PowerSaverManager(
         activity.findViewById<View>(R.id.main_content)?.setBackgroundColor(backgroundColor)
         activity.findViewById<View>(android.R.id.content)?.setBackgroundResource(R.drawable.wallpaper_background)
         
-        // Restore widget container background and elevation
-        val topWidget = activity.findViewById<View>(R.id.top_widget_container)
-        topWidget?.setBackgroundResource(R.drawable.widget_background)
-        topWidget?.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
+        // Use MainActivity's theme-aware logic to restore backgrounds correctly
+        activity.applyThemeBasedWidgetBackgrounds()
         
-        // Restore search box background
-        val searchBox = activity.findViewById<EditText>(R.id.search_box)
-        searchBox?.setBackgroundResource(R.drawable.search_box_transparent_bg)
+        val topWidget = activity.findViewById<View>(R.id.top_widget_container)
+        topWidget?.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
         
         // Restore drawer content background
         activity.findViewById<View>(R.id.widgets_drawer)?.setBackgroundColor(backgroundColor)
         activity.findViewById<View>(R.id.wallpaper_drawer)?.setBackgroundColor(Color.TRANSPARENT)
         val settingsHeader = activity.findViewById<View>(R.id.widget_settings_header)
-        settingsHeader?.setBackgroundResource(R.drawable.widget_background)
         settingsHeader?.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
 
         // Restore transparent system bars (SystemBarManager will handle icons)

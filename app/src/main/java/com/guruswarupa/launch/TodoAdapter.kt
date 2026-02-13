@@ -3,6 +3,8 @@ package com.guruswarupa.launch
 
 import android.graphics.Color
 import android.graphics.Paint
+import android.content.Context
+import android.content.res.Configuration
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -115,11 +117,28 @@ class TodoAdapter(
             holder.dayViews.forEachIndexed { index, dayView ->
                 val dayOfWeek = index + 1 // 1=Sunday, 2=Monday, etc.
                 if (todoItem.selectedDays.contains(dayOfWeek)) {
-                    dayView.setBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.nord8))
+                    // Use theme-appropriate colors for selected days
+                    val selectedBgColor = if (isNightMode(holder.itemView.context)) {
+                        ContextCompat.getColor(holder.itemView.context, R.color.nord8) // Light blue for dark mode
+                    } else {
+                        ContextCompat.getColor(holder.itemView.context, R.color.nord8) // Same in light mode
+                    }
+                    dayView.setBackgroundColor(selectedBgColor)
                     dayView.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.white))
                 } else {
-                    dayView.setBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.nord2))
-                    dayView.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.text_secondary))
+                    // Use theme-appropriate colors for unselected days
+                    val unselectedBgColor = if (isNightMode(holder.itemView.context)) {
+                        ContextCompat.getColor(holder.itemView.context, R.color.nord3) // Darker gray for dark mode
+                    } else {
+                        ContextCompat.getColor(holder.itemView.context, R.color.nord2) // Lighter gray for light mode
+                    }
+                    val unselectedTextColor = if (isNightMode(holder.itemView.context)) {
+                        ContextCompat.getColor(holder.itemView.context, R.color.text_secondary)
+                    } else {
+                        ContextCompat.getColor(holder.itemView.context, R.color.text_secondary)
+                    }
+                    dayView.setBackgroundColor(unselectedBgColor)
+                    dayView.setTextColor(unselectedTextColor)
                 }
             }
         } else {
@@ -162,6 +181,10 @@ class TodoAdapter(
     private fun getCurrentDateString(): String {
         val calendar = Calendar.getInstance()
         return "${calendar.get(Calendar.DAY_OF_YEAR)}-${calendar.get(Calendar.YEAR)}"
+    }
+    
+    private fun isNightMode(context: Context): Boolean {
+        return (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     }
 
     override fun getItemCount(): Int = todoItems.size
