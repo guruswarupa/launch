@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Background - gray -->
+    <!-- Light gradient background for dark theme -->
     <item>
         <shape android:shape="rectangle">
             <corners android:radius="16dp" />
-            <solid android:color="#80FFFFFF" />
+            <gradient
+                android:angle="135"
+                android:startColor="#80000000"
+                android:centerColor="#80000000"
+                android:endColor="#80000000" />
         </shape>
     </item>
     <!-- Icon -->
     <item
-        android:drawable="@drawable/ic_normal_mode_icon"
+        android:drawable="@drawable/ic_workspace_active_icon"
         android:gravity="center"
         android:width="28dp"
         android:height="28dp" />

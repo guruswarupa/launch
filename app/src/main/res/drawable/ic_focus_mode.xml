@@ -6,9 +6,9 @@
             <corners android:radius="16dp" />
             <gradient
                 android:angle="135"
-                android:startColor="#81A1C1"
-                android:centerColor="#5E81AC"
-                android:endColor="#4C566A" />
+                android:startColor="#80FFFFFF"
+                android:centerColor="#80FFFFFF"
+                android:endColor="#80FFFFFF" />
         </shape>
     </item>
     <!-- Icon -->
