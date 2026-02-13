@@ -77,7 +77,6 @@ dependencies {
     implementation(libs.cardview)
     implementation(libs.material)
     implementation(libs.exp4j)
-    // Removed unused dependencies: room-ktx, joda-time, google-http-client, findbugs-jsr305
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

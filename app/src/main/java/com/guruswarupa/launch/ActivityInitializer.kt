@@ -31,10 +31,8 @@ class ActivityInitializer(
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
 
-        // Setup search box
-        searchBox.setOnClickListener {
-            // Single tap - focus search box
-        }
+        // Setup search box - removed click listener to prevent unwanted focus
+        // Search box will naturally gain focus when tapped by user
 
         searchBox.setOnLongClickListener {
             val intent = Intent(Intent.ACTION_VIEW, "https://www.google.com".toUri())
