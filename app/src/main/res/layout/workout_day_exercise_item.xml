@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:text="Push-ups"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textSize="16sp"
         android:textStyle="bold" />
 

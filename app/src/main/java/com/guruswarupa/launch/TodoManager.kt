@@ -13,7 +13,9 @@ import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Calendar
@@ -220,6 +222,16 @@ class TodoManager(
 
         val dialog = dialogBuilder.create()
         dialog.show()
+        
+        // Fix dialog text colors
+        fixDialogTextColors(dialog)
+    }
+    
+    private fun fixDialogTextColors(dialog: android.app.AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(activity, R.color.text)
+            dialog.findViewById<TextView>(android.R.id.title)?.setTextColor(textColor)
+        } catch (_: Exception) {}
     }
 
     private fun addTodoItem(

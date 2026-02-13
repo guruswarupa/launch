@@ -163,7 +163,7 @@ class FinanceWidgetManager(
         var sortedTransactions = getLatestTransactions()
         
         val adapter = TransactionAdapter(sortedTransactions, currencySymbol) { transactionToDelete ->
-            AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+            val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
                 .setTitle("Delete Transaction")
                 .setMessage("Are you sure you want to delete this transaction?")
                 .setPositiveButton("Delete") { _, _ ->
@@ -178,6 +178,8 @@ class FinanceWidgetManager(
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
+            
+            fixDialogTextColors(dialog)
         }
         recyclerView.adapter = adapter
 
@@ -190,7 +192,7 @@ class FinanceWidgetManager(
         }
 
         clearAllButton?.setOnClickListener {
-            AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+            val d = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
                 .setTitle("Reset Finance Data")
                 .setMessage("Are you sure you want to reset all finance data? This will clear your balance, transaction history, and monthly records. This action cannot be undone.")
                 .setPositiveButton("Reset") { _, _ ->
@@ -202,6 +204,8 @@ class FinanceWidgetManager(
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
+            
+            fixDialogTextColors(d)
         }
 
         if (sortedTransactions.isEmpty()) {
@@ -209,5 +213,14 @@ class FinanceWidgetManager(
         }
 
         dialog.show()
+        fixDialogTextColors(dialog)
+    }
+    
+    private fun fixDialogTextColors(dialog: AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(activity, R.color.text)
+            dialog.findViewById<TextView>(android.R.id.title)?.setTextColor(textColor)
+            dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(textColor)
+        } catch (_: Exception) {}
     }
 }

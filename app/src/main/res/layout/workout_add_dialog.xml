@@ -10,7 +10,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Exercise Type"
-        android:textColor="@color/white"
+        android:textColor="@color/dialog_text"
         android:textSize="14sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Reps (Count)"
-            android:textColor="@color/white"
+            android:textColor="@color/dialog_text"
             android:checked="true"
             android:buttonTint="@color/nord7" />
 
@@ -38,7 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Time (Stopwatch)"
-            android:textColor="@color/white"
+            android:textColor="@color/dialog_text"
             android:buttonTint="@color/nord7" />
     </RadioGroup>
 
@@ -46,7 +46,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Quick Add (Presets)"
-        android:textColor="@color/white"
+        android:textColor="@color/dialog_text"
         android:textSize="14sp"
         android:textStyle="bold"
         android:layout_marginBottom="12dp" />
@@ -74,7 +74,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Or add custom exercise"
-        android:textColor="@color/white"
+        android:textColor="@color/dialog_text"
         android:textSize="14sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
@@ -84,8 +84,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Exercise name"
-        android:textColor="@color/white"
-        android:textColorHint="@color/text_secondary"
+        android:textColor="@color/dialog_text"
+        android:textColorHint="@color/dialog_text_secondary"
         android:inputType="text"
         android:padding="12dp"
         android:background="@drawable/widget_background"

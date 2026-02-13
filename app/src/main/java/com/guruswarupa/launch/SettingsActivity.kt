@@ -540,7 +540,7 @@ class SettingsActivity : ComponentActivity() {
     }
     
     private fun restartLauncher() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Restart Launcher")
             .setMessage("This will restart the launcher. Continue?")
             .setPositiveButton("Restart") { _, _ ->
@@ -561,10 +561,12 @@ class SettingsActivity : ComponentActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+        
+        fixDialogTextColors(dialog)
     }
     
     private fun clearCache() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Clear Cache")
             .setMessage("This will clear the launcher's cache files. This may free up storage space but won't affect your settings or data. Continue?")
             .setPositiveButton("Clear Cache") { _, _ ->
@@ -631,10 +633,12 @@ class SettingsActivity : ComponentActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+        
+        fixDialogTextColors(dialog)
     }
     
     private fun clearData() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Clear Data")
             .setMessage("WARNING: This will delete ALL launcher data including:\n\n• All settings and preferences\n• Favorite apps\n• Workspaces\n• App locks and timers\n• Todo items\n• Workout data\n• Finance data\n• Widget configurations\n• All other app data\n\nThis action CANNOT be undone. The launcher will restart after clearing data.\n\nAre you absolutely sure?")
             .setPositiveButton("Clear All Data") { _, _ ->
@@ -712,6 +716,16 @@ class SettingsActivity : ComponentActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+        
+        fixDialogTextColors(dialog)
+    }
+    
+    private fun fixDialogTextColors(dialog: AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(this, R.color.text)
+            dialog.findViewById<TextView>(android.R.id.title)?.setTextColor(textColor)
+            dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(textColor)
+        } catch (_: Exception) {}
     }
     
     companion object {

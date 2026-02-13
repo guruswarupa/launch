@@ -142,6 +142,9 @@ class PhysicalActivityWidget(
         
         // Populate hourly stats list
         hourlyStatsContainer.removeAllViews()
+        val textColor = ContextCompat.getColor(context, R.color.text)
+        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
+        
         hourlyData.forEach { hourly ->
             if (hourly.steps > 0) {
                 val hourView = LayoutInflater.from(context).inflate(
@@ -160,12 +163,12 @@ class PhysicalActivityWidget(
                 }
                 
                 text1.text = hourLabel
-                text1.setTextColor(ContextCompat.getColor(context, R.color.white))
+                text1.setTextColor(textColor)
                 text1.textSize = 14f
                 
                 val distanceFormattedHourly = df.format(hourly.distanceKm)
                 text2.text = "${hourly.steps} steps • $distanceFormattedHourly km"
-                text2.setTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+                text2.setTextColor(secondaryTextColor)
                 text2.textSize = 12f
                 
                 hourlyStatsContainer.addView(hourView)

@@ -39,6 +39,12 @@
     <color name="gray">#808080</color>
     <color name="red">#FF5252</color>
     
+    <!-- Dialog Colors -->
+    <color name="dialog_background">#80000000</color> <!-- Original semi-transparent black for dark mode -->
+    <color name="menu_background_color">#80000000</color> <!-- Original semi-transparent black for dark mode -->
+    <color name="dialog_text">#FFFFFF</color> <!-- Restore pure white for dialog text in dark mode -->
+    <color name="dialog_text_secondary">#B0B0B0</color>
+    
     <!-- Icon colors for dark mode -->
     <color name="icon_color">#FFFFFF</color> <!-- White icons for dark mode -->
 

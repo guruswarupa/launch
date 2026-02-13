@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
@@ -83,7 +84,7 @@ class PermissionManager(
     fun requestUsageStatsPermission(usageStatsManager: AppUsageStatsManager) {
         if (!usageStatsManager.hasUsageStatsPermission()) {
             if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
-                AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+                val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
                     .setTitle("Usage Stats Permission")
                     .setMessage("To show app usage time, please grant usage access permission in the next screen.")
                     .setPositiveButton("Grant") { _, _ ->
@@ -96,8 +97,18 @@ class PermissionManager(
                         sharedPreferences.edit().putBoolean("usage_stats_permission_denied", true).apply()
                     }
                     .show()
+                
+                fixDialogTextColors(dialog)
             }
         }
+    }
+    
+    private fun fixDialogTextColors(dialog: AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(activity, R.color.text)
+            dialog.findViewById<TextView>(android.R.id.title)?.setTextColor(textColor)
+            dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(textColor)
+        } catch (_: Exception) {}
     }
     
     /**

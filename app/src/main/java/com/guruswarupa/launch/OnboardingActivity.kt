@@ -1381,25 +1381,25 @@ class OnboardingActivity : ComponentActivity() {
     
     private fun fixDialogTextColors(dialog: AlertDialog) {
         try {
-            val whiteColor = ContextCompat.getColor(this, android.R.color.white)
+            val textColor = ContextCompat.getColor(this, R.color.text)
             val nord7Color = ContextCompat.getColor(this, R.color.nord7)
             
             val titleView = dialog.findViewById<TextView>(android.R.id.title)
-            titleView?.setTextColor(whiteColor)
+            titleView?.setTextColor(textColor)
             
             val messageView = dialog.findViewById<TextView>(android.R.id.message)
-            messageView?.setTextColor(whiteColor)
+            messageView?.setTextColor(textColor)
             
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(nord7Color)
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(whiteColor)
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(whiteColor)
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(textColor)
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(textColor)
             
             val listView = dialog.listView
             if (listView != null) {
                 for (i in 0 until listView.childCount) {
                     val child = listView.getChildAt(i)
                     if (child is TextView) {
-                        child.setTextColor(whiteColor)
+                        child.setTextColor(textColor)
                     }
                 }
             }

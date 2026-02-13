@@ -13,6 +13,7 @@ import android.view.animation.AnimationUtils
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -95,7 +96,7 @@ class WorkoutWidget(private val rootView: View) {
         
         val dialogView = LayoutInflater.from(context).inflate(R.layout.workout_day_details, null)
         val dateText = dialogView.findViewById<TextView>(R.id.day_date_text)
-        val exercisesList = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.day_exercises_list)
+        val exercisesList = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.day_events_list)
         val emptyState = dialogView.findViewById<View>(R.id.day_empty_state)
         
         dateText.text = displayDate
@@ -231,6 +232,12 @@ class WorkoutWidget(private val rootView: View) {
         val typeReps = dialogView.findViewById<android.widget.RadioButton>(R.id.type_reps)
         val typeTime = dialogView.findViewById<android.widget.RadioButton>(R.id.type_time)
         
+        // Fix input colors
+        val textColor = ContextCompat.getColor(context, R.color.text)
+        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
+        customInput.setTextColor(textColor)
+        customInput.setHintTextColor(secondaryTextColor)
+        
         val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Add Exercise")
             .setView(dialogView)
@@ -262,6 +269,8 @@ class WorkoutWidget(private val rootView: View) {
                     }
                     background = context.getDrawable(R.drawable.button_neutral_ripple)
                     setPadding(16, 12, 16, 12)
+                    // Set preset button text color based on theme
+                    setTextColor(textColor)
                     setOnClickListener {
                         val type = if (typeTime.isChecked) ExerciseType.TIME else ExerciseType.REPS
                         addExercise(preset, type)
@@ -342,7 +351,7 @@ class WorkoutWidget(private val rootView: View) {
     
     fun showExerciseOptions(exercise: WorkoutExercise) {
         val options = arrayOf("Reset Today", "Delete Exercise")
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(exercise.name)
             .setItems(options) { _, which ->
                 when (which) {
@@ -363,6 +372,25 @@ class WorkoutWidget(private val rootView: View) {
             }
             .setNegativeButton("Cancel", null)
             .show()
+        
+        fixDialogTextColors(dialog)
+    }
+    
+    private fun fixDialogTextColors(dialog: AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(context, R.color.text)
+            val listView = dialog.listView
+            if (listView != null) {
+                listView.post {
+                    for (i in 0 until listView.childCount) {
+                        val child = listView.getChildAt(i)
+                        if (child is TextView) {
+                            child.setTextColor(textColor)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
     }
     
     private fun showDeleteConfirmDialog(exercise: WorkoutExercise, onConfirm: () -> Unit) {

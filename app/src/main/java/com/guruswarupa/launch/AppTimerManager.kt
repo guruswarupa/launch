@@ -62,13 +62,13 @@ class AppTimerManager(private val context: Context) {
         
         currentDialog = dialog // Store reference to track if showing
         
-        // Fix dialog items text color to white
+        // Fix dialog items text color to theme-aware color
         fixDialogItemsTextColor(dialog)
     }
     
     private fun fixDialogItemsTextColor(dialog: AlertDialog) {
         try {
-            val whiteColor = ContextCompat.getColor(context, android.R.color.white)
+            val textColor = ContextCompat.getColor(context, R.color.text)
             val listView = dialog.listView
             if (listView != null) {
                 // Post on main thread after dialog is shown to ensure views are inflated
@@ -78,10 +78,10 @@ class AppTimerManager(private val context: Context) {
                         for (i in 0 until listView.childCount) {
                             val itemView = listView.getChildAt(i)
                             if (itemView is TextView) {
-                                itemView.setTextColor(whiteColor)
+                                itemView.setTextColor(textColor)
                             } else if (itemView is ViewGroup) {
                                 // Search for TextView in the view hierarchy
-                                findTextViewsAndSetColor(itemView, whiteColor)
+                                findTextViewsAndSetColor(itemView, textColor)
                             }
                         }
                     } catch (_: Exception) {
@@ -95,9 +95,9 @@ class AppTimerManager(private val context: Context) {
                         for (i in 0 until listView.childCount) {
                             val itemView = listView.getChildAt(i)
                             if (itemView is TextView) {
-                                itemView.setTextColor(whiteColor)
+                                itemView.setTextColor(textColor)
                             } else if (itemView is ViewGroup) {
-                                findTextViewsAndSetColor(itemView, whiteColor)
+                                findTextViewsAndSetColor(itemView, textColor)
                             }
                         }
                     } catch (_: Exception) {
@@ -124,8 +124,9 @@ class AppTimerManager(private val context: Context) {
     private fun showCustomTimerDialog(onTimerSet: (Long) -> Unit) {
         val input = EditText(context)
         input.hint = "Enter minutes"
-        input.setTextColor(ContextCompat.getColor(context, android.R.color.white))
-        input.setHintTextColor(ContextCompat.getColor(context, android.R.color.white))
+        val textColor = ContextCompat.getColor(context, R.color.text)
+        input.setTextColor(textColor)
+        input.setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Timer")
