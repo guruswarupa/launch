@@ -1,12 +1,12 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="wrap_content"
+    android:layout_width="80dp"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_margin="4dp"
     android:orientation="vertical"
-    android:background="?android:attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
-    android:gravity="center_horizontal">
+    android:gravity="center_horizontal"
+    android:padding="8dp">
 
     <!-- Icon ImageView -->
     <ImageView
@@ -27,7 +27,10 @@
         android:layout_marginTop="4dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:maxWidth="90dp" />
+        android:maxWidth="72dp"
+        android:gravity="center"
+        android:background="@drawable/grid_item_background"
+        android:padding="4dp" />
 
     <!-- Usage Time TextView -->
     <TextView
@@ -37,6 +40,9 @@
         android:textSize="10sp"
         android:textColor="@color/text_secondary"
         android:alpha="0.7"
-        android:layout_marginBottom="8dp"
-        android:maxWidth="90dp" />
+        android:layout_marginBottom="4dp"
+        android:maxWidth="72dp"
+        android:gravity="center"
+        android:background="@drawable/grid_item_background"
+        android:padding="4dp" />
 </LinearLayout>
