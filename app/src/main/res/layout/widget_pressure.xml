@@ -2,9 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/widget_background"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:orientation="vertical">
 
     <!-- Header -->
     <LinearLayout
@@ -20,7 +18,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Barometric Pressure"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="22sp"
             android:textStyle="bold"
             android:letterSpacing="0.02" />
@@ -30,7 +28,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enable"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="13sp"
             android:textStyle="bold"
             android:background="@drawable/button_neutral_ripple"
@@ -45,11 +43,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/widget_background"
         android:padding="24dp"
         android:gravity="center"
-        android:visibility="gone"
-        android:elevation="4dp">
+        android:visibility="gone">
 
         <!-- Pressure Display Card -->
         <LinearLayout
@@ -57,14 +53,13 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="@drawable/widget_background"
             android:padding="20dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Pressure"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.05"
@@ -93,7 +88,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Altitude: 0.00 m"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
@@ -113,7 +108,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Pressure sensor not available"
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="16sp"
             android:gravity="center"
             android:visibility="gone" />

@@ -41,4 +41,11 @@
     
     <!-- Icon colors for dark mode -->
     <color name="icon_color">#FFFFFF</color> <!-- White icons for dark mode -->
+
+    <!-- Dynamic Text Colors -->
+    <color name="widget_text">@color/white</color>
+    <color name="widget_text_secondary">@color/text_secondary</color>
+    <color name="widget_divider">#33FFFFFF</color>
+    <color name="widget_item_background">#1AFFFFFF</color>
+    <color name="widget_item_stroke">#33FFFFFF</color>
 </resources>

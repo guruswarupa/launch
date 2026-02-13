@@ -55,6 +55,15 @@ class TodoManager(
     
     fun getTodoItems(): MutableList<TodoItem> = todoItems
     
+    /**
+     * Notify the adapter that theme has changed and views need to be refreshed
+     */
+    fun onThemeChanged() {
+        if (::todoAdapter.isInitialized) {
+            todoAdapter.notifyDataSetChanged()
+        }
+    }
+    
     fun showAddTodoDialog() {
         val dialogBuilder = android.app.AlertDialog.Builder(activity, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Add Todo Item")

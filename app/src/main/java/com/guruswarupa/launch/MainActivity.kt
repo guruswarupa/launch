@@ -46,6 +46,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var timeTextView: TextView
     private lateinit var dateTextView: TextView
     private lateinit var searchBox: EditText
+    private lateinit var searchContainer: FrameLayout
     private lateinit var appDock: LinearLayout
     private lateinit var wallpaperBackground: ImageView
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView
@@ -56,7 +57,10 @@ class MainActivity : FragmentActivity() {
     private lateinit var voiceSearchButton: ImageButton
     private lateinit var topWidgetContainer: LinearLayout
     private var fullAppList: MutableList<ResolveInfo> = mutableListOf()
-
+        
+    // Theme tracking
+    private var currentUiMode: Int = 0
+        
     // Right Drawer Views
     private lateinit var rightDrawerWallpaper: ImageView
     private lateinit var rightDrawerTime: TextView
@@ -136,6 +140,92 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
+     * Applies theme-appropriate backgrounds to all widget containers based on current theme mode.
+     */
+    fun applyThemeBasedWidgetBackgrounds() {
+        // Check if we're in night mode (dark theme)
+        val isNightMode = (resources.configuration.uiMode and 
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        
+        // Save current UI mode to detect changes
+        currentUiMode = resources.configuration.uiMode
+        
+        // Select appropriate background drawables
+        val widgetBackground = if (isNightMode) {
+            R.drawable.widget_background_dark // Semi-transparent black
+        } else {
+            R.drawable.widget_background // Semi-transparent white
+        }
+        
+        // Apply backgrounds to all widget containers
+        findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.widget_settings_header)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.widgets_section)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.notifications_widget_container)?.parent?.let { parent ->
+            if (parent is View) parent.setBackgroundResource(widgetBackground)
+        }
+        findViewById<View>(R.id.calendar_events_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.countdown_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.physical_activity_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.compass_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.pressure_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.proximity_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.temperature_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.network_stats_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.device_info_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.noise_decibel_widget_container)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.workout_widget_container)?.parent?.let { parent ->
+            if (parent is View) parent.setBackgroundResource(widgetBackground)
+        }
+        findViewById<View>(R.id.calculator_widget_container)?.parent?.let { parent ->
+            if (parent is View) parent.setBackgroundResource(widgetBackground)
+        }
+        findViewById<View>(R.id.finance_widget)?.setBackgroundResource(widgetBackground)
+        findViewById<View>(R.id.weekly_usage_widget)?.setBackgroundResource(widgetBackground)
+
+        // Apply theme to search box
+        if (::searchBox.isInitialized) {
+            val searchBg = if (isNightMode) R.drawable.search_box_transparent_bg else R.drawable.search_box_light_bg
+            val textColor = ContextCompat.getColor(this, if (isNightMode) R.color.white else R.color.black)
+            val hintColor = ContextCompat.getColor(this, if (isNightMode) R.color.gray_light else R.color.gray)
+            
+            // Apply background to search container if initialized, otherwise to searchBox
+            if (::searchContainer.isInitialized) {
+                searchContainer.setBackgroundResource(searchBg)
+                searchBox.background = null // Keep EditText background transparent
+            } else {
+                searchBox.setBackgroundResource(searchBg)
+            }
+            
+            searchBox.setTextColor(textColor)
+            searchBox.setHintTextColor(hintColor)
+            
+            // Tint search icon
+            val iconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+            searchBox.compoundDrawablesRelative[0]?.setTint(iconColor)
+            if (::voiceSearchButton.isInitialized) {
+                voiceSearchButton.setColorFilter(iconColor)
+            }
+        }
+    }
+    
+    /**
+     * Checks if the UI mode has changed and updates widget backgrounds if needed.
+     */
+    private fun checkAndUpdateThemeIfNeeded() {
+        val newUiMode = resources.configuration.uiMode
+        if (newUiMode != currentUiMode) {
+            currentUiMode = newUiMode
+            applyThemeBasedWidgetBackgrounds()
+            // Notify todo manager of theme change
+            if (::todoManager.isInitialized) {
+                todoManager.onThemeChanged()
+            }
+        }
+    }
+    
+    /**
      * Initializes broadcast receivers.
      */
     private fun initializeBroadcastReceivers() {
@@ -174,6 +264,7 @@ class MainActivity : FragmentActivity() {
      */
     private fun initializeViews() {
         searchBox = findViewById(R.id.search_box)
+        searchContainer = findViewById(R.id.search_container)
         recyclerView = findViewById(R.id.app_list)
         // Disable animations to prevent "Tmp detached view" crash during rapid updates
         recyclerView.itemAnimator = null
@@ -420,6 +511,9 @@ class MainActivity : FragmentActivity() {
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, favoriteAppManager)
         
+        // Apply theme-appropriate widget backgrounds
+        applyThemeBasedWidgetBackgrounds()
+        
         // Initialize appList before using it (must be initialized before appListLoader)
         appList = mutableListOf()
         fullAppList = mutableListOf()
@@ -496,6 +590,17 @@ class MainActivity : FragmentActivity() {
         
         activityInitializer.setupDrawerLayout(drawerLayout)
         navigationManager = NavigationManager(this, drawerLayout, gestureHandler, handler)
+        
+        // Add drawer listener to check for theme changes when drawer opens
+        drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
+            override fun onDrawerOpened(drawerView: View) {
+                // Check for theme changes when drawer opens
+                checkAndUpdateThemeIfNeeded()
+            }
+            override fun onDrawerClosed(drawerView: View) {}
+            override fun onDrawerStateChanged(newState: Int) {}
+        })
         
         // Initialize WidgetManager
         val widgetContainer = findViewById<LinearLayout>(R.id.widget_container)
@@ -989,6 +1094,9 @@ class MainActivity : FragmentActivity() {
                 applyFocusMode(appDockManager.getCurrentMode())
             }
         }
+        
+        // Check for theme changes and update widget backgrounds if needed
+        checkAndUpdateThemeIfNeeded()
         
         // Ensure search box doesn't gain focus when returning to home screen
         if (::searchBox.isInitialized) {

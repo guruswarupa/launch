@@ -3,25 +3,25 @@
     <style name="CustomDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:windowBackground">@drawable/alert_dialog_background</item>
         <item name="colorSurface">@android:color/transparent</item> <!-- Transparent surface -->
-        <item name="colorOnSurface">@color/white</item> <!-- Text color -->
+        <item name="colorOnSurface">@color/text</item> <!-- Text color -->
         <item name="colorPrimary">@color/nord7</item> <!-- Button color -->
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item> <!-- Rounded corners -->
         
         <!-- Explicit text colors for latest Android compatibility -->
-        <item name="android:textColorPrimary">@color/white</item>
-        <item name="android:textColorSecondary">@color/white</item>
-        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColor">@color/text</item>
     </style>
     
     <style name="CustomDialogTitleStyle" parent="TextAppearance.MaterialComponents.Headline6">
-        <item name="android:textColor">@color/white</item>
+        <item name="android:textColor">@color/text</item>
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
     </style>
     
     <style name="CustomDialogBodyStyle" parent="TextAppearance.MaterialComponents.Body1">
-        <item name="android:textColor">@color/white</item>
+        <item name="android:textColor">@color/text</item>
         <item name="android:textSize">16sp</item>
     </style>
     
@@ -31,42 +31,42 @@
     </style>
     
     <style name="CustomDialogNegativeButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textColor">@color/white</item>
-        <item name="rippleColor">@color/white</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="rippleColor">@color/text</item>
     </style>
     
     <style name="CustomDialogNeutralButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textColor">@color/white</item>
-        <item name="rippleColor">@color/white</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="rippleColor">@color/text</item>
     </style>
     
     <style name="TextAppearance.Dialog.Title" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="android:textSize">18sp</item>
-        <item name="android:textColor">@color/white</item>
+        <item name="android:textColor">@color/text</item>
     </style>
     <style name="PopupMenuStyle" parent="Widget.AppCompat.PopupMenu">
         <item name="android:popupBackground">@drawable/menu_background</item>
-        <item name="android:textColor">@color/white</item>
-        <item name="android:textColorPrimary">@color/white</item>
-        <item name="android:textColorSecondary">@color/white</item>
-        <item name="android:textColorHint">@color/white</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
         <item name="android:itemTextAppearance">@style/PopupMenuItemTextAppearance</item>
-        <!-- Force white text regardless of theme -->
-        <item name="colorControlNormal">@color/white</item>
-        <item name="colorControlActivated">@color/white</item>
-        <item name="colorControlHighlight">@color/white</item>
+        <!-- Force appropriate text color regardless of theme -->
+        <item name="colorControlNormal">@color/text</item>
+        <item name="colorControlActivated">@color/text</item>
+        <item name="colorControlHighlight">@color/text</item>
     </style>
     
     <style name="PopupMenuItemTextAppearance" parent="TextAppearance.AppCompat.Menu">
-        <item name="android:textColor">@color/white</item>
-        <item name="android:textColorPrimary">@color/white</item>
-        <item name="android:textColorSecondary">@color/white</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
     </style>
 
 
     <style name="TextAppearance.Dialog.Item" parent="TextAppearance.MaterialComponents.Body1">
         <item name="android:textSize">16sp</item>
-        <item name="android:textColor">@color/white</item>
+        <item name="android:textColor">@color/text</item>
     </style>
 
     <!-- Base application theme. -->
@@ -79,12 +79,12 @@
 
     <!-- Widget text style with background -->
     <style name="WidgetTextStyle">
-        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textColor">#000000</item>
         <item name="android:textSize">16sp</item>
         <item name="android:background">@drawable/widget_background</item>
         <item name="android:padding">8dp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:shadowColor">#000000</item>
+        <item name="android:shadowColor">#FFFFFFFF</item>
         <item name="android:shadowDx">1</item>
         <item name="android:shadowDy">1</item>
         <item name="android:shadowRadius">2</item>
@@ -118,7 +118,7 @@
         <item name="android:background">@drawable/day_badge_background</item>
         <item name="android:gravity">center</item>
         <item name="android:textSize">10sp</item>
-        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textColor">@color/widget_text</item>
         <item name="android:textStyle">bold</item>
     </style>
 
