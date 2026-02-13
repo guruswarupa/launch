@@ -181,6 +181,7 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.calculator_widget_container)?.parent?.let { parent ->
             if (parent is View) parent.setBackgroundResource(widgetBackground)
         }
+        findViewById<View>(R.id.todo_widget_main_container)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.finance_widget)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.weekly_usage_widget)?.setBackgroundResource(widgetBackground)
 
@@ -760,9 +761,9 @@ class MainActivity : FragmentActivity() {
         lifecycleManager.setAppList(appList)
         lifecycleManager.setWidgetManager(widgetManager)
         lifecycleManager.setUsageStatsManager(usageStatsManager)
+        lifecycleManager.setUsageStatsDisplayManager(usageStatsDisplayManager)
         lifecycleManager.setTimeDateManager(timeDateManager)
         lifecycleManager.setWeeklyUsageGraph(weeklyUsageGraph)
-        lifecycleManager.setUsageStatsDisplayManager(usageStatsDisplayManager)
         // todoManager is initialized later in initializeDeferredWidgets()
         if (::todoManager.isInitialized) {
             lifecycleManager.setTodoManager(todoManager)
@@ -1193,6 +1194,7 @@ class MainActivity : FragmentActivity() {
         
         // Pause pressure tracking
         if (::pressureWidget.isInitialized) {
+            pressureWidget.onResume() // Resume just ensures it's stopped correctly if needed, wait, onPause should stop
             pressureWidget.onPause()
         }
         
