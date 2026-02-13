@@ -2,6 +2,8 @@ package com.guruswarupa.launch
 
 import android.content.Context
 import android.graphics.*
+import android.graphics.PorterDuff
+import android.hardware.SensorManager
 import android.util.AttributeSet
 import android.view.View
 import androidx.core.graphics.toColorInt
@@ -16,28 +18,31 @@ class CompassView @JvmOverloads constructor(
     
     private var azimuth: Float = 0f
     private var directionName: String = "N"
+    private var accuracy: Int = SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM
     
     // Gradient colors
-    private val outerRingColor = "#88C0D0".toColorInt() // nord8
-    private val innerRingColor = "#8FBCBB".toColorInt() // nord7
-    private val cardinalColor = "#E5E9F0".toColorInt() // Light text
-    private val intermediateColor = "#88A3BE".toColorInt() // Muted
-    private val northMarkerColor = "#BF616A".toColorInt() // Red accent
-    private val centerGradientStart = "#5E81AC".toColorInt() // Blue
-    private val centerGradientEnd = "#88C0D0".toColorInt() // Light blue
+    private val outerRingColor = "#5E81AC".toColorInt() // nord10 - Deeper blue
+    private val innerRingColor = "#81A1C1".toColorInt() // nord9 - Medium blue
+    private val cardinalColor = "#ECEFF4".toColorInt() // nord6 - Light text
+    private val intermediateColor = "#88C0D0".toColorInt() // nord8 - Light blue
+    private val northMarkerColor = "#BF616A".toColorInt() // nord11 - Red accent
+    private val centerGradientStart = "#88C0D0".toColorInt() // nord8 - Light blue
+    private val centerGradientEnd = "#5E81AC".toColorInt() // nord10 - Deep blue
     
     private val compassRingPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
-        strokeWidth = 6f
+        strokeWidth = 8f
         color = outerRingColor
+        setShadowLayer(6f, 0f, 3f, "#60000000".toColorInt())
     }
     
     private val innerRingPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 4f
         color = innerRingColor
+        setShadowLayer(4f, 0f, 2f, "#40000000".toColorInt())
     }
     
     private val directionPaint = Paint().apply {
@@ -51,36 +56,39 @@ class CompassView @JvmOverloads constructor(
         textSize = 56f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        setShadowLayer(8f, 0f, 2f, "#40000000".toColorInt())
+        setShadowLayer(12f, 0f, 4f, "#80000000".toColorInt())
     }
     
     private val cardinalPaint = Paint().apply {
         isAntiAlias = true
         color = cardinalColor
-        textSize = 36f
+        textSize = 42f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        setShadowLayer(4f, 0f, 1f, "#30000000".toColorInt())
+        setShadowLayer(8f, 0f, 2f, "#80000000".toColorInt())
     }
     
     private val intermediatePaint = Paint().apply {
         isAntiAlias = true
         color = intermediateColor
-        textSize = 24f
+        textSize = 26f
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.DEFAULT
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        setShadowLayer(4f, 0f, 1f, "#60000000".toColorInt())
     }
     
     private val markerPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
         color = northMarkerColor
+        setShadowLayer(6f, 0f, 3f, "#60000000".toColorInt())
     }
     
     private val tickPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
         color = "#88A3BE".toColorInt()
+        setShadowLayer(2f, 0f, 1f, "#30000000".toColorInt())
     }
 
     private val backgroundPaint = Paint().apply {
@@ -98,6 +106,14 @@ class CompassView @JvmOverloads constructor(
         isAntiAlias = true
         style = Paint.Style.FILL
         color = "#40000000".toColorInt()
+    }
+
+    private val calibrationPaint = Paint().apply {
+        isAntiAlias = true
+        style = Paint.Style.STROKE
+        strokeWidth = 8f
+        color = "#EBCB8B".toColorInt() // nord13 yellow
+        strokeCap = Paint.Cap.ROUND
     }
 
     private val markerPath = Path()
@@ -120,9 +136,15 @@ class CompassView @JvmOverloads constructor(
     private var backgroundShader: Shader? = null
     private var centerShader: Shader? = null
 
-    fun setDirection(azimuth: Float, directionName: String) {
+    private var calibrationPhase = 0f
+
+    fun setDirection(azimuth: Float, directionName: String, accuracy: Int) {
         this.azimuth = azimuth
         this.directionName = directionName
+        this.accuracy = accuracy
+        if (accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+            calibrationPhase = (calibrationPhase + 0.1f) % (2 * PI.toFloat())
+        }
         invalidate()
     }
     
@@ -147,6 +169,19 @@ class CompassView @JvmOverloads constructor(
             Shader.TileMode.CLAMP
         )
         
+        // Add outer glow effect
+        val outerGlowShader = RadialGradient(
+            centerX, centerY, radius + 15f,
+            Color.TRANSPARENT,
+            "#405E81AC".toColorInt(),
+            Shader.TileMode.CLAMP
+        )
+        
+        // Combine shaders
+        backgroundShader = ComposeShader(
+            backgroundShader!!, outerGlowShader, PorterDuff.Mode.ADD
+        )
+        
         centerShader = RadialGradient(
             centerX, centerY, 35f,
             centerGradientStart,
@@ -163,6 +198,11 @@ class CompassView @JvmOverloads constructor(
         // Draw background circle with gradient
         backgroundPaint.shader = backgroundShader
         canvas.drawCircle(centerX, centerY, radius + 5f, backgroundPaint)
+
+        if (accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
+            drawCalibration(canvas)
+            return
+        }
         
         // Rotate canvas to show current direction (negative because we want compass to rotate)
         canvas.withRotation(-azimuth, centerX, centerY) {
@@ -299,5 +339,39 @@ class CompassView @JvmOverloads constructor(
             centerY + 50f,
             textPaint
         )
+    }
+
+    private fun drawCalibration(canvas: Canvas) {
+        val path = Path()
+        val size = radius * 0.6f
+        
+        // Draw an "8" figure (lemniscate)
+        for (i in 0..100) {
+            val t = (i / 100f) * 2 * PI.toFloat()
+            val scale = 2 / (3 - cos(2 * t))
+            val x = centerX + scale * cos(t) * size
+            val y = centerY + scale * sin(2 * t) / 2 * size
+            
+            if (i == 0) path.moveTo(x, y)
+            else path.lineTo(x, y)
+        }
+        path.close()
+        
+        canvas.drawPath(path, calibrationPaint)
+        
+        // Draw moving dot on the path
+        val dotT = calibrationPhase
+        val dotScale = 2 / (3 - cos(2 * dotT))
+        val dotX = centerX + dotScale * cos(dotT) * size
+        val dotY = centerY + dotScale * sin(2 * dotT) / 2 * size
+        
+        calibrationPaint.style = Paint.Style.FILL
+        canvas.drawCircle(dotX, dotY, 15f, calibrationPaint)
+        calibrationPaint.style = Paint.Style.STROKE
+
+        textPaint.textSize = 32f
+        val msg = "Recalibrate (Rotate in ∞ shape)"
+        textPaint.getTextBounds(msg, 0, msg.length, textBounds)
+        canvas.drawText(msg, centerX, centerY + size + 60f, textPaint)
     }
 }
