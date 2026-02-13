@@ -139,8 +139,8 @@ class DailyUsageManager(private val context: Context) {
         val input = EditText(context).apply {
             hint = "Enter minutes (0 to disable)"
             setText(if (currentLimit > 0) (currentLimit / 60000).toString() else "")
-            setTextColor(ContextCompat.getColor(context, android.R.color.white))
-            setHintTextColor(ContextCompat.getColor(context, android.R.color.white))
+            setTextColor(ContextCompat.getColor(context, R.color.text))
+            setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)

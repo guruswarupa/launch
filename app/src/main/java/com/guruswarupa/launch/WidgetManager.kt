@@ -20,6 +20,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -239,7 +240,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         
         if (options.isEmpty()) return
         
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(widgetName)
             .setItems(options.toTypedArray()) { _, which ->
                 val selectedOption = options[which]
@@ -251,6 +252,25 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             }
             .setNegativeButton("Cancel", null)
             .show()
+        
+        fixDialogTextColors(dialog)
+    }
+    
+    private fun fixDialogTextColors(dialog: AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(context, R.color.text)
+            val listView = dialog.listView
+            if (listView != null) {
+                listView.post {
+                    for (i in 0 until listView.childCount) {
+                        val child = listView.getChildAt(i)
+                        if (child is TextView) {
+                            child.setTextColor(textColor)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
     }
     
     fun moveWidgetUp(appWidgetId: Int) {

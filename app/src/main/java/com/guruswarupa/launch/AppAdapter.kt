@@ -738,15 +738,17 @@ class AppAdapter(
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
         popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
 
+        // Use theme-aware text color
+        val textColor = ContextCompat.getColor(activity, R.color.text)
+
         // Update favorite menu item text
         val favoriteMenuItem = popupMenu.menu.findItem(R.id.toggle_favorite)
         if (favoriteMenuItem != null) {
             val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
             favoriteMenuItem.title = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
-            // Force white text color using SpannableString
-            val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+            // Force theme-aware text color using SpannableString
             val spannable = android.text.SpannableString(favoriteMenuItem.title)
-            spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             favoriteMenuItem.title = spannable
         }
 
@@ -756,23 +758,21 @@ class AppAdapter(
             try {
                 val isHidden = activity.hiddenAppManager.isAppHidden(packageName)
                 hideMenuItem.title = if (isHidden) "Unhide App" else "Hide App"
-                // Force white text color using SpannableString
-                val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+                // Force theme-aware text color using SpannableString
                 val spannable = android.text.SpannableString(hideMenuItem.title)
-                spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 hideMenuItem.title = spannable
             } catch (_: UninitializedPropertyAccessException) {
                 hideMenuItem.isVisible = false
             }
         }
         
-        // Force white text for all menu items
-        val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+        // Force theme-aware text for all menu items
         for (i in 0 until popupMenu.menu.size) {
             val item = popupMenu.menu[i]
             val title = item.title?.toString() ?: continue
             val spannable = android.text.SpannableString(title)
-            spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             item.title = spannable
         }
 
@@ -812,7 +812,7 @@ class AppAdapter(
     @SuppressLint("DiscouragedPrivateApi")
     private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
         try {
-            val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+            val textColor = ContextCompat.getColor(activity, R.color.text)
             
             // Try to get the ListView from the popup menu using reflection
             val popupField = popupMenu.javaClass.getDeclaredField("mPopup")
@@ -841,9 +841,9 @@ class AppAdapter(
             // Function to fix text colors in a view
             fun fixTextColors(view: View) {
                 if (view is TextView) {
-                    view.setTextColor(whiteColor)
+                    view.setTextColor(textColor)
                 } else if (view is ViewGroup) {
-                    findTextViewsAndSetColor(view, whiteColor)
+                    findTextViewsAndSetColor(view, textColor)
                 }
             }
             

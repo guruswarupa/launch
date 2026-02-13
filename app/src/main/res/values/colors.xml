@@ -39,6 +39,12 @@
     <color name="red">#FF5252</color>
     <color name="icon_color">#FFFFFF</color> <!-- White icons -->
     
+    <!-- Dialog Colors -->
+    <color name="dialog_background">#F2FFFFFF</color> <!-- Near-opaque white for dialogs in light mode -->
+    <color name="menu_background_color">#E6FFFFFF</color> <!-- Translucent white for menus in light mode -->
+    <color name="dialog_text">@color/text</color>
+    <color name="dialog_text_secondary">@color/text_secondary</color>
+    
     <!-- Dynamic Text Colors -->
     <color name="widget_text">@color/black</color>
     <color name="widget_text_secondary">@color/text_secondary</color>

@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Today"
-        android:textColor="@color/white"
+        android:textColor="@color/dialog_text"
         android:textSize="22sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
@@ -20,7 +20,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Total: 0h 0m"
-        android:textColor="@color/text_secondary"
+        android:textColor="@color/dialog_text_secondary"
         android:textSize="16sp"
         android:layout_marginBottom="24dp" />
 
@@ -47,7 +47,7 @@
         android:layout_marginTop="16dp"
         android:background="@drawable/button_neutral_ripple"
         android:text="Close"
-        android:textColor="@color/white"
+        android:textColor="@color/dialog_text"
         android:paddingHorizontal="32dp"
         android:paddingVertical="12dp"
         android:textSize="14sp" />

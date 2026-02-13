@@ -232,7 +232,7 @@ class CountdownWidget(
         }
         options.add("Delete")
         
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(countdown.title)
             .setItems(options.toTypedArray()) { _, which ->
                 val selectedOption = options[which]
@@ -256,6 +256,26 @@ class CountdownWidget(
             }
             .setNegativeButton("Cancel", null)
             .show()
+        
+        // Fix dialog text colors for dark mode consistency
+        fixDialogTextColors(dialog)
+    }
+    
+    private fun fixDialogTextColors(dialog: AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(context, R.color.text)
+            val listView = dialog.listView
+            if (listView != null) {
+                listView.post {
+                    for (i in 0 until listView.childCount) {
+                        val child = listView.getChildAt(i)
+                        if (child is TextView) {
+                            child.setTextColor(textColor)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
     }
     
     @SuppressLint("NotifyDataSetChanged")
@@ -284,6 +304,16 @@ class CountdownWidget(
         val dateInput: EditText = dialogView.findViewById(R.id.countdown_date_input)
         val timeInput: EditText = dialogView.findViewById(R.id.countdown_time_input)
         val fromCalendarButton: Button = dialogView.findViewById(R.id.from_calendar_button)
+        
+        // Fix input colors
+        val textColor = ContextCompat.getColor(context, R.color.text)
+        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
+        titleInput.setTextColor(textColor)
+        titleInput.setHintTextColor(secondaryTextColor)
+        dateInput.setTextColor(textColor)
+        dateInput.setHintTextColor(secondaryTextColor)
+        timeInput.setTextColor(textColor)
+        timeInput.setHintTextColor(secondaryTextColor)
         
         // Set up date picker
         val calendar = Calendar.getInstance()
@@ -369,6 +399,16 @@ class CountdownWidget(
         val dateInput: EditText = dialogView.findViewById(R.id.countdown_date_input)
         val timeInput: EditText = dialogView.findViewById(R.id.countdown_time_input)
         val fromCalendarButton: Button = dialogView.findViewById(R.id.from_calendar_button)
+        
+        // Fix input colors
+        val textColor = ContextCompat.getColor(context, R.color.text)
+        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
+        titleInput.setTextColor(textColor)
+        titleInput.setHintTextColor(secondaryTextColor)
+        dateInput.setTextColor(textColor)
+        dateInput.setHintTextColor(secondaryTextColor)
+        timeInput.setTextColor(textColor)
+        timeInput.setHintTextColor(secondaryTextColor)
         
         titleInput.setText(countdown.title)
         
@@ -465,7 +505,7 @@ class CountdownWidget(
             "${event.title} - ${dateFormat.format(Date(event.startTime))}"
         }
         
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select Calendar Event")
             .setItems(eventTitles.toTypedArray()) { _, which ->
                 val selectedEvent = events[which]
@@ -480,6 +520,9 @@ class CountdownWidget(
             }
             .setNegativeButton("Cancel", null)
             .show()
+        
+        // Fix dialog text colors
+        fixDialogTextColors(dialog)
     }
     
     private fun loadUpcomingCalendarEvents(): List<CalendarEvent> {
@@ -604,7 +647,7 @@ class CountdownWidget(
                     Manifest.permission.READ_CALENDAR
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                AlertDialog.Builder(context, R.style.CustomDialogTheme)
+                val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
                     .setTitle("Calendar Permission")
                     .setMessage("This permission allows you to create countdowns from your calendar events.")
                     .setPositiveButton("Grant Permission") { _, _ ->
@@ -618,6 +661,8 @@ class CountdownWidget(
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
+                
+                fixDialogTextColors(dialog)
             }
         }
     }

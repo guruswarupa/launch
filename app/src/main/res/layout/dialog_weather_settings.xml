@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Weather API Settings"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textSize="18sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />
@@ -30,7 +30,7 @@
         android:hint="Enter OpenWeatherMap API Key"
         android:inputType="text"
         android:padding="12dp"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textColorHint="@color/nord3"
         android:textSize="14sp"
         android:layout_marginBottom="16dp" />
@@ -51,7 +51,7 @@
         android:hint="e.g. London, UK"
         android:inputType="text"
         android:padding="12dp"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textColorHint="@color/nord3"
         android:textSize="14sp" />
 
