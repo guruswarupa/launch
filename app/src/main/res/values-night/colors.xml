@@ -3,7 +3,7 @@
     <color name="background">#121212</color> <!-- Matte black background -->
     <color name="text">#E0E0E0</color> <!-- Light grey text for contrast -->
     <color name="text_secondary">#B0B0B0</color> <!-- Lighter grey for secondary text -->
-    <color name="card_background">#1C1C1C</color> <!-- Dark card background -->
+    <color name="card_background">#80000000</color> <!-- Translucent black card background -->
     <color name="card_elevation">#333333</color> <!-- Slightly lighter card elevation -->
     <color name="colorPrimary">#6200EE</color> <!-- Keep accent colors like purple for highlights -->
     <color name="colorPrimaryDark">#3700B3</color>
@@ -54,4 +54,7 @@
     <color name="widget_divider">#33FFFFFF</color>
     <color name="widget_item_background">#1AFFFFFF</color>
     <color name="widget_item_stroke">#33FFFFFF</color>
+
+    <!-- Grid Item Background Colors -->
+    <color name="grid_item_background">#80000000</color>
 </resources>

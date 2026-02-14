@@ -1,19 +1,23 @@
 package com.guruswarupa.launch
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.app.WallpaperManager
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -34,20 +38,15 @@ class AppLockSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Use modern edge-to-edge API with transparent bars and white icons
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
-        )
+        // Make status bar and navigation bar transparent BEFORE setContentView
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
+        }
         
         setContentView(R.layout.activity_app_lock_settings)
         
-        // Handle window insets for edge-to-edge
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        setupTheme()
 
         appLockManager = AppLockManager(this)
 
@@ -156,6 +155,98 @@ class AppLockSettingsActivity : ComponentActivity() {
         recreateAppsList()
     }
     
+    private fun setupTheme() {
+        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val overlay = findViewById<View>(R.id.settings_overlay)
+        
+        if (isDarkMode) {
+            overlay.setBackgroundColor(Color.parseColor("#CC000000"))
+        } else {
+            overlay.setBackgroundColor(Color.parseColor("#66FFFFFF"))
+        }
+        
+        setupWallpaper()
+        
+        window.decorView.post {
+            makeSystemBarsTransparent(isDarkMode)
+        }
+    }
+    
+    private fun setupWallpaper() {
+        val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
+        
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
+            try {
+                val wallpaperManager = WallpaperManager.getInstance(this)
+                val wallpaperDrawable = wallpaperManager.drawable
+                if (wallpaperDrawable != null) {
+                    wallpaperImageView.setImageDrawable(wallpaperDrawable)
+                }
+            } catch (e: Exception) {
+                wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
+            }
+        } else {
+            wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
+        }
+    }
+    
+    private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.statusBarColor = Color.TRANSPARENT
+                window.navigationBarColor = Color.TRANSPARENT
+                window.setDecorFitsSystemWindows(false)
+                
+                val insetsController = window.decorView.windowInsetsController
+                if (insetsController != null) {
+                    val appearance = if (!isDarkMode) {
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    } else {
+                        0
+                    }
+                    insetsController.setSystemBarsAppearance(
+                        appearance,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    )
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                window.statusBarColor = Color.TRANSPARENT
+                window.navigationBarColor = Color.TRANSPARENT
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                
+                @Suppress("DEPRECATION")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val decorView = window.decorView
+                    if (decorView != null) {
+                        var flags = decorView.systemUiVisibility
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        
+                        if (!isDarkMode) {
+                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                            }
+                        }
+                        decorView.systemUiVisibility = flags
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    window.statusBarColor = Color.TRANSPARENT
+                    window.navigationBarColor = Color.TRANSPARENT
+                }
+            } catch (ex: Exception) {
+            }
+        }
+    }
+
     private fun setupExpandableSections() {
         // App Lock Settings Section
         val appLockSettingsHeader = findViewById<LinearLayout>(R.id.app_lock_settings_header)
