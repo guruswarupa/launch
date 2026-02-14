@@ -444,6 +444,18 @@ class SettingsActivity : ComponentActivity() {
                 }
                 settingsJson.put("app_lock_prefs", appLockJson)
             }
+            
+            // Export physical activity data
+            exportPhysicalActivityData(settingsJson)
+            
+            // Export workout tracker data
+            exportWorkoutData(settingsJson)
+            
+            // Export todo list data
+            exportTodoData(settingsJson)
+            
+            // Export finance tracker data
+            exportFinanceData(settingsJson)
 
             contentResolver.openOutputStream(uri)?.use { outputStream ->
                 outputStream.write(settingsJson.toString(2).toByteArray())
@@ -482,6 +494,26 @@ class SettingsActivity : ComponentActivity() {
                         val editor = appLockPrefs.edit()
                         importPreferences(appLockJson, editor)
                         editor.apply()
+                    }
+                    
+                    // Import physical activity data
+                    if (settingsJson.has("physical_activity_data")) {
+                        importPhysicalActivityData(settingsJson.getJSONObject("physical_activity_data"))
+                    }
+                    
+                    // Import workout data
+                    if (settingsJson.has("workout_data")) {
+                        importWorkoutData(settingsJson.getJSONObject("workout_data"))
+                    }
+                    
+                    // Import todo data
+                    if (settingsJson.has("todo_data")) {
+                        importTodoData(settingsJson.getJSONObject("todo_data"))
+                    }
+                    
+                    // Import finance data
+                    if (settingsJson.has("finance_data")) {
+                        importFinanceData(settingsJson.getJSONObject("finance_data"))
                     }
                 } else {
                     val editor = prefs.edit()
@@ -640,7 +672,7 @@ class SettingsActivity : ComponentActivity() {
     private fun clearData() {
         val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Clear Data")
-            .setMessage("WARNING: This will delete ALL launcher data including:\n\n• All settings and preferences\n• Favorite apps\n• Workspaces\n• App locks and timers\n• Todo items\n• Workout data\n• Finance data\n• Widget configurations\n• All other app data\n\nThis action CANNOT be undone. The launcher will restart after clearing data.\n\nAre you absolutely sure?")
+            .setMessage("WARNING: This will delete ALL launcher data including:\n\n• All settings and preferences\n• Favorite apps\n• Workspaces\n• App locks and timers\n• Todo items\n• Workout data\n• Finance data\n• Physical activity data\n• Widget configurations\n• All other app data\n\nThis action CANNOT be undone. The launcher will restart after clearing data.\n\nAre you absolutely sure?")
             .setPositiveButton("Clear All Data") { _, _ ->
                 try {
                     val allPrefs = listOf(
@@ -782,6 +814,235 @@ class SettingsActivity : ComponentActivity() {
                 }
             } catch (ex: Exception) {
             }
+        }
+    }
+    
+    /**
+     * Export physical activity data including steps, distance, and historical data
+     */
+    private fun exportPhysicalActivityData(settingsJson: JSONObject) {
+        try {
+            val activityPrefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
+            val activityAll = activityPrefs.all
+            if (activityAll.isNotEmpty()) {
+                val activityJson = JSONObject()
+                for ((key, value) in activityAll) {
+                    when (value) {
+                        is String -> activityJson.put(key, value)
+                        is Boolean -> activityJson.put(key, value)
+                        is Int -> activityJson.put(key, value)
+                        is Long -> activityJson.put(key, value)
+                        is Float -> activityJson.put(key, value)
+                        is Set<*> -> {
+                            val jsonArray = JSONArray()
+                            value.forEach { jsonArray.put(it) }
+                            activityJson.put(key, jsonArray)
+                        }
+                    }
+                }
+                settingsJson.put("physical_activity_data", activityJson)
+            }
+        } catch (e: Exception) {
+            // Silently fail if physical activity data is not available
+        }
+    }
+    
+    /**
+     * Export workout tracker data including exercises and workout history
+     */
+    private fun exportWorkoutData(settingsJson: JSONObject) {
+        try {
+            val workoutPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+            val exercisesString = workoutPrefs.getString("workout_exercises", null)
+            val lastResetDate = workoutPrefs.getString("workout_last_reset_date", null)
+            val streak = workoutPrefs.getInt("workout_streak", 0)
+            val lastStreakDate = workoutPrefs.getString("workout_last_streak_date", null)
+            
+            if (exercisesString != null) {
+                val workoutJson = JSONObject()
+                workoutJson.put("exercises", exercisesString)
+                if (lastResetDate != null) {
+                    workoutJson.put("last_reset_date", lastResetDate)
+                }
+                workoutJson.put("streak", streak)
+                if (lastStreakDate != null) {
+                    workoutJson.put("last_streak_date", lastStreakDate)
+                }
+                settingsJson.put("workout_data", workoutJson)
+            }
+        } catch (e: Exception) {
+            // Silently fail if workout data is not available
+        }
+    }
+    
+    /**
+     * Export todo list data including tasks and their status
+     */
+    private fun exportTodoData(settingsJson: JSONObject) {
+        try {
+            val todoPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+            val todoItemsString = todoPrefs.getString("todo_items", null)
+            
+            if (todoItemsString != null) {
+                val todoJson = JSONObject()
+                todoJson.put("todo_items", todoItemsString)
+                settingsJson.put("todo_data", todoJson)
+            }
+        } catch (e: Exception) {
+            // Silently fail if todo data is not available
+        }
+    }
+    
+    /**
+     * Export finance tracker data including transactions and balance
+     */
+    private fun exportFinanceData(settingsJson: JSONObject) {
+        try {
+            val financePrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+            val financeJson = JSONObject()
+            
+            // Export balance and currency
+            val balance = financePrefs.getFloat("finance_balance", 0.0f)
+            val currency = financePrefs.getString("finance_currency", "USD")
+            financeJson.put("balance", balance)
+            if (currency != null) {
+                financeJson.put("currency", currency)
+            }
+            
+            // Export monthly income/expense data
+            val allPrefs = financePrefs.all
+            val monthlyData = JSONObject()
+            allPrefs.keys.filter { it.startsWith("finance_income_") || it.startsWith("finance_expenses_") }
+                .forEach { key ->
+                    val value = allPrefs[key]
+                    if (value is Float) {
+                        monthlyData.put(key, value)
+                    }
+                }
+            if (monthlyData.length() > 0) {
+                financeJson.put("monthly_data", monthlyData)
+            }
+            
+            // Export transaction history
+            val transactions = JSONArray()
+            allPrefs.keys.filter { it.startsWith("transaction_") }
+                .forEach { key ->
+                    val transactionData = financePrefs.getString(key, null)
+                    if (transactionData != null) {
+                        transactions.put(transactionData)
+                    }
+                }
+            if (transactions.length() > 0) {
+                financeJson.put("transactions", transactions)
+            }
+            
+            if (financeJson.length() > 0) {
+                settingsJson.put("finance_data", financeJson)
+            }
+        } catch (e: Exception) {
+            // Silently fail if finance data is not available
+        }
+    }
+    
+    /**
+     * Import physical activity data
+     */
+    private fun importPhysicalActivityData(activityJson: JSONObject) {
+        try {
+            val activityPrefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
+            val editor = activityPrefs.edit()
+            importPreferences(activityJson, editor)
+            editor.apply()
+        } catch (e: Exception) {
+            // Silently fail if import fails
+        }
+    }
+    
+    /**
+     * Import workout tracker data
+     */
+    private fun importWorkoutData(workoutJson: JSONObject) {
+        try {
+            val workoutPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+            val editor = workoutPrefs.edit()
+            
+            if (workoutJson.has("exercises")) {
+                editor.putString("workout_exercises", workoutJson.getString("exercises"))
+            }
+            if (workoutJson.has("last_reset_date")) {
+                editor.putString("workout_last_reset_date", workoutJson.getString("last_reset_date"))
+            }
+            if (workoutJson.has("streak")) {
+                editor.putInt("workout_streak", workoutJson.getInt("streak"))
+            }
+            if (workoutJson.has("last_streak_date")) {
+                editor.putString("workout_last_streak_date", workoutJson.getString("last_streak_date"))
+            }
+            
+            editor.apply()
+        } catch (e: Exception) {
+            // Silently fail if import fails
+        }
+    }
+    
+    /**
+     * Import todo list data
+     */
+    private fun importTodoData(todoJson: JSONObject) {
+        try {
+            val todoPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+            val editor = todoPrefs.edit()
+            
+            if (todoJson.has("todo_items")) {
+                editor.putString("todo_items", todoJson.getString("todo_items"))
+            }
+            
+            editor.apply()
+        } catch (e: Exception) {
+            // Silently fail if import fails
+        }
+    }
+    
+    /**
+     * Import finance tracker data
+     */
+    private fun importFinanceData(financeJson: JSONObject) {
+        try {
+            val financePrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
+            val editor = financePrefs.edit()
+            
+            // Import balance and currency
+            if (financeJson.has("balance")) {
+                editor.putFloat("finance_balance", financeJson.getDouble("balance").toFloat())
+            }
+            if (financeJson.has("currency")) {
+                editor.putString("finance_currency", financeJson.getString("currency"))
+            }
+            
+            // Import monthly data
+            if (financeJson.has("monthly_data")) {
+                val monthlyData = financeJson.getJSONObject("monthly_data")
+                val keys = monthlyData.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    editor.putFloat(key, monthlyData.getDouble(key).toFloat())
+                }
+            }
+            
+            // Import transactions
+            if (financeJson.has("transactions")) {
+                val transactions = financeJson.getJSONArray("transactions")
+                for (i in 0 until transactions.length()) {
+                    val transactionData = transactions.getString(i)
+                    // Generate a unique key for each transaction
+                    val timestamp = System.currentTimeMillis() + i
+                    editor.putString("transaction_$timestamp", transactionData)
+                }
+            }
+            
+            editor.apply()
+        } catch (e: Exception) {
+            // Silently fail if import fails
         }
     }
 }
