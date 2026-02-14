@@ -15,6 +15,7 @@
 
     <!-- Semi-transparent overlay for better text visibility -->
     <View
+        android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#80000000"/>
@@ -39,7 +40,7 @@
                 android:text="App Lock"
                 android:textSize="32sp"
                 android:textStyle="bold"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text"
                 android:gravity="center"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="32dp"/>
@@ -70,7 +71,7 @@
                         android:text="App Lock Settings"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/app_lock_settings_arrow"
@@ -78,7 +79,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -105,15 +106,15 @@
                             android:layout_weight="1"
                             android:text="Enable App Lock"
                             android:textSize="16sp"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/text"
                             android:layout_marginEnd="16dp"/>
 
                         <androidx.appcompat.widget.SwitchCompat
                             android:id="@+id/enable_app_lock_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:thumbTint="@color/nord7"
-                            android:trackTint="@color/nord3"/>
+                            android:thumbTint="@color/text"
+                            android:trackTint="@color/text"/>
 
                     </LinearLayout>
 
@@ -133,15 +134,15 @@
                             android:layout_weight="1"
                             android:text="Enable Fingerprint"
                             android:textSize="16sp"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/text"
                             android:layout_marginEnd="16dp"/>
 
                         <androidx.appcompat.widget.SwitchCompat
                             android:id="@+id/fingerprint_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:thumbTint="@color/nord7"
-                            android:trackTint="@color/nord3"/>
+                            android:thumbTint="@color/text"
+                            android:trackTint="@color/text"/>
 
                     </LinearLayout>
 
@@ -198,7 +199,7 @@
                         android:text="Select Apps to Lock"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/apps_list_arrow"
@@ -206,7 +207,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>

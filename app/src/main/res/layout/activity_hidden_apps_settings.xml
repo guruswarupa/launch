@@ -14,6 +14,7 @@
 
     <!-- Semi-transparent overlay for better text visibility -->
     <View
+        android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#80000000"/>
@@ -33,7 +34,7 @@
             android:text="Hidden Apps"
             android:textSize="32sp"
             android:textStyle="bold"
-            android:textColor="@android:color/white"
+            android:textColor="@color/text"
             android:gravity="center"
             android:layout_marginTop="32dp"
             android:layout_marginBottom="32dp"/>
@@ -54,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:text="No hidden apps"
                 android:textSize="18sp"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text"
                 android:gravity="center"
                 android:layout_marginTop="16dp"/>
 

@@ -34,14 +34,14 @@
                 android:layout_height="wrap_content"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="@android:color/white"/>
+                android:textColor="@color/text"/>
 
             <TextView
                 android:id="@+id/package_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text"
                 android:alpha="0.5"
                 android:ellipsize="middle"
                 android:maxLines="1"/>
@@ -67,7 +67,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="14sp"
-            android:textColor="@android:color/white"
+            android:textColor="@color/text"
             android:background="@drawable/button_background"
             android:paddingHorizontal="8dp"
             android:paddingVertical="2dp"
@@ -81,7 +81,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:textSize="13sp"
-        android:textColor="@android:color/white"
+        android:textColor="@color/text"
         android:alpha="0.8"/>
 
     <LinearLayout
@@ -91,15 +91,14 @@
         android:orientation="vertical"
         android:layout_marginTop="8dp"
         android:visibility="gone"
-        android:paddingTop="8dp"
-        android:background="@drawable/divider_background">
+        android:paddingTop="8dp">
 
         <TextView
             android:id="@+id/app_details"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="13sp"
-            android:textColor="@android:color/white"
+            android:textColor="@color/text"
             android:alpha="0.7"
             android:lineSpacingExtra="2dp"
             android:layout_marginBottom="12dp"/>

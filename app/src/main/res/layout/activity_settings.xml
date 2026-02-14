@@ -14,6 +14,7 @@
 
     <!-- Semi-transparent overlay for better text visibility -->
     <View
+        android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#80000000"/>
@@ -38,7 +39,7 @@
                 android:text="Settings"
                 android:textSize="32sp"
                 android:textStyle="bold"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text"
                 android:gravity="center"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="32dp"/>
@@ -69,7 +70,7 @@
                         android:text="Display Style"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/display_style_arrow"
@@ -77,7 +78,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -153,7 +154,7 @@
                         android:text="Wallpaper"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/wallpaper_arrow"
@@ -161,7 +162,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -215,7 +216,7 @@
                         android:text="Backup &amp; Restore"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/backup_restore_arrow"
@@ -223,7 +224,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -298,7 +299,7 @@
                         android:text="Security &amp; Privacy"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/app_lock_arrow"
@@ -306,7 +307,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -382,7 +383,7 @@
                         android:text="Launcher Permissions"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/permissions_arrow"
@@ -390,7 +391,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -443,7 +444,7 @@
                         android:text="Tutorial"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/tutorial_arrow"
@@ -451,7 +452,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -469,7 +470,7 @@
                         android:layout_height="wrap_content"
                         android:text="Show the feature tutorial again to learn about all the launcher features and shortcuts."
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.8"
                         android:layout_marginBottom="12dp"/>
 
@@ -513,7 +514,7 @@
                         android:text="Quick Actions"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/quick_actions_arrow"
@@ -521,7 +522,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -547,15 +548,15 @@
                             android:layout_weight="1"
                             android:text="Shake to Toggle Torch"
                             android:textSize="16sp"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/text"
                             android:alpha="0.9"/>
 
                         <Switch
                             android:id="@+id/shake_torch_switch"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:thumbTint="@android:color/white"
-                            android:trackTint="@android:color/white"/>
+                            android:thumbTint="@color/text"
+                            android:trackTint="@color/text"/>
 
                     </LinearLayout>
 
@@ -577,7 +578,7 @@
                                 android:layout_weight="1"
                                 android:text="Shake Sensitivity"
                                 android:textSize="16sp"
-                                android:textColor="@android:color/white"
+                                android:textColor="@color/text"
                                 android:alpha="0.9"/>
 
                             <TextView
@@ -587,7 +588,7 @@
                                 android:text="5"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
-                                android:textColor="@android:color/white"/>
+                                android:textColor="@color/text"/>
 
                         </LinearLayout>
 
@@ -598,9 +599,9 @@
                             android:max="9"
                             android:progress="4"
                             android:layout_marginTop="8dp"
-                            android:thumbTint="@android:color/white"
-                            android:progressTint="@android:color/white"
-                            android:progressBackgroundTint="@android:color/white"/>
+                            android:thumbTint="@color/text"
+                            android:progressTint="@color/text"
+                            android:progressBackgroundTint="@color/text"/>
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -614,7 +615,7 @@
                                 android:layout_weight="1"
                                 android:text="Less Sensitive"
                                 android:textSize="10sp"
-                                android:textColor="@android:color/white"
+                                android:textColor="@color/text"
                                 android:alpha="0.6"/>
 
                             <TextView
@@ -622,7 +623,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="More Sensitive"
                                 android:textSize="10sp"
-                                android:textColor="@android:color/white"
+                                android:textColor="@color/text"
                                 android:alpha="0.6"/>
 
                         </LinearLayout>
@@ -634,7 +635,7 @@
                         android:layout_height="wrap_content"
                         android:text="Shake your device twice to toggle the flashlight. Works even when the launcher is in the background."
                         android:textSize="12sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"
                         android:layout_marginTop="8dp"/>
 
@@ -668,7 +669,7 @@
                         android:text="Support &amp; Feedback"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/support_arrow"
@@ -676,7 +677,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
@@ -694,7 +695,7 @@
                         android:layout_height="wrap_content"
                         android:text="Have a suggestion, found a bug, or want a new feature? Mail the developer directly!"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.8"
                         android:layout_marginBottom="12dp"/>
 
@@ -738,7 +739,7 @@
                         android:text="Launcher"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"/>
+                        android:textColor="@color/text"/>
 
                     <TextView
                         android:id="@+id/launcher_arrow"
@@ -746,7 +747,7 @@
                         android:layout_height="wrap_content"
                         android:text="▼"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/text"
                         android:alpha="0.7"/>
 
                 </LinearLayout>
