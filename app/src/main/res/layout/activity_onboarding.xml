@@ -12,11 +12,12 @@
         android:src="@drawable/wallpaper_background"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay for better text visibility -->
+    <!-- Semi-transparent overlay for better text visibility - Dynamic -->
     <View
+        android:id="@+id/onboarding_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#80000000"/>
+        android:background="@color/onboarding_overlay"/>
 
     <!-- Content Container -->
     <ScrollView
@@ -52,7 +53,7 @@
                     android:id="@+id/step1_connector"
                     android:layout_width="24dp"
                     android:layout_height="3dp"
-                    android:background="@color/nord3"
+                    android:background="@color/onboarding_step_indicator_inactive"
                     android:layout_marginHorizontal="3dp"/>
 
                 <!-- Step 2 Indicator -->
@@ -65,7 +66,7 @@
                     android:id="@+id/step2_connector"
                     android:layout_width="24dp"
                     android:layout_height="3dp"
-                    android:background="@color/nord3"
+                    android:background="@color/onboarding_step_indicator_inactive"
                     android:layout_marginHorizontal="3dp"/>
 
                 <!-- Step 3 Indicator -->
@@ -78,7 +79,7 @@
                     android:id="@+id/step3_connector"
                     android:layout_width="24dp"
                     android:layout_height="3dp"
-                    android:background="@color/nord3"
+                    android:background="@color/onboarding_step_indicator_inactive"
                     android:layout_marginHorizontal="3dp"/>
 
                 <!-- Step 4 Indicator -->
@@ -91,7 +92,7 @@
                     android:id="@+id/step4_connector"
                     android:layout_width="24dp"
                     android:layout_height="3dp"
-                    android:background="@color/nord3"
+                    android:background="@color/onboarding_step_indicator_inactive"
                     android:layout_marginHorizontal="3dp"/>
 
                 <!-- Step 5 Indicator -->
@@ -125,7 +126,7 @@
                         android:text="Welcome to Launch!"
                         android:textSize="32sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
@@ -134,7 +135,7 @@
                         android:layout_height="wrap_content"
                         android:text="Your powerful, customizable launcher is ready to transform your home screen experience."
                         android:textSize="16sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -146,7 +147,7 @@
                         android:layout_height="wrap_content"
                         android:text="Let's set it up in just a few simple steps:"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.8"
                         android:layout_marginBottom="24dp"/>
@@ -163,7 +164,7 @@
                             android:layout_height="wrap_content"
                             android:text="✓ Grant necessary permissions"
                             android:textSize="14sp"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/onboarding_text"
                             android:alpha="0.9"
                             android:layout_marginBottom="8dp"/>
 
@@ -172,7 +173,7 @@
                             android:layout_height="wrap_content"
                             android:text="✓ Set as default launcher"
                             android:textSize="14sp"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/onboarding_text"
                             android:alpha="0.9"
                             android:layout_marginBottom="8dp"/>
 
@@ -181,7 +182,7 @@
                             android:layout_height="wrap_content"
                             android:text="✓ Choose your display style"
                             android:textSize="14sp"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/onboarding_text"
                             android:alpha="0.9"/>
 
                     </LinearLayout>
@@ -192,7 +193,7 @@
                         android:layout_height="wrap_content"
                         android:text="Privacy Notice: All permissions are used solely for app functionality. We do NOT collect, store, or transmit any of your data. This is an open-source project - you can verify our codebase anytime."
                         android:textSize="12sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text_secondary"
                         android:gravity="center"
                         android:alpha="0.8"
                         android:lineSpacingExtra="4dp"
@@ -204,7 +205,7 @@
                         android:layout_height="wrap_content"
                         android:text="Your privacy is our priority. All data stays on your device."
                         android:textSize="11sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text_secondary"
                         android:gravity="center"
                         android:alpha="0.7"
                         android:fontStyle="italic"/>
@@ -226,7 +227,7 @@
                         android:text="Permissions"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
@@ -235,7 +236,7 @@
                         android:layout_height="wrap_content"
                         android:text="We'll guide you through each permission request and explain why it's needed. You can skip any permission and grant it later if needed."
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -259,7 +260,7 @@
                         android:text="Set as Default Launcher"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
@@ -268,7 +269,7 @@
                         android:layout_height="wrap_content"
                         android:text="To use this launcher as your home screen, you need to set it as the default launcher. This allows you to access your apps, widgets, and shortcuts directly from the home screen."
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -292,7 +293,7 @@
                         android:text="Import Backup"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
@@ -301,7 +302,7 @@
                         android:layout_height="wrap_content"
                         android:text="Do you have a backup file from a previous installation? You can import your settings, favorites, workspaces, and all other data."
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -318,18 +319,8 @@
                         android:paddingHorizontal="32dp"
                         android:paddingVertical="16dp"
                         android:layout_marginBottom="16dp"
-                        android:backgroundTint="@color/nord7"/>
-
-                    <Button
-                        android:id="@+id/skip_backup_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Skip"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:backgroundTint="@android:color/transparent"
-                        android:paddingHorizontal="24dp"
-                        android:paddingVertical="12dp"/>
+                        android:backgroundTint="@color/nord7"
+                        android:textColor="@color/white"/>
 
                 </LinearLayout>
 
@@ -348,7 +339,7 @@
                         android:text="Choose Display Style"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
@@ -357,7 +348,7 @@
                         android:layout_height="wrap_content"
                         android:text="How would you like to view your apps?"
                         android:textSize="16sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:layout_marginBottom="32dp"/>
@@ -378,7 +369,7 @@
                             android:text="Grid View"
                             android:textAllCaps="false"
                             android:background="@drawable/button_background"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/onboarding_text"
                             android:padding="16dp"/>
 
                         <Button
@@ -390,7 +381,7 @@
                             android:text="List View"
                             android:textAllCaps="false"
                             android:background="@drawable/button_background"
-                            android:textColor="@android:color/white"
+                            android:textColor="@color/onboarding_text"
                             android:padding="16dp"/>
 
                     </LinearLayout>
@@ -411,7 +402,7 @@
                         android:text="Select Favorite Apps"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="8dp"/>
 
@@ -420,7 +411,7 @@
                         android:layout_height="wrap_content"
                         android:text="Choose which apps you want to see by default. You can change this later in settings."
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -458,7 +449,7 @@
                         android:text="Create Workspaces"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="8dp"/>
 
@@ -467,7 +458,7 @@
                         android:layout_height="wrap_content"
                         android:text="Organize your apps into workspaces. You can create multiple workspaces and switch between them."
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -488,9 +479,10 @@
                             android:layout_height="wrap_content"
                             android:hint="Workspace name (e.g., Work, Personal)"
                             android:textSize="14sp"
-                            android:textColor="@android:color/white"
-                            android:textColorHint="@android:color/white"
-                            android:alpha="0.7"
+                            android:textColor="@color/onboarding_input_text"
+                            android:textColorHint="@color/onboarding_input_hint"
+                            android:background="@color/onboarding_input_background"
+                            android:alpha="0.9"
                             android:padding="12dp"
                             android:minHeight="48dp"/>
 
@@ -503,7 +495,7 @@
                         android:text="Your Workspaces:"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:paddingHorizontal="16dp"
                         android:layout_marginBottom="8dp"
@@ -530,7 +522,7 @@
                         android:layout_height="wrap_content"
                         android:text="Select apps for workspace:"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:alpha="0.9"
                         android:gravity="center"
                         android:paddingHorizontal="16dp"
@@ -560,7 +552,7 @@
                         android:text="Create Workspace"
                         android:textAllCaps="false"
                         android:background="@drawable/button_background"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:paddingHorizontal="24dp"
@@ -588,7 +580,7 @@
                         android:text="Weather API Key (Optional)"
                         android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
@@ -597,7 +589,7 @@
                         android:layout_height="wrap_content"
                         android:text="Enter your OpenWeatherMap API key to enable weather information on your home screen. You can skip this and add it later in Settings."
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -610,10 +602,10 @@
                         android:layout_height="wrap_content"
                         android:hint="Enter OpenWeatherMap API Key"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="@android:color/white"
-                        android:alpha="0.7"
-                        android:background="@drawable/rounded_background"
+                        android:textColor="@color/onboarding_input_text"
+                        android:textColorHint="@color/onboarding_input_hint"
+                        android:alpha="0.9"
+                        android:background="@color/onboarding_input_background"
                         android:padding="16dp"
                         android:layout_marginHorizontal="24dp"
                         android:layout_marginBottom="16dp"
@@ -625,7 +617,7 @@
                         android:layout_height="wrap_content"
                         android:text="Get a free API key at: openweathermap.org/api"
                         android:textSize="12sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text_secondary"
                         android:gravity="center"
                         android:alpha="0.7"
                         android:layout_marginBottom="16dp"/>
@@ -636,10 +628,10 @@
                         android:layout_height="wrap_content"
                         android:hint="Enter city name (e.g., London, New York)"
                         android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textColorHint="@android:color/white"
-                        android:alpha="0.7"
-                        android:background="@drawable/rounded_background"
+                        android:textColor="@color/onboarding_input_text"
+                        android:textColorHint="@color/onboarding_input_hint"
+                        android:alpha="0.9"
+                        android:background="@color/onboarding_input_background"
                         android:padding="16dp"
                         android:layout_marginHorizontal="24dp"
                         android:layout_marginBottom="8dp"
@@ -651,7 +643,7 @@
                         android:layout_height="wrap_content"
                         android:text="Enter the name of the city for weather information"
                         android:textSize="12sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text_secondary"
                         android:gravity="center"
                         android:alpha="0.7"
                         android:layout_marginBottom="32dp"/>
@@ -673,7 +665,7 @@
                         android:text="All Set!"
                         android:textSize="32sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:layout_marginBottom="16dp"/>
 
@@ -682,7 +674,7 @@
                         android:layout_height="wrap_content"
                         android:text="Your launcher is ready to use. Enjoy your new home screen experience!"
                         android:textSize="16sp"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
                         android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
@@ -710,7 +702,7 @@
                     android:text="Back"
                     android:textAllCaps="false"
                     android:background="@drawable/button_background"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/onboarding_text"
                     android:padding="16dp"
                     android:visibility="gone"/>
 
@@ -723,7 +715,7 @@
                     android:text="Next"
                     android:textAllCaps="false"
                     android:background="@drawable/button_background"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/onboarding_text"
                     android:padding="16dp"/>
 
             </LinearLayout>
@@ -734,7 +726,7 @@
                 android:layout_height="wrap_content"
                 android:text="Developed by Guru Swarupa"
                 android:textSize="12sp"
-                android:textColor="@android:color/white"
+                android:textColor="@color/onboarding_text_secondary"
                 android:alpha="0.6"
                 android:gravity="center"
                 android:layout_marginTop="24dp"/>

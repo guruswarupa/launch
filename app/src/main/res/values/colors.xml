@@ -67,4 +67,14 @@
     <color name="tutorial_button_background">#E0E0E0</color>
     <color name="tutorial_button_stroke">#CCCCCC</color>
     <color name="tutorial_ripple">#20000000</color>
+
+    <!-- Onboarding Colors -->
+    <color name="onboarding_overlay">#E6FFFFFF</color> <!-- Increased opacity (90% white) for better text contrast -->
+    <color name="onboarding_text">#000000</color> <!-- Pure black for maximum readability -->
+    <color name="onboarding_text_secondary">#333333</color>
+    <color name="onboarding_step_indicator_active">#0288D1</color>
+    <color name="onboarding_step_indicator_inactive">#B0B0B0</color>
+    <color name="onboarding_input_background">#F0F0F0</color>
+    <color name="onboarding_input_text">#000000</color>
+    <color name="onboarding_input_hint">#666666</color>
 </resources>
