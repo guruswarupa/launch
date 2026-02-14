@@ -57,4 +57,13 @@
 
     <!-- Grid Item Background Colors -->
     <color name="grid_item_background">#80000000</color>
+
+    <!-- Tutorial Colors -->
+    <color name="tutorial_background">#E0000000</color>
+    <color name="tutorial_title">@color/white</color>
+    <color name="tutorial_description">@color/text_secondary</color>
+    <color name="tutorial_accent">#4FC3F7</color>
+    <color name="tutorial_button_background">#33FFFFFF</color>
+    <color name="tutorial_button_stroke">#4DFFFFFF</color>
+    <color name="tutorial_ripple">#40FFFFFF</color>
 </resources>
