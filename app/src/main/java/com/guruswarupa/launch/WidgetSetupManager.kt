@@ -17,27 +17,12 @@ class WidgetSetupManager(
 ) {
     
     fun setupBatteryAndUsage() {
-        // Assuming you have TextViews in your layout with these IDs
+        // Updated: Screen time display removed from main layout to improve privacy and battery
         val batteryPercentageTextView = activity.findViewById<TextView>(R.id.battery_percentage)
-        val screenTimeTextView = activity.findViewById<TextView>(R.id.screen_time)
 
         // Get battery percentage using BatteryManager
         val batteryManager = BatteryManager(activity)
         batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
-
-        // Get screen time usage in minutes for today
-        val calendar = java.util.Calendar.getInstance()
-        // Set to start of current day
-        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
-        calendar.set(java.util.Calendar.MINUTE, 0)
-        calendar.set(java.util.Calendar.SECOND, 0)
-        calendar.set(java.util.Calendar.MILLISECOND, 0)
-        val startTime = calendar.timeInMillis
-        val endTime = System.currentTimeMillis()
-
-        val screenTimeMillis = usageStatsManager.getTotalUsageForPeriod(startTime, endTime)
-        val formattedTime = usageStatsManager.formatUsageTime(screenTimeMillis)
-        screenTimeTextView?.text = activity.getString(R.string.screen_time_format, formattedTime)
     }
     
     fun setupWeather(weatherIcon: ImageView, weatherText: TextView) {
@@ -149,6 +134,11 @@ class WidgetSetupManager(
         val widget = DeviceInfoWidget(activity, container)
         widget.initialize()
         return widget
+    }
+    
+    fun setupWeeklyUsageWidget() {
+        // The weekly usage graph is managed by UsageStatsDisplayManager
+        // This method exists for consistency with other widget setup methods
     }
     
     fun requestNotificationPermission() {

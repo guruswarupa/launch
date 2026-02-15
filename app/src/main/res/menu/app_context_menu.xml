@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/usage_header"
+        android:title="Usage: ..."
+        android:enabled="false" />
+
+    <item
         android:id="@+id/app_info"
         android:title="App Info"
         android:icon="@drawable/ic_settings" />
@@ -14,7 +19,6 @@
         android:id="@+id/uninstall_app"
         android:title="Uninstall"
         android:icon="@drawable/ic_settings" />
-
 
     <item
         android:id="@+id/toggle_favorite"

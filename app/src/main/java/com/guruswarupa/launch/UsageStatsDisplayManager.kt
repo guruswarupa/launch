@@ -42,7 +42,6 @@ class UsageStatsDisplayManager(
     }
     
     fun loadWeeklyUsageData() {
-        // This function is already called from background threads, but ensure UI updates are on main thread
         if (usageStatsManager.hasUsageStatsPermission()) {
             val weeklyData = usageStatsManager.getWeeklyUsageData()
             val appUsageData = usageStatsManager.getWeeklyAppUsageData()

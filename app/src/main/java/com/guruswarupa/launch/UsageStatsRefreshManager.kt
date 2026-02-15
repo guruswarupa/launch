@@ -3,7 +3,6 @@ package com.guruswarupa.launch
 import android.util.Log
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
-import java.util.Calendar
 import java.util.concurrent.Executor
 
 /**
@@ -46,25 +45,9 @@ class UsageStatsRefreshManager(
 
     /**
      * Updates usage information in background.
+     * Deprecated: Usage is now only calculated on demand for specific apps.
      */
     fun updateUsageInBackground() {
-        safeExecute {
-            // Get screen time usage for today
-            val calendar = Calendar.getInstance()
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
-            val startTime = calendar.timeInMillis
-            val endTime = System.currentTimeMillis()
-
-            val screenTimeMillis = usageStatsManager.getTotalUsageForPeriod(startTime, endTime)
-            val formattedTime = usageStatsManager.formatUsageTime(screenTimeMillis)
-
-            activity.runOnUiThread {
-                val screenTimeTextView = activity.findViewById<TextView>(R.id.screen_time)
-                screenTimeTextView?.text = activity.getString(R.string.screen_time_format, formattedTime)
-            }
-        }
+        // No-op: Screen time widget removed from main layout
     }
 }

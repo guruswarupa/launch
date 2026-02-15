@@ -42,11 +42,10 @@ class AppAdapter(
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     private val usageStatsManager = AppUsageStatsManager(activity)
-    private val usageCache = ConcurrentHashMap<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
     private val iconCache = ConcurrentHashMap<String, Drawable>() // packageName to icon
     private val labelCache = ConcurrentHashMap<String, String>() // packageName to label
     private val specialAppIconCache = ConcurrentHashMap<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
-    private val cacheDuration = 30000L // 30 seconds cache (reduced for more frequent updates)
+    private val usageCache = ConcurrentHashMap<String, String>() // packageName to formatted usage string
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
     private var itemsRendered = 0 // Track how many items have been rendered
     private val iconPreloadExecutor = Executors.newFixedThreadPool(2) // Separate thread pool for icon preloading
@@ -236,19 +235,6 @@ class AppAdapter(
         }
     }
 
-    private fun getUsageTimeWithCache(packageName: String): Long {
-        val currentTime = System.currentTimeMillis()
-        val cached = usageCache[packageName]
-
-        return if (cached != null && (currentTime - cached.second) < cacheDuration) {
-            cached.first
-        } else {
-            val usageTime = usageStatsManager.getAppUsageTime(packageName)
-            usageCache[packageName] = Pair(usageTime, currentTime)
-            usageTime
-        }
-    }
-
     override fun getItemViewType(position: Int): Int {
         return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
     }
@@ -284,42 +270,8 @@ class AppAdapter(
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
 
-        // Defer usage stats loading on initial render for better performance
-        
-        if (holder.appUsageTime != null) {
-            // OPTIMIZATION: Always defer usage stats loading for first 30 items to improve initial render
-            // This prevents blocking the UI thread during initial load
-            if (position < 30 && itemsRendered < 30) {
-                holder.appUsageTime.text = ""
-                holder.appUsageTime.visibility = View.GONE // Hide initially, show only when we have data
-                // Load usage time asynchronously after initial render
-                executor.execute {
-                    val usageTime = getUsageTimeWithCache(packageName)
-                    val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-                    (context as? Activity)?.runOnUiThread {
-                        // Only update if this holder still shows the same app
-                        if (holder.bindingAdapterPosition == position) {
-                            if (formattedTime.isNotEmpty()) {
-                                holder.appUsageTime.text = formattedTime
-                                holder.appUsageTime.visibility = View.VISIBLE
-                            } else {
-                                holder.appUsageTime.visibility = View.GONE
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Use cached usage time (cache lookup is fast, actual query only if cache expired)
-                val usageTime = getUsageTimeWithCache(packageName)
-                val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-                if (formattedTime.isNotEmpty()) {
-                    holder.appUsageTime.text = formattedTime
-                    holder.appUsageTime.visibility = View.VISIBLE
-                } else {
-                    holder.appUsageTime.visibility = View.GONE
-                }
-            }
-        }
+        // Always hide the on-item usage display
+        holder.appUsageTime?.visibility = View.GONE
 
         when (packageName) {
             "contact_search" -> {
@@ -730,6 +682,22 @@ class AppAdapter(
 
         // Use theme-aware text color
         val textColor = ContextCompat.getColor(activity, R.color.text)
+
+        // Update usage header asynchronously
+        val usageHeader = popupMenu.menu.findItem(R.id.usage_header)
+        if (usageHeader != null) {
+            executor.execute {
+                val usageTime = usageStatsManager.getAppUsageTime(packageName)
+                val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+                activity.runOnUiThread {
+                    usageHeader.title = "Usage: $formattedTime"
+                    // Force text color update for the header too
+                    val spannable = android.text.SpannableString(usageHeader.title)
+                    spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    usageHeader.title = spannable
+                }
+            }
+        }
 
         // Update favorite menu item text
         val favoriteMenuItem = popupMenu.menu.findItem(R.id.toggle_favorite)
