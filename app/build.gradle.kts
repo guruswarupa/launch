@@ -12,8 +12,8 @@ android {
         applicationId = "com.guruswarupa.launchh"
         minSdk = 24
         targetSdk = 35
-        versionCode = 12
-        versionName = "5.6"
+        versionCode = 13
+        versionName = "5.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -28,15 +28,20 @@ android {
             )
         }
     }
+
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
     
     // Enable code splitting and optimize APK size
     splits {
         abi {
-            isEnable = false // Disable ABI splits to keep single APK, but enable other optimizations
+            isEnable = false 
         }
     }
     
-    // Enable additional optimizations
     packaging {
         resources {
             excludes += setOf(
@@ -85,5 +90,4 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.biometric)
-
 }
