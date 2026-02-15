@@ -101,12 +101,13 @@
 - Calculation history with easy access
 - Toggle between radians and degrees
 
-### ⏱️ App Timer Manager
-- Set usage timers for individual apps
-- Quick presets: 1 minute, 5 minutes, 10 minutes
-- Custom timer duration support
-- Automatic app closure when timer expires
-- Helps manage screen time and app usage
+### ⏱️ App Usage & Session Timers
+- **Daily App Usage Limits**: Set maximum daily time limits for any app.
+- **Visual Feedback**: Icons automatically gray out when a daily limit is reached.
+- **Auto-Enforcement**: Launcher automatically closes apps and returns to home screen once the limit is hit.
+- **Session Timers**: Set quick usage timers (1, 5, or 10 minutes) for focused sessions.
+- **Custom Timer Durations**: Full control over session and daily limit lengths.
+- Helps manage screen time and combat app addiction.
 
 ### 📱 App Categories & Organization
 - Organize apps by type (Social, Productivity, Games, etc.)
@@ -180,7 +181,7 @@
 - **Change Wallpaper**: Set custom wallpapers for your home screen
 - **Update Weather API Key**: Use your personal API key from openweathermap.org
 - **Manage App Locks**: Configure PIN and fingerprint authentication
-- **App Timer Settings**: Configure default timer durations
+- **App Timer Settings**: Configure default timer durations and daily limits
 - **Widget Management**: Add, remove, and configure widgets
 - **Workspace Configuration**: Customize workspace layouts
 
@@ -193,7 +194,7 @@
 | **Tap Time Widget**         | Opens Clock app                             |
 | **Tap Date Widget**         | Opens Calendar app                          |
 | **Long Press Search Bar**   | Opens Google in browser                     |
-| **Long Press App Icon**     | Opens uninstall prompt                      |
+| **Long Press App Icon**     | Opens app context menu (Uninstall, Share, etc.)|
 | **Long Press Dock App**     | Remove or rename app                        |
 | **Type in Search Bar**      | Instant calculator                          |
 | **Long Press Focus Icon**   | Enter Focus Mode setup                      |
@@ -230,7 +231,7 @@ Launch requires **minimal permissions**:
 - **SMS** → to send messages
 - **Phone** → to make calls
 - **Storage** → for notes, wallpapers, and backups
-- **Usage Stats** → for app usage tracking and sorting (optional)
+- **Usage Stats** → for app usage tracking, daily limits, and sorting (optional)
 - **Notification Access** → for notifications widget (optional)
 - **Location** → for weather widget location-based forecasts (optional)
 - **Audio** → for voice search functionality (optional)
