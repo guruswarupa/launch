@@ -19,13 +19,9 @@ class AppUsageStatsManager(private val context: Context) {
     private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usage, timestamp)
     
     companion object {
-        private const val CACHE_DURATION = 60000L // 1 minute (reduced for more frequent updates)
+        private const val CACHE_DURATION = 30000L // 30 seconds
     }
     
-    /**
-     * Invalidate all caches to force fresh data retrieval
-     * Call this when app resumes to ensure up-to-date usage data
-     */
     fun invalidateCache() {
         usageCache.clear()
         dailyUsageCache = null
@@ -67,7 +63,6 @@ class AppUsageStatsManager(private val context: Context) {
         }
 
         val calendar = Calendar.getInstance()
-        // Set to start of current day
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
@@ -75,143 +70,25 @@ class AppUsageStatsManager(private val context: Context) {
         val startTime = calendar.timeInMillis
         val endTime = System.currentTimeMillis()
 
-        // Try using queryEvents for the most accurate real-time usage tracking
-        // This gives us actual foreground/background events, allowing precise calculation
-        try {
-            val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
-            var totalUsage = 0L
-            var lastForegroundTime: Long? = null
-
-            val event = UsageEvents.Event()
-            while (usageEvents.hasNextEvent()) {
-                usageEvents.getNextEvent(event)
-                
-                if (event.packageName == packageName) {
-                    when (event.eventType) {
-                        UsageEvents.Event.ACTIVITY_RESUMED -> {
-                            // App moved to foreground - record the start time
-                            lastForegroundTime = event.timeStamp
-                        }
-                        UsageEvents.Event.ACTIVITY_PAUSED -> {
-                            // App moved to background - calculate duration
-                            if (lastForegroundTime != null) {
-                                // Only count time that falls within today's range
-                                val sessionStart = maxOf(lastForegroundTime, startTime)
-                                val sessionEnd = minOf(event.timeStamp, endTime)
-                                if (sessionEnd > sessionStart) {
-                                    totalUsage += (sessionEnd - sessionStart)
-                                }
-                                lastForegroundTime = null
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // If app is currently in foreground (lastForegroundTime is set), count time until now
-            if (lastForegroundTime != null) {
-                val sessionStart = maxOf(lastForegroundTime, startTime)
-                if (endTime > sessionStart) {
-                    totalUsage += (endTime - sessionStart)
-                }
-            }
-            
-            // Cache the result
-            usageCache[packageName] = Pair(totalUsage, currentTime)
-            return totalUsage
-        } catch (_: Exception) {
-            // Fallback to INTERVAL_DAILY if queryEvents fails
-            // Query from a few days back to ensure we get today's daily aggregate
-            calendar.add(Calendar.DAY_OF_YEAR, -7)
-            val queryStartTime = calendar.timeInMillis
-            
-            val usageStatsList = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                queryStartTime,
-                endTime
-            )
-
-            // Find today's usage entry for this package
-            val todayUsage = usageStatsList
-                .filter { 
-                    it.packageName == packageName && 
-                    it.totalTimeInForeground > 0
-                }
-                .firstOrNull { stats ->
-                    // Check if this entry is for today by verifying lastTimeUsed is within today's range
-                    stats.lastTimeUsed in startTime..endTime
-                }
-                ?.totalTimeInForeground ?: 0L
-            
-            // Cache the result
-            usageCache[packageName] = Pair(todayUsage, currentTime)
-            return todayUsage
-        }
+        // Use queryAndAggregateUsageStats for a more reliable daily aggregate
+        val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+        val usage = statsMap[packageName]?.totalTimeInForeground ?: 0L
+        
+        usageCache[packageName] = Pair(usage, currentTime)
+        return usage
     }
 
     fun getTotalUsageForPeriod(startTime: Long, endTime: Long): Long {
         if (!hasUsageStatsPermission()) return 0L
         
-        return try {
-            val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
-            val packageForegroundTime = mutableMapOf<String, Long>()
-            var totalUsage = 0L
-
-            val event = UsageEvents.Event()
-            while (usageEvents.hasNextEvent()) {
-                usageEvents.getNextEvent(event)
-                
-                // Filter out system apps and launcher
-                if (event.packageName.startsWith("com.android") ||
-                    event.packageName.startsWith("android") ||
-                    event.packageName == "com.guruswarupa.launch") {
-                    continue
-                }
-                
-                when (event.eventType) {
-                    UsageEvents.Event.ACTIVITY_RESUMED -> {
-                        packageForegroundTime[event.packageName] = event.timeStamp
-                    }
-                    UsageEvents.Event.ACTIVITY_PAUSED -> {
-                        val foregroundStart = packageForegroundTime.remove(event.packageName)
-                        if (foregroundStart != null) {
-                            val sessionStart = maxOf(foregroundStart, startTime)
-                            val sessionEnd = minOf(event.timeStamp, endTime)
-                            if (sessionEnd > sessionStart) {
-                                totalUsage += (sessionEnd - sessionStart)
-                            }
-                        }
-                    }
-                }
+        val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+        return statsMap.values
+            .filter { stats ->
+                !stats.packageName.startsWith("com.android") &&
+                !stats.packageName.startsWith("android") &&
+                stats.packageName != "com.guruswarupa.launch"
             }
-            
-            // Count any apps still in foreground at the end time
-            for (foregroundStart in packageForegroundTime.values) {
-                val sessionStart = maxOf(foregroundStart, startTime)
-                if (endTime > sessionStart) {
-                    totalUsage += (endTime - sessionStart)
-                }
-            }
-            
-            totalUsage
-        } catch (_: Exception) {
-            // Fallback to queryUsageStats
-            val usageStatsList = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                startTime,
-                endTime
-            )
-            
-            usageStatsList
-                .filter { stats ->
-                    stats.totalTimeInForeground > 0 &&
-                            stats.lastTimeUsed in startTime..endTime &&
-                            !stats.packageName.startsWith("com.android") &&
-                            !stats.packageName.startsWith("android") &&
-                            stats.packageName != "com.guruswarupa.launch"
-                }
-                .sumOf { it.totalTimeInForeground }
-        }
+            .sumOf { it.totalTimeInForeground }
     }
 
     fun formatUsageTime(timeInMillis: Long): String {
@@ -230,7 +107,6 @@ class AppUsageStatsManager(private val context: Context) {
     fun getWeeklyUsageData(): List<Pair<String, Long>> {
         if (!hasUsageStatsPermission()) return emptyList()
 
-        // Check cache first
         val currentTime = System.currentTimeMillis()
         weeklyDataCache?.let { (timestamp, data) ->
             if (currentTime - timestamp < CACHE_DURATION) {
@@ -241,19 +117,15 @@ class AppUsageStatsManager(private val context: Context) {
         val weeklyData = mutableListOf<Pair<String, Long>>()
         val calendar = Calendar.getInstance()
 
-        // Get data for the last 7 days
         for (i in 6 downTo 0) {
             calendar.time = Date()
             calendar.add(Calendar.DAY_OF_YEAR, -i)
-
-            // Set to start of day
             calendar.set(Calendar.HOUR_OF_DAY, 0)
             calendar.set(Calendar.MINUTE, 0)
             calendar.set(Calendar.SECOND, 0)
             calendar.set(Calendar.MILLISECOND, 0)
             val startTime = calendar.timeInMillis
 
-            // Set to end of day (or current time for today)
             val isToday = (i == 0)
             val endTime = if (isToday) {
                 System.currentTimeMillis()
@@ -265,86 +137,28 @@ class AppUsageStatsManager(private val context: Context) {
                 calendar.timeInMillis
             }
 
-            // Use queryEvents for accurate daily usage calculation
-            val totalDayUsage = try {
-                val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
-                val packageForegroundTime = mutableMapOf<String, Long>()
-                var dayTotalUsage = 0L
-
-                val event = UsageEvents.Event()
-                while (usageEvents.hasNextEvent()) {
-                    usageEvents.getNextEvent(event)
-                    
-                    // Filter out system apps and launcher
-                    if (event.packageName.startsWith("com.android") ||
-                        event.packageName.startsWith("android") ||
-                        event.packageName == "com.guruswarupa.launch") {
-                        continue
-                    }
-                    
-                    when (event.eventType) {
-                        UsageEvents.Event.ACTIVITY_RESUMED -> {
-                            packageForegroundTime[event.packageName] = event.timeStamp
-                        }
-                        UsageEvents.Event.ACTIVITY_PAUSED -> {
-                            val foregroundStart = packageForegroundTime.remove(event.packageName)
-                            if (foregroundStart != null) {
-                                val sessionStart = maxOf(foregroundStart, startTime)
-                                val sessionEnd = minOf(event.timeStamp, endTime)
-                                if (sessionEnd > sessionStart) {
-                                    dayTotalUsage += (sessionEnd - sessionStart)
-                                }
-                            }
-                        }
-                    }
+            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+            val dayTotalUsage = statsMap.values
+                .filter { stats ->
+                    !stats.packageName.startsWith("com.android") &&
+                    !stats.packageName.startsWith("android") &&
+                    stats.packageName != "com.guruswarupa.launch"
                 }
-                
-                // Count any apps still in foreground (for today)
-                if (isToday) {
-                    val now = System.currentTimeMillis()
-                    for (foregroundStart in packageForegroundTime.values) {
-                        val sessionStart = maxOf(foregroundStart, startTime)
-                        if (now > sessionStart) {
-                            dayTotalUsage += (now - sessionStart)
-                        }
-                    }
-                }
-                
-                dayTotalUsage
-            } catch (_: Exception) {
-                // Fallback to INTERVAL_DAILY
-                val usageStatsList = usageStatsManager.queryUsageStats(
-                    UsageStatsManager.INTERVAL_DAILY,
-                    startTime,
-                    endTime
-                )
-                
-                usageStatsList
-                    .filter { stats ->
-                        stats.totalTimeInForeground > 0 &&
-                                stats.lastTimeUsed in startTime..endTime &&
-                                !stats.packageName.startsWith("com.android") &&
-                                !stats.packageName.startsWith("android") &&
-                                stats.packageName != "com.guruswarupa.launch"
-                    }
-                    .sumOf { it.totalTimeInForeground }
-            }
+                .sumOf { it.totalTimeInForeground }
 
-            // Format day label
             val dayFormat = when (i) {
                 0 -> "Today"
                 1 -> "Yesterday"
                 else -> {
-                    calendar.time = Date()
-                    calendar.add(Calendar.DAY_OF_YEAR, -i)
-                    SimpleDateFormat("EEE", Locale.getDefault()).format(calendar.time)
+                    val labelCalendar = Calendar.getInstance()
+                    labelCalendar.add(Calendar.DAY_OF_YEAR, -i)
+                    SimpleDateFormat("EEE", Locale.getDefault()).format(labelCalendar.time)
                 }
             }
 
-            weeklyData.add(dayFormat to totalDayUsage)
+            weeklyData.add(dayFormat to dayTotalUsage)
         }
 
-        // Cache the result
         weeklyDataCache = Pair(currentTime, weeklyData)
         return weeklyData
     }
@@ -355,19 +169,15 @@ class AppUsageStatsManager(private val context: Context) {
         val weeklyData = mutableListOf<Pair<String, Map<String, Long>>>()
         val calendar = Calendar.getInstance()
 
-        // Get data for the last 7 days
         for (i in 6 downTo 0) {
             calendar.time = Date()
             calendar.add(Calendar.DAY_OF_YEAR, -i)
-
-            // Set to start of day
             calendar.set(Calendar.HOUR_OF_DAY, 0)
             calendar.set(Calendar.MINUTE, 0)
             calendar.set(Calendar.SECOND, 0)
             calendar.set(Calendar.MILLISECOND, 0)
             val startTime = calendar.timeInMillis
 
-            // Set to end of day (or current time for today)
             val isToday = (i == 0)
             val endTime = if (isToday) {
                 System.currentTimeMillis()
@@ -379,115 +189,45 @@ class AppUsageStatsManager(private val context: Context) {
                 calendar.timeInMillis
             }
 
-            // Use queryEvents for accurate app-specific daily usage
+            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
             val appUsageMap = mutableMapOf<String, Long>()
-            try {
-                val usageEvents = usageStatsManager.queryEvents(startTime, endTime)
-                val packageForegroundTime = mutableMapOf<String, Long>() // packageName to last foreground timestamp
-
-                val event = UsageEvents.Event()
-                while (usageEvents.hasNextEvent()) {
-                    usageEvents.getNextEvent(event)
-                    
-                    // Filter out system apps and launcher
-                    if (event.packageName.startsWith("com.android") ||
-                        event.packageName.startsWith("android") ||
-                        event.packageName == "com.guruswarupa.launch") {
-                        continue
-                    }
-                    
-                    when (event.eventType) {
-                        UsageEvents.Event.ACTIVITY_RESUMED -> {
-                            packageForegroundTime[event.packageName] = event.timeStamp
-                        }
-                        UsageEvents.Event.ACTIVITY_PAUSED -> {
-                            val foregroundStart = packageForegroundTime.remove(event.packageName)
-                            if (foregroundStart != null) {
-                                val sessionStart = maxOf(foregroundStart, startTime)
-                                val sessionEnd = minOf(event.timeStamp, endTime)
-                                if (sessionEnd > sessionStart) {
-                                    val duration = sessionEnd - sessionStart
-                                    val appName = try {
-                                        context.packageManager.getApplicationLabel(
-                                            context.packageManager.getApplicationInfo(event.packageName, 0)
-                                        ).toString()
-                                    } catch (_: Exception) {
-                                        event.packageName.substringAfterLast(".")
-                                    }
-                                    appUsageMap[appName] = (appUsageMap[appName] ?: 0) + duration
-                                }
-                            }
-                        }
-                    }
+            
+            statsMap.values
+                .filter { stats ->
+                    stats.totalTimeInForeground > 0 &&
+                    !stats.packageName.startsWith("com.android") &&
+                    !stats.packageName.startsWith("android") &&
+                    stats.packageName != "com.guruswarupa.launch"
                 }
-                
-                // Count any apps still in foreground (for today)
-                if (isToday) {
-                    val now = System.currentTimeMillis()
-                    for ((pName, foregroundStart) in packageForegroundTime) {
-                        val sessionStart = maxOf(foregroundStart, startTime)
-                        if (now > sessionStart) {
-                            val duration = now - sessionStart
-                            val appName = try {
-                                context.packageManager.getApplicationLabel(
-                                    context.packageManager.getApplicationInfo(pName, 0)
-                                ).toString()
-                            } catch (_: Exception) {
-                                pName.substringAfterLast(".")
-                            }
-                            appUsageMap[appName] = (appUsageMap[appName] ?: 0) + duration
-                        }
+                .forEach { stats ->
+                    val appName = try {
+                        context.packageManager.getApplicationLabel(
+                            context.packageManager.getApplicationInfo(stats.packageName, 0)
+                        ).toString()
+                    } catch (_: Exception) {
+                        stats.packageName.substringAfterLast(".")
                     }
+                    appUsageMap[appName] = (appUsageMap[appName] ?: 0) + stats.totalTimeInForeground
                 }
-            } catch (_: Exception) {
-                // Fallback to INTERVAL_DAILY
-                val usageStatsList = usageStatsManager.queryUsageStats(
-                    UsageStatsManager.INTERVAL_DAILY,
-                    startTime,
-                    endTime
-                )
-                
-                usageStatsList
-                    .filter { stats ->
-                        stats.totalTimeInForeground > 0 &&
-                                stats.lastTimeUsed in startTime..endTime &&
-                                !stats.packageName.startsWith("com.android") &&
-                                !stats.packageName.startsWith("android") &&
-                                stats.packageName != "com.guruswarupa.launch"
-                    }
-                    .forEach { stats ->
-                        val appName = try {
-                            context.packageManager.getApplicationLabel(
-                                context.packageManager.getApplicationInfo(stats.packageName, 0)
-                            ).toString()
-                        } catch (_: Exception) {
-                            stats.packageName.substringAfterLast(".")
-                        }
-                        appUsageMap[appName] = (appUsageMap[appName] ?: 0) + stats.totalTimeInForeground
-                    }
-            }
 
-            // Sort by usage and return top 15 apps
             val sortedApps = appUsageMap.toList()
                 .sortedByDescending { it.second }
                 .take(15)
                 .toMap()
             
-            // Calculate "Others" usage
             val othersUsage = appUsageMap.values.sum() - sortedApps.values.sum()
             val finalApps = sortedApps.toMutableMap()
             if (othersUsage > 0) {
                 finalApps["Others"] = othersUsage
             }
 
-            // Format day label
             val dayFormat = when (i) {
                 0 -> "Today"
                 1 -> "Yesterday"
                 else -> {
-                    calendar.time = Date()
-                    calendar.add(Calendar.DAY_OF_YEAR, -i)
-                    SimpleDateFormat("EEE", Locale.getDefault()).format(calendar.time)
+                    val labelCalendar = Calendar.getInstance()
+                    labelCalendar.add(Calendar.DAY_OF_YEAR, -i)
+                    SimpleDateFormat("EEE", Locale.getDefault()).format(labelCalendar.time)
                 }
             }
 

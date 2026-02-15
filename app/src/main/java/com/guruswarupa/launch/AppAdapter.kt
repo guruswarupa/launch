@@ -508,6 +508,8 @@ class AppAdapter(
                 val cachedIcon = iconCache[packageName]
                 if (cachedIcon != null) {
                     holder.appIcon.setImageDrawable(cachedIcon)
+                    // Apply daily limit grayscale if needed
+                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                 } else {
                     // Show placeholder immediately to prevent UI freeze
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
@@ -524,6 +526,8 @@ class AppAdapter(
                             (context as? Activity)?.runOnUiThread {
                                 if (holder.bindingAdapterPosition == position) {
                                     holder.appIcon.setImageDrawable(icon)
+                                    // Apply daily limit grayscale if needed
+                                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                                 }
                             }
                         } catch (_: Exception) {
@@ -532,6 +536,8 @@ class AppAdapter(
                             (context as? Activity)?.runOnUiThread {
                                 if (holder.bindingAdapterPosition == position) {
                                     holder.appIcon.setImageDrawable(fallbackIcon)
+                                    // Apply daily limit grayscale if needed
+                                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                                 }
                             }
                         }
@@ -553,6 +559,13 @@ class AppAdapter(
                         return@setOnClickListener
                     }
                     holder.lastClickTime = currentTime
+                    
+                    // Check if app is over daily limit
+                    if (activity.appTimerManager.isAppOverDailyLimit(packageName)) {
+                        val appName = labelCache[packageName] ?: appInfo.activityInfo.packageName
+                        Toast.makeText(activity, "Daily limit reached for $appName", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
                     
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                     if (intent != null) {
@@ -683,6 +696,13 @@ class AppAdapter(
         // Use theme-aware text color
         val textColor = ContextCompat.getColor(activity, R.color.text)
 
+        // Add Daily Limit option to the menu
+        val appName = labelCache[packageName] ?: appInfo.activityInfo.packageName
+        val dailyLimitItem = popupMenu.menu.add(0, 100, 0, "Set Daily Limit")
+        val limitSpannable = android.text.SpannableString(dailyLimitItem.title)
+        limitSpannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, limitSpannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        dailyLimitItem.title = limitSpannable
+
         // Update usage header asynchronously
         val usageHeader = popupMenu.menu.findItem(R.id.usage_header)
         if (usageHeader != null) {
@@ -736,6 +756,12 @@ class AppAdapter(
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                100 -> { // Daily Limit
+                    activity.appTimerManager.showDailyLimitDialog(appName, packageName) {
+                        notifyDataSetChanged() // Refresh UI to apply/remove grayscale
+                    }
+                    true
+                }
                 R.id.app_info -> {
                     showAppInfo(packageName)
                     true
