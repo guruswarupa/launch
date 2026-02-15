@@ -3,6 +3,13 @@
     <string name="settings_app_name">Launch Settings</string>
     <string name="search_text"> Search...</string>
     
+    <!-- Device Admin Strings -->
+    <string name="device_admin_label">Launch Screen Off</string>
+    <string name="device_admin_description">Allows the launcher to turn off the screen when double-tapped.</string>
+    <string name="request_device_admin_title">Enable Screen Off</string>
+    <string name="request_device_admin_message">To turn off the screen with a double-tap, Launch needs Device Administrator permission.</string>
+    <string name="grant_permission">Grant</string>
+
     <!-- App Search Strings -->
     <string name="search_on_play_store">Search %1$s on Play Store</string>
     <string name="search_in_google_maps">Search %1$s in Google Maps</string>
