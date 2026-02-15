@@ -1,21 +1,29 @@
 package com.guruswarupa.launch
 
 import android.Manifest
+import android.app.WallpaperManager
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.toColorInt
+import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import java.util.concurrent.Executors
 
@@ -29,12 +37,12 @@ class PrivacyDashboardActivity : ComponentActivity() {
     private lateinit var statTotalValue: TextView
     private lateinit var statCriticalValue: TextView
     private lateinit var statSideloadedValue: TextView
-    private lateinit var chipGroup: com.google.android.material.chip.ChipGroup
+    private lateinit var chipGroup: ChipGroup
 
     private var allApps = listOf<AppPrivacyInfo>()
     private val executor = Executors.newSingleThreadExecutor()
 
-    private val sensitivePermissions = listOf(
+    private val sensitivePermissions = listOfNotNull(
         Manifest.permission.CAMERA,
         Manifest.permission.RECORD_AUDIO,
         Manifest.permission.READ_CONTACTS,
@@ -44,21 +52,22 @@ class PrivacyDashboardActivity : ComponentActivity() {
         Manifest.permission.WRITE_EXTERNAL_STORAGE,
         Manifest.permission.READ_SMS,
         Manifest.permission.CALL_PHONE,
-        Manifest.permission.POST_NOTIFICATIONS,
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.POST_NOTIFICATIONS else null,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES else null,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_VIDEO else null,
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_AUDIO else null
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = Color.TRANSPARENT
-            window.navigationBarColor = Color.TRANSPARENT
-        }
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = 
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
 
         setContentView(R.layout.activity_privacy_dashboard)
+        
+        setupTheme()
 
         findViewById<ImageButton>(R.id.back_button).setOnClickListener {
             finish()
@@ -83,16 +92,119 @@ class PrivacyDashboardActivity : ComponentActivity() {
         statSideloadedValue = findViewById(R.id.stat_sideloaded_value)
         chipGroup = findViewById(R.id.filter_chip_group)
         
-        chipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+        chipGroup.setOnCheckedStateChangeListener { _, _ ->
             applyFilters()
         }
 
         loadApps()
     }
+    
+    private fun setupTheme() {
+        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val overlay = findViewById<View>(R.id.settings_overlay)
+        
+        if (isDarkMode) {
+            overlay.setBackgroundColor("#CC000000".toColorInt())
+        } else {
+            overlay.setBackgroundColor("#66FFFFFF".toColorInt())
+        }
+        
+        setupWallpaper()
+        
+        window.decorView.post {
+            makeSystemBarsTransparent(isDarkMode)
+        }
+    }
+    
+    private fun setupWallpaper() {
+        val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
+        
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
+            try {
+                val wallpaperManager = WallpaperManager.getInstance(this)
+                val wallpaperDrawable = wallpaperManager.drawable
+                if (wallpaperDrawable != null) {
+                    wallpaperImageView.setImageDrawable(wallpaperDrawable)
+                }
+            } catch (_: Exception) {
+                wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
+            }
+        } else {
+            wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
+        }
+    }
+    
+    private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                @Suppress("DEPRECATION")
+                window.statusBarColor = Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = Color.TRANSPARENT
+                
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                
+                val insetsController = window.decorView.windowInsetsController
+                if (insetsController != null) {
+                    val appearance = if (!isDarkMode) {
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    } else {
+                        0
+                    }
+                    insetsController.setSystemBarsAppearance(
+                        appearance,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    )
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                window.statusBarColor = Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = Color.TRANSPARENT
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                @Suppress("DEPRECATION")
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                @Suppress("DEPRECATION")
+                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                
+                @Suppress("DEPRECATION")
+                val decorView = window.decorView
+                @Suppress("DEPRECATION")
+                var flags = decorView.systemUiVisibility
+                @Suppress("DEPRECATION")
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                @Suppress("DEPRECATION")
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                @Suppress("DEPRECATION")
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                
+                if (!isDarkMode) {
+                    @Suppress("DEPRECATION")
+                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        @Suppress("DEPRECATION")
+                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                    }
+                }
+                @Suppress("DEPRECATION")
+                decorView.systemUiVisibility = flags
+            }
+        } catch (_: Exception) {
+            try {
+                @Suppress("DEPRECATION")
+                window.statusBarColor = Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = Color.TRANSPARENT
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     private fun loadApps() {
         executor.execute {
             val pm = packageManager
+            @Suppress("DEPRECATION")
             val packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
             
             val appPrivacyList = packages.mapNotNull { packageInfo ->
@@ -111,14 +223,14 @@ class PrivacyDashboardActivity : ComponentActivity() {
                 if (granted.isNotEmpty() || (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0) {
                     val appName = try {
                         pm.getApplicationLabel(appInfo).toString()
-                    } catch (e: Exception) {
-                        packageInfo.packageName ?: "Unknown"
+                    } catch (_: Exception) {
+                        packageInfo.packageName
                     }
                     val icon = try {
                         pm.getApplicationIcon(appInfo)
-                    } catch (e: Exception) {
-                        resources.getDrawable(R.mipmap.ic_launcher, theme)
-                    }
+                    } catch (_: Exception) {
+                        ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, theme)
+                    } ?: ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, theme)!!
                     
                     val severity = when {
                         granted.any { it in listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_SMS, Manifest.permission.ACCESS_FINE_LOCATION) } -> 2
@@ -130,7 +242,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
                     val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         try {
                             pm.getInstallSourceInfo(packageInfo.packageName).installingPackageName
-                        } catch (e: Exception) { null }
+                        } catch (_: Exception) { null }
                     } else {
                         @Suppress("DEPRECATION")
                         pm.getInstallerPackageName(packageInfo.packageName)
@@ -141,7 +253,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
                         installer in listOf("com.android.packageinstaller", "com.google.android.packageinstaller")
 
                     AppPrivacyInfo(
-                        packageName = packageInfo.packageName ?: "Unknown",
+                        packageName = packageInfo.packageName,
                         appName = appName,
                         icon = icon,
                         grantedPermissions = granted,

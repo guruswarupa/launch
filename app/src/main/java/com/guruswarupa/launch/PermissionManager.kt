@@ -2,11 +2,13 @@ package com.guruswarupa.launch
 
 import android.Manifest
 import android.app.AlertDialog
-import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.os.Build
+import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 
 /**
  * Manages all permission requests for the launcher
@@ -65,6 +67,7 @@ class PermissionManager(
     /**
      * Request call phone permission
      */
+    @Suppress("unused")
     fun requestCallPhonePermission() {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE)
             != PackageManager.PERMISSION_GRANTED
@@ -83,28 +86,39 @@ class PermissionManager(
     fun requestUsageStatsPermission(usageStatsManager: AppUsageStatsManager) {
         if (!usageStatsManager.hasUsageStatsPermission()) {
             if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
-                AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+                val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
                     .setTitle("Usage Stats Permission")
                     .setMessage("To show app usage time, please grant usage access permission in the next screen.")
                     .setPositiveButton("Grant") { _, _ ->
+                        @Suppress("DEPRECATION")
                         activity.startActivityForResult(
                             usageStatsManager.requestUsageStatsPermission(),
                             USAGE_STATS_REQUEST
                         )
                     }
                     .setNegativeButton("Skip") { _, _ ->
-                        sharedPreferences.edit().putBoolean("usage_stats_permission_denied", true).apply()
+                        sharedPreferences.edit { putBoolean("usage_stats_permission_denied", true) }
                     }
                     .show()
+                
+                fixDialogTextColors(dialog)
             }
         }
+    }
+    
+    private fun fixDialogTextColors(dialog: AlertDialog) {
+        try {
+            val textColor = ContextCompat.getColor(activity, R.color.text)
+            dialog.findViewById<TextView>(android.R.id.title)?.setTextColor(textColor)
+            dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(textColor)
+        } catch (_: Exception) {}
     }
     
     /**
      * Request notification permission (Android 13+)
      */
     fun requestNotificationPermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(
@@ -119,6 +133,7 @@ class PermissionManager(
     /**
      * Request microphone permission for audio recording (used by noise decibel widget)
      */
+    @Suppress("unused")
     fun requestMicrophonePermission() {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
@@ -135,7 +150,7 @@ class PermissionManager(
      */
     fun handlePermissionResult(
         requestCode: Int,
-        permissions: Array<String>,
+        @Suppress("unused") permissions: Array<String>,
         grantResults: IntArray,
         onContactsGranted: () -> Unit = {},
         onCallPhoneGranted: () -> Unit = {},
@@ -144,11 +159,11 @@ class PermissionManager(
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    sharedPreferences.edit().putBoolean("contacts_permission_denied", false).apply()
+                    sharedPreferences.edit { putBoolean("contacts_permission_denied", false) }
                     onContactsGranted()
                 } else {
                     if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_CONTACTS)) {
-                        sharedPreferences.edit().putBoolean("contacts_permission_denied", true).apply()
+                        sharedPreferences.edit { putBoolean("contacts_permission_denied", true) }
                     }
                 }
             }
@@ -159,17 +174,15 @@ class PermissionManager(
             }
             SMS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    sharedPreferences.edit().putBoolean("sms_permission_denied", false).apply()
+                    sharedPreferences.edit { putBoolean("sms_permission_denied", false) }
                 } else {
                     if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.SEND_SMS)) {
-                        sharedPreferences.edit().putBoolean("sms_permission_denied", true).apply()
+                        sharedPreferences.edit { putBoolean("sms_permission_denied", true) }
                     }
                 }
             }
             VOICE_SEARCH_REQUEST -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, caller should handle voice search
-                }
+                // Permission handled by the caller who requested it
             }
             NOTIFICATION_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

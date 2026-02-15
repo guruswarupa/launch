@@ -42,11 +42,10 @@ class AppAdapter(
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
     private val usageStatsManager = AppUsageStatsManager(activity)
-    private val usageCache = ConcurrentHashMap<String, Pair<Long, Long>>() // packageName to (usageTime, timestamp)
     private val iconCache = ConcurrentHashMap<String, Drawable>() // packageName to icon
     private val labelCache = ConcurrentHashMap<String, String>() // packageName to label
     private val specialAppIconCache = ConcurrentHashMap<String, Drawable>() // Cache for special app icons (Play Store, Maps, YouTube)
-    private val cacheDuration = 30000L // 30 seconds cache (reduced for more frequent updates)
+    private val usageCache = ConcurrentHashMap<String, String>() // packageName to formatted usage string
     private val executor = Executors.newSingleThreadExecutor() // Executor for background tasks
     private var itemsRendered = 0 // Track how many items have been rendered
     private val iconPreloadExecutor = Executors.newFixedThreadPool(2) // Separate thread pool for icon preloading
@@ -211,7 +210,7 @@ class AppAdapter(
         // as appList may be modified in updateAppList on the main thread while this runs in background
         val appsToPreload = try {
             ArrayList(appList.subList(startPosition, minOf(endPosition, size)))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return
         }
         
@@ -236,24 +235,6 @@ class AppAdapter(
         }
     }
 
-    private fun getUsageTimeWithCache(packageName: String): Long {
-        // Skip usage queries in power saver mode to save battery
-        if (activity.appDockManager.isPowerSaverActive()) {
-            return 0L
-        }
-        
-        val currentTime = System.currentTimeMillis()
-        val cached = usageCache[packageName]
-
-        return if (cached != null && (currentTime - cached.second) < cacheDuration) {
-            cached.first
-        } else {
-            val usageTime = usageStatsManager.getAppUsageTime(packageName)
-            usageCache[packageName] = Pair(usageTime, currentTime)
-            usageTime
-        }
-    }
-
     override fun getItemViewType(position: Int): Int {
         return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
     }
@@ -267,57 +248,30 @@ class AppAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
-        val isPowerSaverActive = activity.appDockManager.isPowerSaverActive()
 
-        // Handle pitch black UI for app items in power saver mode
-        if (isPowerSaverActive) {
-            holder.itemView.background = null
-            holder.itemView.elevation = 0f
-            holder.appIcon.background = null
-        } else {
             if (!isGridMode) {
-                holder.itemView.setBackgroundResource(R.drawable.rounded_background)
+                // Check if we're in night mode (dark theme)
+                val isNightMode = (activity.resources.configuration.uiMode and 
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES
+                
+                // Use light background in light mode, dark background in dark mode
+                val backgroundDrawable = if (isNightMode) {
+                    R.drawable.rounded_background // Semi-transparent black
+                } else {
+                    R.drawable.rounded_background_light // Semi-transparent white
+                }
+                
+                holder.itemView.setBackgroundResource(backgroundDrawable)
                 holder.itemView.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
-            } else {
-                holder.itemView.setBackgroundResource(android.R.drawable.list_selector_background)
             }
             holder.appIcon.setBackgroundResource(R.drawable.circular_background)
-        }
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
 
-        // Show usage time only in list mode and when power saver is disabled
-        // Hide usage time in power saver mode to save battery (no usage queries)
-        // Defer usage stats loading on initial render for better performance
-        
-        if (!isGridMode && holder.appUsageTime != null && !isPowerSaverActive) {
-            // OPTIMIZATION: Always defer usage stats loading for first 30 items to improve initial render
-            // This prevents blocking the UI thread during initial load
-            if (position < 30 && itemsRendered < 30) {
-                holder.appUsageTime.text = ""
-                holder.appUsageTime.visibility = View.VISIBLE
-                // Load usage time asynchronously after initial render
-                executor.execute {
-                    val usageTime = getUsageTimeWithCache(packageName)
-                    val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-                    (context as? Activity)?.runOnUiThread {
-                        // Only update if this holder still shows the same app
-                        if (holder.bindingAdapterPosition == position) {
-                            holder.appUsageTime.text = formattedTime
-                        }
-                    }
-                }
-            } else {
-                // Use cached usage time (cache lookup is fast, actual query only if cache expired)
-                val usageTime = getUsageTimeWithCache(packageName)
-                val formattedTime = usageStatsManager.formatUsageTime(usageTime)
-                holder.appUsageTime.text = formattedTime
-                holder.appUsageTime.visibility = View.VISIBLE
-            }
-        } else {
-            holder.appUsageTime?.visibility = View.GONE
-        }
+        // Always hide the on-item usage display
+        holder.appUsageTime?.visibility = View.GONE
 
         when (packageName) {
             "contact_search" -> {
@@ -554,6 +508,8 @@ class AppAdapter(
                 val cachedIcon = iconCache[packageName]
                 if (cachedIcon != null) {
                     holder.appIcon.setImageDrawable(cachedIcon)
+                    // Apply daily limit grayscale if needed
+                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                 } else {
                     // Show placeholder immediately to prevent UI freeze
                     holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
@@ -570,6 +526,8 @@ class AppAdapter(
                             (context as? Activity)?.runOnUiThread {
                                 if (holder.bindingAdapterPosition == position) {
                                     holder.appIcon.setImageDrawable(icon)
+                                    // Apply daily limit grayscale if needed
+                                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                                 }
                             }
                         } catch (_: Exception) {
@@ -578,6 +536,8 @@ class AppAdapter(
                             (context as? Activity)?.runOnUiThread {
                                 if (holder.bindingAdapterPosition == position) {
                                     holder.appIcon.setImageDrawable(fallbackIcon)
+                                    // Apply daily limit grayscale if needed
+                                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                                 }
                             }
                         }
@@ -599,6 +559,13 @@ class AppAdapter(
                         return@setOnClickListener
                     }
                     holder.lastClickTime = currentTime
+                    
+                    // Check if app is over daily limit
+                    if (activity.appTimerManager.isAppOverDailyLimit(packageName)) {
+                        val appName = labelCache[packageName] ?: appInfo.activityInfo.packageName
+                        Toast.makeText(activity, "Daily limit reached for $appName", Toast.LENGTH_SHORT).show()
+                        return@setOnClickListener
+                    }
                     
                     val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
                     if (intent != null) {
@@ -726,15 +693,40 @@ class AppAdapter(
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
         popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
 
+        // Use theme-aware text color
+        val textColor = ContextCompat.getColor(activity, R.color.text)
+
+        // Add Daily Limit option to the menu
+        val appName = labelCache[packageName] ?: appInfo.activityInfo.packageName
+        val dailyLimitItem = popupMenu.menu.add(0, 100, 0, "Set Daily Limit")
+        val limitSpannable = android.text.SpannableString(dailyLimitItem.title)
+        limitSpannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, limitSpannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        dailyLimitItem.title = limitSpannable
+
+        // Update usage header asynchronously
+        val usageHeader = popupMenu.menu.findItem(R.id.usage_header)
+        if (usageHeader != null) {
+            executor.execute {
+                val usageTime = usageStatsManager.getAppUsageTime(packageName)
+                val formattedTime = usageStatsManager.formatUsageTime(usageTime)
+                activity.runOnUiThread {
+                    usageHeader.title = "Usage: $formattedTime"
+                    // Force text color update for the header too
+                    val spannable = android.text.SpannableString(usageHeader.title)
+                    spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    usageHeader.title = spannable
+                }
+            }
+        }
+
         // Update favorite menu item text
         val favoriteMenuItem = popupMenu.menu.findItem(R.id.toggle_favorite)
         if (favoriteMenuItem != null) {
             val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
             favoriteMenuItem.title = if (isFavorite) "Remove from Favorites" else "Add to Favorites"
-            // Force white text color using SpannableString
-            val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+            // Force theme-aware text color using SpannableString
             val spannable = android.text.SpannableString(favoriteMenuItem.title)
-            spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             favoriteMenuItem.title = spannable
         }
 
@@ -744,28 +736,32 @@ class AppAdapter(
             try {
                 val isHidden = activity.hiddenAppManager.isAppHidden(packageName)
                 hideMenuItem.title = if (isHidden) "Unhide App" else "Hide App"
-                // Force white text color using SpannableString
-                val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+                // Force theme-aware text color using SpannableString
                 val spannable = android.text.SpannableString(hideMenuItem.title)
-                spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 hideMenuItem.title = spannable
             } catch (_: UninitializedPropertyAccessException) {
                 hideMenuItem.isVisible = false
             }
         }
         
-        // Force white text for all menu items
-        val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+        // Force theme-aware text for all menu items
         for (i in 0 until popupMenu.menu.size) {
             val item = popupMenu.menu[i]
             val title = item.title?.toString() ?: continue
             val spannable = android.text.SpannableString(title)
-            spannable.setSpan(android.text.style.ForegroundColorSpan(whiteColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             item.title = spannable
         }
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
+                100 -> { // Daily Limit
+                    activity.appTimerManager.showDailyLimitDialog(appName, packageName) {
+                        notifyDataSetChanged() // Refresh UI to apply/remove grayscale
+                    }
+                    true
+                }
                 R.id.app_info -> {
                     showAppInfo(packageName)
                     true
@@ -800,7 +796,7 @@ class AppAdapter(
     @SuppressLint("DiscouragedPrivateApi")
     private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
         try {
-            val whiteColor = ContextCompat.getColor(activity, android.R.color.white)
+            val textColor = ContextCompat.getColor(activity, R.color.text)
             
             // Try to get the ListView from the popup menu using reflection
             val popupField = popupMenu.javaClass.getDeclaredField("mPopup")
@@ -829,9 +825,9 @@ class AppAdapter(
             // Function to fix text colors in a view
             fun fixTextColors(view: View) {
                 if (view is TextView) {
-                    view.setTextColor(whiteColor)
+                    view.setTextColor(textColor)
                 } else if (view is ViewGroup) {
-                    findTextViewsAndSetColor(view, whiteColor)
+                    findTextViewsAndSetColor(view, textColor)
                 }
             }
             

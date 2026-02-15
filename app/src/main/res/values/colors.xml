@@ -1,41 +1,82 @@
 <resources>
-    <color name="background">#121212</color> <!-- Matte black background -->
-    <color name="text">#FFFFFF</color> <!-- White text -->
-    <color name="text_secondary">#FFFFFF</color> <!-- White text for secondary -->
-    <color name="card_background">#1C1C1C</color> <!-- Dark card background -->
-    <color name="card_elevation">#333333</color> <!-- Slightly lighter card elevation -->
-    <color name="colorPrimary">#6200EE</color> <!-- Keep accent colors like purple for highlights -->
+    <color name="background">#F5F5F5</color> <!-- Light grey background for light mode -->
+    <color name="text">#000000</color> <!-- Black text for light background -->
+    <color name="text_secondary">#666666</color> <!-- Dark gray text for secondary -->
+    <color name="card_background">#FFFFFF</color> <!-- White card background -->
+    <color name="card_elevation">#E0E0E0</color>
+    <color name="colorPrimary">#6200EE</color>
     <color name="colorPrimaryDark">#3700B3</color>
     <color name="colorAccent">#03DAC5</color>
     <color name="colorButtonBackground">#6200EE</color>
     <color name="colorButtonText">#FFFFFF</color>
     <color name="button_primary">#81A1C1</color>
     <color name="white">#ffffff</color>
+    <color name="black">#000000</color>
     <color name="squircle_stroke">#8e8e8e</color>
-    <color name="group_overlay">#80000000</color>
-    <color name="nord0">#2E3440</color> <!-- Background, Lightest -->
-    <color name="nord1">#3B4252</color> <!-- Dark blue-gray -->
-    <color name="nord2">#434C5E</color> <!-- Blue-gray -->
-    <color name="nord3">#4C566A</color> <!-- Slate gray -->
-    <color name="nord4">#D8DEE9</color> <!-- Light grayish blue -->
-    <color name="nord5">#E5E9F0</color> <!-- Lightest gray -->
-    <color name="nord6">#ECEFF4</color> <!-- Off-white -->
-    <color name="nord7">#8FBCBB</color> <!-- Pale cyan -->
-    <color name="nord8">#88C0D0</color> <!-- Light blue -->
-    <color name="nord9">#81A1C1</color> <!-- Blue -->
-    <color name="nord10">#5E81AC</color> <!-- Medium blue -->
-    <color name="nord11">#BF616A</color> <!-- Red -->
-    <color name="nord12">#D08770</color> <!-- Orange -->
-    <color name="nord13">#EBCB8B</color> <!-- Yellow -->
-    <color name="nord14">#A3BE8C</color> <!-- Green -->
-    <color name="nord15">#B48EAD</color> <!-- Purple -->
-    <color name="surfaceColor">#121212</color> <!-- Dark surface color for dark mode -->
-    <color name="outlineColor">#3A3A3A</color>
+    <color name="group_overlay">#80FFFFFF</color>
+    <color name="nord0">#2E3440</color>
+    <color name="nord1">#3B4252</color>
+    <color name="nord2">#434C5E</color>
+    <color name="nord3">#4C566A</color>
+    <color name="nord4">#D8DEE9</color>
+    <color name="nord5">#E5E9F0</color>
+    <color name="nord6">#ECEFF4</color>
+    <color name="nord7">#8FBCBB</color>
+    <color name="nord8">#88C0D0</color>
+    <color name="nord9">#81A1C1</color>
+    <color name="nord10">#5E81AC</color>
+    <color name="nord11">#BF616A</color>
+    <color name="nord12">#D08770</color>
+    <color name="nord13">#EBCB8B</color>
+    <color name="nord14">#A3BE8C</color>
+    <color name="nord15">#B48EAD</color>
+    <color name="surfaceColor">#F5F5F5</color>
+    <color name="outlineColor">#D0D0D0</color>
     <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
     <color name="green">#FF44FF44</color>
     <color name="gray_light">#FFCCCCCC</color>
     <color name="gray">#808080</color>
     <color name="red">#FF5252</color>
-    <color name="icon_color">#FFFFFF</color> <!-- White icons -->
+    <color name="icon_color">#000000</color>
+    
+    <!-- Dialog Colors -->
+    <color name="dialog_background">#F2FFFFFF</color>
+    <color name="menu_background_color">#E6FFFFFF</color>
+    <color name="dialog_text">@color/text</color>
+    <color name="dialog_text_secondary">@color/text_secondary</color>
+    
+    <!-- Dynamic Text Colors -->
+    <color name="widget_text">@color/black</color>
+    <color name="widget_text_secondary">@color/text_secondary</color>
+    <color name="widget_divider">#33000000</color>
+    <color name="widget_item_background">#1A000000</color>
+    <color name="widget_item_stroke">#33000000</color>
+    
+    <!-- Settings Specific Colors -->
+    <color name="settings_overlay">#66FFFFFF</color> <!-- Lighter overlay for light mode -->
+    <color name="settings_header_text">@color/text</color>
+
+    <!-- Grid Item Background Colors -->
+    <color name="grid_item_background">#80FFFFFF</color>
+    <color name="grid_item_background_light">#80FFFFFF</color>
+    <color name="grid_item_background_dark">#80000000</color>
+
+    <!-- Tutorial Colors -->
+    <color name="tutorial_background">#F8F8F8</color>
+    <color name="tutorial_title">#222222</color>
+    <color name="tutorial_description">#555555</color>
+    <color name="tutorial_accent">#0288D1</color>
+    <color name="tutorial_button_background">#E0E0E0</color>
+    <color name="tutorial_button_stroke">#CCCCCC</color>
+    <color name="tutorial_ripple">#20000000</color>
+
+    <!-- Onboarding Colors -->
+    <color name="onboarding_overlay">#E6FFFFFF</color> <!-- Increased opacity (90% white) for better text contrast -->
+    <color name="onboarding_text">#000000</color> <!-- Pure black for maximum readability -->
+    <color name="onboarding_text_secondary">#333333</color>
+    <color name="onboarding_step_indicator_active">#0288D1</color>
+    <color name="onboarding_step_indicator_inactive">#B0B0B0</color>
+    <color name="onboarding_input_background">#F0F0F0</color>
+    <color name="onboarding_input_text">#000000</color>
+    <color name="onboarding_input_hint">#666666</color>
 </resources>

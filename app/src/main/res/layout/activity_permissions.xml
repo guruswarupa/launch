@@ -15,6 +15,7 @@
 
     <!-- Semi-transparent overlay for better text visibility -->
     <View
+        android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#80000000"/>
@@ -39,7 +40,7 @@
                 android:text="Permissions"
                 android:textSize="32sp"
                 android:textStyle="bold"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text"
                 android:gravity="center"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="32dp"/>
@@ -50,7 +51,7 @@
                 android:layout_height="wrap_content"
                 android:text="Enable permissions to unlock all features of the launcher. Some permissions are required for core functionality."
                 android:textSize="14sp"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text"
                 android:alpha="0.8"
                 android:gravity="center"
                 android:layout_marginBottom="24dp"/>

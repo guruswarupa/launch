@@ -2,8 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:orientation="vertical">
 
     <!-- Header -->
     <LinearLayout
@@ -18,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Workout"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -27,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Calendar"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="12sp"
             android:background="@drawable/button_neutral_ripple"
             android:paddingHorizontal="12dp"
@@ -39,7 +38,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="+ Add"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="14sp"
             android:background="@drawable/button_neutral_ripple"
             android:paddingHorizontal="20dp"
@@ -52,7 +51,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/widget_background"
         android:padding="16dp"
         android:layout_marginBottom="16dp">
 
@@ -75,7 +73,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Today"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="4dp" />
 
@@ -106,7 +104,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Exercises"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="4dp" />
 
@@ -115,7 +113,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -145,7 +143,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Streak"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="11sp"
                     android:layout_marginBottom="4dp" />
 
@@ -176,7 +174,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="This Week"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="11sp"
                     android:layout_marginBottom="4dp" />
 
@@ -231,7 +229,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="No exercises yet"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="18sp"
             android:textStyle="bold"
             android:layout_marginBottom="8dp" />
@@ -240,7 +238,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Tap + Add to start tracking your workouts"
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="14sp"
             android:gravity="center" />
     </LinearLayout>

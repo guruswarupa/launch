@@ -22,6 +22,8 @@ class CompassManager(context: Context) : SensorEventListener {
     
     private var currentAzimuth: Float = 0f
     private var onDirectionChanged: ((Float) -> Unit)? = null
+    private var onAccuracyChangedListener: ((Int) -> Unit)? = null
+    private var currentAccuracy: Int = SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM
     
     companion object {
         private const val TAG = "CompassManager"
@@ -46,6 +48,10 @@ class CompassManager(context: Context) : SensorEventListener {
     
     fun setOnDirectionChangedListener(listener: (Float) -> Unit) {
         onDirectionChanged = listener
+    }
+
+    fun setOnAccuracyChangedListener(listener: (Int) -> Unit) {
+        onAccuracyChangedListener = listener
     }
     
     fun startTracking() {
@@ -98,7 +104,10 @@ class CompassManager(context: Context) : SensorEventListener {
     }
     
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Not critical for compass functionality
+        if (sensor?.type == Sensor.TYPE_MAGNETIC_FIELD) {
+            currentAccuracy = accuracy
+            onAccuracyChangedListener?.invoke(accuracy)
+        }
     }
     
     private fun updateOrientationAngles() {
@@ -126,6 +135,10 @@ class CompassManager(context: Context) : SensorEventListener {
     
     fun getCurrentDirection(): Float {
         return currentAzimuth
+    }
+
+    fun getAccuracy(): Int {
+        return currentAccuracy
     }
 
     fun getDirectionName(azimuth: Float): String {

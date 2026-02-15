@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.speech.RecognizerIntent
-import android.widget.EditText
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -16,9 +15,7 @@ import androidx.fragment.app.FragmentActivity
  */
 class VoiceSearchManager(
     private val activity: FragmentActivity,
-    private val packageManager: android.content.pm.PackageManager,
-    private val searchBox: EditText,
-    private val permissionManager: PermissionManager
+    private val packageManager: android.content.pm.PackageManager
 ) {
     fun startVoiceSearch() {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)
@@ -39,8 +36,9 @@ class VoiceSearchManager(
 
         if (intent.resolveActivity(packageManager) != null) {
             try {
+                @Suppress("DEPRECATION")
                 activity.startActivityForResult(intent, PermissionManager.VOICE_SEARCH_REQUEST)
-            } catch (e: ActivityNotFoundException) {
+            } catch (_: ActivityNotFoundException) {
                 Toast.makeText(activity, "Voice recognition not supported on this device", Toast.LENGTH_SHORT).show()
             }
         } else {
@@ -60,7 +58,7 @@ class VoiceSearchManager(
         if (intent.resolveActivity(packageManager) != null) {
             try {
                 activity.startActivity(intent)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 Toast.makeText(activity, "Could not launch system assistant", Toast.LENGTH_SHORT).show()
             }
         } else {

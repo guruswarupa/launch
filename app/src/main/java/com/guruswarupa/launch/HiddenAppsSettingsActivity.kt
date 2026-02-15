@@ -1,9 +1,14 @@
 package com.guruswarupa.launch
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.WallpaperManager
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.content.res.Configuration
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,6 +18,7 @@ import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -24,22 +30,21 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
     private lateinit var emptyStateLayout: LinearLayout
     private var hiddenAppsList = mutableListOf<ResolveInfo>()
 
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         // Make status bar and navigation bar transparent BEFORE setContentView
-        // This prevents the blue flash on activity start
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        }
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+        
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = 
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         
         setContentView(R.layout.activity_hidden_apps_settings)
         
-        // Ensure system bars are fully configured after view is created
-        window.decorView.post {
-            makeSystemBarsTransparent()
-        }
+        setupTheme()
 
         val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
         hiddenAppManager = HiddenAppManager(prefs)
@@ -55,50 +60,88 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
         recreateAppsList()
     }
     
-    private fun makeSystemBarsTransparent() {
+    private fun setupTheme() {
+        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val overlay = findViewById<View>(R.id.settings_overlay)
+        
+        if (isDarkMode) {
+            overlay.setBackgroundColor("#CC000000".toColorInt())
+        } else {
+            overlay.setBackgroundColor("#66FFFFFF".toColorInt())
+        }
+        
+        setupWallpaper()
+        
+        window.decorView.post {
+            makeSystemBarsTransparent(isDarkMode)
+        }
+    }
+    
+    private fun setupWallpaper() {
+        val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
+        
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
+            try {
+                val wallpaperManager = WallpaperManager.getInstance(this)
+                val wallpaperDrawable = wallpaperManager.drawable
+                if (wallpaperDrawable != null) {
+                    wallpaperImageView.setImageDrawable(wallpaperDrawable)
+                }
+            } catch (_: Exception) {
+                wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
+            }
+        } else {
+            wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
+        }
+    }
+    
+    @Suppress("DEPRECATION")
+    private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.statusBarColor = Color.TRANSPARENT
+                window.navigationBarColor = Color.TRANSPARENT
                 window.setDecorFitsSystemWindows(false)
                 
-                val decorView = window.decorView
-                if (decorView != null) {
-                    val insetsController = decorView.windowInsetsController
-                    if (insetsController != null) {
-                        insetsController.setSystemBarsAppearance(
-                            0,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        )
+                val insetsController = window.decorView.windowInsetsController
+                insetsController?.let {
+                    val appearance = if (!isDarkMode) {
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    } else {
+                        0
                     }
+                    it.setSystemBarsAppearance(
+                        appearance,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    )
                 }
-            } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            } else {
+                window.statusBarColor = Color.TRANSPARENT
+                window.navigationBarColor = Color.TRANSPARENT
                 window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                 
-                @Suppress("DEPRECATION")
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    val decorView = window.decorView
-                    if (decorView != null) {
-                        var flags = decorView.systemUiVisibility
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        decorView.systemUiVisibility = flags
+                val decorView = window.decorView
+                var flags = decorView.systemUiVisibility
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                
+                if (!isDarkMode) {
+                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                     }
                 }
+                decorView.systemUiVisibility = flags
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                    window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                }
-            } catch (ex: Exception) {
-                // Ignore
+                window.statusBarColor = Color.TRANSPARENT
+                window.navigationBarColor = Color.TRANSPARENT
+            } catch (_: Exception) {
             }
         }
     }
@@ -122,7 +165,7 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
         if (hiddenAppsList.isEmpty()) {
             appsRecyclerView.visibility = View.GONE
             emptyStateLayout.visibility = View.VISIBLE
-            emptyStateText.text = "No hidden apps. Long press an app in the app list to hide it."
+            emptyStateText.setText(R.string.no_hidden_apps)
         } else {
             appsRecyclerView.visibility = View.VISIBLE
             emptyStateLayout.visibility = View.GONE
@@ -164,7 +207,7 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
             try {
                 holder.icon.setImageDrawable(app.loadIcon(packageManager))
                 holder.name.text = app.loadLabel(packageManager)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 holder.icon.setImageResource(R.drawable.ic_default_app_icon)
                 holder.name.text = packageName
             }

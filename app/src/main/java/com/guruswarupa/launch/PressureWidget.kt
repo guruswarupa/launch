@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.edit
 import java.text.DecimalFormat
 
 class PressureWidget(
@@ -78,14 +79,14 @@ class PressureWidget(
     private fun togglePressure() {
         val currentState = sharedPreferences.getBoolean(PREF_PRESSURE_ENABLED, false)
         val newState = !currentState
-        sharedPreferences.edit().putBoolean(PREF_PRESSURE_ENABLED, newState).apply()
+        sharedPreferences.edit { putBoolean(PREF_PRESSURE_ENABLED, newState) }
         updateUI(newState)
     }
     
     private fun updateUI(isEnabled: Boolean) {
         if (isEnabled) {
             widgetContainer.visibility = View.VISIBLE
-            toggleButton.text = "Disable"
+            toggleButton.text = context.getString(R.string.disable)
             
             if (pressureManager.hasPressureSensor()) {
                 setupWithSensor()
@@ -94,7 +95,7 @@ class PressureWidget(
             }
         } else {
             widgetContainer.visibility = View.GONE
-            toggleButton.text = "Enable"
+            toggleButton.text = context.getString(R.string.enable)
             handler.removeCallbacks(updateRunnable)
             pressureManager.stopTracking()
         }
@@ -116,7 +117,7 @@ class PressureWidget(
         pressureText.visibility = View.GONE
         altitudeText.visibility = View.GONE
         trendText.visibility = View.GONE
-        noSensorText.text = "Pressure sensor not available on this device"
+        noSensorText.text = context.getString(R.string.pressure_sensor_not_available)
     }
     
     private fun updateDisplay() {
@@ -128,16 +129,16 @@ class PressureWidget(
     
     private fun updatePressureDisplay(pressure: Float) {
         val df = DecimalFormat("#.##")
-        pressureText.text = "${df.format(pressure)} hPa"
+        pressureText.text = context.getString(R.string.pressure_format, df.format(pressure))
         
         val altitude = pressureManager.getAltitude()
-        altitudeText.text = "Altitude: ${df.format(altitude)} m"
+        altitudeText.text = context.getString(R.string.altitude_format, df.format(altitude))
         
         if (previousPressure > 0) {
             val trend = pressureManager.getPressureTrend(previousPressure)
-            trendText.text = "Trend: $trend"
+            trendText.text = context.getString(R.string.trend_format, trend)
         } else {
-            trendText.text = "Trend: --"
+            trendText.text = context.getString(R.string.trend_format, context.getString(R.string.trend_none))
         }
         
         previousPressure = pressure

@@ -8,7 +8,7 @@ import android.hardware.SensorManager
 import android.util.Log
 import kotlin.math.*
 
-class ProximityManager(private val context: Context) : SensorEventListener {
+class ProximityManager(context: Context) : SensorEventListener {
     
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var proximitySensor: Sensor? = null
@@ -96,9 +96,5 @@ class ProximityManager(private val context: Context) : SensorEventListener {
     
     fun isNear(): Boolean {
         return isNear
-    }
-    
-    fun getMaxRange(): Float {
-        return maxRange
     }
 }

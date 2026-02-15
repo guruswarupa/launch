@@ -4,7 +4,6 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import java.util.Calendar
 
 class TodoAlarmManager(private val context: Context) {
@@ -51,7 +50,6 @@ class TodoAlarmManager(private val context: Context) {
         val intervalStartTime = todoItem.intervalStartTime ?: return
         val recurrenceInterval = todoItem.recurrenceInterval ?: return
         val (startHour, startMinute) = parseTime(intervalStartTime) ?: return
-        val intervalMinutes = recurrenceInterval
 
         val calendar = Calendar.getInstance()
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -66,8 +64,8 @@ class TodoAlarmManager(private val context: Context) {
         if (currentTimeInMinutes >= startTimeInMinutes) {
             // Find next interval occurrence
             val elapsedSinceStart = currentTimeInMinutes - startTimeInMinutes
-            val intervalsPassed = (elapsedSinceStart / intervalMinutes) + 1
-            nextAlarmTimeInMinutes = startTimeInMinutes + (intervalsPassed * intervalMinutes)
+            val intervalsPassed = (elapsedSinceStart / recurrenceInterval) + 1
+            nextAlarmTimeInMinutes = startTimeInMinutes + (intervalsPassed * recurrenceInterval)
         }
 
         // If next alarm is tomorrow, add a day
@@ -89,15 +87,11 @@ class TodoAlarmManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-        }
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            pendingIntent
+        )
     }
 
     /**
@@ -142,15 +136,11 @@ class TodoAlarmManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-        }
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            pendingIntent
+        )
     }
 
     /**
@@ -187,15 +177,11 @@ class TodoAlarmManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-        }
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            pendingIntent
+        )
     }
 
     /**
@@ -293,7 +279,7 @@ class TodoAlarmManager(private val context: Context) {
             } else {
                 null
             }
-        } catch (e: NumberFormatException) {
+        } catch (_: NumberFormatException) {
             null
         }
     }

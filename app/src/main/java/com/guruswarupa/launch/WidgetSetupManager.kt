@@ -1,47 +1,28 @@
 package com.guruswarupa.launch
 
-import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
 
 /**
  * Manages initialization and setup of all widgets
  */
 class WidgetSetupManager(
     private val activity: MainActivity,
-    private val handler: Handler,
     private val usageStatsManager: AppUsageStatsManager,
     private val weatherManager: WeatherManager,
     private val permissionManager: PermissionManager
 ) {
     
     fun setupBatteryAndUsage() {
-        // Assuming you have TextViews in your layout with these IDs
+        // Updated: Screen time display removed from main layout to improve privacy and battery
         val batteryPercentageTextView = activity.findViewById<TextView>(R.id.battery_percentage)
-        val screenTimeTextView = activity.findViewById<TextView>(R.id.screen_time)
 
         // Get battery percentage using BatteryManager
         val batteryManager = BatteryManager(activity)
         batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
-
-        // Get screen time usage in minutes for today
-        val calendar = java.util.Calendar.getInstance()
-        // Set to start of current day
-        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
-        calendar.set(java.util.Calendar.MINUTE, 0)
-        calendar.set(java.util.Calendar.SECOND, 0)
-        calendar.set(java.util.Calendar.MILLISECOND, 0)
-        val startTime = calendar.timeInMillis
-        val endTime = System.currentTimeMillis()
-
-        val screenTimeMillis = usageStatsManager.getTotalUsageForPeriod(startTime, endTime)
-        val formattedTime = usageStatsManager.formatUsageTime(screenTimeMillis)
-        screenTimeTextView?.text = "Screen Time: $formattedTime"
     }
     
     fun setupWeather(weatherIcon: ImageView, weatherText: TextView) {
@@ -101,7 +82,7 @@ class WidgetSetupManager(
     
     fun setupPressureWidget(sharedPreferences: android.content.SharedPreferences): PressureWidget {
         val pressureContainer = activity.findViewById<android.widget.LinearLayout>(R.id.pressure_widget_container)
-        val pressureWidget = PressureWidget(activity, pressureContainer, sharedPreferences)
+        val pressureWidget = PressureWidget(activity, container = pressureContainer, sharedPreferences = sharedPreferences)
         pressureWidget.initialize()
         return pressureWidget
     }
@@ -141,18 +122,23 @@ class WidgetSetupManager(
         return countdownWidget
     }
 
-    fun setupNetworkStatsWidget(sharedPreferences: android.content.SharedPreferences): NetworkStatsWidget {
+    fun setupNetworkStatsWidget(): NetworkStatsWidget {
         val container = activity.findViewById<android.widget.LinearLayout>(R.id.network_stats_widget_container)
-        val widget = NetworkStatsWidget(activity, container, sharedPreferences)
+        val widget = NetworkStatsWidget(activity, container)
         widget.initialize()
         return widget
     }
 
-    fun setupDeviceInfoWidget(sharedPreferences: android.content.SharedPreferences): DeviceInfoWidget {
+    fun setupDeviceInfoWidget(): DeviceInfoWidget {
         val container = activity.findViewById<android.widget.LinearLayout>(R.id.device_info_widget_container)
-        val widget = DeviceInfoWidget(activity, container, sharedPreferences)
+        val widget = DeviceInfoWidget(activity, container)
         widget.initialize()
         return widget
+    }
+    
+    fun setupWeeklyUsageWidget() {
+        // The weekly usage graph is managed by UsageStatsDisplayManager
+        // This method exists for consistency with other widget setup methods
     }
     
     fun requestNotificationPermission() {

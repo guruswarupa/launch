@@ -9,7 +9,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Title"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
@@ -18,7 +18,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Enter countdown title"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textColorHint="@color/text_secondary"
         android:background="@drawable/widget_background"
         android:padding="12dp"
@@ -29,7 +29,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Date"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
@@ -38,7 +38,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Select date"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textColorHint="@color/text_secondary"
         android:background="@drawable/widget_background"
         android:padding="12dp"
@@ -50,7 +50,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Time"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
@@ -59,7 +59,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Select time"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:textColorHint="@color/text_secondary"
         android:background="@drawable/widget_background"
         android:padding="12dp"
@@ -72,7 +72,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Select from Calendar"
-        android:textColor="@color/white"
+        android:textColor="@color/text"
         android:background="@drawable/button_neutral_ripple"
         android:paddingHorizontal="16dp"
         android:paddingVertical="12dp" />

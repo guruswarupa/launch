@@ -43,10 +43,6 @@ data class WorkoutExercise(
         return dailyCounts[date] ?: 0
     }
     
-    fun addTime(seconds: Int) {
-        increment(seconds)
-    }
-    
     fun formatTime(seconds: Int): String {
         val hours = seconds / 3600
         val minutes = (seconds % 3600) / 60
@@ -113,10 +109,6 @@ data class WorkoutExercise(
         return String.format(Locale.getDefault(), "%d-%d-%d", year, month, day)
     }
     
-    fun isToday(): Boolean {
-        return lastWorkoutDate == getCurrentDate()
-    }
-    
     companion object {
         private val PRESET_REPS_EXERCISES = listOf(
             "Push-ups", "Sit-ups", "Squats", "Burpees",
@@ -134,8 +126,6 @@ data class WorkoutExercise(
                 PRESET_REPS_EXERCISES
             }
         }
-        
-        fun getAllPresets(): List<String> = PRESET_REPS_EXERCISES + PRESET_TIME_EXERCISES
         
         fun fromJson(json: String): WorkoutExercise? {
             val parts = json.split("|")

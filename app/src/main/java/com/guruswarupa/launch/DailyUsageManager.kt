@@ -10,6 +10,10 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 
+/**
+ * Manages daily usage limits and tracking for apps.
+ */
+@Suppress("unused")
 class DailyUsageManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("daily_usage_prefs", Context.MODE_PRIVATE)
     private val appUsageStatsManager = AppUsageStatsManager(context)
@@ -45,7 +49,7 @@ class DailyUsageManager(private val context: Context) {
     /**
      * Set daily usage limit for an app in milliseconds
      */
-    fun setDailyLimit(packageName: String, limitMs: Long) {
+    private fun setDailyLimit(packageName: String, limitMs: Long) {
         prefs.edit { putLong("${PREF_DAILY_LIMIT_PREFIX}$packageName", limitMs) }
     }
 
@@ -139,8 +143,8 @@ class DailyUsageManager(private val context: Context) {
         val input = EditText(context).apply {
             hint = "Enter minutes (0 to disable)"
             setText(if (currentLimit > 0) (currentLimit / 60000).toString() else "")
-            setTextColor(ContextCompat.getColor(context, android.R.color.white))
-            setHintTextColor(ContextCompat.getColor(context, android.R.color.white))
+            setTextColor(ContextCompat.getColor(context, R.color.text))
+            setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)

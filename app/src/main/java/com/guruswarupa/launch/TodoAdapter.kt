@@ -1,8 +1,8 @@
-
 package com.guruswarupa.launch
 
-import android.graphics.Color
 import android.graphics.Paint
+import android.content.Context
+import android.content.res.Configuration
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,14 +30,14 @@ class TodoAdapter(
         val intervalText: TextView = view.findViewById(R.id.interval_text)
         val daysContainer: LinearLayout = view.findViewById(R.id.days_container)
 
-        val dayViews = listOf(
-            view.findViewById<TextView>(R.id.day_sun),
-            view.findViewById<TextView>(R.id.day_mon),
-            view.findViewById<TextView>(R.id.day_tue),
-            view.findViewById<TextView>(R.id.day_wed),
-            view.findViewById<TextView>(R.id.day_thu),
-            view.findViewById<TextView>(R.id.day_fri),
-            view.findViewById<TextView>(R.id.day_sat)
+        val dayViews = listOf<TextView>(
+            view.findViewById(R.id.day_sun),
+            view.findViewById(R.id.day_mon),
+            view.findViewById(R.id.day_tue),
+            view.findViewById(R.id.day_wed),
+            view.findViewById(R.id.day_thu),
+            view.findViewById(R.id.day_fri),
+            view.findViewById(R.id.day_sat)
         )
     }
 
@@ -49,14 +49,15 @@ class TodoAdapter(
 
     override fun onBindViewHolder(holder: TodoViewHolder, position: Int) {
         val todoItem = todoItems[position]
+        val context = holder.itemView.context
 
         holder.todoCheckBox.isChecked = todoItem.isChecked
 
         // Set priority indicator drawable
         val priorityDrawable = when (todoItem.priority) {
-            TodoItem.Priority.HIGH -> ContextCompat.getDrawable(holder.itemView.context, R.drawable.priority_high)
-            TodoItem.Priority.MEDIUM -> ContextCompat.getDrawable(holder.itemView.context, R.drawable.priority_medium)
-            TodoItem.Priority.LOW -> ContextCompat.getDrawable(holder.itemView.context, R.drawable.priority_low)
+            TodoItem.Priority.HIGH -> ContextCompat.getDrawable(context, R.drawable.priority_high)
+            TodoItem.Priority.MEDIUM -> ContextCompat.getDrawable(context, R.drawable.priority_medium)
+            TodoItem.Priority.LOW -> ContextCompat.getDrawable(context, R.drawable.priority_low)
         }
         holder.priorityIndicator.background = priorityDrawable
 
@@ -78,7 +79,7 @@ class TodoAdapter(
 
         // Show due time if set
         if (todoItem.dueTime != null) {
-            holder.dueTimeText.text = "Due: ${todoItem.dueTime}"
+            holder.dueTimeText.text = context.getString(R.string.todo_due_format, todoItem.dueTime)
             holder.dueTimeText.visibility = View.VISIBLE
         } else {
             holder.dueTimeText.visibility = View.GONE
@@ -86,23 +87,23 @@ class TodoAdapter(
 
         // Show interval info if interval-based
         if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
-            val intervalText = when (todoItem.recurrenceInterval) {
-                30 -> "Every 30 min"
-                60 -> "Every 1 hr"
-                120 -> "Every 2 hrs"
-                180 -> "Every 3 hrs"
-                240 -> "Every 4 hrs"
-                360 -> "Every 6 hrs"
-                480 -> "Every 8 hrs"
-                720 -> "Every 12 hrs"
-                else -> "Every ${todoItem.recurrenceInterval} min"
+            val intervalLabel = when (todoItem.recurrenceInterval) {
+                30 -> context.getString(R.string.todo_every_30_min)
+                60 -> context.getString(R.string.todo_every_1_hr)
+                120 -> context.getString(R.string.todo_every_2_hrs)
+                180 -> context.getString(R.string.todo_every_3_hrs)
+                240 -> context.getString(R.string.todo_every_4_hrs)
+                360 -> context.getString(R.string.todo_every_6_hrs)
+                480 -> context.getString(R.string.todo_every_8_hrs)
+                720 -> context.getString(R.string.todo_every_12_hrs)
+                else -> context.getString(R.string.todo_every_min_format, todoItem.recurrenceInterval)
             }
-            val startTimeText = if (todoItem.intervalStartTime != null) {
-                " from ${todoItem.intervalStartTime}"
+            val startTimeLabel = if (todoItem.intervalStartTime != null) {
+                context.getString(R.string.todo_from_format, todoItem.intervalStartTime)
             } else {
                 ""
             }
-            holder.intervalText.text = "$intervalText$startTimeText"
+            holder.intervalText.text = context.getString(R.string.converter_result_format, intervalLabel, startTimeLabel)
             holder.intervalText.visibility = View.VISIBLE
         } else {
             holder.intervalText.visibility = View.GONE
@@ -115,11 +116,20 @@ class TodoAdapter(
             holder.dayViews.forEachIndexed { index, dayView ->
                 val dayOfWeek = index + 1 // 1=Sunday, 2=Monday, etc.
                 if (todoItem.selectedDays.contains(dayOfWeek)) {
-                    dayView.setBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.nord8))
-                    dayView.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.white))
+                    // Use theme-appropriate colors for selected days
+                    val selectedBgColor = ContextCompat.getColor(context, R.color.nord8) // Light blue
+                    dayView.setBackgroundColor(selectedBgColor)
+                    dayView.setTextColor(ContextCompat.getColor(context, R.color.white))
                 } else {
-                    dayView.setBackgroundColor(ContextCompat.getColor(holder.itemView.context, R.color.nord2))
-                    dayView.setTextColor(ContextCompat.getColor(holder.itemView.context, R.color.text_secondary))
+                    // Use theme-appropriate colors for unselected days
+                    val unselectedBgColor = if (isNightMode(context)) {
+                        ContextCompat.getColor(context, R.color.nord3) // Darker gray for dark mode
+                    } else {
+                        ContextCompat.getColor(context, R.color.nord2) // Lighter gray for light mode
+                    }
+                    val unselectedTextColor = ContextCompat.getColor(context, R.color.text_secondary)
+                    dayView.setBackgroundColor(unselectedBgColor)
+                    dayView.setTextColor(unselectedTextColor)
                 }
             }
         } else {
@@ -162,6 +172,10 @@ class TodoAdapter(
     private fun getCurrentDateString(): String {
         val calendar = Calendar.getInstance()
         return "${calendar.get(Calendar.DAY_OF_YEAR)}-${calendar.get(Calendar.YEAR)}"
+    }
+    
+    private fun isNightMode(context: Context): Boolean {
+        return (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     }
 
     override fun getItemCount(): Int = todoItems.size

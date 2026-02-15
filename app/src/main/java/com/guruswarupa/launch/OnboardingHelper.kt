@@ -3,6 +3,7 @@ package com.guruswarupa.launch
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import androidx.core.content.edit
 
 /**
  * Helper class for onboarding checks.
@@ -32,7 +33,7 @@ class OnboardingHelper(
         
         if (isFirstRun || isFirstTime) {
             if (isFirstRun) {
-                sharedPreferences.edit().putBoolean("isFirstRun", false).apply()
+                sharedPreferences.edit { putBoolean("isFirstRun", false) }
             }
             
             // Start onboarding - if we're here because launcher was set as default, continue from default launcher step

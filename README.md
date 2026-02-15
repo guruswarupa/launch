@@ -1,14 +1,23 @@
-# Launch
+<p align="center">
+  <img width="120" alt="Launch App Icon" alt="ChatGPT Image Feb 15, 2026, 02_36_14 PM" src="https://github.com/user-attachments/assets/bf4cc306-6966-4290-9e2a-36debd605df2" />
+</p>
 
-A clean, efficient, and minimalist Android launcher that prioritizes simplicity and functionality.
+<h1 align="center">Launch</h1>
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-     alt="Get it on F-Droid"
-     height="80">](https://f-droid.org/packages/com.guruswarupa.launchh/)
+<p align="center">
+  A clean, efficient, and minimalist Android launcher built for focus and productivity.
+</p>
+<p align="center">
+       <a href="https://deepwiki.com/guruswarupa/launch">
+         <img src="https://deepwiki.com/badge.svg" height="45" />
+       </a>
+</p>
+<p align="center">
+  <a href="https://f-droid.org/packages/com.guruswarupa.launchh/">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="100" />
+  </a>
+</p>
 
-Or download the latest APK from the [Releases Section](https://github.com/guruswarupa/launch/releases/latest).
-
----
 
 ## 📋 Table of Contents
 
@@ -68,11 +77,6 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - After timeout, locked apps require authentication again  
 - Ideal for securing sensitive apps like WhatsApp, Instagram, etc.
 
-### 🔋 Power Saver Mode
-- Keeps wallpaper black to save battery
-- Hides app usage stats and weather updates
-- Ideal for low-power or OLED displays
-
 ### ✅ Todo List Widget (Now Smarter)
 - Add and manage daily tasks directly from the home screen  
 - Set **due time** for each task  
@@ -97,12 +101,13 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - Calculation history with easy access
 - Toggle between radians and degrees
 
-### ⏱️ App Timer Manager
-- Set usage timers for individual apps
-- Quick presets: 1 minute, 5 minutes, 10 minutes
-- Custom timer duration support
-- Automatic app closure when timer expires
-- Helps manage screen time and app usage
+### ⏱️ App Usage & Session Timers
+- **Daily App Usage Limits**: Set maximum daily time limits for any app.
+- **Visual Feedback**: Icons automatically gray out when a daily limit is reached.
+- **Auto-Enforcement**: Launcher automatically closes apps and returns to home screen once the limit is hit.
+- **Session Timers**: Set quick usage timers (1, 5, or 10 minutes) for focused sessions.
+- **Custom Timer Durations**: Full control over session and daily limit lengths.
+- Helps manage screen time and combat app addiction.
 
 ### 📱 App Categories & Organization
 - Organize apps by type (Social, Productivity, Games, etc.)
@@ -176,7 +181,7 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 - **Change Wallpaper**: Set custom wallpapers for your home screen
 - **Update Weather API Key**: Use your personal API key from openweathermap.org
 - **Manage App Locks**: Configure PIN and fingerprint authentication
-- **App Timer Settings**: Configure default timer durations
+- **App Timer Settings**: Configure default timer durations and daily limits
 - **Widget Management**: Add, remove, and configure widgets
 - **Workspace Configuration**: Customize workspace layouts
 
@@ -189,7 +194,7 @@ Or download the latest APK from the [Releases Section](https://github.com/gurusw
 | **Tap Time Widget**         | Opens Clock app                             |
 | **Tap Date Widget**         | Opens Calendar app                          |
 | **Long Press Search Bar**   | Opens Google in browser                     |
-| **Long Press App Icon**     | Opens uninstall prompt                      |
+| **Long Press App Icon**     | Opens app context menu (Uninstall, Share, etc.)|
 | **Long Press Dock App**     | Remove or rename app                        |
 | **Type in Search Bar**      | Instant calculator                          |
 | **Long Press Focus Icon**   | Enter Focus Mode setup                      |
@@ -226,7 +231,7 @@ Launch requires **minimal permissions**:
 - **SMS** → to send messages
 - **Phone** → to make calls
 - **Storage** → for notes, wallpapers, and backups
-- **Usage Stats** → for app usage tracking and sorting (optional)
+- **Usage Stats** → for app usage tracking, daily limits, and sorting (optional)
 - **Notification Access** → for notifications widget (optional)
 - **Location** → for weather widget location-based forecasts (optional)
 - **Audio** → for voice search functionality (optional)

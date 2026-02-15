@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -11,9 +12,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class WorkoutCalendarView(
-    private val rootView: View,
-    private val exercises: List<WorkoutExercise>,
-    private val onDayClick: ((String, List<Pair<WorkoutExercise, Int>>) -> Unit)? = null
+    rootView: View,
+    exercises: List<WorkoutExercise>,
+    onDayClick: ((String, List<Pair<WorkoutExercise, Int>>) -> Unit)? = null
 ) {
     private val context: Context = rootView.context
     private val calendarRecyclerView: RecyclerView = rootView.findViewById(R.id.calendar_recycler_view)
@@ -68,12 +69,14 @@ class CalendarAdapter(
         updateCalendar(calendar)
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     fun updateCalendar(newCalendar: Calendar) {
         calendar = newCalendar.clone() as Calendar
         updateDays()
         notifyDataSetChanged()
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     fun updateExercises(newExercises: List<WorkoutExercise>) {
         exercises = newExercises
         updateDays()
@@ -94,8 +97,8 @@ class CalendarAdapter(
         // Calculate offset - Sunday = 1, Monday = 2, etc.
         // We want Sunday to be first column (index 0)
         val startOffset = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
-        for (i in 0 until startOffset) {
-            days.add(DayItem(null, false, false, null))
+        repeat(startOffset) {
+            days.add(DayItem(day = null, hasWorkout = false, isToday = false, dateString = null))
         }
         
         // Get all workout dates from all exercises

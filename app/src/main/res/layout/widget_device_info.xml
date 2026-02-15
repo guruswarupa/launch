@@ -3,16 +3,13 @@
     android:id="@+id/device_info_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@drawable/widget_background"
-    android:padding="16dp"
-    android:layout_marginBottom="16dp">
+    android:orientation="vertical">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Device Info"
-        android:textColor="@color/white"
+        android:textColor="@color/widget_text"
         android:textSize="18sp"
         android:textStyle="bold"
         android:layout_marginBottom="12dp"/>
@@ -39,7 +36,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="CPU Model"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="12sp"/>
                 
                 <TextView
@@ -47,7 +44,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Loading..."
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"
                     android:maxLines="1"
                     android:ellipsize="end"/>
@@ -64,7 +61,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="CPU Temp"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="12sp"/>
                 
                 <TextView
@@ -72,7 +69,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--°C"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"
                     android:textStyle="bold"/>
             </LinearLayout>
@@ -95,7 +92,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="RAM Usage"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="12sp"/>
                 
                 <TextView
@@ -103,7 +100,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0 / 0 GB"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"/>
 
                 <ProgressBar
@@ -127,7 +124,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Storage"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="12sp"/>
                 
                 <TextView
@@ -135,7 +132,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0 / 0 GB"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"/>
                 
                 <ProgressBar
@@ -153,7 +150,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@color/text_secondary"
+            android:background="@color/widget_text_secondary"
             android:alpha="0.2"
             android:layout_marginBottom="12dp"/>
 
@@ -172,7 +169,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Android Version"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="10sp"/>
                 
                 <TextView
@@ -180,7 +177,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"
                     android:maxLines="1"
                     android:ellipsize="end"/>
@@ -196,7 +193,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="System Uptime"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="10sp"/>
                 
                 <TextView
@@ -204,7 +201,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"/>
             </LinearLayout>
 
@@ -218,7 +215,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Hardware Info"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="10sp"/>
                 
                 <TextView
@@ -226,7 +223,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"
                     android:maxLines="1"
                     android:ellipsize="end"/>
@@ -241,7 +238,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Kernel Version"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/widget_text_secondary"
                     android:textSize="10sp"/>
                 
                 <TextView
@@ -249,7 +246,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textColor="@color/white"
+                    android:textColor="@color/widget_text"
                     android:textSize="14sp"
                     android:maxLines="1"
                     android:ellipsize="end"/>

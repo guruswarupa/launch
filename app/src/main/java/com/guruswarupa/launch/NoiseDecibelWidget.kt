@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.core.content.edit
 import java.text.DecimalFormat
 
 class NoiseDecibelWidget(
@@ -40,10 +41,14 @@ class NoiseDecibelWidget(
     
     private val updateRunnable = object : Runnable {
         override fun run() {
-            if (isInitialized && noiseManager.isRecording()) {
-                // Updates are handled by the listener
+            // Periodic check to ensure recording is still active if it should be
+            if (isInitialized && !noiseManager.isRecording()) {
+                val isEnabled = sharedPreferences.getBoolean(PREF_NOISE_ENABLED, false)
+                if (isEnabled && hasMicrophonePermission() && noiseManager.hasMicrophone()) {
+                    noiseManager.startRecording()
+                }
             }
-            handler.postDelayed(this, 100) // Check every 100ms
+            handler.postDelayed(this, 1000) // Check every second
         }
     }
     
@@ -76,7 +81,7 @@ class NoiseDecibelWidget(
         
         // Ensure widget is disabled by default - explicitly set to false if not already set
         if (!sharedPreferences.contains(PREF_NOISE_ENABLED)) {
-            sharedPreferences.edit().putBoolean(PREF_NOISE_ENABLED, false).apply()
+            sharedPreferences.edit { putBoolean(PREF_NOISE_ENABLED, false) }
         }
         
         val isEnabled = sharedPreferences.getBoolean(PREF_NOISE_ENABLED, false)
@@ -88,14 +93,14 @@ class NoiseDecibelWidget(
     private fun toggleNoiseAnalyzer() {
         val currentState = sharedPreferences.getBoolean(PREF_NOISE_ENABLED, false)
         val newState = !currentState
-        sharedPreferences.edit().putBoolean(PREF_NOISE_ENABLED, newState).apply()
+        sharedPreferences.edit { putBoolean(PREF_NOISE_ENABLED, newState) }
         updateUI(newState)
     }
     
     private fun updateUI(isEnabled: Boolean) {
         if (isEnabled) {
             widgetContainer.visibility = View.VISIBLE
-            toggleButton.text = "Disable"
+            toggleButton.setText(R.string.noise_button_disable)
             
             // Check permission first
             if (!hasMicrophonePermission()) {
@@ -111,7 +116,7 @@ class NoiseDecibelWidget(
             }
         } else {
             widgetContainer.visibility = View.GONE
-            toggleButton.text = "Enable"
+            toggleButton.setText(R.string.noise_button_enable)
             handler.removeCallbacks(updateRunnable)
             noiseManager.stopRecording()
         }
@@ -165,17 +170,24 @@ class NoiseDecibelWidget(
     }
     
     private fun updateDecibelDisplay(decibel: Double) {
-        decibelText.text = "${df.format(decibel)} dB"
+        decibelText.text = context.getString(R.string.decibel_format, df.format(decibel))
         
         // Update noise level text and color based on decibel value
-        val (levelText, colorRes) = when {
-            decibel < 30 -> Pair("Quiet", R.color.nord7)
-            decibel < 50 -> Pair("Moderate", R.color.nord8)
-            decibel < 70 -> Pair("Loud", R.color.nord11)
-            else -> Pair("Very Loud", R.color.nord12)
+        val levelRes = when {
+            decibel < 30 -> R.string.noise_level_quiet
+            decibel < 50 -> R.string.noise_level_moderate
+            decibel < 70 -> R.string.noise_level_loud
+            else -> R.string.noise_level_very_loud
         }
         
-        noiseLevelText.text = levelText
+        val colorRes = when {
+            decibel < 30 -> R.color.nord7
+            decibel < 50 -> R.color.nord8
+            decibel < 70 -> R.color.nord11
+            else -> R.color.nord12
+        }
+        
+        noiseLevelText.setText(levelRes)
         noiseLevelText.setTextColor(ContextCompat.getColor(context, colorRes))
         
         // Update indicator bar width (0-100% based on 0-120 dB range)
@@ -187,13 +199,7 @@ class NoiseDecibelWidget(
             decibelIndicator.layoutParams = layoutParams
             
             // Update indicator color based on level
-            val indicatorColor = when {
-                decibel < 30 -> R.color.nord7
-                decibel < 50 -> R.color.nord8
-                decibel < 70 -> R.color.nord11
-                else -> R.color.nord12
-            }
-            decibelIndicator.setBackgroundColor(ContextCompat.getColor(context, indicatorColor))
+            decibelIndicator.setBackgroundColor(ContextCompat.getColor(context, colorRes))
         }
     }
     

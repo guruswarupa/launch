@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.toColorInt
 import kotlin.math.*
 
 class DailyUsagePieView @JvmOverloads constructor(
@@ -23,7 +24,7 @@ class DailyUsagePieView @JvmOverloads constructor(
     private val strokePaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
-        color = Color.parseColor("#1A1A1A")
+        color = "#1A1A1A".toColorInt()
         strokeWidth = 3f
     }
 
@@ -37,56 +38,56 @@ class DailyUsagePieView @JvmOverloads constructor(
 
     // Extended color palette for better app distinction
     private val appColors = listOf(
-        Color.parseColor("#E53935"), // Red
-        Color.parseColor("#8E24AA"), // Purple
-        Color.parseColor("#3949AB"), // Deep Blue
-        Color.parseColor("#00897B"), // Teal Green
-        Color.parseColor("#FDD835"), // Yellow
-        Color.parseColor("#FB8C00"), // Orange
-        Color.parseColor("#6D4C41"), // Brown
-        Color.parseColor("#C0CA33"), // Lime
-        Color.parseColor("#00ACC1"), // Cyan
-        Color.parseColor("#D81B60"), // Pink
-        Color.parseColor("#5E35B1"), // Deep Purple
-        Color.parseColor("#0277BD"), // Light Blue
-        Color.parseColor("#00796B"), // Teal
-        Color.parseColor("#689F38"), // Light Green
-        Color.parseColor("#F57C00"), // Deep Orange
-        Color.parseColor("#455A64"), // Blue Grey
-        Color.parseColor("#E91E63"), // Pink Red
-        Color.parseColor("#9C27B0"), // Purple
-        Color.parseColor("#673AB7"), // Deep Purple
-        Color.parseColor("#3F51B5"), // Indigo
-        Color.parseColor("#2196F3"), // Blue
-        Color.parseColor("#03A9F4"), // Light Blue
-        Color.parseColor("#00BCD4"), // Cyan
-        Color.parseColor("#009688"), // Teal
-        Color.parseColor("#4CAF50"), // Green
-        Color.parseColor("#8BC34A"), // Light Green
-        Color.parseColor("#CDDC39"), // Lime
-        Color.parseColor("#FFEB3B"), // Yellow
-        Color.parseColor("#FFC107"), // Amber
-        Color.parseColor("#FF9800"), // Orange
-        Color.parseColor("#FF5722"), // Deep Orange
-        Color.parseColor("#795548"), // Brown
-        Color.parseColor("#9E9E9E"), // Grey
-        Color.parseColor("#607D8B"), // Blue Grey
-        Color.parseColor("#EF5350"), // Red Light
-        Color.parseColor("#EC407A"), // Pink Light
-        Color.parseColor("#AB47BC"), // Purple Light
-        Color.parseColor("#7E57C2"), // Deep Purple Light
-        Color.parseColor("#5C6BC0"), // Indigo Light
-        Color.parseColor("#42A5F5"), // Blue Light
-        Color.parseColor("#29B6F6"), // Light Blue Light
-        Color.parseColor("#26C6DA"), // Cyan Light
-        Color.parseColor("#26A69A"), // Teal Light
-        Color.parseColor("#66BB6A"), // Green Light
-        Color.parseColor("#9CCC65"), // Light Green Light
-        Color.parseColor("#D4E157"), // Lime Light
-        Color.parseColor("#FFEE58"), // Yellow Light
-        Color.parseColor("#FFCA28"), // Amber Light
-        Color.parseColor("#FFA726"), // Orange Light
-        Color.parseColor("#FF7043")  // Deep Orange Light
+        "#E53935".toColorInt(), // Red
+        "#8E24AA".toColorInt(), // Purple
+        "#3949AB".toColorInt(), // Deep Blue
+        "#00897B".toColorInt(), // Teal Green
+        "#FDD835".toColorInt(), // Yellow
+        "#FB8C00".toColorInt(), // Orange
+        "#6D4C41".toColorInt(), // Brown
+        "#C0CA33".toColorInt(), // Lime
+        "#00ACC1".toColorInt(), // Cyan
+        "#D81B60".toColorInt(), // Pink
+        "#5E35B1".toColorInt(), // Deep Purple
+        "#0277BD".toColorInt(), // Light Blue
+        "#00796B".toColorInt(), // Teal
+        "#689F38".toColorInt(), // Light Green
+        "#F57C00".toColorInt(), // Deep Orange
+        "#455A64".toColorInt(), // Blue Grey
+        "#E91E63".toColorInt(), // Pink Red
+        "#9C27B0".toColorInt(), // Purple
+        "#673AB7".toColorInt(), // Deep Purple
+        "#3F51B5".toColorInt(), // Indigo
+        "#2196F3".toColorInt(), // Blue
+        "#03A9F4".toColorInt(), // Light Blue
+        "#00BCD4".toColorInt(), // Cyan
+        "#009688".toColorInt(), // Teal
+        "#4CAF50".toColorInt(), // Green
+        "#8BC34A".toColorInt(), // Light Green
+        "#CDDC39".toColorInt(), // Lime
+        "#FFEB3B".toColorInt(), // Yellow
+        "#FFC107".toColorInt(), // Amber
+        "#FF9800".toColorInt(), // Orange
+        "#FF5722".toColorInt(), // Deep Orange
+        "#795548".toColorInt(), // Brown
+        "#9E9E9E".toColorInt(), // Grey
+        "#607D8B".toColorInt(), // Blue Grey
+        "#EF5350".toColorInt(), // Red Light
+        "#EC407A".toColorInt(), // Pink Light
+        "#AB47BC".toColorInt(), // Purple Light
+        "#7E57C2".toColorInt(), // Deep Purple Light
+        "#5C6BC0".toColorInt(), // Indigo Light
+        "#42A5F5".toColorInt(), // Blue Light
+        "#29B6F6".toColorInt(), // Light Blue Light
+        "#26C6DA".toColorInt(), // Cyan Light
+        "#26A69A".toColorInt(), // Teal Light
+        "#66BB6A".toColorInt(), // Green Light
+        "#9CCC65".toColorInt(), // Light Green Light
+        "#D4E157".toColorInt(), // Lime Light
+        "#FFEE58".toColorInt(), // Yellow Light
+        "#FFCA28".toColorInt(), // Amber Light
+        "#FFA726".toColorInt(), // Orange Light
+        "#FF7043".toColorInt()  // Deep Orange Light
     )
 
     fun setAppUsageData(data: Map<String, Long>) {
@@ -94,6 +95,7 @@ class DailyUsagePieView @JvmOverloads constructor(
         invalidate()
     }
 
+    @Suppress("unused")
     fun setSelectedSlice(index: Int) {
         selectedSliceIndex = index
         invalidate()
@@ -104,7 +106,7 @@ class DailyUsagePieView @JvmOverloads constructor(
 
         if (appUsages.isEmpty()) {
             textPaint.textSize = 32f
-            textPaint.color = Color.parseColor("#666666")
+            textPaint.color = "#666666".toColorInt()
             canvas.drawText(
                 "No usage data",
                 width / 2f,
@@ -120,7 +122,7 @@ class DailyUsagePieView @JvmOverloads constructor(
 
         val totalUsage = appUsages.values.sum()
         if (totalUsage == 0L) {
-            piePaint.color = Color.parseColor("#2A2A2A")
+            piePaint.color = "#2A2A2A".toColorInt()
             canvas.drawCircle(centerX, centerY, radius, piePaint)
             canvas.drawCircle(centerX, centerY, radius, strokePaint)
             return

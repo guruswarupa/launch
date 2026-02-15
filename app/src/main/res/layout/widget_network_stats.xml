@@ -3,10 +3,7 @@
     android:id="@+id/network_stats_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="@drawable/widget_background"
-    android:padding="16dp"
-    android:layout_marginBottom="16dp">
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Network Stats"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -30,7 +27,7 @@
             android:layout_height="40dp"
             android:text="Run Speedtest"
             android:textSize="12sp"
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:background="@drawable/button_neutral_ripple"
             android:paddingHorizontal="12dp"/>
     </LinearLayout>
@@ -53,7 +50,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Download"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="12sp"/>
 
             <TextView
@@ -61,7 +58,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0.0 Mbps"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"/>
@@ -70,7 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Upload"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="12sp"/>
 
             <TextView
@@ -78,7 +75,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0.0 Mbps"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="16sp"
                 android:textStyle="bold"/>
         </LinearLayout>
@@ -95,7 +92,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Ping"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="12sp"/>
 
             <TextView
@@ -103,16 +100,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 ms"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"/>
+                android:textStyle="bold" android:layout_marginBottom="8dp"/>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Jitter"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="12sp"/>
 
             <TextView
@@ -120,7 +116,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 ms"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="16sp"
                 android:textStyle="bold"/>
         </LinearLayout>
@@ -149,7 +145,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Mobile Data"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="12sp"/>
 
             <TextView
@@ -157,7 +153,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0.0 MB"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="14sp"
                 android:textStyle="bold"/>
         </LinearLayout>
@@ -172,7 +168,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Wi-Fi Data"
-                android:textColor="@color/text_secondary"
+                android:textColor="@color/widget_text_secondary"
                 android:textSize="12sp"/>
 
             <TextView
@@ -180,7 +176,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0.0 MB"
-                android:textColor="@color/white"
+                android:textColor="@color/widget_text"
                 android:textSize="14sp"
                 android:textStyle="bold"/>
         </LinearLayout>
@@ -197,7 +193,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Wi-Fi IP: "
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/widget_text_secondary"
             android:textSize="12sp"/>
 
         <TextView
@@ -205,7 +201,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Loading..."
-            android:textColor="@color/white"
+            android:textColor="@color/widget_text"
             android:textSize="12sp"
             android:textStyle="bold"/>
     </LinearLayout>
@@ -215,7 +211,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Ready"
-        android:textColor="@color/text_secondary"
+        android:textColor="@color/widget_text_secondary"
         android:textSize="12sp"
         android:gravity="center"
         android:layout_marginTop="8dp"/>

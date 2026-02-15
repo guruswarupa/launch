@@ -13,8 +13,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginEnd="16dp"
-        android:scaleType="centerCrop"
-        android:background="@drawable/circular_background"/>
+        android:scaleType="centerCrop"/>
 
     <TextView
         android:id="@+id/app_name"
@@ -23,7 +22,7 @@
         android:layout_weight="1"
         android:text="App Name"
         android:textSize="16sp"
-        android:textColor="@android:color/white"
+        android:textColor="@color/text"
         android:maxLines="1"
         android:ellipsize="end"/>
 
@@ -34,6 +33,7 @@
         android:text="Unhide"
         android:textColor="@color/nord7"
         android:background="@android:color/transparent"
-        android:textSize="14sp"/>
+        android:textSize="14sp"
+        android:textAllCaps="false"/>
 
 </LinearLayout>

@@ -1,143 +1,226 @@
-Launch is a clean, efficient, and minimalist Android launcher designed to maximize simplicity and productivity.
+Launch is a clean, efficient, and minimalist Android launcher designed to maximize simplicity, focus, and productivity.
+
+Built for those who value speed, clarity, and control.
+Simple. Clean. Powerful.
 
 ---
 
-🧠 Smart App Management
-- Sorts apps by usage frequency
-- Rarely used apps grouped alphabetically
-- App usage time shown beside icons
-- Interactive weekly usage graph
-- Daily usage breakdowns with pie charts
-- One-tap uninstall via long press
-- Switch between grid and list view
+🧠 **Smart App Management**
+
+* Apps sorted automatically by usage frequency
+* Rarely used apps grouped alphabetically
+* App usage time displayed beside icons
+* Weekly phone usage graph (last 7 days)
+* Tap any day for detailed breakdown
+* Interactive daily pie charts
+* Total screen time per day
+* One-tap uninstall via long press
+* Switch between smooth grid and list view
+* Mark apps as favorites
+* Toggle between “Favorites Only” and “Show All”
+* Organize apps by categories (Social, Productivity, Games, etc.)
+* Filter apps by category
 
 ---
 
-🔍 Smart Universal Search
-- Search apps, contacts, and web
-- Built-in calculator in search bar
-- Quick links to Play Store, YouTube, Maps, and Browser
-- Tap to call, SMS, or WhatsApp contacts from results
+🔍 **Smart Universal Search**
+
+* Search apps, contacts, and perform web searches
+* Built-in calculator in search bar
+* Scientific calculations supported
+* Quick links to Play Store, YouTube, Maps, and browser
+* Tap to call, SMS, or WhatsApp contacts directly
+* Voice command support
+
+Example voice commands:
+
+* Call Swaroop
+* Message Swaroop
+* WhatsApp Swaroop
+* Open YouTube
+* Search weather tomorrow
+* Uninstall WhatsApp
+* Bangalore to Mysore (opens Maps route)
 
 ---
 
-⚡ Quick Actions
-- Time widget → Clock  
-- Date widget → Calendar  
-- Search bar:  
-  • Long press → Google search in browser  
-- Weather widget with live data and API key support
+⚡ **Quick Actions & Widgets**
+
+* Time widget → Opens Clock
+* Date widget → Opens Calendar
+* Weather widget with live data (OpenWeatherMap API supported)
+* Battery widget with charging status
+* Notifications widget (view & dismiss notifications)
+* Todo list widget (full task management)
+* Full calculator widget (Basic, Scientific & Converter modes)
+* Third-party Android widget support
+* Long press search bar → Google in browser
 
 ---
 
-🔖 Dock Customization
-- Add, rename, or group favorite apps
-- Customize number of dock icons and layout
+🔕 **Focus Mode**
+
+* Temporarily hide distracting apps
+* Select allowed apps (whitelist)
+* Set countdown timer
+* Cannot exit until timer ends
+* Visible timer countdown on screen
 
 ---
 
-🚫 Focus Mode
-- Temporarily hide distracting apps
-- Whitelist allowed apps
-- Set a countdown timer
-- Cannot exit until timer ends
+⏱️ **App Usage Limits & Session Timers**
+
+* Set daily usage limits for any app
+* Icons gray out when limit is reached
+* Automatically returns to home when limit expires
+* Quick session timers (1, 5, 10 minutes)
+* Custom timer durations supported
+* Helps reduce screen addiction and improve discipline
 
 ---
 
-🔐 App Lock
-- Lock individual apps with PIN or fingerprint
-- 1-minute timeout window after unlocking
-- Protect apps like WhatsApp, Instagram, etc.
+🔐 **App Lock**
+
+* Lock individual apps with PIN
+* Fingerprint unlock support (if device supports it)
+* 1-minute unlock timeout window
+* Protect sensitive apps like WhatsApp, Instagram, etc.
 
 ---
 
-✅ To-do List Widget
-- Add tasks with due time and priority
-- Supports daily, weekly, or custom recurring tasks
-- Visual completion tracking on home screen
+✅ **Advanced Todo List Widget**
+
+* Add tasks with due time
+* Assign priority (High / Medium / Low)
+* Recurring tasks (Daily / Weekly / Custom)
+* Visual completion tracking
+* Persistent clean task interface
 
 ---
 
-💰 Finance Tracker
-- Track income and expenses
-- Add notes to transactions
-- Monthly savings overview
+🔔 **Notifications Widget**
+
+* View unread notification counts
+* Quick access to recent notifications
+* Swipe to dismiss directly
+* Tap to open related app
 
 ---
 
-⚙️ Settings
-- Backup and restore all data
-- Toggle grid/list layout
-- Change wallpaper
-- Change weather API key
-- Manage app locks
-- Enable shake-to-toggle torch
+🧮 **Calculator Widget**
+
+* Basic arithmetic operations
+* Scientific mode (sin, cos, log, etc.)
+* Converter mode (unit & base conversions)
+* Calculation history
+* Radians/Degrees toggle
 
 ---
 
-📊 Enhanced Usage Statistics
-- Weekly usage graph (last 7 days)
-- Tap any day for detailed breakdown
-- Interactive pie charts
-- App-by-app time analysis
-- Total screen time per day
+💰 **Finance Tracker**
+
+* Track income and expenses
+* Add notes to transactions
+* View recent transaction history
+* Monthly savings overview
+* Offline-first and lightweight
 
 ---
 
-📱 Shake to Toggle Torch
-- Shake device twice to toggle flashlight
-- Works in background
-- Battery efficient (only when screen on)
-- Quick access without unlocking
+📦 **APK Sharing**
+
+* Share installed APKs
+* Send via Bluetooth, email, or messaging apps
+* Access from app context menu or dock
 
 ---
 
-🎓 Interactive Feature Tutorial
-- Step-by-step feature walkthrough
-- Visual highlights and explanations
-- Smart navigation through all features
-- Resume support if interrupted
+🎨 **Dock Customization**
+
+* Add, rename, or group favorite apps
+* Customize dock layout and icon count
+* Long press to edit or remove
 
 ---
 
-🔋 Power Saver Mode
-- Keeps wallpaper black to save battery
-- Hides app usage stats and weather updates
-- Ideal for low-power or OLED displays
+📊 **Enhanced Usage Statistics**
+
+* Weekly usage graph
+* Daily detailed breakdown
+* Interactive pie charts
+* App-by-app time analysis
+* Total screen time tracking
+* Auto refresh when date changes
 
 ---
 
-🤏 Gestures
-- Tap or long-press widgets for quick actions
-- Long-press icons for uninstall or rename
-- Calculator in search bar
-- Shake device twice to toggle torch
-- Tap weekly usage day for details
+📱 **Shake to Toggle Torch**
+
+* Shake device twice to toggle flashlight
+* Works in background
+* Battery efficient (active only when screen on)
+* Quick access without unlocking
 
 ---
 
-🎙️ Voice Commands
-Use your voice in the search bar:
-- Call Swaroop
-- Search weather
-- Uninstall WhatsApp
-- Open YouTube
+🎓 **Onboarding & Interactive Tutorial**
+
+* First-run setup wizard
+* Guided feature introduction
+* Step-by-step walkthrough
+* Smart navigation & auto highlights
+* Resume if interrupted
+* Skip anytime
 
 ---
 
-🔐 Privacy
-Launch is 100% open source. No ads. No tracking.
+🤏 **Gestures**
+
+* Tap widgets for quick actions
+* Long press icons for uninstall/share/rename
+* Long press dock apps to edit
+* Long press Focus icon to configure
+* Swipe notifications to dismiss
+* Tap weekly usage day for details
+* Shake device twice to toggle torch
+
+---
+
+⚙️ **Settings & Customization**
+
+* Backup and restore all data
+* Import/Export launcher configuration
+* Toggle grid/list layout
+* Change wallpaper
+* Manage app locks
+* Configure app timers
+* Update weather API key
+* Manage widgets
+* Customize workspace layout
+* Enable shake-to-toggle torch
+
+---
+
+🔐 **Privacy & Permissions**
+
+Launch is 100% open source.
+No ads. No tracking.
 
 Permissions used:
-- Contacts → for search
-- Phone & SMS → for quick actions
-- Storage → for notes, wallpapers, and backups
-- Location → for weather (OpenWeatherMap)
-- Microphone → for voice input
-- Camera → for shake-to-toggle torch (optional)
+
+* Contacts → Contact search & quick actions
+* Phone → Calling support
+* SMS → Messaging support
+* Storage → Notes, wallpapers, backups
+* Usage Stats → App usage tracking & limits (optional)
+* Notification Access → Notifications widget (optional)
+* Location → Weather widget (optional)
+* Microphone → Voice search (optional)
+* Camera → Torch feature (optional)
+
+All advanced permissions are optional. Core launcher functionality works independently.
 
 ---
 
-Built for those who value speed, clarity, and control.  
-Simple. Clean. Powerful.  
-Try Launch now and make your phone yours.
+Try Launch now and take control of your phone.
+Minimalism meets power. 🚀

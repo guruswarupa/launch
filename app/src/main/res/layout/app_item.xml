@@ -50,5 +50,6 @@
         android:alpha="0.7"
         android:layout_marginStart="8dp"
         android:gravity="end"
-        android:fontFamily="sans-serif"/>
+        android:fontFamily="sans-serif"
+        android:visibility="gone"/>
 </LinearLayout>

@@ -32,7 +32,7 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textSize="16sp"
-        android:textColor="@android:color/white"
+        android:textColor="@color/onboarding_text"
         android:textStyle="normal"
         android:maxLines="1"
         android:ellipsize="end"
@@ -42,7 +42,7 @@
         android:id="@+id/checkbox"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:buttonTint="@color/nord9"
+        android:buttonTint="@color/onboarding_step_indicator_active"
         android:scaleX="1.2"
         android:scaleY="1.2"/>
 

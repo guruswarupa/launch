@@ -24,7 +24,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             // Clear instance before calling super to prevent issues
             instance = null
             isListenerConnected = false
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         } finally {
             super.onDestroy()
         }
@@ -52,7 +52,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
                 // Notify widget to update
                 updateWidget()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
     }
     
@@ -63,7 +63,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
                 // Notify widget to update
                 updateWidget()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
     }
     
@@ -83,12 +83,13 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException getting active notifications", e)
             emptyArray()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyArray()
         }
     }
     
     // Helper method to cancel notification using package, tag and id
+    @Suppress("unused", "DEPRECATION")
     fun dismissNotification(pkg: String, tag: String?, id: Int) {
         try {
             if (isListenerConnected) {
@@ -97,7 +98,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             }
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException dismissing notification", e)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
     }
     
@@ -109,7 +110,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             }
         } catch (e: SecurityException) {
             Log.w(TAG, "SecurityException dismissing notification by key", e)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
     }
 }
