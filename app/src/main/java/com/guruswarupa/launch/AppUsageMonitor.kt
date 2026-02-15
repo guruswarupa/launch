@@ -1,4 +1,3 @@
-
 package com.guruswarupa.launch
 
 import android.app.Service
@@ -6,17 +5,20 @@ import android.content.Intent
 import android.os.IBinder
 import android.os.Handler
 import android.os.Looper
-import android.app.ActivityManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
+import android.widget.Toast
 
 class AppUsageMonitor : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var monitoringRunnable: Runnable? = null
-    private var lastForegroundApp: String? = null
     private lateinit var appTimerManager: AppTimerManager
+    private lateinit var usageStatsManager: UsageStatsManager
 
     override fun onCreate() {
         super.onCreate()
         appTimerManager = AppTimerManager(this)
+        usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -27,47 +29,47 @@ class AppUsageMonitor : Service() {
     private fun startMonitoring() {
         monitoringRunnable = object : Runnable {
             override fun run() {
-                checkForegroundApp()
-                handler.postDelayed(this, 5000) // Check every 5 seconds (reduced frequency for better battery life)
+                checkForegroundAppUsage()
+                // Check every second for immediate enforcement
+                handler.postDelayed(this, 1000)
             }
         }
         handler.post(monitoringRunnable!!)
     }
 
-    private fun checkForegroundApp() {
+    private fun checkForegroundAppUsage() {
         val currentApp = getForegroundApp()
-
-        if (currentApp != null && currentApp != lastForegroundApp) {
-            if (currentApp == packageName) {
-                // User returned to launcher, cancel any active timer
-                appTimerManager.cancelTimer()
+        
+        // Don't act if the foreground app is our launcher or system UI
+        if (currentApp != null && currentApp != packageName && 
+            !currentApp.startsWith("com.android.systemui")) {
+            
+            if (appTimerManager.isAppOverDailyLimit(currentApp)) {
+                handler.post {
+                    Toast.makeText(this, "Daily limit reached for this app.", Toast.LENGTH_LONG).show()
+                    appTimerManager.returnToLauncher(currentApp)
+                }
             }
-            lastForegroundApp = currentApp
         }
     }
 
     private fun getForegroundApp(): String? {
-        try {
-            val activityManager = getSystemService(ACTIVITY_SERVICE) as? ActivityManager
-            if (activityManager != null && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
-                @Suppress("DEPRECATION")
-                val tasks = activityManager.getRunningTasks(1)
-                return if (tasks.isNotEmpty()) {
-                    tasks[0].topActivity?.packageName
-                } else {
-                    null
+        val time = System.currentTimeMillis()
+        // Query usage stats for the last minute to find the most recently used app
+        val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 60 * 1000, time)
+        
+        if (stats != null) {
+            var lastApp: String? = null
+            var lastTime = 0L
+            for (usageStats in stats) {
+                if (usageStats.lastTimeUsed > lastTime) {
+                    lastTime = usageStats.lastTimeUsed
+                    lastApp = usageStats.packageName
                 }
-            } else {
-                // For Android Q+, use UsageStatsManager instead
-                // This is a simplified fallback - for production, use UsageStatsManager
-                return null
             }
-        } catch (_: SecurityException) {
-            // Requires GET_TASKS permission which is deprecated
-            return null
-        } catch (_: Exception) {
-            return null
+            return lastApp
         }
+        return null
     }
 
     override fun onDestroy() {

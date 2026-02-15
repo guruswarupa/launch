@@ -666,6 +666,9 @@ class MainActivity : FragmentActivity() {
         // Start shake detection service for background quick actions (if enabled)
         updateShakeDetectionService()
         
+        // Start app usage monitor for daily limits
+        startService(Intent(this, AppUsageMonitor::class.java))
+        
         // Initialize lifecycle manager
         initializeLifecycleManager()
 
