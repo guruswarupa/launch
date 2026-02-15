@@ -1,16 +1,23 @@
-# Launch
+<p align="center">
+  <img width="120" alt="Launch App Icon" alt="ChatGPT Image Feb 15, 2026, 02_36_14 PM" src="https://github.com/user-attachments/assets/bf4cc306-6966-4290-9e2a-36debd605df2" />
+</p>
 
-A clean, efficient, and minimalist Android launcher that prioritizes simplicity and functionality.
+<h1 align="center">Launch</h1>
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/guruswarupa/launch)
+<p align="center">
+  A clean, efficient, and minimalist Android launcher built for focus and productivity.
+</p>
+<p align="center">
+       <a href="https://deepwiki.com/guruswarupa/launch">
+         <img src="https://deepwiki.com/badge.svg" height="45" />
+       </a>
+</p>
+<p align="center">
+  <a href="https://f-droid.org/packages/com.guruswarupa.launchh/">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="100" />
+  </a>
+</p>
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-     alt="Get it on F-Droid"
-     height="80">](https://f-droid.org/packages/com.guruswarupa.launchh/)
-
-Or download the latest APK from the [Releases Section](https://github.com/guruswarupa/launch/releases/latest).
-
----
 
 ## 📋 Table of Contents
 
