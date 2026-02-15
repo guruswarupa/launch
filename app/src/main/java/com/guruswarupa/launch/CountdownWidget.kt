@@ -265,13 +265,11 @@ class CountdownWidget(
         try {
             val textColor = ContextCompat.getColor(context, R.color.text)
             val listView = dialog.listView
-            if (listView != null) {
-                listView.post {
-                    for (i in 0 until listView.childCount) {
-                        val child = listView.getChildAt(i)
-                        if (child is TextView) {
-                            child.setTextColor(textColor)
-                        }
+            listView?.post {
+                for (i in 0 until listView.childCount) {
+                    val child = listView.getChildAt(i)
+                    if (child is TextView) {
+                        child.setTextColor(textColor)
                     }
                 }
             }
