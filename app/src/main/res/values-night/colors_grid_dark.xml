@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark theme grid item background -->
-    <color name="grid_item_background_dark">#80000000</color> <!-- Semi-transparent black -->
+    <!-- Moved to colors.xml to avoid duplication and MissingDefaultResource lint error -->
 </resources>

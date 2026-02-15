@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Light theme grid item background -->
-    <color name="grid_item_background_light">#80FFFFFF</color> <!-- Semi-transparent white -->
+    <!-- Moved to colors.xml to avoid duplication and MissingDefaultResource lint error -->
 </resources>

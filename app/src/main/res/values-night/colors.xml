@@ -57,6 +57,8 @@
 
     <!-- Grid Item Background Colors -->
     <color name="grid_item_background">#80000000</color>
+    <color name="grid_item_background_light">#80FFFFFF</color>
+    <color name="grid_item_background_dark">#80000000</color>
 
     <!-- Tutorial Colors -->
     <color name="tutorial_background">#E0000000</color>
