@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -8,10 +9,11 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val currentMonth = dateFormat.format(Date())
-    private val BALANCE_KEY = "finance_balance"
-    private val CURRENCY_KEY = "finance_currency"
     
     companion object {
+        private const val BALANCE_KEY = "finance_balance"
+        private const val CURRENCY_KEY = "finance_currency"
+
         val SUPPORTED_CURRENCIES = mapOf(
             "USD" to "$",
             "EUR" to "€",
@@ -47,17 +49,17 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     
     fun setCurrency(currencyCode: String) {
         if (SUPPORTED_CURRENCIES.containsKey(currencyCode)) {
-            sharedPreferences.edit().putString(CURRENCY_KEY, currencyCode).apply()
+            sharedPreferences.edit { putString(CURRENCY_KEY, currencyCode) }
         }
     }
 
     fun addIncome(amount: Double, description: String = "") {
         val currentBalance = getBalance()
         val newBalance = currentBalance + amount
-        sharedPreferences.edit().putFloat("finance_balance", newBalance.toFloat()).apply()
+        sharedPreferences.edit { putFloat(BALANCE_KEY, newBalance.toFloat()) }
 
         val monthlyIncome = getMonthlyIncome()
-        sharedPreferences.edit().putFloat("finance_income_$currentMonth", (monthlyIncome + amount).toFloat()).apply()
+        sharedPreferences.edit { putFloat("finance_income_$currentMonth", (monthlyIncome + amount).toFloat()) }
 
         addTransaction(amount, "income", description)
     }
@@ -65,10 +67,10 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     fun addExpense(amount: Double, description: String = "") {
         val currentBalance = getBalance()
         val newBalance = currentBalance - amount
-        sharedPreferences.edit().putFloat("finance_balance", newBalance.toFloat()).apply()
+        sharedPreferences.edit { putFloat(BALANCE_KEY, newBalance.toFloat()) }
 
         val monthlyExpenses = getMonthlyExpenses()
-        sharedPreferences.edit().putFloat("finance_expenses_$currentMonth", (monthlyExpenses + amount).toFloat()).apply()
+        sharedPreferences.edit { putFloat("finance_expenses_$currentMonth", (monthlyExpenses + amount).toFloat()) }
 
         addTransaction(-amount, "expense", description)
     }
@@ -76,12 +78,12 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     fun getBalance(): Double {
         return try {
             sharedPreferences.getFloat(BALANCE_KEY, 0.0f).toDouble()
-        } catch (e: ClassCastException) {
+        } catch (_: ClassCastException) {
             // Handle case where balance was stored as Integer
             val intBalance = sharedPreferences.getInt(BALANCE_KEY, 0)
             val floatBalance = intBalance.toFloat()
             // Update to Float for future use
-            sharedPreferences.edit().putFloat(BALANCE_KEY, floatBalance).apply()
+            sharedPreferences.edit { putFloat(BALANCE_KEY, floatBalance) }
             floatBalance.toDouble()
         }
     }
@@ -89,10 +91,10 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     fun getMonthlyExpenses(): Double {
         return try {
             sharedPreferences.getFloat("finance_expenses_$currentMonth", 0.0f).toDouble()
-        } catch (e: ClassCastException) {
+        } catch (_: ClassCastException) {
             val intExpenses = sharedPreferences.getInt("finance_expenses_$currentMonth", 0)
             val floatExpenses = intExpenses.toFloat()
-            sharedPreferences.edit().putFloat("finance_expenses_$currentMonth", floatExpenses).apply()
+            sharedPreferences.edit { putFloat("finance_expenses_$currentMonth", floatExpenses) }
             floatExpenses.toDouble()
         }
     }
@@ -100,10 +102,10 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     fun getMonthlyIncome(): Double {
         return try {
             sharedPreferences.getFloat("finance_income_$currentMonth", 0.0f).toDouble()
-        } catch (e: ClassCastException) {
+        } catch (_: ClassCastException) {
             val intIncome = sharedPreferences.getInt("finance_income_$currentMonth", 0)
             val floatIncome = intIncome.toFloat()
-            sharedPreferences.edit().putFloat("finance_income_$currentMonth", floatIncome).apply()
+            sharedPreferences.edit { putFloat("finance_income_$currentMonth", floatIncome) }
             floatIncome.toDouble()
         }
     }
@@ -112,14 +114,13 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
         val timestamp = System.currentTimeMillis()
         val transactionKey = "transaction_$timestamp"
         val transactionData = "$type:$amount:$timestamp:$description"
-        sharedPreferences.edit().putString(transactionKey, transactionData).apply()
+        sharedPreferences.edit { putString(transactionKey, transactionData) }
 
         // Keep only last 100 transactions to avoid storage bloat
         cleanupOldTransactions()
     }
 
     fun deleteTransaction(timestamp: Long) {
-        val allPrefs = sharedPreferences.all
         val key = "transaction_$timestamp"
         val transactionData = sharedPreferences.getString(key, "") ?: ""
         
@@ -131,43 +132,26 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
                 
                 // Adjust balance
                 val currentBalance = getBalance()
-                val newBalance = if (type == "income") currentBalance - amount else currentBalance - amount
-                // Actually if type is 'income', amount is positive. If 'expense', amount is negative in transactionData (based on addTransaction call)
-                // Wait, addIncome calls addTransaction(amount, "income") where amount is positive.
-                // addExpense calls addTransaction(-amount, "expense") where amount is negative.
-                // So balance = balance - amount always reverses it?
-                // Let's re-check addIncome: balance = balance + amount, addTransaction(amount, "income")
-                // delete income: balance = balance - amount. Correct.
-                // addExpense: balance = balance - amount, addTransaction(-amount, "expense")
-                // delete expense: balance = balance - (-amount) = balance + amount. Correct.
-                sharedPreferences.edit().putFloat(BALANCE_KEY, (currentBalance - amount).toFloat()).apply()
+                sharedPreferences.edit { putFloat(BALANCE_KEY, (currentBalance - amount).toFloat()) }
                 
                 // Adjust monthly records
                 val date = Date(timestamp)
                 val monthStr = dateFormat.format(date)
                 if (type == "income") {
                     val monthlyIncome = sharedPreferences.getFloat("finance_income_$monthStr", 0.0f).toDouble()
-                    sharedPreferences.edit().putFloat("finance_income_$monthStr", (monthlyIncome - amount).toFloat()).apply()
+                    sharedPreferences.edit { putFloat("finance_income_$monthStr", (monthlyIncome - amount).toFloat()) }
                 } else {
                     val monthlyExpenses = sharedPreferences.getFloat("finance_expenses_$monthStr", 0.0f).toDouble()
                     // amount is negative for expenses, so we subtract it (which adds the positive absolute value back)
-                    // Wait, monthlyExpenses stores POSITIVE total of expenses usually.
-                    // Let's check addExpense: monthlyExpenses = monthlyExpenses + amount (where amount is positive parameter)
-                    // But addTransaction receives -amount.
-                    // So in parts[1] we have -amount.
-                    // monthlyExpenses = monthlyExpenses - (-amount) = monthlyExpenses + amount.
-                    // Wait, if parts[1] is -5.0 (expense of 5), monthlyExpenses was increased by 5.0.
-                    // To reverse: monthlyExpenses = monthlyExpenses - 5.0.
-                    // So if parts[1] is -5.0, amount is -5.0.
-                    // monthlyExpenses = monthlyExpenses - abs(amount)
-                    sharedPreferences.edit().putFloat("finance_expenses_$monthStr", (monthlyExpenses - kotlin.math.abs(amount)).toFloat()).apply()
+                    sharedPreferences.edit { putFloat("finance_expenses_$monthStr", (monthlyExpenses - kotlin.math.abs(amount)).toFloat()) }
                 }
                 
-                sharedPreferences.edit().remove(key).apply()
+                sharedPreferences.edit { remove(key) }
             }
         }
     }
 
+    @Suppress("unused")
     fun getTransactionHistory(): List<Triple<String, Double, String>> {
         val allPrefs = sharedPreferences.all
         val transactions = mutableListOf<Triple<String, Double, String>>()
@@ -183,12 +167,12 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
             }
         }
 
-        return transactions.sortedByDescending {
+        return transactions.sortedByDescending { transaction ->
             allPrefs.keys.filter { it.startsWith("transaction_") }
                 .find { key ->
                     val data = sharedPreferences.getString(key, "") ?: ""
                     data.split(":").let { parts ->
-                        parts.size >= 3 && parts[0] == it.first && parts[1].toDoubleOrNull() == it.second
+                        parts.size >= 3 && parts[0] == transaction.first && parts[1].toDoubleOrNull() == transaction.second
                     }
                 }?.substringAfter("transaction_")?.toLongOrNull() ?: 0L
         }
@@ -206,22 +190,22 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
             }
 
             // Batch remove operations for better performance
-            val editor = sharedPreferences.edit()
-            sortedKeys.drop(100).forEach { key ->
-                editor.remove(key)
+            sharedPreferences.edit {
+                sortedKeys.drop(100).forEach { key ->
+                    remove(key)
+                }
             }
-            editor.apply() // Single apply() call instead of multiple
         }
     }
 
     fun resetData() {
-        val editor = sharedPreferences.edit()
         val allPrefs = sharedPreferences.all
-        for (key in allPrefs.keys) {
-            if (key.startsWith("finance_") || key.startsWith("transaction_")) {
-                editor.remove(key)
+        sharedPreferences.edit {
+            for (key in allPrefs.keys) {
+                if (key.startsWith("finance_") || key.startsWith("transaction_")) {
+                    remove(key)
+                }
             }
         }
-        editor.apply()
     }
 }

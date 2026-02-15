@@ -5,25 +5,26 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Handler
 import android.os.Looper
-import kotlin.math.abs
+import android.util.Log
 import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
  * Manages audio recording and decibel calculation for noise analysis
  */
-class NoiseDecibelManager(private val context: android.content.Context) {
+class NoiseDecibelManager(@Suppress("unused") private val context: android.content.Context) {
     
     private var audioRecord: AudioRecord? = null
     private var isRecording = false
-    private var handler: Handler = Handler(Looper.getMainLooper())
+    private val handler: Handler = Handler(Looper.getMainLooper())
     private var onDecibelChangedListener: ((Double) -> Unit)? = null
     
     companion object {
         private const val SAMPLE_RATE = 44100
-        private val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
-        private val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
+        private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
+        private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val BUFFER_SIZE_MULTIPLIER = 2
         private const val UPDATE_INTERVAL_MS = 100L // Update every 100ms
     }
@@ -52,23 +53,30 @@ class NoiseDecibelManager(private val context: android.content.Context) {
         if (isRecording) return true
         
         try {
-            val bufferSize = AudioRecord.getMinBufferSize(
+            val minBufferSize = AudioRecord.getMinBufferSize(
                 SAMPLE_RATE,
                 CHANNEL_CONFIG,
                 AUDIO_FORMAT
-            ) * BUFFER_SIZE_MULTIPLIER
+            )
             
-            if (bufferSize == AudioRecord.ERROR_BAD_VALUE || bufferSize == AudioRecord.ERROR) {
+            if (minBufferSize == AudioRecord.ERROR_BAD_VALUE || minBufferSize == AudioRecord.ERROR) {
                 return false
             }
+
+            val bufferSize = minBufferSize * BUFFER_SIZE_MULTIPLIER
             
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT,
-                bufferSize
-            )
+            audioRecord = try {
+                AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    SAMPLE_RATE,
+                    CHANNEL_CONFIG,
+                    AUDIO_FORMAT,
+                    bufferSize
+                )
+            } catch (_: SecurityException) {
+                Log.e("NoiseDecibelManager", "Microphone permission required")
+                return false
+            }
             
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
                 audioRecord?.release()
@@ -80,8 +88,7 @@ class NoiseDecibelManager(private val context: android.content.Context) {
             isRecording = true
             handler.post(recordingRunnable)
             return true
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             stopRecording()
             return false
         }
@@ -98,8 +105,8 @@ class NoiseDecibelManager(private val context: android.content.Context) {
             audioRecord?.stop()
             audioRecord?.release()
             audioRecord = null
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
+            // Ignore errors during stop
         }
     }
     
@@ -107,7 +114,7 @@ class NoiseDecibelManager(private val context: android.content.Context) {
      * Calculates current decibel level from audio buffer
      */
     private fun calculateDecibel(): Double {
-        val audioRecord = this.audioRecord ?: return 0.0
+        val currentAudioRecord = this.audioRecord ?: return 0.0
         
         try {
             val bufferSize = AudioRecord.getMinBufferSize(
@@ -116,8 +123,10 @@ class NoiseDecibelManager(private val context: android.content.Context) {
                 AUDIO_FORMAT
             )
             
+            if (bufferSize <= 0) return 0.0
+            
             val buffer = ShortArray(bufferSize)
-            val readSize = audioRecord.read(buffer, 0, bufferSize)
+            val readSize = currentAudioRecord.read(buffer, 0, bufferSize)
             
             if (readSize <= 0) {
                 return 0.0
@@ -128,7 +137,7 @@ class NoiseDecibelManager(private val context: android.content.Context) {
             for (i in 0 until readSize) {
                 sum += (buffer[i] * buffer[i]).toDouble()
             }
-            val rms = kotlin.math.sqrt(sum / readSize)
+            val rms = sqrt(sum / readSize)
             
             // Convert to decibels
             // Reference value is typically 1.0 for normalized audio
@@ -142,8 +151,7 @@ class NoiseDecibelManager(private val context: android.content.Context) {
             
             // Clamp to reasonable range (0-120 dB)
             return max(0.0, min(120.0, db + 96.0))
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             return 0.0
         }
     }
@@ -159,7 +167,7 @@ class NoiseDecibelManager(private val context: android.content.Context) {
                 AUDIO_FORMAT
             )
             bufferSize != AudioRecord.ERROR_BAD_VALUE && bufferSize != AudioRecord.ERROR
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }

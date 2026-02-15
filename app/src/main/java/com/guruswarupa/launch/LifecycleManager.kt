@@ -1,8 +1,7 @@
 package com.guruswarupa.launch
 
 import android.os.Handler
-import android.util.Log
-import android.view.View
+import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 
 /**
@@ -28,7 +27,6 @@ class LifecycleManager(
     private var networkStatsWidget: NetworkStatsWidget? = null
     private var usageStatsManager: AppUsageStatsManager? = null
     private var timeDateManager: TimeDateManager? = null
-    private var wallpaperManagerHelper2: WallpaperManagerHelper? = null
     private var weeklyUsageGraph: WeeklyUsageGraphView? = null
     private var usageStatsDisplayManager: UsageStatsDisplayManager? = null
     private var todoManager: TodoManager? = null
@@ -115,6 +113,7 @@ class LifecycleManager(
         this.backgroundExecutor = executor
     }
     
+    @Suppress("unused")
     fun setBlockingBackGesture(isBlocking: Boolean) {
         this.isBlockingBackGesture = isBlocking
     }
@@ -162,11 +161,11 @@ class LifecycleManager(
                         // Use try-catch to handle initialization safely
                         try {
                             mainActivity.loadApps(forceRefresh = false)
-                        } catch (e: UninitializedPropertyAccessException) {
+                        } catch (_: UninitializedPropertyAccessException) {
                             // Managers not initialized yet, skip refresh
                         }
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Not MainActivity or error, ignore
                 }
             }
@@ -213,7 +212,7 @@ class LifecycleManager(
             // Load expensive weekly usage graph data after a delay (only if visible)
             handler.postDelayed({
                 weeklyUsageGraph?.let {
-                    if (it.visibility == View.VISIBLE) {
+                    if (it.isVisible) {
                         usageStatsDisplayManager?.loadWeeklyUsageData()
                     }
                 }

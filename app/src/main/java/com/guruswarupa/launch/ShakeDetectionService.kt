@@ -14,6 +14,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 
 /**
  * Foreground service that detects shake gestures in the background
@@ -27,7 +28,7 @@ class ShakeDetectionService : Service() {
     private var screenOnReceiver: BroadcastReceiver? = null
     private var settingsReceiver: BroadcastReceiver? = null
     private val powerManager: PowerManager by lazy {
-        getSystemService(Context.POWER_SERVICE) as PowerManager
+        getSystemService(POWER_SERVICE) as PowerManager
     }
     
     companion object {
@@ -56,17 +57,17 @@ class ShakeDetectionService : Service() {
                 // Triple shake detected - toggle torch
                 try {
                     torchManager?.toggleTorch()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // Error toggling torch - silently fail
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Error in onCreate - silently fail
         }
     }
     
     private fun applySensitivity() {
-        val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
         val sensitivity = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5)
         shakeDetector?.updateSensitivity(sensitivity)
     }
@@ -95,7 +96,7 @@ class ShakeDetectionService : Service() {
                 }
                 else -> START_STICKY
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             START_STICKY
         }
     }
@@ -105,12 +106,7 @@ class ShakeDetectionService : Service() {
      * Only listens when screen is on to save battery
      */
     private fun updateShakeDetectionState() {
-        val isScreenOn = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
-            powerManager.isInteractive
-        } else {
-            @Suppress("DEPRECATION")
-            powerManager.isScreenOn
-        }
+        val isScreenOn = powerManager.isInteractive
         
         if (isScreenOn) {
             shakeDetector?.start()
@@ -142,7 +138,14 @@ class ShakeDetectionService : Service() {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
         }
-        registerReceiver(screenOnReceiver, filter)
+        
+        // Use ContextCompat to register receiver with appropriate export flag
+        ContextCompat.registerReceiver(
+            this,
+            screenOnReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
     
     /**
@@ -158,11 +161,14 @@ class ShakeDetectionService : Service() {
         }
         
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(settingsReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(settingsReceiver, filter)
-        }
+        
+        // Use ContextCompat to register receiver with appropriate export flag
+        ContextCompat.registerReceiver(
+            this,
+            settingsReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
     
     override fun onDestroy() {
@@ -189,7 +195,7 @@ class ShakeDetectionService : Service() {
             
             shakeDetector?.cleanup()
             torchManager?.turnOffTorch() // Turn off torch when service stops
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Error in onDestroy - silently fail
         }
     }

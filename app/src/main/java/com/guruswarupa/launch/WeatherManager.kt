@@ -13,7 +13,7 @@ import android.widget.Toast
 import org.json.JSONObject
 import java.net.URL
 import java.util.concurrent.Executors
-import com.guruswarupa.launch.R
+import androidx.core.content.edit
 
 class WeatherManager(private val context: Context) {
 
@@ -27,7 +27,7 @@ class WeatherManager(private val context: Context) {
 
     private fun saveApiKey(apiKey: String) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-        prefs.edit().putString("weather_api_key", apiKey).apply()
+        prefs.edit { putString("weather_api_key", apiKey) }
     }
 
     private fun hasUserRejectedApiKey(): Boolean {
@@ -37,7 +37,7 @@ class WeatherManager(private val context: Context) {
 
     private fun setUserRejectedApiKey(rejected: Boolean) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("weather_api_key_rejected", rejected).apply()
+        prefs.edit { putBoolean("weather_api_key_rejected", rejected) }
     }
 
     private fun getStoredCityName(): String? {
@@ -47,9 +47,9 @@ class WeatherManager(private val context: Context) {
 
     private fun saveCityName(cityName: String) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-        prefs.edit()
-            .putString("weather_stored_city_name", cityName)
-            .apply()
+        prefs.edit {
+            putString("weather_stored_city_name", cityName)
+        }
     }
 
     private fun getCachedWeather(): CachedWeather? {
@@ -69,12 +69,12 @@ class WeatherManager(private val context: Context) {
     private fun saveCachedWeather(temperature: Int, description: String, weatherId: Int) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
         val currentTime = System.currentTimeMillis()
-        prefs.edit()
-            .putInt("weather_cached_temperature", temperature)
-            .putString("weather_cached_description", description)
-            .putInt("weather_cached_weather_id", weatherId)
-            .putLong("weather_cached_timestamp", currentTime)
-            .apply()
+        prefs.edit {
+            putInt("weather_cached_temperature", temperature)
+                .putString("weather_cached_description", description)
+                .putInt("weather_cached_weather_id", weatherId)
+                .putLong("weather_cached_timestamp", currentTime)
+        }
     }
 
     private fun isCacheValid(cachedWeather: CachedWeather, maxAgeMinutes: Long = 45): Boolean {
@@ -98,7 +98,7 @@ class WeatherManager(private val context: Context) {
         if (apiKey == null) {
             if (hasUserRejectedApiKey() && !forcePrompt) {
                 handler.post {
-                    weatherText.text = "Tap to set weather API key"
+                    weatherText.text = context.getString(R.string.tap_to_set_api_key)
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
 
                     val clickListener = View.OnClickListener {
@@ -117,7 +117,7 @@ class WeatherManager(private val context: Context) {
             val cachedWeather = getCachedWeather()
             if (cachedWeather != null && isCacheValid(cachedWeather)) {
                 handler.post {
-                    weatherText.text = "${cachedWeather.temperature}°C ${cachedWeather.description}"
+                    weatherText.text = context.getString(R.string.weather_temp_format, cachedWeather.temperature, cachedWeather.description)
                     setWeatherIcon(weatherIcon, cachedWeather.weatherId)
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
@@ -129,7 +129,7 @@ class WeatherManager(private val context: Context) {
                 fetchWeatherData(weatherIcon, weatherText, storedCityName, apiKey)
             } else {
                 handler.post {
-                    weatherText.text = "Tap to enter location"
+                    weatherText.text = context.getString(R.string.tap_to_enter_location)
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
@@ -140,7 +140,7 @@ class WeatherManager(private val context: Context) {
     private fun fetchWeatherData(weatherIcon: ImageView, weatherText: TextView, cityName: String, apiKey: String) {
         val encodedCityName = try {
             java.net.URLEncoder.encode(cityName, "UTF-8")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             cityName
         }
         val url = "https://api.openweathermap.org/data/2.5/weather?q=$encodedCityName&appid=$apiKey&units=metric"
@@ -161,14 +161,13 @@ class WeatherManager(private val context: Context) {
                 saveCityName(actualCityName)
                 
                 handler.post {
-                    weatherText.text = "$temperature°C $description"
+                    weatherText.text = context.getString(R.string.weather_temp_format, temperature, description)
                     setWeatherIcon(weatherIcon, weatherId)
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
-
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 handler.post {
-                    weatherText.text = "Weather unavailable"
+                    weatherText.text = context.getString(R.string.weather_unavailable)
                     weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
                     setupRefreshListeners(weatherIcon, weatherText)
                 }

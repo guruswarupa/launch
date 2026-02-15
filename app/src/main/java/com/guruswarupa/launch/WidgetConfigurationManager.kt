@@ -1,7 +1,7 @@
 package com.guruswarupa.launch
 
-import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -9,11 +9,9 @@ import org.json.JSONObject
  * Manages widget visibility and ordering in the drawer
  */
 class WidgetConfigurationManager(
-    private val context: Context,
     private val sharedPreferences: SharedPreferences
 ) {
     companion object {
-        private const val PREF_WIDGET_CONFIG = "widget_configuration"
         private const val PREF_WIDGET_ORDER = "widget_order"
         
         // Widget IDs that correspond to container IDs in the layout
@@ -63,7 +61,7 @@ class WidgetConfigurationManager(
                     widgets.add(WidgetInfo(id, name, enabled))
                 }
                 widgets
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // If parsing fails, return empty list
                 mutableListOf()
             }
@@ -74,7 +72,6 @@ class WidgetConfigurationManager(
         // If we have saved widgets, use them in the saved order
         if (savedWidgetsList.isNotEmpty()) {
             val savedWidgetIds = savedWidgetsList.map { it.id }.toSet()
-            val savedWidgetsMap = savedWidgetsList.associateBy { it.id }
             
             // Add any new widgets from ALL_WIDGETS that aren't in saved list
             val result = savedWidgetsList.toMutableList()
@@ -104,9 +101,9 @@ class WidgetConfigurationManager(
             jsonObject.put("enabled", widget.enabled)
             jsonArray.put(jsonObject)
         }
-        sharedPreferences.edit()
-            .putString(PREF_WIDGET_ORDER, jsonArray.toString())
-            .apply()
+        sharedPreferences.edit {
+            putString(PREF_WIDGET_ORDER, jsonArray.toString())
+        }
     }
     
     /**
@@ -115,13 +112,5 @@ class WidgetConfigurationManager(
     fun isWidgetEnabled(widgetId: String): Boolean {
         val widgets = getWidgetOrder()
         return widgets.find { it.id == widgetId }?.enabled ?: true
-    }
-    
-    /**
-     * Get widget name by ID
-     */
-    fun getWidgetName(widgetId: String): String {
-        val widgets = getWidgetOrder()
-        return widgets.find { it.id == widgetId }?.name ?: widgetId
     }
 }

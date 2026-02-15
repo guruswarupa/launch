@@ -26,11 +26,15 @@ class WorkspacesListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val workspace = workspaces[position]
+        val context = holder.itemView.context
         holder.workspaceName.text = workspace.first
-        holder.appCount.text = "${workspace.second.size} apps"
+        holder.appCount.text = context.getString(R.string.workspace_app_count_format, workspace.second.size)
         
         holder.deleteButton.setOnClickListener {
-            onDelete(position)
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                onDelete(currentPos)
+            }
         }
     }
 

@@ -1,9 +1,10 @@
 package com.guruswarupa.launch
 
+import android.graphics.Color
 import android.os.Build
-import android.view.View
-import android.view.WindowInsetsController
 import android.view.WindowManager
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 /**
  * Manages system bar (status bar and navigation bar) transparency and appearance
@@ -14,56 +15,34 @@ class SystemBarManager(private val activity: androidx.fragment.app.FragmentActiv
      * Make status bar and navigation bar transparent
      */
     fun makeSystemBarsTransparent() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11+ (API 30+)
-                activity.window.statusBarColor = android.graphics.Color.TRANSPARENT
-                activity.window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                activity.window.setDecorFitsSystemWindows(false)
-                
-                val decorView = activity.window.decorView
-                if (decorView != null) {
-                    val insetsController = decorView.windowInsetsController
-                    if (insetsController != null) {
-                        // Always use white/light icons regardless of mode
-                        insetsController.setSystemBarsAppearance(
-                            0,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        )
-                    }
-                }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // Android 5.0+ (API 21+)
-                activity.window.statusBarColor = android.graphics.Color.TRANSPARENT
-                activity.window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                activity.window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                
-                @Suppress("DEPRECATION")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val decorView = activity.window.decorView
-                    if (decorView != null) {
-                        var flags = decorView.systemUiVisibility
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        
-                        // Always use white/light icons (don't set LIGHT_STATUS_BAR flag)
-                        decorView.systemUiVisibility = flags
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // If anything fails, at least try to set the colors
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    activity.window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    activity.window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                }
-            } catch (ex: Exception) {
-                // Ignore if window is not ready
-            }
+        val window = activity.window
+        
+        // Set colors to transparent. 
+        // Note: although direct color setting might show deprecation warnings in some contexts,
+        // it remains necessary for full transparency in combination with edge-to-edge.
+        @Suppress("DEPRECATION")
+        window.statusBarColor = Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = Color.TRANSPARENT
+        
+        // Modern way to enable edge-to-edge (drawing behind system bars)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // Modern way to control icon appearance (light vs dark)
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        
+        // Set to false for light icons (best for dark backgrounds/wallpapers)
+        // Set to true if you have a very light background
+        controller.isAppearanceLightStatusBars = false
+        controller.isAppearanceLightNavigationBars = false
+        
+        // Ensure proper flags are set for older versions
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+            @Suppress("DEPRECATION")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+            @Suppress("DEPRECATION")
+            window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
         }
     }
 }

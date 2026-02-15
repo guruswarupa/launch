@@ -7,6 +7,7 @@ import android.os.Environment
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
+import java.util.Locale
 
 class DeviceInfoManager(private val context: Context) {
 
@@ -98,7 +99,7 @@ class DeviceInfoManager(private val context: Context) {
     
     fun formatBytes(bytes: Long): String {
         val gb = bytes / (1024.0 * 1024.0 * 1024.0)
-        return String.format("%.1f", gb)
+        return String.format(Locale.getDefault(), "%.1f", gb)
     }
 
     fun getAndroidVersion(): String {
@@ -113,6 +114,7 @@ class DeviceInfoManager(private val context: Context) {
         }
     }
 
+    @Suppress("unused")
     fun getBuildNumber(): String {
         return Build.DISPLAY
     }
@@ -129,11 +131,11 @@ class DeviceInfoManager(private val context: Context) {
         val days = (uptimeMillis / (1000 * 60 * 60 * 24))
         
         return if (days > 0) {
-            String.format("%dd %dh %dm", days, hours, minutes)
+            String.format(Locale.getDefault(), "%dd %dh %dm", days, hours, minutes)
         } else if (hours > 0) {
-            String.format("%dh %dm", hours, minutes)
+            String.format(Locale.getDefault(), "%dh %dm", hours, minutes)
         } else {
-            String.format("%dm %ds", minutes, seconds)
+            String.format(Locale.getDefault(), "%dm %ds", minutes, seconds)
         }
     }
 }

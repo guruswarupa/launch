@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -11,9 +12,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class PhysicalActivityCalendarView(
-    private val rootView: View,
-    private val activityManager: PhysicalActivityManager,
-    private val onDayClick: ((String, ActivityData) -> Unit)? = null
+    rootView: View,
+    activityManager: PhysicalActivityManager,
+    onDayClick: ((String, ActivityData) -> Unit)? = null
 ) {
     private val context: Context = rootView.context
     private val calendarRecyclerView: RecyclerView = rootView.findViewById(R.id.calendar_recycler_view)
@@ -69,6 +70,7 @@ class ActivityCalendarAdapter(
         updateCalendar(calendar)
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     fun updateCalendar(newCalendar: Calendar) {
         calendar = newCalendar.clone() as Calendar
         val year = calendar.get(Calendar.YEAR)
@@ -78,6 +80,7 @@ class ActivityCalendarAdapter(
         notifyDataSetChanged()
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     fun refreshData() {
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH) + 1
@@ -99,8 +102,8 @@ class ActivityCalendarAdapter(
         
         // Calculate offset - Sunday = 1, Monday = 2, etc.
         val startOffset = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
-        for (i in 0 until startOffset) {
-            days.add(DayItem(null, false, false, null, null))
+        repeat(startOffset) {
+            days.add(DayItem(day = null))
         }
         
         // Add days of month

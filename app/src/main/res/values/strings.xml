@@ -60,4 +60,151 @@
     <string name="compass_enable">Enable</string>
     <string name="compass_no_sensors">Compass sensors not available on this device</string>
     <string name="compass_azimuth_format">%1$d°</string>
+
+    <!-- Device Info Widget Strings -->
+    <string name="ram_usage_format">%1$s / %2$s GB</string>
+    <string name="storage_usage_format">%1$s / %2$s GB</string>
+    <string name="cpu_temp_format">%1$.1f°C</string>
+
+    <!-- Widget Strings -->
+    <string name="screen_time_format">Screen Time: %1$s</string>
+
+    <!-- Hidden Apps Strings -->
+    <string name="no_hidden_apps">No hidden apps. Long press an app in the app list to hide it.</string>
+
+    <!-- Network Stats Widget Strings -->
+    <string name="mbps_format">%1$.1f Mbps</string>
+    <string name="ms_format">%1$d ms</string>
+    <string name="status_running">Running...</string>
+    <string name="status_initializing">Initializing...</string>
+    <string name="status_completed">Test Completed</string>
+    <string name="button_run_speedtest">Run Speedtest</string>
+
+    <!-- Noise Decibel Widget Strings -->
+    <string name="decibel_format">%1$s dB</string>
+    <string name="noise_level_quiet">Quiet</string>
+    <string name="noise_level_moderate">Moderate</string>
+    <string name="noise_level_loud">Loud</string>
+    <string name="noise_level_very_loud">Very Loud</string>
+    <string name="noise_button_disable">Disable</string>
+    <string name="noise_button_enable">Enable</string>
+
+    <!-- Onboarding Strings -->
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_start_permissions">Start Permissions</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_launch_app">Launch App</string>
+
+    <!-- Physical Activity Strings -->
+    <string name="distance_km_format">%1$s km</string>
+    <string name="steps_distance_format">%1$d steps • %2$s km</string>
+    <string name="stats">Stats</string>
+    <string name="calendar">Calendar</string>
+    <string name="zero_steps">0 steps</string>
+    <string name="zero_distance">0.00 km</string>
+    <string name="enable_in_settings">Enable in Settings</string>
+    <string name="steps_format">%1$s steps</string>
+
+    <!-- Pressure Widget Strings -->
+    <string name="disable">Disable</string>
+    <string name="enable">Enable</string>
+    <string name="proximity_sensor_not_available">Proximity sensor not available on this device</string>
+    <string name="pressure_sensor_not_available">Pressure sensor not available on this device</string>
+    <string name="pressure_format">%1$s hPa</string>
+    <string name="altitude_format">Altitude: %1$s m</string>
+    <string name="trend_format">Trend: %1$s</string>
+    <string name="trend_none">--</string>
+
+    <!-- Privacy Dashboard Strings -->
+    <string name="no_sensitive_permissions">No sensitive permissions accessed.</string>
+    <string name="access_to_format">Access to: %1$s</string>
+    <string name="no_sensitive_permissions_granted">This app does not seem to have any sensitive permissions granted.</string>
+    <string name="detailed_analysis">Detailed analysis:\n\n</string>
+    <string name="permission_detail_item">• %1$s: %2$s\n\n</string>
+    <string name="default_permission_description">Allows access to %1$s.</string>
+    
+    <string name="perm_camera">Camera</string>
+    <string name="perm_microphone">Microphone</string>
+    <string name="perm_contacts">Contacts</string>
+    <string name="perm_location">Location</string>
+    <string name="perm_location_approx">Location (Approx)</string>
+    <string name="perm_storage">Storage</string>
+    <string name="perm_storage_write">Storage (Write)</string>
+    <string name="perm_sms">SMS</string>
+    <string name="perm_phone">Phone</string>
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_photos">Photos</string>
+    <string name="perm_videos">Videos</string>
+    <string name="perm_audio">Audio</string>
+
+    <string name="desc_camera">Allows the app to take pictures and record videos. This can be used for scanning QR codes, taking profile pictures, or making video calls.</string>
+    <string name="desc_microphone">Allows the app to record audio using the microphone. This is used for voice messages, voice search, or recording video with sound. Be careful if an app accesses this without reason.</string>
+    <string name="desc_contacts">Allows the app to read your contact list. This helps in finding friends, suggesting contacts to message, or showing contact names.</string>
+    <string name="desc_location">Allows the app to access your precise location (GPS). Highly sensitive data that reveals exactly where you are.</string>
+    <string name="desc_location_approx">Allows the app to access your approximate location. Less sensitive than precise location but still reveals your general area.</string>
+    <string name="desc_storage">Allows the app to read files from your storage. Apps can access your personal documents and files with this.</string>
+    <string name="desc_storage_write">Allows the app to save or modify files in your storage.</string>
+    <string name="desc_sms">Allows the app to read your text messages. This is highly sensitive as it can include OTPs and private conversations.</string>
+    <string name="desc_phone">Allows the app to make phone calls. This could lead to unexpected charges if abused.</string>
+    <string name="desc_notifications">Allows the app to show you notifications. Can be used for spam if not managed.</string>
+    <string name="desc_photos">Allows the app to specifically access your photos.</string>
+    <string name="desc_videos">Allows the app to specifically access your videos.</string>
+    <string name="desc_audio">Allows the app to specifically access your audio files.</string>
+
+    <!-- Proximity Widget Strings -->
+    <string name="distance_cm_format">%1$s cm</string>
+    <string name="status_near">Status: Near</string>
+    <string name="status_far">Status: Far</string>
+
+    <!-- Temperature Widget Strings -->
+    <string name="temperature_sensor_not_available">Temperature sensor not available on this device</string>
+    <string name="temperature_c_format">%1$s°C</string>
+    <string name="temperature_f_format">%1$s°F</string>
+    <string name="status_format">Status: %1$s</string>
+
+    <!-- Todo Adapter Strings -->
+    <string name="todo_due_format">Due: %1$s</string>
+    <string name="todo_every_30_min">Every 30 min</string>
+    <string name="todo_every_1_hr">Every 1 hr</string>
+    <string name="todo_every_2_hrs">Every 2 hrs</string>
+    <string name="todo_every_3_hrs">Every 3 hrs</string>
+    <string name="todo_every_4_hrs">Every 4 hrs</string>
+    <string name="todo_every_6_hrs">Every 6 hrs</string>
+    <string name="todo_every_8_hrs">Every 8 hrs</string>
+    <string name="todo_every_12_hrs">Every 12 hrs</string>
+    <string name="todo_every_min_format">Every %1$d min</string>
+    <string name="todo_from_format"> from %1$s</string>
+
+    <!-- Finance Strings -->
+    <string name="income">Income</string>
+    <string name="expense">Expense</string>
+    <string name="date_time_divider_format">%1$s • %2$s</string>
+    <string name="transaction_amount_income_format">+%1$s%2$.2f</string>
+    <string name="transaction_amount_expense_format">-%1$s%2$.2f</string>
+
+    <!-- Usage Stats Strings -->
+    <string name="total_usage_format">Total: %1$s</string>
+
+    <!-- Weather Manager Strings -->
+    <string name="tap_to_set_api_key">Tap to set weather API key</string>
+    <string name="tap_to_enter_location">Tap to enter location</string>
+    <string name="weather_unavailable">Weather unavailable</string>
+    <string name="weather_temp_format">%1$d°C %2$s</string>
+
+    <!-- Workout Strings -->
+    <string name="workout_start">Start</string>
+    <string name="workout_stop">Stop</string>
+    <string name="workout_list">List</string>
+    <string name="workout_calendar">Calendar</string>
+    <string name="workout_streak_day_format">%1$d day</string>
+    <string name="workout_streak_days_format">%1$d days</string>
+    <string name="workout_recorded_format">Recorded: %1$s</string>
+    <string name="workout_total_format">Total: %1$s</string>
+    <string name="workout_best_format">Best: %1$s</string>
+    <string name="workout_type_reps">REPS</string>
+    <string name="workout_type_time">TIME</string>
+
+    <!-- Workspace Strings -->
+    <string name="workspace_app_count_format">%1$d apps</string>
 </resources>

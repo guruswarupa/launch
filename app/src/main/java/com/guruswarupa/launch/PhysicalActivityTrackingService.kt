@@ -32,7 +32,7 @@ class PhysicalActivityTrackingService : Service() {
         // This satisfies the system requirement within milliseconds
         try {
             val notification = createNotification()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
             } else {
                 startForeground(NOTIFICATION_ID, notification)
@@ -50,7 +50,7 @@ class PhysicalActivityTrackingService : Service() {
         // Safe to call multiple times, ensures foreground state is maintained
         try {
             val notification = createNotification()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
             } else {
                 startForeground(NOTIFICATION_ID, notification)

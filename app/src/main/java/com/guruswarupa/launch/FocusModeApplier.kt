@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.util.Log
 import android.view.View
 import android.widget.EditText
@@ -86,9 +87,10 @@ class FocusModeApplier(
                         onUpdateAppSearchManager()
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 activity.runOnUiThread {
                     if (!activity.isFinishing && !activity.isDestroyed) {
+                        @SuppressLint("NotifyDataSetChanged")
                         adapter.notifyDataSetChanged()
                     }
                 }

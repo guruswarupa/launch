@@ -2,10 +2,9 @@ package com.guruswarupa.launch
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.View
-import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlin.math.abs
 
 /**
  * A RecyclerView that wraps its content height instead of scrolling independently.
@@ -26,8 +25,9 @@ class WrapContentRecyclerView @JvmOverloads constructor(
         super.onMeasure(widthSpec, heightSpec)
         
         val layoutManager = layoutManager
-        if (layoutManager is LinearLayoutManager && adapter != null && adapter!!.itemCount > 0) {
-            val itemCount = adapter!!.itemCount
+        val adapter = adapter
+        if (layoutManager is LinearLayoutManager && adapter != null && adapter.itemCount > 0) {
+            val itemCount = adapter.itemCount
             var totalHeight = paddingTop + paddingBottom
             
             // Measure items that are currently visible/attached
@@ -44,7 +44,7 @@ class WrapContentRecyclerView @JvmOverloads constructor(
             }
             
             // If we couldn't measure all items, estimate based on measured ones
-            if (measuredItems > 0 && measuredItems < itemCount) {
+            if (measuredItems in 1 until itemCount) {
                 val averageItemHeight = (totalHeight - paddingTop - paddingBottom) / measuredItems
                 totalHeight = paddingTop + paddingBottom + (averageItemHeight * itemCount)
             } else if (measuredItems == 0 && itemCount > 0) {
@@ -89,8 +89,9 @@ class WrapContentRecyclerView @JvmOverloads constructor(
         if (isRecalculating) return
         
         val layoutManager = layoutManager
-        if (layoutManager is LinearLayoutManager && adapter != null && adapter!!.itemCount > 0) {
-            val itemCount = adapter!!.itemCount
+        val adapter = adapter
+        if (layoutManager is LinearLayoutManager && adapter != null && adapter.itemCount > 0) {
+            val itemCount = adapter.itemCount
             val currentHeight = layoutParams.height
             
             // Don't recalculate if we already have a reasonable height and all items are measured
@@ -107,7 +108,7 @@ class WrapContentRecyclerView @JvmOverloads constructor(
                 for (i in 0 until itemCount) {
                     val view = layoutManager.findViewByPosition(i)
                     if (view != null && view.height > 0) {
-                        val itemLayoutParams = view.layoutParams as? ViewGroup.MarginLayoutParams
+                        val itemLayoutParams = view.layoutParams as? MarginLayoutParams
                         val topMargin = itemLayoutParams?.topMargin ?: 0
                         val bottomMargin = itemLayoutParams?.bottomMargin ?: 0
                         totalHeight += view.height + topMargin + bottomMargin
@@ -120,7 +121,7 @@ class WrapContentRecyclerView @JvmOverloads constructor(
                 totalHeight += extraPadding
                 
                 // Only update if height changed significantly (more than 10px difference)
-                if (totalHeight > 0 && kotlin.math.abs(totalHeight - currentHeight) > 10) {
+                if (totalHeight > 0 && abs(totalHeight - currentHeight) > 10) {
                     layoutParams.height = totalHeight
                     requestLayout()
                 }
@@ -144,7 +145,7 @@ class WrapContentRecyclerView @JvmOverloads constructor(
                     for (i in 0 until itemCount) {
                         val view = layoutManager.findViewByPosition(i)
                         if (view != null && view.height > 0) {
-                            val itemLayoutParams = view.layoutParams as? ViewGroup.MarginLayoutParams
+                            val itemLayoutParams = view.layoutParams as? MarginLayoutParams
                             val topMargin = itemLayoutParams?.topMargin ?: 0
                             val bottomMargin = itemLayoutParams?.bottomMargin ?: 0
                             totalMeasuredHeight += view.height + topMargin + bottomMargin
@@ -155,7 +156,7 @@ class WrapContentRecyclerView @JvmOverloads constructor(
                     totalHeight += totalMeasuredHeight
                     
                     // If we still didn't measure all, estimate the rest
-                    if (finalMeasuredCount > 0 && finalMeasuredCount < itemCount) {
+                    if (finalMeasuredCount in 1 until itemCount) {
                         val averageHeight = totalMeasuredHeight / finalMeasuredCount
                         totalHeight += averageHeight * (itemCount - finalMeasuredCount)
                     }

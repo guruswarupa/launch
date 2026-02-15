@@ -3,17 +3,17 @@ package com.guruswarupa.launch
 import android.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Handler
-import android.os.Looper
-import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AnimationUtils
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -21,7 +21,7 @@ import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.util.*
 
-class WorkoutWidget(private val rootView: View) {
+class WorkoutWidget(rootView: View) {
     private val context: Context = rootView.context
     private val prefs: SharedPreferences = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
     private val exercisesRecyclerView: RecyclerView = rootView.findViewById(R.id.workout_exercises_recycler_view)
@@ -88,7 +88,7 @@ class WorkoutWidget(private val rootView: View) {
         
         val parsedDate = try {
             dateFormat.parse(date)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
         
@@ -96,19 +96,19 @@ class WorkoutWidget(private val rootView: View) {
         
         val dialogView = LayoutInflater.from(context).inflate(R.layout.workout_day_details, null)
         val dateText = dialogView.findViewById<TextView>(R.id.day_date_text)
-        val exercisesList = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.day_events_list)
-        val emptyState = dialogView.findViewById<View>(R.id.day_empty_state)
+        val exercisesList = dialogView.findViewById<RecyclerView>(R.id.day_exercises_list)
+        val dayEmptyState = dialogView.findViewById<View>(R.id.day_empty_state)
         
         dateText.text = displayDate
         
         if (dayExercises.isEmpty()) {
             exercisesList.visibility = View.GONE
-            emptyState.visibility = View.VISIBLE
+            dayEmptyState.visibility = View.VISIBLE
         } else {
             exercisesList.visibility = View.VISIBLE
-            emptyState.visibility = View.GONE
+            dayEmptyState.visibility = View.GONE
             
-            exercisesList.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
+            exercisesList.layoutManager = LinearLayoutManager(context)
             exercisesList.adapter = DayExercisesAdapter(dayExercises)
         }
         
@@ -126,13 +126,13 @@ class WorkoutWidget(private val rootView: View) {
             // Show calendar, hide list
             listViewContainer.visibility = View.GONE
             calendarViewContainer.visibility = View.VISIBLE
-            (viewToggleButton as android.widget.Button).text = "List"
+            (viewToggleButton as Button).text = context.getString(R.string.workout_list)
             calendarView?.updateExercises(exercises)
         } else {
             // Show list, hide calendar
             listViewContainer.visibility = View.VISIBLE
             calendarViewContainer.visibility = View.GONE
-            (viewToggleButton as android.widget.Button).text = "Calendar"
+            (viewToggleButton as Button).text = context.getString(R.string.workout_calendar)
         }
     }
     
@@ -143,13 +143,13 @@ class WorkoutWidget(private val rootView: View) {
         if (lastReset != today && lastReset != null) {
             // Reset all exercises for new day
             exercises.forEach { it.resetToday() }
-            prefs.edit().putString(LAST_RESET_DATE_KEY, today).apply()
+            prefs.edit { putString(LAST_RESET_DATE_KEY, today) }
             saveExercises()
-            adapter.notifyDataSetChanged()
+            adapter.notifyItemRangeChanged(0, exercises.size)
             updateStats()
         } else if (lastReset == null) {
             // First time - just set the date
-            prefs.edit().putString(LAST_RESET_DATE_KEY, today).apply()
+            prefs.edit { putString(LAST_RESET_DATE_KEY, today) }
         }
     }
     
@@ -168,8 +168,8 @@ class WorkoutWidget(private val rootView: View) {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
-                val fromPos = viewHolder.adapterPosition
-                val toPos = target.adapterPosition
+                val fromPos = viewHolder.bindingAdapterPosition
+                val toPos = target.bindingAdapterPosition
                 if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION) {
                     return false
                 }
@@ -188,7 +188,7 @@ class WorkoutWidget(private val rootView: View) {
             }
             
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.adapterPosition
+                val position = viewHolder.bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION && position < exercises.size) {
                     val exercise = exercises[position]
                     showDeleteConfirmDialog(exercise) {
@@ -229,7 +229,6 @@ class WorkoutWidget(private val rootView: View) {
         val dialogView = LayoutInflater.from(context).inflate(R.layout.workout_add_dialog, null)
         val customInput = dialogView.findViewById<EditText>(R.id.custom_exercise_input)
         val presetsContainer = dialogView.findViewById<ViewGroup>(R.id.presets_container)
-        val typeReps = dialogView.findViewById<android.widget.RadioButton>(R.id.type_reps)
         val typeTime = dialogView.findViewById<android.widget.RadioButton>(R.id.type_time)
         
         // Fix input colors
@@ -259,7 +258,7 @@ class WorkoutWidget(private val rootView: View) {
             val presets = WorkoutExercise.getPresets(exerciseType)
             
             presets.forEach { preset ->
-                val presetButton = android.widget.Button(context).apply {
+                val presetButton = Button(context).apply {
                     text = preset
                     layoutParams = ViewGroup.MarginLayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -267,7 +266,7 @@ class WorkoutWidget(private val rootView: View) {
                     ).apply {
                         setMargins(0, 0, 0, 8)
                     }
-                    background = context.getDrawable(R.drawable.button_neutral_ripple)
+                    background = AppCompatResources.getDrawable(context, R.drawable.button_neutral_ripple)
                     setPadding(16, 12, 16, 12)
                     // Set preset button text color based on theme
                     setTextColor(textColor)
@@ -282,7 +281,7 @@ class WorkoutWidget(private val rootView: View) {
         }
         
         val typeGroup = dialogView.findViewById<android.widget.RadioGroup>(R.id.exercise_type_group)
-        typeGroup.setOnCheckedChangeListener { _, checkedId ->
+        typeGroup.setOnCheckedChangeListener { _, _ ->
             updatePresets()
         }
         
@@ -380,13 +379,11 @@ class WorkoutWidget(private val rootView: View) {
         try {
             val textColor = ContextCompat.getColor(context, R.color.text)
             val listView = dialog.listView
-            if (listView != null) {
-                listView.post {
-                    for (i in 0 until listView.childCount) {
-                        val child = listView.getChildAt(i)
-                        if (child is TextView) {
-                            child.setTextColor(textColor)
-                        }
+            listView?.post {
+                for (i in 0 until listView.childCount) {
+                    val child = listView.getChildAt(i)
+                    if (child is TextView) {
+                        child.setTextColor(textColor)
                     }
                 }
             }
@@ -487,30 +484,34 @@ class WorkoutWidget(private val rootView: View) {
                     // New streak starting
                     currentStreak = 1
                 }
-                prefs.edit()
-                    .putInt(STREAK_KEY, currentStreak)
-                    .putString(LAST_STREAK_DATE_KEY, today)
-                    .apply()
+                prefs.edit {
+                    putInt(STREAK_KEY, currentStreak)
+                    putString(LAST_STREAK_DATE_KEY, today)
+                }
             } else if (lastStreakDate != yesterday) {
                 // Streak broken
                 currentStreak = 0
-                prefs.edit()
-                    .putInt(STREAK_KEY, 0)
-                    .putString(LAST_STREAK_DATE_KEY, today)
-                    .apply()
+                prefs.edit {
+                    putInt(STREAK_KEY, 0)
+                    putString(LAST_STREAK_DATE_KEY, today)
+                }
             }
         } else {
             // First time - initialize
             if (workedOutToday) {
                 currentStreak = 1
-                prefs.edit()
-                    .putInt(STREAK_KEY, 1)
-                    .putString(LAST_STREAK_DATE_KEY, today)
-                    .apply()
+                prefs.edit {
+                    putInt(STREAK_KEY, 1)
+                    putString(LAST_STREAK_DATE_KEY, today)
+                }
             }
         }
         
-        streakText.text = "$currentStreak ${if (currentStreak == 1) "day" else "days"}"
+        streakText.text = if (currentStreak == 1) {
+            context.getString(R.string.workout_streak_day_format, currentStreak)
+        } else {
+            context.getString(R.string.workout_streak_days_format, currentStreak)
+        }
     }
     
     private fun getYesterdayDate(): String {
@@ -521,9 +522,9 @@ class WorkoutWidget(private val rootView: View) {
     
     private fun updateWeeklyTotal() {
         val calendar = Calendar.getInstance()
-        val today = calendar.get(Calendar.DAY_OF_WEEK)
+        val todayDay = calendar.get(Calendar.DAY_OF_WEEK)
         val startOfWeek = calendar.clone() as Calendar
-        startOfWeek.add(Calendar.DAY_OF_WEEK, -(today - calendar.firstDayOfWeek))
+        startOfWeek.add(Calendar.DAY_OF_WEEK, -(todayDay - calendar.firstDayOfWeek))
         startOfWeek.set(Calendar.HOUR_OF_DAY, 0)
         startOfWeek.set(Calendar.MINUTE, 0)
         startOfWeek.set(Calendar.SECOND, 0)
@@ -589,9 +590,8 @@ class WorkoutWidget(private val rootView: View) {
             exercises.forEach { exercise ->
                 jsonArray.put(exercise.toJson())
             }
-            prefs.edit().putString(EXERCISES_KEY, jsonArray.toString()).apply()
-        } catch (e: Exception) {
-            e.printStackTrace()
+            prefs.edit { putString(EXERCISES_KEY, jsonArray.toString()) }
+        } catch (_: Exception) {
         }
     }
     
@@ -608,13 +608,12 @@ class WorkoutWidget(private val rootView: View) {
                 }
             }
             
-            adapter.notifyDataSetChanged()
+            adapter.notifyItemRangeChanged(0, exercises.size)
             updateStats()
             
             // Update calendar view if it exists
             calendarView?.updateExercises(exercises)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
         }
     }
 }
@@ -634,7 +633,6 @@ class WorkoutAdapter(
         val incrementButton: View = itemView.findViewById(R.id.increment_button)
         val increment5Button: View = itemView.findViewById(R.id.increment_5_button)
         val menuButton: TextView = itemView.findViewById(R.id.exercise_menu_button)
-        val cardView: View = itemView.findViewById(R.id.exercise_card)
         
         // Time-based views
         val repsLayout: View = itemView.findViewById(R.id.reps_layout)
@@ -642,8 +640,8 @@ class WorkoutAdapter(
         val stopwatchDisplay: TextView = itemView.findViewById(R.id.stopwatch_display)
         val todayTimeText: TextView = itemView.findViewById(R.id.today_time_text)
         val bestTimeText: TextView = itemView.findViewById(R.id.best_time_text)
-        val stopwatchStartStop: android.widget.Button = itemView.findViewById(R.id.stopwatch_start_stop)
-        val stopwatchReset: android.widget.Button = itemView.findViewById(R.id.stopwatch_reset)
+        val stopwatchStartStop: Button = itemView.findViewById(R.id.stopwatch_start_stop)
+        val stopwatchReset: Button = itemView.findViewById(R.id.stopwatch_reset)
         
         var stopwatch: WorkoutStopwatch? = null
     }
@@ -656,6 +654,7 @@ class WorkoutAdapter(
     
     override fun onBindViewHolder(holder: WorkoutViewHolder, position: Int) {
         val exercise = exercises[position]
+        val context = holder.itemView.context
         
         holder.exerciseNameText.text = exercise.name
         
@@ -668,12 +667,12 @@ class WorkoutAdapter(
             holder.repsLayout.visibility = View.GONE
             holder.timeLayout.visibility = View.VISIBLE
             
-            holder.exerciseTypeLabel.text = "TIME"
+            holder.exerciseTypeLabel.text = context.getString(R.string.workout_type_time)
             holder.exerciseTypeLabel.visibility = View.VISIBLE
             
-            holder.todayTimeText.text = "Recorded: ${exercise.getDisplayValue()}"
-            holder.totalCountText.text = "Total: ${exercise.getTotalDisplayValue()}"
-            holder.bestTimeText.text = "Best: ${exercise.getBestDisplayValue()}"
+            holder.todayTimeText.text = context.getString(R.string.workout_recorded_format, exercise.getDisplayValue())
+            holder.totalCountText.text = context.getString(R.string.workout_total_format, exercise.getTotalDisplayValue())
+            holder.bestTimeText.text = context.getString(R.string.workout_best_format, exercise.getBestDisplayValue())
             
             // Setup stopwatch
             holder.stopwatch = WorkoutStopwatch(
@@ -691,8 +690,8 @@ class WorkoutAdapter(
             holder.exerciseTypeLabel.visibility = View.GONE
             
             holder.todayCountText.text = exercise.getDisplayValue()
-            holder.totalCountText.text = "Total: ${exercise.getTotalDisplayValue()}"
-            holder.bestDayText.text = "Best: ${exercise.getBestDisplayValue()}"
+            holder.totalCountText.text = context.getString(R.string.workout_total_format, exercise.getTotalDisplayValue())
+            holder.bestDayText.text = context.getString(R.string.workout_best_format, exercise.getBestDisplayValue())
             
             // Animate count change
             val animation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)

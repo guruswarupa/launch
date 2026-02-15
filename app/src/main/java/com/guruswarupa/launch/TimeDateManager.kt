@@ -40,10 +40,7 @@ class TimeDateManager(
         }
     }
     
-    private var isPowerSaverMode = false
-    
     fun startUpdates(isPowerSaver: Boolean = false) {
-        isPowerSaverMode = isPowerSaver
         stopUpdates()
         if (isPowerSaver) {
             handler.post(powerSaverUpdateRunnable)
@@ -70,11 +67,6 @@ class TimeDateManager(
         val currentTime = dateFormat.format(now)
         dateTextView.text = currentTime
         
-        rightDrawerDate?.text = artisticDateFormat.format(now).uppercase()
-    }
-    
-    fun setPowerSaverMode(enabled: Boolean) {
-        isPowerSaverMode = enabled
-        startUpdates(enabled)
+        rightDrawerDate?.text = artisticDateFormat.format(now).uppercase(Locale.getDefault())
     }
 }

@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -41,30 +42,28 @@ class TransactionAdapter(
 
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
         val transaction = transactions[position]
+        val context = holder.itemView.context
         
         // Set type
-        val typeText = if (transaction.type == "income") "Income" else "Expense"
-        holder.typeText.text = typeText
+        val isIncome = transaction.type == "income"
+        val typeLabel = context.getString(if (isIncome) R.string.income else R.string.expense)
+        holder.typeText.text = typeLabel
         
         // Set description or default text
-        holder.descriptionText.text = if (transaction.description.isNotEmpty()) {
-            transaction.description
-        } else {
-            if (transaction.type == "income") "Income" else "Expense"
-        }
+        holder.descriptionText.text = transaction.description.ifEmpty { typeLabel }
         
         // Set date and time
         val date = Date(transaction.timestamp)
         val dateStr = dateFormat.format(date)
         val timeStr = timeFormat.format(date)
-        holder.dateText.text = "$dateStr • $timeStr"
+        holder.dateText.text = context.getString(R.string.date_time_divider_format, dateStr, timeStr)
         
         // Set amount with proper formatting
-        val formattedAmount = String.format("%s%.2f", currencySymbol, kotlin.math.abs(transaction.amount))
-        holder.amountText.text = if (transaction.type == "income") {
-            "+$formattedAmount"
+        val absAmount = kotlin.math.abs(transaction.amount)
+        holder.amountText.text = if (isIncome) {
+            context.getString(R.string.transaction_amount_income_format, currencySymbol, absAmount)
         } else {
-            "-$formattedAmount"
+            context.getString(R.string.transaction_amount_expense_format, currencySymbol, absAmount)
         }
 
         holder.deleteButton.setOnClickListener {
@@ -74,6 +73,7 @@ class TransactionAdapter(
 
     override fun getItemCount(): Int = transactions.size
 
+    @SuppressLint("NotifyDataSetChanged")
     fun updateData(newTransactions: List<Transaction>) {
         this.transactions = newTransactions.toMutableList()
         notifyDataSetChanged()

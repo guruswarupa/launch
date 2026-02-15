@@ -11,8 +11,7 @@ import android.widget.TextView
 
 class NetworkStatsWidget(
     private val context: Context,
-    private val container: LinearLayout,
-    private val sharedPreferences: android.content.SharedPreferences
+    private val container: LinearLayout
 ) {
     private var isInitialized = false
     private lateinit var widgetView: View
@@ -24,7 +23,7 @@ class NetworkStatsWidget(
     private lateinit var runButton: Button
     private lateinit var wifiIpText: TextView
     
-    private val networkStatsManager = NetworkStatsManager(context)
+    private val networkStatsManager = NetworkStatsManager()
     private val handler = Handler(Looper.getMainLooper())
 
     // Auto-update runnable for data usage
@@ -68,9 +67,6 @@ class NetworkStatsWidget(
         handler.post(updateRunnable)
     }
     
-    // Periodically update data usage? For now, we update on init and when speedtest runs or just stick to init. 
-    // Let's add a periodic update along with the speedtest or just a separate update.
-    
     private fun updateDataUsage() {
         val (mobile, wifi) = networkStatsManager.getNetworkUsage()
         mobileUsageText.text = networkStatsManager.formatDataUsage(mobile)
@@ -80,21 +76,21 @@ class NetworkStatsWidget(
     
     private fun startSpeedTest() {
         runButton.isEnabled = false
-        runButton.text = "Running..."
-        statusText.text = "Initializing..."
+        runButton.setText(R.string.status_running)
+        statusText.setText(R.string.status_initializing)
         updateDataUsage() // Update stats before test
         
         networkStatsManager.runSpeedTest(
             callback = { result ->
                 handler.post {
-                    downloadText.text = "${result.downloadSpeedMbps} Mbps"
-                    uploadText.text = "${result.uploadSpeedMbps} Mbps"
-                    pingText.text = "${result.pingMs} ms"
-                    jitterText.text = "${result.jitterMs} ms"
+                    downloadText.text = context.getString(R.string.mbps_format, result.downloadSpeedMbps)
+                    uploadText.text = context.getString(R.string.mbps_format, result.uploadSpeedMbps)
+                    pingText.text = context.getString(R.string.ms_format, result.pingMs)
+                    jitterText.text = context.getString(R.string.ms_format, result.jitterMs)
                     
-                    statusText.text = "Test Completed"
+                    statusText.setText(R.string.status_completed)
                     runButton.isEnabled = true
-                    runButton.text = "Run Speedtest"
+                    runButton.setText(R.string.button_run_speedtest)
                 }
             },
             onProgress = { message ->
@@ -106,7 +102,7 @@ class NetworkStatsWidget(
                 handler.post {
                     statusText.text = error
                     runButton.isEnabled = true
-                    runButton.text = "Run Speedtest"
+                    runButton.setText(R.string.button_run_speedtest)
                 }
             }
         )

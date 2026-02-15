@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.SharedPreferences
@@ -21,10 +22,12 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.app.AppOpsManager
+import androidx.core.content.edit
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.view.isVisible
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -57,7 +60,10 @@ class OnboardingActivity : ComponentActivity() {
     private var hasRequestedDefaultLauncher = false
     private var displayStyleSelected = false
     private var backupImported = false
-    private val IMPORT_BACKUP_REQUEST_CODE = 1000
+
+    companion object {
+        private const val IMPORT_BACKUP_REQUEST_CODE = 1000
+    }
 
     // UI References
     private lateinit var onboardingScrollView: android.widget.ScrollView
@@ -107,25 +113,25 @@ class OnboardingActivity : ComponentActivity() {
 
     // Define all permissions with explanations
     private val permissionList = mutableListOf<PermissionInfo>().apply {
+        add(PermissionInfo(
+            Manifest.permission.READ_CONTACTS,
+            "Contacts Permission",
+            "We need access to your contacts so you can search for people by name in the universal search bar. This allows you to quickly call, message, or WhatsApp your contacts directly from the launcher.",
+            100
+        ))
+        add(PermissionInfo(
+            Manifest.permission.CALL_PHONE,
+            "Phone Call Permission",
+            "This permission lets you make phone calls directly from search results. When you search for a contact, you can tap to call them instantly without opening the phone app.",
+            101
+        ))
+        add(PermissionInfo(
+            Manifest.permission.SEND_SMS,
+            "SMS Permission",
+            "This allows you to send text messages directly from the launcher. When you search for a contact, you can quickly send them an SMS without leaving the launcher.",
+            102
+        ))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(PermissionInfo(
-                Manifest.permission.READ_CONTACTS,
-                "Contacts Permission",
-                "We need access to your contacts so you can search for people by name in the universal search bar. This allows you to quickly call, message, or WhatsApp your contacts directly from the launcher.",
-                100
-            ))
-            add(PermissionInfo(
-                Manifest.permission.CALL_PHONE,
-                "Phone Call Permission",
-                "This permission lets you make phone calls directly from search results. When you search for a contact, you can tap to call them instantly without opening the phone app.",
-                101
-            ))
-            add(PermissionInfo(
-                Manifest.permission.SEND_SMS,
-                "SMS Permission",
-                "This allows you to send text messages directly from the launcher. When you search for a contact, you can quickly send them an SMS without leaving the launcher.",
-                102
-            ))
             add(PermissionInfo(
                 Manifest.permission.READ_MEDIA_IMAGES,
                 "Photos & Media Permission",
@@ -145,24 +151,6 @@ class OnboardingActivity : ComponentActivity() {
                 105
             ))
         } else {
-            add(PermissionInfo(
-                Manifest.permission.READ_CONTACTS,
-                "Contacts Permission",
-                "We need access to your contacts so you can search for people by name in the universal search bar. This allows you to quickly call, message, or WhatsApp your contacts directly from the launcher.",
-                100
-            ))
-            add(PermissionInfo(
-                Manifest.permission.CALL_PHONE,
-                "Phone Call Permission",
-                "This permission lets you make phone calls directly from search results. When you search for a contact, you can tap to call them instantly without opening the phone app.",
-                101
-            ))
-            add(PermissionInfo(
-                Manifest.permission.SEND_SMS,
-                "SMS Permission",
-                "This allows you to send text messages directly from the launcher. When you search for a contact, you can quickly send them an SMS without leaving the launcher.",
-                102
-            ))
             add(PermissionInfo(
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 "Storage Permission",
@@ -209,6 +197,7 @@ class OnboardingActivity : ComponentActivity() {
         }
     }
     
+    @Suppress("DEPRECATION")
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -218,21 +207,19 @@ class OnboardingActivity : ComponentActivity() {
                 window.setDecorFitsSystemWindows(false)
                 
                 val decorView = window.decorView
-                if (decorView != null) {
-                    val insetsController = decorView.windowInsetsController
-                    if (insetsController != null) {
-                        val appearance = if (!isDarkMode) {
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        } else {
-                            0
-                        }
-                        insetsController.setSystemBarsAppearance(
-                            appearance,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        )
+                val insetsController = decorView.windowInsetsController
+                if (insetsController != null) {
+                    val appearance = if (!isDarkMode) {
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    } else {
+                        0
                     }
+                    insetsController.setSystemBarsAppearance(
+                        appearance,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    )
                 }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            } else {
                 // Android 5.0+ (API 21+)
                 window.statusBarColor = android.graphics.Color.TRANSPARENT
                 window.navigationBarColor = android.graphics.Color.TRANSPARENT
@@ -240,33 +227,26 @@ class OnboardingActivity : ComponentActivity() {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                 
-                @Suppress("DEPRECATION")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val decorView = window.decorView
-                    if (decorView != null) {
-                        var flags = decorView.systemUiVisibility
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        
-                        if (!isDarkMode) {
-                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                            }
-                        }
-                        
-                        decorView.systemUiVisibility = flags
+                val decorView = window.decorView
+                var flags = decorView.systemUiVisibility
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                
+                if (!isDarkMode) {
+                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                     }
                 }
+                
+                decorView.systemUiVisibility = flags
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                }
-            } catch (ex: Exception) {}
+                window.statusBarColor = android.graphics.Color.TRANSPARENT
+                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            } catch (_: Exception) {}
         }
     }
 
@@ -355,27 +335,27 @@ class OnboardingActivity : ComponentActivity() {
             OnboardingStep.WELCOME -> {
                 welcomeStep.visibility = View.VISIBLE
                 backButton.visibility = View.GONE
-                nextButton.text = "Get Started"
+                nextButton.setText(R.string.onboarding_get_started)
                 updateProgressIndicator(1)
             }
             OnboardingStep.PERMISSIONS -> {
                 permissionsStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
-                nextButton.text = "Start Permissions"
+                nextButton.setText(R.string.onboarding_start_permissions)
                 updateProgressIndicator(1)
                 nextButton.setOnClickListener { startPermissionFlow() }
             }
             OnboardingStep.DEFAULT_LAUNCHER -> {
                 defaultLauncherStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
-                nextButton.text = if (isDefaultLauncher()) "Continue" else "Set as Default"
+                nextButton.text = if (isDefaultLauncher()) getString(R.string.onboarding_continue) else "Set as Default"
                 updateProgressIndicator(2)
                 nextButton.setOnClickListener { goToNextStep() }
             }
             OnboardingStep.BACKUP_IMPORT -> {
                 backupImportStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
-                nextButton.text = "Skip"
+                nextButton.setText(R.string.onboarding_skip)
                 updateProgressIndicator(3)
                 setupBackupImportButtons()
                 if (cachedAppsList == null && !isPreloadingApps) {
@@ -385,7 +365,7 @@ class OnboardingActivity : ComponentActivity() {
             OnboardingStep.DISPLAY_STYLE -> {
                 displayStyleStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
-                nextButton.text = if (displayStyleSelected) "Continue" else "Select Style First"
+                nextButton.text = if (displayStyleSelected) getString(R.string.onboarding_continue) else "Select Style First"
                 nextButton.isEnabled = displayStyleSelected
                 updateProgressIndicator(4)
                 if (cachedAppsList == null && !isPreloadingApps) {
@@ -395,7 +375,7 @@ class OnboardingActivity : ComponentActivity() {
             OnboardingStep.FAVORITES -> {
                 favoritesStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
-                nextButton.text = "Continue"
+                nextButton.setText(R.string.onboarding_continue)
                 nextButton.isEnabled = true
                 updateProgressIndicator(5)
                 loadAppsForFavoritesSelection()
@@ -403,7 +383,7 @@ class OnboardingActivity : ComponentActivity() {
             OnboardingStep.WORKSPACES -> {
                 workspacesStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
-                nextButton.text = "Continue"
+                nextButton.setText(R.string.onboarding_continue)
                 nextButton.isEnabled = true
                 updateProgressIndicator(6)
                 loadAppsForWorkspacesSelection()
@@ -420,7 +400,7 @@ class OnboardingActivity : ComponentActivity() {
             OnboardingStep.WEATHER_API_KEY -> {
                 weatherApiKeyStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
-                nextButton.text = "Continue"
+                nextButton.setText(R.string.onboarding_continue)
                 nextButton.isEnabled = true
                 updateProgressIndicator(7)
                 val existingKey = prefs.getString("weather_api_key", "") ?: ""
@@ -435,7 +415,7 @@ class OnboardingActivity : ComponentActivity() {
             OnboardingStep.COMPLETE -> {
                 completeStep.visibility = View.VISIBLE
                 backButton.visibility = View.GONE
-                nextButton.text = "Launch App"
+                nextButton.setText(R.string.onboarding_launch_app)
                 updateProgressIndicator(7)
             }
         }
@@ -456,7 +436,7 @@ class OnboardingActivity : ComponentActivity() {
             if (isCircular) {
                 view.background = createCircularDrawable(color)
             } else {
-                view.background = android.graphics.drawable.ColorDrawable(color)
+                view.background = color.toDrawable()
             }
         }
 
@@ -535,12 +515,12 @@ class OnboardingActivity : ComponentActivity() {
             OnboardingStep.WORKSPACES -> showStep(OnboardingStep.WEATHER_API_KEY)
             OnboardingStep.WEATHER_API_KEY -> {
                 val apiKey = weatherApiKeyInput.text.toString().trim()
-                prefs.edit().putString("weather_api_key", apiKey).apply()
+                prefs.edit { putString("weather_api_key", apiKey) }
                 if (apiKey.isNotEmpty()) {
-                    prefs.edit().putBoolean("weather_api_key_rejected", false).apply()
+                    prefs.edit { putBoolean("weather_api_key_rejected", false) }
                 }
                 val location = weatherLocationInput.text.toString().trim()
-                prefs.edit().putString("weather_stored_city_name", location).apply()
+                prefs.edit { putString("weather_stored_city_name", location) }
                 showStep(OnboardingStep.COMPLETE)
             }
             OnboardingStep.COMPLETE -> finishSetup()
@@ -549,7 +529,7 @@ class OnboardingActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (hasRequestedStoragePermission && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        if (hasRequestedStoragePermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             hasRequestedStoragePermission = false
             if (hasStoragePermission()) {
                 requestUsageStatsPermission()
@@ -612,7 +592,9 @@ class OnboardingActivity : ComponentActivity() {
         dialog.show()
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        @Suppress("DEPRECATION")
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             requestNextPermission()
@@ -628,11 +610,11 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun markPermissionAsDenied(permission: String) {
         when (permission) {
-            Manifest.permission.READ_CONTACTS -> prefs.edit().putBoolean("contacts_permission_denied", true).apply()
-            Manifest.permission.SEND_SMS -> prefs.edit().putBoolean("sms_permission_denied", true).apply()
-            Manifest.permission.CALL_PHONE -> prefs.edit().putBoolean("call_phone_permission_denied", true).apply()
-            Manifest.permission.POST_NOTIFICATIONS -> prefs.edit().putBoolean("notification_permission_denied", true).apply()
-            Manifest.permission.ACTIVITY_RECOGNITION -> prefs.edit().putBoolean("activity_recognition_permission_denied", true).apply()
+            Manifest.permission.READ_CONTACTS -> prefs.edit { putBoolean("contacts_permission_denied", true) }
+            Manifest.permission.SEND_SMS -> prefs.edit { putBoolean("sms_permission_denied", true) }
+            Manifest.permission.CALL_PHONE -> prefs.edit { putBoolean("call_phone_permission_denied", true) }
+            Manifest.permission.POST_NOTIFICATIONS -> prefs.edit { putBoolean("notification_permission_denied", true) }
+            Manifest.permission.ACTIVITY_RECOGNITION -> prefs.edit { putBoolean("activity_recognition_permission_denied", true) }
         }
     }
     
@@ -647,7 +629,7 @@ class OnboardingActivity : ComponentActivity() {
     }
 
     private fun requestStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!hasStoragePermission()) {
                 showStoragePermissionExplanation()
             } else {
@@ -658,6 +640,7 @@ class OnboardingActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("InlinedApi")
     private fun showStoragePermissionExplanation() {
         val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Storage Access Permission")
@@ -666,7 +649,7 @@ class OnboardingActivity : ComponentActivity() {
                 try {
                     hasRequestedStoragePermission = true
                     startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(this, "Enable file access in Settings.", Toast.LENGTH_LONG).show()
                     requestUsageStatsPermission()
                 }
@@ -679,8 +662,8 @@ class OnboardingActivity : ComponentActivity() {
     }
 
     private fun hasStoragePermission(): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            try { android.os.Environment.isExternalStorageManager() } catch (e: Exception) { false }
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try { android.os.Environment.isExternalStorageManager() } catch (_: Exception) { false }
         } else {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         }
@@ -701,13 +684,13 @@ class OnboardingActivity : ComponentActivity() {
             .setPositiveButton("Open Settings") { _, _ ->
                 try {
                     startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(this, "Enable usage access in Settings.", Toast.LENGTH_LONG).show()
                     showStep(OnboardingStep.DEFAULT_LAUNCHER)
                 }
             }
             .setNegativeButton("Skip") { _, _ ->
-                prefs.edit().putBoolean("usage_stats_permission_denied", true).apply()
+                prefs.edit { putBoolean("usage_stats_permission_denied", true) }
                 showStep(OnboardingStep.DEFAULT_LAUNCHER)
             }
             .setCancelable(false)
@@ -716,6 +699,7 @@ class OnboardingActivity : ComponentActivity() {
         dialog.show()
     }
 
+    @Suppress("DEPRECATION")
     private fun hasUsageStatsPermission(): Boolean {
         val appOpsManager = getSystemService(APP_OPS_SERVICE) as AppOpsManager
         val mode = appOpsManager.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
@@ -737,7 +721,7 @@ class OnboardingActivity : ComponentActivity() {
         val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Continue Without Setting Default?")
             .setMessage("You can set this launcher as default later from Settings.\n\nDo you want to continue?")
-            .setPositiveButton("Continue") { _, _ -> showStep(OnboardingStep.BACKUP_IMPORT) }
+            .setPositiveButton(R.string.onboarding_continue) { _, _ -> showStep(OnboardingStep.BACKUP_IMPORT) }
             .setNegativeButton("Set as Default") { _, _ -> setDefaultLauncher() }
             .setCancelable(false)
             .create()
@@ -746,7 +730,7 @@ class OnboardingActivity : ComponentActivity() {
     }
 
     private fun selectDisplayStyle(style: String) {
-        prefs.edit().putString("view_preference", style).apply()
+        prefs.edit { putString("view_preference", style) }
         displayStyleSelected = true
         if (style == "grid") {
             gridStyleButton.alpha = 1.0f
@@ -756,7 +740,7 @@ class OnboardingActivity : ComponentActivity() {
             listStyleButton.alpha = 1.0f
         }
         nextButton.isEnabled = true
-        nextButton.text = "Continue"
+        nextButton.setText(R.string.onboarding_continue)
     }
     
     private fun preloadAppList() {
@@ -764,13 +748,13 @@ class OnboardingActivity : ComponentActivity() {
         isPreloadingApps = true
         Thread {
             try {
-                val packageManager = packageManager
+                val pm = packageManager
                 val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                val allApps = packageManager.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+                val allApps = pm.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
                 cachedAppsList = allApps.sortedWith(compareBy { app ->
-                    try { app.loadLabel(packageManager).toString().lowercase() } catch (e: Exception) { app.activityInfo.packageName.lowercase() }
+                    try { app.loadLabel(pm).toString().lowercase() } catch (_: Exception) { app.activityInfo.packageName.lowercase() }
                 })
-            } catch (e: Exception) {} finally { isPreloadingApps = false }
+            } catch (_: Exception) {} finally { isPreloadingApps = false }
         }.start()
     }
     
@@ -790,9 +774,9 @@ class OnboardingActivity : ComponentActivity() {
     private fun loadAppsForFavoritesSelectionInternal() {
         Thread {
             try {
-                val packageManager = packageManager
+                val pm = packageManager
                 val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                val quickApps = packageManager.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }.sortedBy { it.activityInfo.packageName.lowercase() }
+                val quickApps = pm.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }.sortedBy { it.activityInfo.packageName.lowercase() }
                 val existingFavorites = FavoriteAppManager(prefs).getFavoriteApps().toMutableSet()
                 runOnUiThread {
                     selectedFavorites = existingFavorites
@@ -803,13 +787,15 @@ class OnboardingActivity : ComponentActivity() {
                     favoritesRecyclerView.adapter = favoritesAdapter
                     favoritesRecyclerView.visibility = View.VISIBLE
                 }
-            } catch (e: Exception) { runOnUiThread { favoritesRecyclerView.visibility = View.VISIBLE } }
+            } catch (_: Exception) { runOnUiThread { favoritesRecyclerView.visibility = View.VISIBLE } }
         }.start()
     }
     
     private fun saveSelectedFavorites() {
-        prefs.edit().putStringSet("favorite_apps", selectedFavorites).apply()
-        prefs.edit().putBoolean("show_all_apps_mode", false).apply()
+        prefs.edit { 
+            putStringSet("favorite_apps", selectedFavorites)
+            putBoolean("show_all_apps_mode", false)
+        }
     }
     
     private fun loadAppsForWorkspacesSelection() {
@@ -817,15 +803,16 @@ class OnboardingActivity : ComponentActivity() {
         Thread {
             try {
                 val apps = cachedAppsList ?: run {
-                    val packageManager = packageManager
+                    val pm = packageManager
                     val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                    packageManager.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }.sortedBy { it.activityInfo.packageName.lowercase() }
+                    pm.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }.sortedBy { it.activityInfo.packageName.lowercase() }
                 }
                 runOnUiThread {
                     allAppsList = apps
                     updateAvailableAppsForWorkspace()
                     workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
                         createdWorkspaces.removeAt(position)
+                        @SuppressLint("NotifyDataSetChanged")
                         workspacesListAdapter.notifyDataSetChanged()
                         updateWorkspacesListVisibility()
                         updateAvailableAppsForWorkspace()
@@ -834,7 +821,7 @@ class OnboardingActivity : ComponentActivity() {
                     updateWorkspacesListVisibility()
                     workspacesAppsRecyclerView.visibility = View.VISIBLE
                 }
-            } catch (e: Exception) { runOnUiThread { workspacesAppsRecyclerView.visibility = View.VISIBLE } }
+            } catch (_: Exception) { runOnUiThread { workspacesAppsRecyclerView.visibility = View.VISIBLE } }
         }.start()
     }
     
@@ -869,13 +856,14 @@ class OnboardingActivity : ComponentActivity() {
             if (workspaceName.isEmpty()) { workspaceNameInput.requestFocus(); return@setOnClickListener }
             if (currentWorkspaceApps.isEmpty()) return@setOnClickListener
             createdWorkspaces.add(Pair(workspaceName, currentWorkspaceApps.toSet()))
+            @SuppressLint("NotifyDataSetChanged")
             workspacesListAdapter.notifyDataSetChanged()
             workspaceNameInput.text.clear()
             currentWorkspaceApps.clear()
             updateAvailableAppsForWorkspace()
             updateWorkspacesListVisibility()
             onboardingScrollView.post {
-                if (workspacesListRecyclerView.visibility == View.VISIBLE) {
+                if (workspacesListRecyclerView.isVisible) {
                     onboardingScrollView.smoothScrollTo(0, workspacesListRecyclerView.top - 100)
                 }
             }
@@ -883,8 +871,8 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun updateWorkspacesListVisibility() {
-        workspacesListTitle.visibility = if (createdWorkspaces.isNotEmpty()) View.VISIBLE else View.GONE
-        workspacesListRecyclerView.visibility = if (createdWorkspaces.isNotEmpty()) View.VISIBLE else View.GONE
+        workspacesListTitle.isVisible = createdWorkspaces.isNotEmpty()
+        workspacesListRecyclerView.isVisible = createdWorkspaces.isNotEmpty()
     }
     
     private fun fixDialogTextColors(dialog: AlertDialog) {
@@ -898,12 +886,12 @@ class OnboardingActivity : ComponentActivity() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(accentColor)
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(textColor)
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(textColor)
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
     }
 
     private fun finishSetup() {
         saveCreatedWorkspaces()
-        prefs.edit().putBoolean("isFirstTime", false).apply()
+        prefs.edit { putBoolean("isFirstTime", false) }
         startActivity(Intent(this, MainActivity::class.java).apply { 
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK 
         })
@@ -926,10 +914,13 @@ class OnboardingActivity : ComponentActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/json"
         }
+        @Suppress("DEPRECATION")
         startActivityForResult(intent, IMPORT_BACKUP_REQUEST_CODE)
     }
     
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_BACKUP_REQUEST_CODE) {
             data.data?.let { importBackupFromFile(it) }
@@ -944,14 +935,14 @@ class OnboardingActivity : ComponentActivity() {
                 val isNewFormat = settingsJson.has("main_preferences")
                 if (isNewFormat) {
                     if (settingsJson.has("main_preferences")) {
-                        val editor = prefs.edit()
-                        importPreferences(settingsJson.getJSONObject("main_preferences"), editor)
-                        editor.apply()
+                        prefs.edit {
+                            importPreferences(settingsJson.getJSONObject("main_preferences"), this)
+                        }
                     }
                 } else {
-                    val editor = prefs.edit()
-                    importPreferences(settingsJson, editor)
-                    editor.apply()
+                    prefs.edit {
+                        importPreferences(settingsJson, this)
+                    }
                 }
                 backupImported = true
                 Toast.makeText(this, "Backup imported successfully", Toast.LENGTH_SHORT).show()
@@ -966,8 +957,7 @@ class OnboardingActivity : ComponentActivity() {
         val keys = prefsJson.keys()
         while (keys.hasNext()) {
             val key = keys.next()
-            val value = prefsJson.get(key)
-            when (value) {
+            when (val value = prefsJson.get(key)) {
                 is String -> editor.putString(key, value)
                 is Boolean -> editor.putBoolean(key, value)
                 is Int -> editor.putInt(key, value)

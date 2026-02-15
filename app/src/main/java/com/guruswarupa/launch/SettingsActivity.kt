@@ -2,7 +2,6 @@ package com.guruswarupa.launch
 
 import android.Manifest
 import android.app.AlertDialog
-import android.app.AppOpsManager
 import android.app.WallpaperManager
 import android.content.Intent
 import android.content.SharedPreferences
@@ -12,38 +11,64 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
-import java.lang.Runtime
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
-import android.view.LayoutInflater
 import android.widget.*
-import androidx.appcompat.widget.SwitchCompat
 import androidx.activity.ComponentActivity
-import androidx.core.app.ActivityCompat
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
+import androidx.core.view.isVisible
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.util.Locale
 
 class SettingsActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
-    private val EXPORT_REQUEST_CODE = 1
-    private val IMPORT_REQUEST_CODE = 2
-    private val HIDDEN_APPS_REQUEST_CODE = 3
-    private var hasRequestedUsageStats = false
+
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                exportSettingsToFile(uri)
+            }
+        }
+    }
+
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                importSettingsFromFile(uri)
+            }
+        }
+    }
+
+    private val hiddenAppsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            sendBroadcast(intent)
+        }
+    }
+
+    private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+        sendBroadcast(intent)
+        setupWallpaper()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         // Make status bar and navigation bar transparent before setContentView
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = android.graphics.Color.TRANSPARENT
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        }
+        @Suppress("DEPRECATION")
+        window.statusBarColor = Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_settings)
         
@@ -60,22 +85,21 @@ class SettingsActivity : ComponentActivity() {
         val saveButton = findViewById<Button>(R.id.save_settings_button)
         
         // Track selected display style
-        val selectedStyleRef = object {
-            var value = prefs.getString("view_preference", "list") ?: "list"
-        }
+        val currentStyle = prefs.getString("view_preference", "list") ?: "list"
+        var selectedStyle = currentStyle
         
         // Update button states based on current preference
-        updateDisplayStyleButtons(gridOption, listOption, selectedStyleRef.value)
+        updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
         
         // Set click listeners for display style buttons
         gridOption.setOnClickListener {
-            selectedStyleRef.value = "grid"
-            updateDisplayStyleButtons(gridOption, listOption, selectedStyleRef.value)
+            selectedStyle = "grid"
+            updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
         }
         
         listOption.setOnClickListener {
-            selectedStyleRef.value = "list"
-            updateDisplayStyleButtons(gridOption, listOption, selectedStyleRef.value)
+            selectedStyle = "list"
+            updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
         }
         val exportButton = findViewById<Button>(R.id.export_settings_button)
         val importButton = findViewById<Button>(R.id.import_settings_button)
@@ -88,11 +112,8 @@ class SettingsActivity : ComponentActivity() {
         val changeWallpaperButton = findViewById<Button>(R.id.change_wallpaper_button)
         val feedbackButton = findViewById<Button>(R.id.feedback_button)
 
-        // Load current settings
-        loadCurrentSettings(gridOption, listOption)
-
         saveButton.setOnClickListener {
-            saveSettings(selectedStyleRef.value)
+            saveSettings(selectedStyle)
         }
 
         exportButton.setOnClickListener {
@@ -109,7 +130,7 @@ class SettingsActivity : ComponentActivity() {
         
         val hiddenAppsButton = findViewById<Button>(R.id.hidden_apps_button)
         hiddenAppsButton.setOnClickListener {
-            startActivityForResult(Intent(this, HiddenAppsSettingsActivity::class.java), HIDDEN_APPS_REQUEST_CODE)
+            hiddenAppsLauncher.launch(Intent(this, HiddenAppsSettingsActivity::class.java))
         }
         
         checkPermissionsButton.setOnClickListener {
@@ -156,9 +177,9 @@ class SettingsActivity : ComponentActivity() {
         val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         
         if (isDarkMode) {
-            overlay.setBackgroundColor(Color.parseColor("#CC000000")) // Darker overlay for dark mode
+            overlay.setBackgroundColor("#CC000000".toColorInt()) // Darker overlay for dark mode
         } else {
-            overlay.setBackgroundColor(Color.parseColor("#66FFFFFF")) // Lighter white overlay for light mode
+            overlay.setBackgroundColor("#66FFFFFF".toColorInt()) // Lighter white overlay for light mode
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
@@ -169,7 +190,7 @@ class SettingsActivity : ComponentActivity() {
                 if (wallpaperDrawable != null) {
                     wallpaperImageView.setImageDrawable(wallpaperDrawable)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Fallback to default wallpaper if anything fails
                 wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
             }
@@ -191,7 +212,7 @@ class SettingsActivity : ComponentActivity() {
         """.trimIndent()
 
         val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:")
+            data = "mailto:".toUri()
             putExtra(Intent.EXTRA_EMAIL, arrayOf("msgswarupa@gmail.com"))
             putExtra(Intent.EXTRA_SUBJECT, "Launch App Feedback")
             putExtra(Intent.EXTRA_TEXT, deviceInfo)
@@ -199,7 +220,7 @@ class SettingsActivity : ComponentActivity() {
 
         try {
             startActivity(Intent.createChooser(intent, "Send Feedback"))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(this, "No mail app found", Toast.LENGTH_SHORT).show()
         }
     }
@@ -207,8 +228,9 @@ class SettingsActivity : ComponentActivity() {
     private fun getAppVersion(): String {
         return try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
-            "${pInfo.versionName} (${if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo.longVersionCode else pInfo.versionCode})"
-        } catch (e: Exception) {
+            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo.longVersionCode else @Suppress("DEPRECATION") pInfo.versionCode
+            "${pInfo.versionName} ($versionCode)"
+        } catch (_: Exception) {
             "Unknown"
         }
     }
@@ -257,17 +279,17 @@ class SettingsActivity : ComponentActivity() {
         setupSectionToggle(quickActionsHeader, quickActionsContent, quickActionsArrow)
         
         // Setup torch toggle switch
-        val shakeTorchSwitch = findViewById<Switch>(R.id.shake_torch_switch)
+        val shakeTorchSwitch = findViewById<SwitchCompat>(R.id.shake_torch_switch)
         val isTorchEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
         shakeTorchSwitch.isChecked = isTorchEnabled
         
         shakeTorchSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked).apply()
+            prefs.edit { putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked) }
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
             sendBroadcast(intent)
             
             // Show/hide sensitivity container
-            findViewById<View>(R.id.shake_sensitivity_container).visibility = if (isChecked) View.VISIBLE else View.GONE
+            findViewById<View>(R.id.shake_sensitivity_container).isVisible = isChecked
         }
         
         // Setup sensitivity seekbar
@@ -277,14 +299,14 @@ class SettingsActivity : ComponentActivity() {
         
         sensitivitySeekBar.progress = currentSensitivity - 1
         sensitivityValueText.text = currentSensitivity.toString()
-        findViewById<View>(R.id.shake_sensitivity_container).visibility = if (isTorchEnabled) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.shake_sensitivity_container).isVisible = isTorchEnabled
         
         sensitivitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val sensitivity = progress + 1
                 sensitivityValueText.text = sensitivity.toString()
                 if (fromUser) {
-                    prefs.edit().putInt(Constants.Prefs.SHAKE_SENSITIVITY, sensitivity).apply()
+                    prefs.edit { putInt(Constants.Prefs.SHAKE_SENSITIVITY, sensitivity) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
                     sendBroadcast(intent)
                 }
@@ -309,23 +331,10 @@ class SettingsActivity : ComponentActivity() {
     
     private fun setupSectionToggle(header: LinearLayout, content: LinearLayout, arrow: TextView) {
         header.setOnClickListener {
-            val isExpanded = content.visibility == View.VISIBLE
-            if (isExpanded) {
-                content.visibility = View.GONE
-                arrow.text = "▼"
-            } else {
-                content.visibility = View.VISIBLE
-                arrow.text = "▲"
-            }
+            val isExpanded = content.isVisible
+            content.isVisible = !isExpanded
+            arrow.text = if (!isExpanded) "▲" else "▼"
         }
-    }
-    
-    private fun loadCurrentSettings(
-        gridOption: Button,
-        listOption: Button
-    ) {
-        val currentStyle = prefs.getString("view_preference", "list") ?: "list"
-        updateDisplayStyleButtons(gridOption, listOption, currentStyle)
     }
     
     private fun updateDisplayStyleButtons(gridOption: Button, listOption: Button, selectedStyle: String) {
@@ -339,11 +348,9 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun saveSettings(selectedDisplayStyle: String) {
-        val editor = prefs.edit()
-
-        editor.putString("view_preference", selectedDisplayStyle)
-
-        editor.commit()
+        prefs.edit {
+            putString("view_preference", selectedDisplayStyle)
+        }
 
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()
 
@@ -353,29 +360,13 @@ class SettingsActivity : ComponentActivity() {
         finish()
     }
 
-    private fun isDefaultLauncher(): Boolean {
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
-        }
-        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        return resolveInfo?.activityInfo?.packageName == packageName
-    }
-    
-    private fun openDefaultLauncherSettings() {
-        try {
-            startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-        } catch (e: Exception) {
-            Toast.makeText(this, "Could not open launcher settings", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun exportSettings() {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/json"
             putExtra(Intent.EXTRA_TITLE, "launch_settings_backup.json")
         }
-        startActivityForResult(intent, EXPORT_REQUEST_CODE)
+        exportLauncher.launch(intent)
     }
 
     private fun importSettings() {
@@ -383,40 +374,7 @@ class SettingsActivity : ComponentActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/json"
         }
-        startActivityForResult(intent, IMPORT_REQUEST_CODE)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (resultCode == RESULT_OK) {
-            when (requestCode) {
-                EXPORT_REQUEST_CODE -> {
-                    data?.data?.let { uri ->
-                        exportSettingsToFile(uri)
-                    }
-                }
-                IMPORT_REQUEST_CODE -> {
-                    data?.data?.let { uri ->
-                        importSettingsFromFile(uri)
-                    }
-                }
-                HIDDEN_APPS_REQUEST_CODE -> {
-                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                    sendBroadcast(intent)
-                }
-                WALLPAPER_REQUEST_CODE -> {
-                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                    sendBroadcast(intent)
-                    Toast.makeText(this, "Wallpaper changed", Toast.LENGTH_SHORT).show()
-                    setupWallpaper()
-                }
-            }
-        } else if (requestCode == WALLPAPER_REQUEST_CODE) {
-            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-            sendBroadcast(intent)
-            setupWallpaper()
-        }
+        importLauncher.launch(intent)
     }
 
     private fun exportSettingsToFile(uri: Uri) {
@@ -515,23 +473,23 @@ class SettingsActivity : ComponentActivity() {
                 if (isNewFormat) {
                     if (settingsJson.has("main_preferences")) {
                         val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
-                        val editor = prefs.edit()
-                        importPreferences(mainPrefsJson, editor)
-                        editor.apply()
+                        prefs.edit {
+                            importPreferences(mainPrefsJson, this)
+                        }
                     }
                     if (settingsJson.has("app_timer_prefs")) {
                         val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
                         val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
-                        val editor = appTimerPrefs.edit()
-                        importPreferences(appTimerJson, editor)
-                        editor.apply()
+                        appTimerPrefs.edit {
+                            importPreferences(appTimerJson, this)
+                        }
                     }
                     if (settingsJson.has("app_lock_prefs")) {
                         val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
                         val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
-                        val editor = appLockPrefs.edit()
-                        importPreferences(appLockJson, editor)
-                        editor.apply()
+                        appLockPrefs.edit {
+                            importPreferences(appLockJson, this)
+                        }
                     }
                     
                     // Import physical activity data
@@ -554,14 +512,14 @@ class SettingsActivity : ComponentActivity() {
                         importFinanceData(settingsJson.getJSONObject("finance_data"))
                     }
                 } else {
-                    val editor = prefs.edit()
-                    importPreferences(settingsJson, editor)
-                    editor.apply()
+                    prefs.edit {
+                        importPreferences(settingsJson, this)
+                    }
                 }
 
                 val gridOption = findViewById<Button>(R.id.grid_option)
                 val listOption = findViewById<Button>(R.id.list_option)
-                loadCurrentSettings(gridOption, listOption)
+                updateDisplayStyleButtons(gridOption, listOption, prefs.getString("view_preference", "list") ?: "list")
 
                 Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }
@@ -574,9 +532,7 @@ class SettingsActivity : ComponentActivity() {
         val keys = prefsJson.keys()
         while (keys.hasNext()) {
             val key = keys.next()
-            val value = prefsJson.get(key)
-
-            when (value) {
+            when (val value = prefsJson.get(key)) {
                 is String -> editor.putString(key, value)
                 is Boolean -> editor.putBoolean(key, value)
                 is Int -> editor.putInt(key, value)
@@ -596,10 +552,10 @@ class SettingsActivity : ComponentActivity() {
 
     
     private fun showTutorial() {
-        val editor = prefs.edit()
-        editor.putBoolean("feature_tutorial_shown", false)
-        editor.putInt("feature_tutorial_current_step", 0)
-        editor.apply()
+        prefs.edit {
+            putBoolean("feature_tutorial_shown", false)
+            putInt("feature_tutorial_current_step", 0)
+        }
         
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -615,13 +571,12 @@ class SettingsActivity : ComponentActivity() {
             .setMessage("This will restart the launcher. Continue?")
             .setPositiveButton("Restart") { _, _ ->
                 try {
-                    val packageManager = packageManager
                     val intent = packageManager.getLaunchIntentForPackage(packageName)
                     val componentName = intent?.component
                     if (componentName != null) {
-                    val mainIntent = Intent.makeRestartActivityTask(componentName)
-                    startActivity(mainIntent)
-                    Runtime.getRuntime().exit(0)
+                        val mainIntent = Intent.makeRestartActivityTask(componentName)
+                        startActivity(mainIntent)
+                        Runtime.getRuntime().exit(0)
                     } else {
                         Toast.makeText(this, "Failed to restart launcher", Toast.LENGTH_SHORT).show()
                     }
@@ -669,7 +624,7 @@ class SettingsActivity : ComponentActivity() {
                                     deletedCount++
                                     totalSize += size
                                 }
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                             }
                         }
                     }
@@ -684,7 +639,7 @@ class SettingsActivity : ComponentActivity() {
                                         deletedCount++
                                         totalSize += size
                                     }
-                                } catch (e: Exception) {
+                                } catch (_: Exception) {
                                 }
                             }
                         }
@@ -721,9 +676,8 @@ class SettingsActivity : ComponentActivity() {
                     
                     allPrefs.forEach { prefName ->
                         try {
-                            val prefs = getSharedPreferences(prefName, MODE_PRIVATE)
-                            prefs.edit().clear().commit()
-                        } catch (e: Exception) {
+                            getSharedPreferences(prefName, MODE_PRIVATE).edit { clear() }
+                        } catch (_: Exception) {
                         }
                     }
                     
@@ -736,7 +690,7 @@ class SettingsActivity : ComponentActivity() {
                                 extCacheDir.listFiles()?.forEach { it.deleteRecursively() }
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                     }
                     
                     try {
@@ -748,7 +702,7 @@ class SettingsActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                     }
                     
                     try {
@@ -759,24 +713,23 @@ class SettingsActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                     }
                     
                     Toast.makeText(this, "All data cleared. Launcher will restart.", Toast.LENGTH_LONG).show()
                     
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         try {
-                            val packageManager = packageManager
                             val intent = packageManager.getLaunchIntentForPackage(packageName)
                             val componentName = intent?.component
                             if (componentName != null) {
                                 val mainIntent = Intent.makeRestartActivityTask(componentName)
                                 startActivity(mainIntent)
-                                java.lang.Runtime.getRuntime().exit(0)
+                                Runtime.getRuntime().exit(0)
                             } else {
                                 finish()
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             finish()
                         }
                     }, 1000)
@@ -798,14 +751,9 @@ class SettingsActivity : ComponentActivity() {
         } catch (_: Exception) {}
     }
     
-    companion object {
-        private const val PERMISSION_REQUEST_CODE = 1000
-        private const val WALLPAPER_REQUEST_CODE = 456
-    }
-    
     private fun chooseWallpaper() {
         val intent = Intent(Intent.ACTION_SET_WALLPAPER)
-        startActivityForResult(intent, WALLPAPER_REQUEST_CODE)
+        wallpaperLauncher.launch(intent)
     }
     
     private fun makeSystemBarsTransparent() {
@@ -813,59 +761,66 @@ class SettingsActivity : ComponentActivity() {
             val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                window.setDecorFitsSystemWindows(false)
+                @Suppress("DEPRECATION")
+                window.statusBarColor = Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = Color.TRANSPARENT
                 
-                val decorView = window.decorView
-                if (decorView != null) {
-                    val insetsController = decorView.windowInsetsController
-                    if (insetsController != null) {
-                        val appearance = if (!isDarkMode) {
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        } else {
-                            0
-                        }
-                        insetsController.setSystemBarsAppearance(
-                            appearance,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        )
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                
+                val insetsController = window.decorView.windowInsetsController
+                if (insetsController != null) {
+                    val appearance = if (!isDarkMode) {
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    } else {
+                        0
                     }
+                    insetsController.setSystemBarsAppearance(
+                        appearance,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                    )
                 }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            } else {
+                @Suppress("DEPRECATION")
+                window.statusBarColor = Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = Color.TRANSPARENT
                 window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                @Suppress("DEPRECATION")
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                @Suppress("DEPRECATION")
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                 
                 @Suppress("DEPRECATION")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val decorView = window.decorView
-                    if (decorView != null) {
-                        var flags = decorView.systemUiVisibility
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        
-                        if (!isDarkMode) {
-                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                            }
-                        }
-                        
-                        decorView.systemUiVisibility = flags
+                val decorView = window.decorView
+                @Suppress("DEPRECATION")
+                var flags = decorView.systemUiVisibility
+                @Suppress("DEPRECATION")
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                @Suppress("DEPRECATION")
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                @Suppress("DEPRECATION")
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                
+                if (!isDarkMode) {
+                    @Suppress("DEPRECATION")
+                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        @Suppress("DEPRECATION")
+                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                     }
                 }
+                
+                @Suppress("DEPRECATION")
+                decorView.systemUiVisibility = flags
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                }
-            } catch (ex: Exception) {
+                @Suppress("DEPRECATION")
+                window.statusBarColor = Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = Color.TRANSPARENT
+            } catch (_: Exception) {
             }
         }
     }
@@ -895,7 +850,7 @@ class SettingsActivity : ComponentActivity() {
                 }
                 settingsJson.put("physical_activity_data", activityJson)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently fail if physical activity data is not available
         }
     }
@@ -923,7 +878,7 @@ class SettingsActivity : ComponentActivity() {
                 }
                 settingsJson.put("workout_data", workoutJson)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently fail if workout data is not available
         }
     }
@@ -941,7 +896,7 @@ class SettingsActivity : ComponentActivity() {
                 todoJson.put("todo_items", todoItemsString)
                 settingsJson.put("todo_data", todoJson)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently fail if todo data is not available
         }
     }
@@ -957,7 +912,7 @@ class SettingsActivity : ComponentActivity() {
             // Export balance and currency
             val balance = financePrefs.getFloat("finance_balance", 0.0f)
             val currency = financePrefs.getString("finance_currency", "USD")
-            financeJson.put("balance", balance)
+            financeJson.put("balance", balance.toDouble())
             if (currency != null) {
                 financeJson.put("currency", currency)
             }
@@ -969,7 +924,7 @@ class SettingsActivity : ComponentActivity() {
                 .forEach { key ->
                     val value = allPrefs[key]
                     if (value is Float) {
-                        monthlyData.put(key, value)
+                        monthlyData.put(key, value.toDouble())
                     }
                 }
             if (monthlyData.length() > 0) {
@@ -992,7 +947,7 @@ class SettingsActivity : ComponentActivity() {
             if (financeJson.length() > 0) {
                 settingsJson.put("finance_data", financeJson)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently fail if finance data is not available
         }
     }
@@ -1003,10 +958,10 @@ class SettingsActivity : ComponentActivity() {
     private fun importPhysicalActivityData(activityJson: JSONObject) {
         try {
             val activityPrefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
-            val editor = activityPrefs.edit()
-            importPreferences(activityJson, editor)
-            editor.apply()
-        } catch (e: Exception) {
+            activityPrefs.edit {
+                importPreferences(activityJson, this)
+            }
+        } catch (_: Exception) {
             // Silently fail if import fails
         }
     }
@@ -1017,23 +972,21 @@ class SettingsActivity : ComponentActivity() {
     private fun importWorkoutData(workoutJson: JSONObject) {
         try {
             val workoutPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            val editor = workoutPrefs.edit()
-            
-            if (workoutJson.has("exercises")) {
-                editor.putString("workout_exercises", workoutJson.getString("exercises"))
+            workoutPrefs.edit {
+                if (workoutJson.has("exercises")) {
+                    putString("workout_exercises", workoutJson.getString("exercises"))
+                }
+                if (workoutJson.has("last_reset_date")) {
+                    putString("workout_last_reset_date", workoutJson.getString("last_reset_date"))
+                }
+                if (workoutJson.has("streak")) {
+                    putInt("workout_streak", workoutJson.getInt("streak"))
+                }
+                if (workoutJson.has("last_streak_date")) {
+                    putString("workout_last_streak_date", workoutJson.getString("last_streak_date"))
+                }
             }
-            if (workoutJson.has("last_reset_date")) {
-                editor.putString("workout_last_reset_date", workoutJson.getString("last_reset_date"))
-            }
-            if (workoutJson.has("streak")) {
-                editor.putInt("workout_streak", workoutJson.getInt("streak"))
-            }
-            if (workoutJson.has("last_streak_date")) {
-                editor.putString("workout_last_streak_date", workoutJson.getString("last_streak_date"))
-            }
-            
-            editor.apply()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently fail if import fails
         }
     }
@@ -1044,14 +997,12 @@ class SettingsActivity : ComponentActivity() {
     private fun importTodoData(todoJson: JSONObject) {
         try {
             val todoPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            val editor = todoPrefs.edit()
-            
-            if (todoJson.has("todo_items")) {
-                editor.putString("todo_items", todoJson.getString("todo_items"))
+            todoPrefs.edit {
+                if (todoJson.has("todo_items")) {
+                    putString("todo_items", todoJson.getString("todo_items"))
+                }
             }
-            
-            editor.apply()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently fail if import fails
         }
     }
@@ -1062,39 +1013,37 @@ class SettingsActivity : ComponentActivity() {
     private fun importFinanceData(financeJson: JSONObject) {
         try {
             val financePrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            val editor = financePrefs.edit()
-            
-            // Import balance and currency
-            if (financeJson.has("balance")) {
-                editor.putFloat("finance_balance", financeJson.getDouble("balance").toFloat())
-            }
-            if (financeJson.has("currency")) {
-                editor.putString("finance_currency", financeJson.getString("currency"))
-            }
-            
-            // Import monthly data
-            if (financeJson.has("monthly_data")) {
-                val monthlyData = financeJson.getJSONObject("monthly_data")
-                val keys = monthlyData.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    editor.putFloat(key, monthlyData.getDouble(key).toFloat())
+            financePrefs.edit {
+                // Import balance and currency
+                if (financeJson.has("balance")) {
+                    putFloat("finance_balance", financeJson.getDouble("balance").toFloat())
+                }
+                if (financeJson.has("currency")) {
+                    putString("finance_currency", financeJson.getString("currency"))
+                }
+                
+                // Import monthly data
+                if (financeJson.has("monthly_data")) {
+                    val monthlyData = financeJson.getJSONObject("monthly_data")
+                    val keys = monthlyData.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        putFloat(key, monthlyData.getDouble(key).toFloat())
+                    }
+                }
+                
+                // Import transactions
+                if (financeJson.has("transactions")) {
+                    val transactions = financeJson.getJSONArray("transactions")
+                    for (i in 0 until transactions.length()) {
+                        val transactionData = transactions.getString(i)
+                        // Generate a unique key for each transaction
+                        val timestamp = System.currentTimeMillis() + i
+                        putString("transaction_$timestamp", transactionData)
+                    }
                 }
             }
-            
-            // Import transactions
-            if (financeJson.has("transactions")) {
-                val transactions = financeJson.getJSONArray("transactions")
-                for (i in 0 until transactions.length()) {
-                    val transactionData = transactions.getString(i)
-                    // Generate a unique key for each transaction
-                    val timestamp = System.currentTimeMillis() + i
-                    editor.putString("transaction_$timestamp", transactionData)
-                }
-            }
-            
-            editor.apply()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Silently fail if import fails
         }
     }

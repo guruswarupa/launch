@@ -36,11 +36,11 @@ class ActivityResultHandler(
             shareManager.handleFilePickerResult(data?.data)
         } else if (requestCode == REQUEST_PICK_WIDGET && resultCode == Activity.RESULT_OK) {
             onBlockBackGestures()
-            widgetManager.handleWidgetPicked(activity, data, REQUEST_PICK_WIDGET)
+            widgetManager.handleWidgetPicked(activity, data)
         } else if (requestCode == REQUEST_CONFIGURE_WIDGET && resultCode == Activity.RESULT_OK) {
             onBlockBackGestures()
             val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
-            widgetManager.handleWidgetConfigured(activity, appWidgetId)
+            widgetManager.handleWidgetConfigured(appWidgetId)
         } else if (requestCode == WALLPAPER_REQUEST_CODE) {
             wallpaperManagerHelper?.let {
                 it.clearCache()
@@ -54,6 +54,9 @@ class ActivityResultHandler(
         results?.get(0)?.let { result ->
             searchBox.setText(result)
             searchBox.setSelection(result.length)
+            
+            // Pass the voice result to handleCommand if handler is available
+            voiceCommandHandler?.handleCommand(result)
         }
     }
 }

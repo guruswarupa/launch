@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.edit
 import java.text.DecimalFormat
 
 class TemperatureWidget(
@@ -76,14 +77,14 @@ class TemperatureWidget(
     private fun toggleTemperature() {
         val currentState = sharedPreferences.getBoolean(PREF_TEMPERATURE_ENABLED, false)
         val newState = !currentState
-        sharedPreferences.edit().putBoolean(PREF_TEMPERATURE_ENABLED, newState).apply()
+        sharedPreferences.edit { putBoolean(PREF_TEMPERATURE_ENABLED, newState) }
         updateUI(newState)
     }
     
     private fun updateUI(isEnabled: Boolean) {
         if (isEnabled) {
             widgetContainer.visibility = View.VISIBLE
-            toggleButton.text = "Disable"
+            toggleButton.text = context.getString(R.string.disable)
             
             if (temperatureManager.hasTemperatureSensor()) {
                 setupWithSensor()
@@ -92,7 +93,7 @@ class TemperatureWidget(
             }
         } else {
             widgetContainer.visibility = View.GONE
-            toggleButton.text = "Enable"
+            toggleButton.text = context.getString(R.string.enable)
             handler.removeCallbacks(updateRunnable)
             temperatureManager.stopTracking()
         }
@@ -114,7 +115,7 @@ class TemperatureWidget(
         temperatureText.visibility = View.GONE
         fahrenheitText.visibility = View.GONE
         statusText.visibility = View.GONE
-        noSensorText.text = "Temperature sensor not available on this device"
+        noSensorText.text = context.getString(R.string.temperature_sensor_not_available)
     }
     
     private fun updateDisplay() {
@@ -126,13 +127,13 @@ class TemperatureWidget(
     
     private fun updateTemperatureDisplay(temperature: Float) {
         val df = DecimalFormat("#.#")
-        temperatureText.text = "${df.format(temperature)}°C"
+        temperatureText.text = context.getString(R.string.temperature_c_format, df.format(temperature))
         
         val fahrenheit = temperatureManager.getTemperatureInFahrenheit()
-        fahrenheitText.text = "${df.format(fahrenheit)}°F"
+        fahrenheitText.text = context.getString(R.string.temperature_f_format, df.format(fahrenheit))
         
         val status = temperatureManager.getTemperatureStatus()
-        statusText.text = "Status: $status"
+        statusText.text = context.getString(R.string.status_format, status)
     }
     
     fun onResume() {

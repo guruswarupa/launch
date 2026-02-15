@@ -8,13 +8,15 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Detects shake gestures using the accelerometer sensor.
  * Supports triple shake detection with configurable thresholds.
  */
 class ShakeDetector(
-    private val context: Context,
+    context: Context,
     private val onDoubleShake: () -> Unit
 ) : SensorEventListener {
     
@@ -90,12 +92,12 @@ class ShakeDetector(
         val timeDelta = currentTime - lastUpdateTime
         if (timeDelta < 50) return // Skip if too soon (avoid too frequent checks)
         
-        val deltaX = Math.abs(x - lastX)
-        val deltaY = Math.abs(y - lastY)
-        val deltaZ = Math.abs(z - lastZ)
+        val deltaX = abs(x - lastX)
+        val deltaY = abs(y - lastY)
+        val deltaZ = abs(z - lastZ)
         
         // Calculate total acceleration change
-        val acceleration = Math.sqrt((deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ).toDouble()).toFloat()
+        val acceleration = sqrt((deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ).toDouble()).toFloat()
         
         if (acceleration > shakeThreshold) {
             val timeSinceLastShake = currentTime - lastShakeTime

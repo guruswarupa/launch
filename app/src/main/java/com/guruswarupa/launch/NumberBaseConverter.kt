@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+@Suppress("unused")
 object NumberBaseConverter {
     
     fun decimalToBinary(decimal: Long): String {
@@ -37,7 +38,7 @@ object NumberBaseConverter {
             } else {
                 decimal.toString(toBase).uppercase()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return "Error"
         }
     }

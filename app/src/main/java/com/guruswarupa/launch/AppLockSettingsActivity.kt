@@ -18,8 +18,7 @@ import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -35,14 +34,13 @@ class AppLockSettingsActivity : ComponentActivity() {
     private lateinit var resetAppLockButton: Button
     private var isPinVerifiedForThisSession = false
 
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         // Make status bar and navigation bar transparent BEFORE setContentView
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            window.statusBarColor = Color.TRANSPARENT
-            window.navigationBarColor = Color.TRANSPARENT
-        }
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_app_lock_settings)
         
@@ -160,9 +158,9 @@ class AppLockSettingsActivity : ComponentActivity() {
         val overlay = findViewById<View>(R.id.settings_overlay)
         
         if (isDarkMode) {
-            overlay.setBackgroundColor(Color.parseColor("#CC000000"))
+            overlay.setBackgroundColor("#CC000000".toColorInt())
         } else {
-            overlay.setBackgroundColor(Color.parseColor("#66FFFFFF"))
+            overlay.setBackgroundColor("#66FFFFFF".toColorInt())
         }
         
         setupWallpaper()
@@ -183,7 +181,7 @@ class AppLockSettingsActivity : ComponentActivity() {
                 if (wallpaperDrawable != null) {
                     wallpaperImageView.setImageDrawable(wallpaperDrawable)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
             }
         } else {
@@ -191,6 +189,7 @@ class AppLockSettingsActivity : ComponentActivity() {
         }
     }
     
+    @Suppress("DEPRECATION")
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -199,50 +198,43 @@ class AppLockSettingsActivity : ComponentActivity() {
                 window.setDecorFitsSystemWindows(false)
                 
                 val insetsController = window.decorView.windowInsetsController
-                if (insetsController != null) {
+                insetsController?.let {
                     val appearance = if (!isDarkMode) {
                         WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
                     } else {
                         0
                     }
-                    insetsController.setSystemBarsAppearance(
+                    it.setSystemBarsAppearance(
                         appearance,
                         WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
                     )
                 }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            } else {
                 window.statusBarColor = Color.TRANSPARENT
                 window.navigationBarColor = Color.TRANSPARENT
                 window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
                 
-                @Suppress("DEPRECATION")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val decorView = window.decorView
-                    if (decorView != null) {
-                        var flags = decorView.systemUiVisibility
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        
-                        if (!isDarkMode) {
-                            flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                            }
-                        }
-                        decorView.systemUiVisibility = flags
+                val decorView = window.decorView
+                var flags = decorView.systemUiVisibility
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                
+                if (!isDarkMode) {
+                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                     }
                 }
+                decorView.systemUiVisibility = flags
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    window.statusBarColor = Color.TRANSPARENT
-                    window.navigationBarColor = Color.TRANSPARENT
-                }
-            } catch (ex: Exception) {
+                window.statusBarColor = Color.TRANSPARENT
+                window.navigationBarColor = Color.TRANSPARENT
+            } catch (_: Exception) {
             }
         }
     }

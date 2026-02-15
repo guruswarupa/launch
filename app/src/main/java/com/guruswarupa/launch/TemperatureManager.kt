@@ -8,7 +8,7 @@ import android.hardware.SensorManager
 import android.util.Log
 import kotlin.math.*
 
-class TemperatureManager(private val context: Context) : SensorEventListener {
+class TemperatureManager(context: Context) : SensorEventListener {
     
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var temperatureSensor: Sensor? = null
@@ -31,6 +31,7 @@ class TemperatureManager(private val context: Context) : SensorEventListener {
         
         // Fallback to device temperature if ambient not available
         if (temperatureSensor == null) {
+            @Suppress("DEPRECATION")
             temperatureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_TEMPERATURE)
         }
         
@@ -78,6 +79,7 @@ class TemperatureManager(private val context: Context) : SensorEventListener {
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null) return
         
+        @Suppress("DEPRECATION")
         val temperature = when (event.sensor.type) {
             Sensor.TYPE_AMBIENT_TEMPERATURE -> event.values[0]
             Sensor.TYPE_TEMPERATURE -> event.values[0]
