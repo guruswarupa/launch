@@ -1,6 +1,9 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -10,6 +13,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -62,6 +67,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var rightDrawerWallpaper: ImageView
     private lateinit var rightDrawerTime: TextView
     private lateinit var rightDrawerDate: TextView
+    private lateinit var wallpaperDrawer: FrameLayout
 
     // Core managers
     internal lateinit var cacheManager: CacheManager
@@ -279,6 +285,7 @@ class MainActivity : FragmentActivity() {
         topWidgetContainer = findViewById(R.id.top_widget_container)
         
         // Right Drawer Views
+        wallpaperDrawer = findViewById(R.id.wallpaper_drawer)
         rightDrawerWallpaper = findViewById(R.id.right_drawer_wallpaper)
         rightDrawerTime = findViewById(R.id.right_drawer_time)
         rightDrawerDate = findViewById(R.id.right_drawer_date)
@@ -295,6 +302,43 @@ class MainActivity : FragmentActivity() {
         
         // Setup search box listener to show/hide top widget
         setupSearchBoxListener()
+        
+        // Setup double tap for right drawer
+        setupRightDrawerDoubleTap()
+    }
+    
+    /**
+     * Sets up double tap listener for the right drawer to turn screen off.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupRightDrawerDoubleTap() {
+        val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                lockScreen()
+                return true
+            }
+        })
+        
+        wallpaperDrawer.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+            true
+        }
+    }
+    
+    /**
+     * Attempts to turn off the screen using Device Admin.
+     */
+    private fun lockScreen() {
+        if (permissionManager.isDeviceAdminActive()) {
+            val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            try {
+                devicePolicyManager.lockNow()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Error locking screen: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            permissionManager.requestDeviceAdminPermission()
+        }
     }
     
     /**
