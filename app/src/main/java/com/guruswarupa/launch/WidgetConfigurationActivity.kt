@@ -1,6 +1,5 @@
 package com.guruswarupa.launch
 
-import android.content.Context
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
@@ -49,7 +48,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             insets
         }
 
-        val sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
         widgetConfigManager = WidgetConfigurationManager(sharedPreferences)
 
         val wallpaperBackground = findViewById<ImageView>(R.id.wallpaper_background)

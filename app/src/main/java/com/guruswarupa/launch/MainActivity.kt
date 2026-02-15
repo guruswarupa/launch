@@ -20,7 +20,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
-import androidx.core.view.isVisible
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.GridLayoutManager
@@ -181,7 +180,6 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.todo_widget_main_container)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.finance_widget)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.weekly_usage_widget)?.setBackgroundResource(widgetBackground)
-
         // Apply theme to search box
         if (::searchBox.isInitialized) {
             val searchBg = if (isNightMode) R.drawable.search_box_transparent_bg else R.drawable.search_box_light_bg
@@ -274,7 +272,6 @@ class MainActivity : FragmentActivity() {
         voiceSearchButton = findViewById(R.id.voice_search_button)
         appDock = findViewById(R.id.app_dock)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
-        weeklyUsageGraph = findViewById(R.id.weekly_usage_graph)
         weatherIcon = findViewById(R.id.weather_icon)
         weatherText = findViewById(R.id.weather_text)
         timeTextView = findViewById(R.id.time_widget)
@@ -285,6 +282,7 @@ class MainActivity : FragmentActivity() {
         rightDrawerWallpaper = findViewById(R.id.right_drawer_wallpaper)
         rightDrawerTime = findViewById(R.id.right_drawer_time)
         rightDrawerDate = findViewById(R.id.right_drawer_date)
+        weeklyUsageGraph = findViewById(R.id.weekly_usage_graph)
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
@@ -547,14 +545,6 @@ class MainActivity : FragmentActivity() {
         // Initialize usage stats display manager (after adapter is created)
         usageStatsDisplayManager = UsageStatsDisplayManager(this, usageStatsManager, weeklyUsageGraph, adapter, recyclerView, handler)
         
-        // Load weekly usage data lazily (only when graph is visible)
-        // Defer to avoid blocking initial load
-        handler.postDelayed({
-            if (::weeklyUsageGraph.isInitialized && weeklyUsageGraph.isVisible) {
-                usageStatsDisplayManager.loadWeeklyUsageData()
-            }
-        }, 300)
-
         // Load apps in background - will update adapter when ready
         appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
         
@@ -581,6 +571,10 @@ class MainActivity : FragmentActivity() {
             override fun onDrawerOpened(drawerView: View) {
                 // Check for theme changes when drawer opens
                 checkAndUpdateThemeIfNeeded()
+                // Refresh usage data when right drawer opens
+                if (drawerView.id == R.id.wallpaper_drawer) {
+                    usageStatsDisplayManager.loadWeeklyUsageData()
+                }
             }
             override fun onDrawerClosed(drawerView: View) {}
             override fun onDrawerStateChanged(newState: Int) {}
@@ -1000,6 +994,7 @@ class MainActivity : FragmentActivity() {
         
         // Cleanup pressure widget
         if (::pressureWidget.isInitialized) {
+            // Ensure tracked state is synced
             pressureWidget.cleanup()
         }
         
@@ -1058,7 +1053,7 @@ class MainActivity : FragmentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus && ::gestureHandler.isInitialized) {
-            // Update gesture exclusion rects when window gains focus (e.g., after rotation)
+            // Update gesture exclusion rect when window gains focus (e.g., after rotation)
             gestureHandler.updateGestureExclusion()
         }
     }
@@ -1389,14 +1384,15 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.finance_widget)?.visibility = 
             if (widgetMap["finance_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
-        findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
-            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
             
         findViewById<View>(R.id.network_stats_widget_container)?.visibility = 
             if (widgetMap["network_stats_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
             
         findViewById<View>(R.id.device_info_widget_container)?.visibility = 
             if (widgetMap["device_info_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
+        findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
+            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
         // Reorder widgets - get the parent LinearLayout that contains all widgets
         // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
