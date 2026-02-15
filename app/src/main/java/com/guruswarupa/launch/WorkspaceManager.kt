@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -11,8 +12,11 @@ data class Workspace(
 )
 
 class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
-    private val WORKSPACES_KEY = "workspaces"
-    private val ACTIVE_WORKSPACE_KEY = "active_workspace_id"
+    
+    companion object {
+        private const val WORKSPACES_KEY = "workspaces"
+        private const val ACTIVE_WORKSPACE_KEY = "active_workspace_id"
+    }
     
     fun createWorkspace(name: String, appPackageNames: Set<String>): Workspace {
         val workspaceId = "workspace_${System.currentTimeMillis()}"
@@ -51,7 +55,7 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
                     }
                 )
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -85,14 +89,16 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
             }
             jsonArray.put(obj)
         }
-        sharedPreferences.edit().putString(WORKSPACES_KEY, jsonArray.toString()).apply()
+        sharedPreferences.edit { putString(WORKSPACES_KEY, jsonArray.toString()) }
     }
     
     fun setActiveWorkspaceId(workspaceId: String?) {
-        if (workspaceId != null) {
-            sharedPreferences.edit().putString(ACTIVE_WORKSPACE_KEY, workspaceId).apply()
-        } else {
-            sharedPreferences.edit().remove(ACTIVE_WORKSPACE_KEY).apply()
+        sharedPreferences.edit {
+            if (workspaceId != null) {
+                putString(ACTIVE_WORKSPACE_KEY, workspaceId)
+            } else {
+                remove(ACTIVE_WORKSPACE_KEY)
+            }
         }
     }
     
@@ -111,11 +117,7 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
     
     fun isAppInActiveWorkspace(packageName: String): Boolean {
         val activeWorkspace = getActiveWorkspace()
-        return if (activeWorkspace != null) {
-            activeWorkspace.appPackageNames.contains(packageName)
-        } else {
-            true // If no workspace is active, show all apps
-        }
+        return activeWorkspace?.appPackageNames?.contains(packageName) ?: true
     }
     
     /**

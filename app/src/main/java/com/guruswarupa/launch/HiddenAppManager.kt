@@ -1,13 +1,17 @@
 package com.guruswarupa.launch
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Manages hidden apps - apps that are hidden from the main app list.
  * Similar to FavoriteAppManager but for hiding apps instead.
  */
 class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
-    private val HIDDEN_APPS_KEY = "hidden_apps"
+    
+    companion object {
+        private const val HIDDEN_APPS_KEY = "hidden_apps"
+    }
     
     // Cache hidden apps to avoid repeated SharedPreferences reads
     private var hiddenAppsCache: Set<String>? = null
@@ -32,7 +36,7 @@ class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
     fun hideApp(packageName: String) {
         val hiddenApps = getHiddenAppsInternal().toMutableSet()
         hiddenApps.add(packageName)
-        sharedPreferences.edit().putStringSet(HIDDEN_APPS_KEY, hiddenApps).apply()
+        sharedPreferences.edit { putStringSet(HIDDEN_APPS_KEY, hiddenApps) }
         invalidateCache()
     }
     
@@ -42,7 +46,7 @@ class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
     fun unhideApp(packageName: String) {
         val hiddenApps = getHiddenAppsInternal().toMutableSet()
         hiddenApps.remove(packageName)
-        sharedPreferences.edit().putStringSet(HIDDEN_APPS_KEY, hiddenApps).apply()
+        sharedPreferences.edit { putStringSet(HIDDEN_APPS_KEY, hiddenApps) }
         invalidateCache()
     }
     
@@ -71,6 +75,7 @@ class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
     /**
      * Filter out hidden apps from a list of apps
      */
+    @Suppress("unused")
     fun filterHiddenApps(apps: List<android.content.pm.ResolveInfo>): List<android.content.pm.ResolveInfo> {
         val hiddenApps = getHiddenApps()
         if (hiddenApps.isEmpty()) {

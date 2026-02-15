@@ -10,7 +10,6 @@ import android.os.Looper
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -110,7 +109,7 @@ class PhysicalActivityWidget(
         
         val parsedDate = try {
             dateFormat.parse(date)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
         
@@ -131,10 +130,10 @@ class PhysicalActivityWidget(
         
         // Set summary stats
         val df = DecimalFormat("#.##")
-        val stepsFormatted = String.format("%,d", activityData.steps)
+        val stepsFormatted = String.format(Locale.getDefault(), "%,d", activityData.steps)
         val distanceFormatted = df.format(activityData.distanceKm)
         totalStepsText.text = stepsFormatted
-        totalDistanceText.text = "$distanceFormatted km"
+        totalDistanceText.text = context.getString(R.string.distance_km_format, distanceFormatted)
         
         // Get hourly data
         val hourlyData = activityManager.getHourlyActivityForDate(date)
@@ -167,7 +166,7 @@ class PhysicalActivityWidget(
                 text1.textSize = 14f
                 
                 val distanceFormattedHourly = df.format(hourly.distanceKm)
-                text2.text = "${hourly.steps} steps • $distanceFormattedHourly km"
+                text2.text = context.getString(R.string.steps_distance_format, hourly.steps, distanceFormattedHourly)
                 text2.setTextColor(secondaryTextColor)
                 text2.textSize = 12f
                 
@@ -189,13 +188,13 @@ class PhysicalActivityWidget(
             // Show calendar, hide stats
             statsViewContainer.visibility = View.GONE
             calendarViewContainer.visibility = View.VISIBLE
-            viewToggleButton.text = "Stats"
+            viewToggleButton.text = context.getString(R.string.stats)
             calendarView?.refreshData()
         } else {
             // Show stats, hide calendar
             statsViewContainer.visibility = View.VISIBLE
             calendarViewContainer.visibility = View.GONE
-            viewToggleButton.text = "Calendar"
+            viewToggleButton.text = context.getString(R.string.calendar)
         }
     }
     
@@ -241,8 +240,8 @@ class PhysicalActivityWidget(
         calendarViewContainer.visibility = View.GONE
         
         // Set default values
-        stepsText.text = "0 steps"
-        distanceText.text = "0.00 km"
+        stepsText.text = context.getString(R.string.zero_steps)
+        distanceText.text = context.getString(R.string.zero_distance)
         
         permissionButton.setOnClickListener {
             requestPermission()
@@ -251,7 +250,7 @@ class PhysicalActivityWidget(
         // Check if permission was previously denied
         val permissionDenied = sharedPreferences.getBoolean("activity_recognition_permission_denied", false)
         if (permissionDenied) {
-            permissionButton.text = "Enable in Settings"
+            permissionButton.text = context.getString(R.string.enable_in_settings)
             permissionButton.setOnClickListener {
                 openSettings()
             }
@@ -291,7 +290,7 @@ class PhysicalActivityWidget(
                 data = android.net.Uri.fromParts("package", context.packageName, null)
             }
             context.startActivity(intent)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Handle error
         }
     }
@@ -307,14 +306,14 @@ class PhysicalActivityWidget(
             val activityData = activityManager.getTodayActivity()
             
             // Format steps
-            val stepsFormatted = String.format("%,d", activityData.steps)
-            stepsText.text = "$stepsFormatted steps"
+            val stepsFormatted = String.format(Locale.getDefault(), "%,d", activityData.steps)
+            stepsText.text = context.getString(R.string.steps_format, stepsFormatted)
             
             // Format distance
             val df = DecimalFormat("#.##")
             val distanceFormatted = df.format(activityData.distanceKm)
-            distanceText.text = "$distanceFormatted km"
-        } catch (e: Exception) {
+            distanceText.text = context.getString(R.string.distance_km_format, distanceFormatted)
+        } catch (_: Exception) {
             // Handle error silently
         }
     }

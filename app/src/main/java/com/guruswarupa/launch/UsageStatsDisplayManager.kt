@@ -1,8 +1,7 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.os.Handler
-import android.os.Looper
-import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -55,6 +54,7 @@ class UsageStatsDisplayManager(
         }
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     fun refreshUsageStats() {
         // Clear adapter cache to force refresh
         adapter.clearUsageCache()
@@ -89,7 +89,7 @@ class UsageStatsDisplayManager(
         // Calculate and display total time
         val totalUsage = appUsages.values.sum()
         val totalTimeText = formatUsageTimeForDialog(totalUsage)
-        totalTime.text = "Total: $totalTimeText"
+        totalTime.text = activity.getString(R.string.total_usage_format, totalTimeText)
         
         // Set pie chart data
         pieChart.setAppUsageData(appUsages)

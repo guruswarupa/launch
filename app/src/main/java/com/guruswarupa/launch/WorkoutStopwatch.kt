@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Button
 import android.widget.TextView
+import java.util.Locale
 
 class WorkoutStopwatch(
     private val timeDisplay: TextView,
@@ -37,7 +38,7 @@ class WorkoutStopwatch(
         if (!isRunning) {
             startTime = System.currentTimeMillis() - elapsedTime
             isRunning = true
-            startStopButton.text = "Stop"
+            startStopButton.text = startStopButton.context.getString(R.string.workout_stop)
             resetButton.isEnabled = false
             
             updateRunnable = object : Runnable {
@@ -56,7 +57,7 @@ class WorkoutStopwatch(
     private fun stop() {
         if (isRunning) {
             isRunning = false
-            startStopButton.text = "Start"
+            startStopButton.text = startStopButton.context.getString(R.string.workout_start)
             resetButton.isEnabled = true
             updateRunnable?.let { handler.removeCallbacks(it) }
             
@@ -72,7 +73,7 @@ class WorkoutStopwatch(
         isRunning = false
         elapsedTime = 0L
         startTime = 0L
-        startStopButton.text = "Start"
+        startStopButton.text = startStopButton.context.getString(R.string.workout_start)
         resetButton.isEnabled = true
         updateRunnable?.let { handler.removeCallbacks(it) }
         updateDisplay()
@@ -85,9 +86,9 @@ class WorkoutStopwatch(
         val seconds = totalSeconds % 60
         
         timeDisplay.text = when {
-            hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
-            minutes > 0 -> String.format("%d:%02d", minutes, seconds)
-            else -> String.format("0:%02d", seconds)
+            hours > 0 -> String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
+            minutes > 0 -> String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
+            else -> String.format(Locale.getDefault(), "0:%02d", seconds)
         }
     }
     

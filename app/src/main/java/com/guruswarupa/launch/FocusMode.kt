@@ -1,7 +1,7 @@
-
 package com.guruswarupa.launch
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 class FocusModeManager(private val sharedPreferences: SharedPreferences) {
 
@@ -10,6 +10,7 @@ class FocusModeManager(private val sharedPreferences: SharedPreferences) {
         private const val FOCUS_MODE_ALLOWED_APPS = "focus_mode_allowed_apps"
     }
 
+    @Suppress("unused")
     fun isFocusModeEnabled(): Boolean {
         return sharedPreferences.getBoolean(FOCUS_MODE_ENABLED, false)
     }
@@ -19,8 +20,8 @@ class FocusModeManager(private val sharedPreferences: SharedPreferences) {
         return sharedPreferences.getStringSet(FOCUS_MODE_ALLOWED_APPS, emptySet()) ?: emptySet()
     }
 
-    fun setAllowedApps(packageNames: Set<String>) {
-        sharedPreferences.edit().putStringSet(FOCUS_MODE_ALLOWED_APPS, packageNames).apply()
+    private fun setAllowedApps(packageNames: Set<String>) {
+        sharedPreferences.edit { putStringSet(FOCUS_MODE_ALLOWED_APPS, packageNames) }
     }
 
     fun addAllowedApp(packageName: String) {

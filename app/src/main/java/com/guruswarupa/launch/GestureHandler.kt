@@ -1,13 +1,14 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.os.Build
 import android.view.MotionEvent
-import android.view.View
 import android.widget.FrameLayout
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import kotlin.math.abs
 
 /**
  * Handles gestures for drawer opening and system gesture exclusion
@@ -35,6 +36,7 @@ class GestureHandler(
     /**
      * Enable or disable custom gestures
      */
+    @Suppress("unused")
     fun setGesturesEnabled(enabled: Boolean) {
         isGesturesEnabled = enabled
         if (!enabled) {
@@ -100,8 +102,9 @@ class GestureHandler(
     /**
      * Setup touch listener for drawer opening
      */
+    @SuppressLint("ClickableViewAccessibility")
     fun setupTouchListener() {
-        mainContent.setOnTouchListener { _, event ->
+        mainContent.setOnTouchListener { v, event ->
             if (!isGesturesEnabled) return@setOnTouchListener false
             
             when (event.action) {
@@ -116,7 +119,7 @@ class GestureHandler(
                     if (isSwipeFromLeftEdge) {
                         val deltaX = event.x - touchStartX
                         val deltaY = event.y - touchStartY
-                        if (deltaX > 10 && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                        if (deltaX > 10 && abs(deltaY) < abs(deltaX) * 0.9) {
                             true // Consume to prevent system gestures
                         } else {
                             isSwipeFromLeftEdge = false
@@ -125,7 +128,7 @@ class GestureHandler(
                     } else if (isSwipeFromRightEdge) {
                         val deltaX = touchStartX - event.x
                         val deltaY = event.y - touchStartY
-                        if (deltaX > 10 && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                        if (deltaX > 10 && abs(deltaY) < abs(deltaX) * 0.9) {
                             true // Consume to prevent system gestures
                         } else {
                             isSwipeFromRightEdge = false
@@ -136,10 +139,11 @@ class GestureHandler(
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.performClick()
                     if (isSwipeFromLeftEdge) {
                         val deltaX = event.x - touchStartX
                         val deltaY = event.y - touchStartY
-                        if (deltaX > minSwipeDistancePx && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                        if (deltaX > minSwipeDistancePx && abs(deltaY) < abs(deltaX) * 0.9) {
                             if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
                                 drawerLayout.openDrawer(GravityCompat.START)
                             }
@@ -149,7 +153,7 @@ class GestureHandler(
                     } else if (isSwipeFromRightEdge) {
                         val deltaX = touchStartX - event.x
                         val deltaY = event.y - touchStartY
-                        if (deltaX > minSwipeDistancePx && Math.abs(deltaY) < Math.abs(deltaX) * 0.9) {
+                        if (deltaX > minSwipeDistancePx && abs(deltaY) < abs(deltaX) * 0.9) {
                             if (!drawerLayout.isDrawerOpen(GravityCompat.END)) {
                                 drawerLayout.openDrawer(GravityCompat.END)
                             }

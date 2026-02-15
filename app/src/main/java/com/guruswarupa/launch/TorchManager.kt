@@ -4,7 +4,6 @@ import android.content.Context
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.os.Build
 import android.widget.Toast
 
 /**
@@ -14,21 +13,17 @@ import android.widget.Toast
 class TorchManager(private val context: Context) {
     
     private val cameraManager: CameraManager? = 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-        } else {
-            null
-        }
+        context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
     
     private var isTorchOn = false
     private var cameraId: String? = null
     
     init {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && cameraManager != null) {
+        cameraManager?.let { manager ->
             try {
                 // Find a camera with flash capability
-                for (id in cameraManager.cameraIdList) {
-                    val characteristics = cameraManager.getCameraCharacteristics(id)
+                for (id in manager.cameraIdList) {
+                    val characteristics = manager.getCameraCharacteristics(id)
                     val flashAvailable = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) ?: false
                     if (flashAvailable) {
                         cameraId = id
@@ -36,10 +31,10 @@ class TorchManager(private val context: Context) {
                     }
                 }
                 // Fallback to first camera if no flash-capable camera found
-                if (cameraId == null && cameraManager.cameraIdList.isNotEmpty()) {
-                    cameraId = cameraManager.cameraIdList[0]
+                if (cameraId == null && manager.cameraIdList.isNotEmpty()) {
+                    cameraId = manager.cameraIdList[0]
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Camera not available
             }
         }
@@ -50,11 +45,6 @@ class TorchManager(private val context: Context) {
      * @return true if torch was successfully toggled, false otherwise
      */
     fun toggleTorch(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            Toast.makeText(context, "Torch not supported on this device", Toast.LENGTH_SHORT).show()
-            return false
-        }
-        
         if (cameraManager == null || cameraId == null) {
             Toast.makeText(context, "Camera not available", Toast.LENGTH_SHORT).show()
             return false
@@ -64,7 +54,7 @@ class TorchManager(private val context: Context) {
             isTorchOn = !isTorchOn
             cameraManager.setTorchMode(cameraId!!, isTorchOn)
             true
-        } catch (e: CameraAccessException) {
+        } catch (_: CameraAccessException) {
             Toast.makeText(context, "Unable to access camera", Toast.LENGTH_SHORT).show()
             isTorchOn = !isTorchOn // Revert state
             false
@@ -76,19 +66,14 @@ class TorchManager(private val context: Context) {
     }
     
     /**
-     * Returns the current torch state
-     */
-    fun isTorchOn(): Boolean = isTorchOn
-    
-    /**
      * Turns off the torch if it's on
      */
     fun turnOffTorch() {
-        if (isTorchOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && cameraManager != null && cameraId != null) {
+        if (isTorchOn && cameraManager != null && cameraId != null) {
             try {
                 cameraManager.setTorchMode(cameraId!!, false)
                 isTorchOn = false
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Ignore errors when turning off
             }
         }

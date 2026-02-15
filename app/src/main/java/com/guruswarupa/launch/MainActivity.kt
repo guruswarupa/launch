@@ -1,7 +1,6 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -13,7 +12,6 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -347,7 +345,7 @@ class MainActivity : FragmentActivity() {
         timeDateManager = TimeDateManager(timeTextView, dateTextView, rightDrawerTime, rightDrawerDate)
         timeDateManager.startUpdates()
         
-        widgetSetupManager = WidgetSetupManager(this, handler, usageStatsManager, weatherManager, permissionManager)
+        widgetSetupManager = WidgetSetupManager(this, usageStatsManager, weatherManager, permissionManager)
         widgetSetupManager.setupWeather(weatherIcon, weatherText)
     }
     
@@ -369,8 +367,8 @@ class MainActivity : FragmentActivity() {
         countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
         
         // Initialize new widgets
-        val networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget(sharedPreferences)
-        val deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget(sharedPreferences)
+        val networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget()
+        val deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget()
         
         lifecycleManager.setNetworkStatsWidget(networkStatsWidget)
         lifecycleManager.setDeviceInfoWidget(deviceInfoWidget)
@@ -395,8 +393,7 @@ class MainActivity : FragmentActivity() {
      */
     private fun updateAppListUI(
         newAppList: List<ResolveInfo>,
-        newFullAppList: List<ResolveInfo>,
-        updateSearchManager: Boolean = true
+        newFullAppList: List<ResolveInfo>
     ) {
         if (isFinishing || isDestroyed) return
         
@@ -409,13 +406,11 @@ class MainActivity : FragmentActivity() {
         
         recyclerView.visibility = View.VISIBLE
         
-        if (updateSearchManager) {
-            // Initialize or update AppSearchManager with new app data
-            if (!::appSearchManager.isInitialized && !isFinishing && !isDestroyed && ::adapter.isInitialized) {
-                updateAppSearchManager()
-            } else if (::appSearchManager.isInitialized) {
-                updateAppSearchManager()
-            }
+        // Initialize or update AppSearchManager with new app data
+        if (!::appSearchManager.isInitialized && !isFinishing && !isDestroyed && ::adapter.isInitialized) {
+            updateAppSearchManager()
+        } else if (::appSearchManager.isInitialized) {
+            updateAppSearchManager()
         }
     }
     
@@ -455,7 +450,7 @@ class MainActivity : FragmentActivity() {
         }
 
         // Initialize widget configuration manager
-        widgetConfigurationManager = WidgetConfigurationManager(this, sharedPreferences)
+        widgetConfigurationManager = WidgetConfigurationManager(sharedPreferences)
         
         // Initialize managers
         cacheManager = CacheManager(this, packageManager, backgroundExecutor)
@@ -516,7 +511,7 @@ class MainActivity : FragmentActivity() {
             cacheManager, backgroundExecutor, handler, recyclerView, searchBox, voiceSearchButton, sharedPreferences
         )
         appListLoader.onAppListUpdated = { sortedList, filteredList ->
-            updateAppListUI(sortedList, filteredList, updateSearchManager = true)
+            updateAppListUI(sortedList, filteredList)
         }
         appListLoader.onAdapterNeedsUpdate = { isGridMode ->
             recyclerView.layoutManager = if (isGridMode) {
@@ -578,7 +573,7 @@ class MainActivity : FragmentActivity() {
         gestureHandler.setupGestureExclusion()
         
         activityInitializer.setupDrawerLayout(drawerLayout)
-        navigationManager = NavigationManager(this, drawerLayout, gestureHandler, handler)
+        navigationManager = NavigationManager(drawerLayout, gestureHandler, handler)
         
         // Add drawer listener to check for theme changes when drawer opens
         drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
@@ -637,13 +632,12 @@ class MainActivity : FragmentActivity() {
         }, 500)
 
         // Initialize voice search manager
-        voiceSearchManager = VoiceSearchManager(this, packageManager, searchBox, permissionManager)
+        voiceSearchManager = VoiceSearchManager(this, packageManager)
         activityInitializer.setupVoiceSearchButton(voiceSearchButton, voiceSearchManager)
         
         // Initialize usage stats refresh manager
         usageStatsRefreshManager = UsageStatsRefreshManager(
-            this, backgroundExecutor, handler, usageStatsManager,
-            adapter, recyclerView, weeklyUsageGraph, usageStatsDisplayManager
+            this, backgroundExecutor, usageStatsManager
         )
         
         // Initialize activity result handler (voiceCommandHandler will be set later)
@@ -810,7 +804,7 @@ class MainActivity : FragmentActivity() {
                     
                     // Update UI on main thread
                     runOnUiThread {
-                        updateAppListUI(sortedFinalList, fullAppList, updateSearchManager = true)
+                        updateAppListUI(sortedFinalList, fullAppList)
                         appDockManager.refreshFavoriteToggle()
                     }
                 } catch (e: Exception) {
@@ -932,7 +926,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION && resultCode == Activity.RESULT_OK) {
+        if (requestCode == ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION && resultCode == RESULT_OK) {
             updateWidgetVisibility()
             // Refresh calendar widget when it becomes visible
             if (::calendarEventsWidget.isInitialized) {
@@ -952,7 +946,7 @@ class MainActivity : FragmentActivity() {
         
         if (::activityResultHandler.isInitialized) {
             // Initialize voice command handler if needed for voice search result
-            if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && resultCode == Activity.RESULT_OK) {
+            if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && resultCode == RESULT_OK) {
                 if (voiceCommandHandler == null) {
                     voiceCommandHandler = VoiceCommandHandler(this, packageManager, contentResolver, searchBox, appList)
                 }
@@ -1101,6 +1095,7 @@ class MainActivity : FragmentActivity() {
         
         // Resume pressure tracking
         if (::pressureWidget.isInitialized) {
+            // Ensure tracked state is synced
             pressureWidget.onResume()
         }
         
@@ -1116,7 +1111,6 @@ class MainActivity : FragmentActivity() {
         
         // Resume noise decibel tracking
         if (::noiseDecibelWidget.isInitialized) {
-            noiseDecibelWidget.onPause() // Ensure it's not double-started
             noiseDecibelWidget.onResume()
         }
         
@@ -1179,7 +1173,6 @@ class MainActivity : FragmentActivity() {
         
         // Pause pressure tracking
         if (::pressureWidget.isInitialized) {
-            pressureWidget.onResume() // Resume just ensures it's stopped correctly if needed, wait, onPause should stop
             pressureWidget.onPause()
         }
         
@@ -1258,7 +1251,7 @@ class MainActivity : FragmentActivity() {
                 permissions,
                 grantResults,
                 onContactsGranted = { 
-                    contactManager.loadContacts { contacts ->
+                    contactManager.loadContacts {
                         if (::appSearchManager.isInitialized) {
                             appSearchManager.updateContactsList()
                         } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
@@ -1329,6 +1322,7 @@ class MainActivity : FragmentActivity() {
      */
     private fun showWidgetConfigurationDialog() {
         val intent = Intent(this, WidgetConfigurationActivity::class.java)
+        @Suppress("DEPRECATION")
         startActivityForResult(intent, ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION)
     }
     
@@ -1425,23 +1419,23 @@ class MainActivity : FragmentActivity() {
             
             widgets.forEach { widget ->
                 val view = when (widget.id) {
-                    "widgets_section" -> findViewById<View>(R.id.widgets_section)
+                    "widgets_section" -> findViewById(R.id.widgets_section)
                     "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
-                    "calendar_events_widget_container" -> findViewById<View>(R.id.calendar_events_widget_container)
-                    "countdown_widget_container" -> findViewById<View>(R.id.countdown_widget_container)
-                    "physical_activity_widget_container" -> findViewById<View>(R.id.physical_activity_widget_container)
-                    "compass_widget_container" -> findViewById<View>(R.id.compass_widget_container)
-                    "pressure_widget_container" -> findViewById<View>(R.id.pressure_widget_container)
-                    "proximity_widget_container" -> findViewById<View>(R.id.proximity_widget_container)
-                    "temperature_widget_container" -> findViewById<View>(R.id.temperature_widget_container)
-                    "noise_decibel_widget_container" -> findViewById<View>(R.id.noise_decibel_widget_container)
+                    "calendar_events_widget_container" -> findViewById(R.id.calendar_events_widget_container)
+                    "countdown_widget_container" -> findViewById(R.id.countdown_widget_container)
+                    "physical_activity_widget_container" -> findViewById(R.id.physical_activity_widget_container)
+                    "compass_widget_container" -> findViewById(R.id.compass_widget_container)
+                    "pressure_widget_container" -> findViewById(R.id.pressure_widget_container)
+                    "proximity_widget_container" -> findViewById(R.id.proximity_widget_container)
+                    "temperature_widget_container" -> findViewById(R.id.temperature_widget_container)
+                    "noise_decibel_widget_container" -> findViewById(R.id.noise_decibel_widget_container)
                     "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
                     "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
                     "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
-                    "finance_widget" -> findViewById<View>(R.id.finance_widget)
-                    "weekly_usage_widget" -> findViewById<View>(R.id.weekly_usage_widget)
-                    "network_stats_widget_container" -> findViewById<View>(R.id.network_stats_widget_container)
-                    "device_info_widget_container" -> findViewById<View>(R.id.device_info_widget_container)
+                    "finance_widget" -> findViewById(R.id.finance_widget)
+                    "weekly_usage_widget" -> findViewById(R.id.weekly_usage_widget)
+                    "network_stats_widget_container" -> findViewById(R.id.network_stats_widget_container)
+                    "device_info_widget_container" -> findViewById(R.id.device_info_widget_container)
                     else -> null
                 }
                 view?.let { viewMap[widget.id] = it }

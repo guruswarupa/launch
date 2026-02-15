@@ -7,7 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.ImageView
-import java.util.concurrent.Executors
+import androidx.core.graphics.createBitmap
 
 /**
  * Helper class for managing wallpaper display
@@ -58,7 +58,7 @@ class WallpaperManagerHelper(
             wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
             drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
             return
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Synchronous wallpaper load failed, trying async
         }
         
@@ -87,11 +87,8 @@ class WallpaperManagerHelper(
                     val screenWidth = activity.resources.displayMetrics.widthPixels
                     val screenHeight = activity.resources.displayMetrics.heightPixels
                     
-                    val bm = Bitmap.createBitmap(
-                        screenWidth.takeIf { it > 0 } ?: 1080,
-                        screenHeight.takeIf { it > 0 } ?: 1920,
-                        Bitmap.Config.ARGB_8888
-                    )
+                    val bm = createBitmap(screenWidth.takeIf { it > 0 } ?: 1080,
+                        screenHeight.takeIf { it > 0 } ?: 1920)
                     val canvas = android.graphics.Canvas(bm)
                     drawable.setBounds(0, 0, canvas.width, canvas.height)
                     drawable.draw(canvas)
@@ -121,7 +118,7 @@ class WallpaperManagerHelper(
                     wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                     drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 handler.post {
                     wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
                     drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)

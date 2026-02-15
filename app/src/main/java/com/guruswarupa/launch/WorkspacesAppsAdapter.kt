@@ -1,6 +1,5 @@
 package com.guruswarupa.launch
 
-import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.view.LayoutInflater
 import android.view.View
@@ -36,14 +35,14 @@ class WorkspacesAppsAdapter(
         // Set app name
         try {
             holder.appName.text = app.loadLabel(packageManager).toString()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             holder.appName.text = packageName
         }
         
         // Set app icon
         try {
             holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
         }
         

@@ -1,10 +1,14 @@
 package com.guruswarupa.launch
 
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 class FavoriteAppManager(private val sharedPreferences: SharedPreferences) {
-    private val FAVORITE_APPS_KEY = "favorite_apps"
-    private val SHOW_ALL_APPS_KEY = "show_all_apps_mode"
+    
+    companion object {
+        private const val FAVORITE_APPS_KEY = "favorite_apps"
+        private const val SHOW_ALL_APPS_KEY = "show_all_apps_mode"
+    }
     
     // Cache favorites to avoid repeated SharedPreferences reads
     private var favoritesCache: Set<String>? = null
@@ -26,14 +30,14 @@ class FavoriteAppManager(private val sharedPreferences: SharedPreferences) {
     fun addFavoriteApp(packageName: String) {
         val favorites = getFavoriteAppsInternal().toMutableSet()
         favorites.add(packageName)
-        sharedPreferences.edit().putStringSet(FAVORITE_APPS_KEY, favorites).apply()
+        sharedPreferences.edit { putStringSet(FAVORITE_APPS_KEY, favorites) }
         invalidateCache()
     }
     
     fun removeFavoriteApp(packageName: String) {
         val favorites = getFavoriteAppsInternal().toMutableSet()
         favorites.remove(packageName)
-        sharedPreferences.edit().putStringSet(FAVORITE_APPS_KEY, favorites).apply()
+        sharedPreferences.edit { putStringSet(FAVORITE_APPS_KEY, favorites) }
         invalidateCache()
     }
     
@@ -46,7 +50,7 @@ class FavoriteAppManager(private val sharedPreferences: SharedPreferences) {
     }
     
     fun setShowAllAppsMode(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(SHOW_ALL_APPS_KEY, enabled).apply()
+        sharedPreferences.edit { putBoolean(SHOW_ALL_APPS_KEY, enabled) }
     }
     
     fun isShowAllAppsMode(): Boolean {

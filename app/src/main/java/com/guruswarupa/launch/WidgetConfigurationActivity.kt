@@ -1,15 +1,20 @@
 package com.guruswarupa.launch
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.toColorInt
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.guruswarupa.launch.Constants
+import java.util.concurrent.Executors
 
 class WidgetConfigurationActivity : AppCompatActivity() {
 
@@ -17,7 +22,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private var adapter: WidgetConfigAdapter? = null
     private val prefsName = "com.guruswarupa.launch.PREFS"
     private lateinit var wallpaperManagerHelper: WallpaperManagerHelper
-    private val backgroundExecutor = java.util.concurrent.Executors.newFixedThreadPool(2)
+    private val backgroundExecutor = Executors.newFixedThreadPool(2)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,8 +38,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         setContentView(R.layout.activity_widget_configuration)
 
         val mainContent = findViewById<View>(R.id.main_content)
-        mainContent.setOnApplyWindowInsetsListener { view, insets ->
-            val systemBars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
+        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(
                 view.paddingLeft,
                 systemBars.top + 16.toPx(),
@@ -45,9 +50,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
 
         val sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        widgetConfigManager = WidgetConfigurationManager(this, sharedPreferences)
+        widgetConfigManager = WidgetConfigurationManager(sharedPreferences)
 
-        val wallpaperBackground = findViewById<android.widget.ImageView>(R.id.wallpaper_background)
+        val wallpaperBackground = findViewById<ImageView>(R.id.wallpaper_background)
         wallpaperManagerHelper = WallpaperManagerHelper(this, wallpaperBackground, null, backgroundExecutor)
         wallpaperManagerHelper.setWallpaperBackground()
 
@@ -57,8 +62,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val saveButton = findViewById<Button>(R.id.save_button)
         
         // Ensure buttons are dark tinted to match theme
-        cancelButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#33000000"))
-        saveButton.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#33000000"))
+        val tintColor = "#33000000".toColorInt()
+        cancelButton.backgroundTintList = ColorStateList.valueOf(tintColor)
+        saveButton.backgroundTintList = ColorStateList.valueOf(tintColor)
 
         // Load current widget configuration
         val widgets = widgetConfigManager.getWidgetOrder().toMutableList()
@@ -81,8 +87,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
-                val fromPos = viewHolder.adapterPosition
-                val toPos = target.adapterPosition
+                val fromPos = viewHolder.bindingAdapterPosition
+                val toPos = target.bindingAdapterPosition
                 if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION) {
                     return false
                 }
@@ -132,6 +138,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
         backgroundExecutor.shutdown()
     }
+    
     private fun Int.toPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }

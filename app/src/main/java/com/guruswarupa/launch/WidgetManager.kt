@@ -9,18 +9,14 @@ import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -62,7 +58,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         }
     }
     
-    fun handleWidgetPicked(activity: Activity, data: Intent?, requestCode: Int) {
+    fun handleWidgetPicked(activity: Activity, data: Intent?) {
         val appWidgetId = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
         
         if (appWidgetId == -1) {
@@ -86,7 +82,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             try {
                 // Use REQUEST_CONFIGURE_WIDGET constant from MainActivity
                 activity.startActivityForResult(configIntent, 801) // REQUEST_CONFIGURE_WIDGET
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // If config fails, try to bind anyway
                 bindWidget(appWidgetId, appWidgetInfo)
             }
@@ -96,7 +92,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         }
     }
     
-    fun handleWidgetConfigured(activity: Activity, appWidgetId: Int) {
+    fun handleWidgetConfigured(appWidgetId: Int) {
         val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
         if (appWidgetInfo != null) {
             bindWidget(appWidgetId, appWidgetInfo)
@@ -105,14 +101,10 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     
     private fun bindWidget(appWidgetId: Int, appWidgetInfo: AppWidgetProviderInfo) {
         try {
-            // For launchers, widgets picked from the picker should already be bound
-            // We just need to create the view using our AppWidgetHost
-            // The widget ID should already be bound to our host when returned from picker
-            
             // Create widget view - this will automatically bind if needed
             val widgetView = try {
                 appWidgetHost.createView(context, appWidgetId, appWidgetInfo)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // If creation fails, the widget might not be bound to our host
                 // Try to explicitly bind it (this may fail if we don't have permissions)
                 val bound = try {
@@ -127,7 +119,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                         @Suppress("DEPRECATION")
                         appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, appWidgetInfo.provider)
                     }
-                } catch (bindException: Exception) {
+                } catch (_: Exception) {
                     false
                 }
                 
@@ -161,17 +153,13 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             // Set widget properties on the view
             widgetView.setAppWidget(appWidgetId, appWidgetInfo)
             
-            // Get widget dimensions
-            val minWidth = appWidgetInfo.minWidth
-            val minHeight = appWidgetInfo.minHeight
-            
             // Save widget info first (needed for button visibility calculation)
             val widgetInfo = WidgetInfo(
                 appWidgetId = appWidgetId,
                 providerPackage = appWidgetInfo.provider.packageName,
                 providerClass = appWidgetInfo.provider.className,
-                minWidth = minWidth,
-                minHeight = minHeight
+                minWidth = appWidgetInfo.minWidth,
+                minHeight = appWidgetInfo.minHeight
             )
             widgets.add(widgetInfo)
             
@@ -260,13 +248,11 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         try {
             val textColor = ContextCompat.getColor(context, R.color.text)
             val listView = dialog.listView
-            if (listView != null) {
-                listView.post {
-                    for (i in 0 until listView.childCount) {
-                        val child = listView.getChildAt(i)
-                        if (child is TextView) {
-                            child.setTextColor(textColor)
-                        }
+            listView?.post {
+                for (i in 0 until listView.childCount) {
+                    val child = listView.getChildAt(i)
+                    if (child is TextView) {
+                        child.setTextColor(textColor)
                     }
                 }
             }
@@ -281,15 +267,12 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             widgets.add(currentIndex - 1, widget)
             
             // Swap views in container
-            // Get references to both views before removing
             val viewToMove = widgetContainer.getChildAt(currentIndex)
             val viewToSwapWith = widgetContainer.getChildAt(currentIndex - 1)
             
-            // Remove both views (remove higher index first to avoid index shift)
             widgetContainer.removeView(viewToMove)
             widgetContainer.removeView(viewToSwapWith)
             
-            // Add them back in swapped order at the correct position
             widgetContainer.addView(viewToSwapWith, currentIndex - 1)
             widgetContainer.addView(viewToMove, currentIndex - 1)
             
@@ -305,22 +288,18 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             widgets.add(currentIndex + 1, widget)
             
             // Swap views in container
-            // Get references to both views before removing
             val viewToMove = widgetContainer.getChildAt(currentIndex)
             val viewToSwapWith = widgetContainer.getChildAt(currentIndex + 1)
             
-            // Remove both views (remove higher index first to avoid index shift)
             widgetContainer.removeView(viewToSwapWith)
             widgetContainer.removeView(viewToMove)
             
-            // Add them back in swapped order at the correct position
             widgetContainer.addView(viewToSwapWith, currentIndex)
             widgetContainer.addView(viewToMove, currentIndex + 1)
             
             saveWidgets()
         }
     }
-    
     
     private fun showRemoveWidgetDialog(appWidgetId: Int, widgetName: String) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
@@ -332,7 +311,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
     
     fun removeWidget(appWidgetId: Int) {
         try {
@@ -373,8 +351,8 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 }
                 jsonArray.put(json)
             }
-            prefs.edit().putString(PREFS_WIDGETS_KEY, jsonArray.toString()).apply()
-        } catch (e: Exception) {
+            prefs.edit { putString(PREFS_WIDGETS_KEY, jsonArray.toString()) }
+        } catch (_: Exception) {
         }
     }
     
@@ -411,7 +389,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             if (widgets.size != jsonArray.length()) {
                 saveWidgets()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
         }
     }
     
@@ -420,7 +398,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             val widgetView = appWidgetHost.createView(context, widgetInfo.appWidgetId, appWidgetInfo)
             val widgetContainerView = createWidgetContainer(widgetView, widgetInfo.appWidgetId, appWidgetInfo)
             widgetContainer.addView(widgetContainerView)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Remove invalid widget
             widgets.remove(widgetInfo)
             appWidgetHost.deleteAppWidgetId(widgetInfo.appWidgetId)
@@ -432,7 +410,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             appWidgetHost.stopListening()
         } catch (e: Exception) {
             // Handle case where stopListening fails due to stale widget references
-            // This can happen when widget providers are uninstalled or become invalid
             Log.w(TAG, "Error stopping widget host listening", e)
         }
     }
@@ -441,7 +418,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         try {
             appWidgetHost.startListening()
         } catch (e: Exception) {
-            // Handle case where startListening fails
             Log.w(TAG, "Error starting widget host listening", e)
         }
     }
@@ -451,7 +427,6 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             appWidgetHost.stopListening()
         } catch (e: Exception) {
             // Handle case where stopListening fails due to stale widget references
-            // This can happen when widget providers are uninstalled or become invalid
             Log.w(TAG, "Error stopping widget host listening in destroy", e)
         }
     }

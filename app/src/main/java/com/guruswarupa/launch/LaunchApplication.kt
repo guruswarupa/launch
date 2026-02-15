@@ -2,9 +2,9 @@ package com.guruswarupa.launch
 
 import android.app.Application
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.core.net.toUri
 import java.io.PrintWriter
 import java.io.StringWriter
 
@@ -44,7 +44,7 @@ class LaunchApplication : Application() {
         val emailBody = "The app has crashed with the following exception:\n\n$deviceInfo\n\nStack Trace:\n$stackTrace"
 
         val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:")
+            data = "mailto:".toUri()
             putExtra(Intent.EXTRA_EMAIL, arrayOf("msgswarupa@gmail.com"))
             putExtra(Intent.EXTRA_SUBJECT, "Launch App Crash Report: ${throwable.javaClass.simpleName}")
             putExtra(Intent.EXTRA_TEXT, emailBody)
@@ -60,8 +60,14 @@ class LaunchApplication : Application() {
     private fun getAppVersion(): String {
         return try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
-            "${pInfo.versionName} (${if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo.longVersionCode else pInfo.versionCode})"
-        } catch (e: Exception) {
+            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode.toLong()
+            }
+            "${pInfo.versionName} ($versionCode)"
+        } catch (_: Exception) {
             "Unknown"
         }
     }

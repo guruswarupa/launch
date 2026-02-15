@@ -7,6 +7,7 @@ import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Locale
 
 /**
  * Manages the finance widget: setup, transactions, and display updates
@@ -83,14 +84,14 @@ class FinanceWidgetManager(
         val monthlyIncome = financeManager.getMonthlyIncome()
         val netSavings = monthlyIncome - monthlyExpenses
         
-        // Format balance with 2 decimal places
-        balanceText.text = String.format("%s%.2f", currencySymbol, balance)
+        // Format balance with 2 decimal places using specific locale
+        balanceText.text = String.format(Locale.getDefault(), "%s%.2f", currencySymbol, balance)
         
         // Show net savings for the month (income - expenses) with neutral color
         val netText = if (netSavings >= 0) {
-            "This Month: +$currencySymbol${String.format("%.2f", netSavings)}"
+            "This Month: +$currencySymbol${String.format(Locale.getDefault(), "%.2f", netSavings)}"
         } else {
-            "This Month: -$currencySymbol${String.format("%.2f", kotlin.math.abs(netSavings))}"
+            "This Month: -$currencySymbol${String.format(Locale.getDefault(), "%.2f", kotlin.math.abs(netSavings))}"
         }
         monthlySpentText.text = netText
         monthlySpentText.setTextColor(ContextCompat.getColor(activity, R.color.text_secondary))
@@ -160,7 +161,7 @@ class FinanceWidgetManager(
             return list.sortedByDescending { it.timestamp }.toMutableList()
         }
 
-        var sortedTransactions = getLatestTransactions()
+        val sortedTransactions = getLatestTransactions()
         
         val adapter = TransactionAdapter(sortedTransactions, currencySymbol) { transactionToDelete ->
             val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)

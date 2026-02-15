@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.edit
 import java.text.DecimalFormat
 
 class ProximityWidget(
@@ -74,14 +75,14 @@ class ProximityWidget(
     private fun toggleProximity() {
         val currentState = sharedPreferences.getBoolean(PREF_PROXIMITY_ENABLED, false)
         val newState = !currentState
-        sharedPreferences.edit().putBoolean(PREF_PROXIMITY_ENABLED, newState).apply()
+        sharedPreferences.edit { putBoolean(PREF_PROXIMITY_ENABLED, newState) }
         updateUI(newState)
     }
     
     private fun updateUI(isEnabled: Boolean) {
         if (isEnabled) {
             widgetContainer.visibility = View.VISIBLE
-            toggleButton.text = "Disable"
+            toggleButton.text = context.getString(R.string.disable)
             
             if (proximityManager.hasProximitySensor()) {
                 setupWithSensor()
@@ -90,7 +91,7 @@ class ProximityWidget(
             }
         } else {
             widgetContainer.visibility = View.GONE
-            toggleButton.text = "Enable"
+            toggleButton.text = context.getString(R.string.enable)
             handler.removeCallbacks(updateRunnable)
             proximityManager.stopTracking()
         }
@@ -110,7 +111,7 @@ class ProximityWidget(
         noSensorText.visibility = View.VISIBLE
         distanceText.visibility = View.GONE
         statusText.visibility = View.GONE
-        noSensorText.text = "Proximity sensor not available on this device"
+        noSensorText.text = context.getString(R.string.proximity_sensor_not_available)
     }
     
     private fun updateDisplay() {
@@ -121,12 +122,12 @@ class ProximityWidget(
     
     private fun updateProximityDisplay(distance: Float, isNear: Boolean) {
         val df = DecimalFormat("#.##")
-        distanceText.text = "${df.format(distance)} cm"
+        distanceText.text = context.getString(R.string.distance_cm_format, df.format(distance))
         
         statusText.text = if (isNear) {
-            "Status: Near"
+            context.getString(R.string.status_near)
         } else {
-            "Status: Far"
+            context.getString(R.string.status_far)
         }
     }
     

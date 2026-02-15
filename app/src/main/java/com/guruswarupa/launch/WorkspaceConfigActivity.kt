@@ -2,8 +2,7 @@ package com.guruswarupa.launch
 
 import android.app.AlertDialog
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -11,8 +10,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.core.view.WindowCompat
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
@@ -128,11 +126,6 @@ class WorkspaceConfigActivity : ComponentActivity() {
             selectedApps.contains(packageName)
         }
         
-        val message = if (appsInOtherWorkspaces.isNotEmpty()) {
-        } else {
-            null
-        }
-        
         val dialogBuilder = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Select Apps for '$workspaceName'")
 
@@ -226,56 +219,41 @@ class WorkspaceConfigActivity : ComponentActivity() {
     
     private fun makeSystemBarsTransparent() {
         try {
+            @Suppress("DEPRECATION")
+            window.statusBarColor = Color.TRANSPARENT
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = Color.TRANSPARENT
+            
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11+ (API 30+)
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                window.setDecorFitsSystemWindows(false)
-                
-                // Use decorView to get insetsController safely
-                val decorView = window.decorView
-                if (decorView != null) {
-                    val insetsController = decorView.windowInsetsController
-                    if (insetsController != null) {
-                        // Always use white/light icons regardless of mode
-                        insetsController.setSystemBarsAppearance(
-                            0,
-                            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                        )
-                    }
-                }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // Android 5.0+ (API 21+)
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+                window.decorView.windowInsetsController?.setSystemBarsAppearance(
+                    0,
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                )
+            } else {
+                @Suppress("DEPRECATION")
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                @Suppress("DEPRECATION")
                 window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
                 
                 @Suppress("DEPRECATION")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val decorView = window.decorView
-                    if (decorView != null) {
-                        var flags = decorView.systemUiVisibility
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                        
-                        // Always use white/light icons regardless of mode (don't set LIGHT_STATUS_BAR flag)
-                        // When LIGHT_STATUS_BAR is NOT set, icons are light/white
-                        
-                        decorView.systemUiVisibility = flags
-                    }
-                }
+                val decorView = window.decorView
+                @Suppress("DEPRECATION")
+                var flags = decorView.systemUiVisibility
+                @Suppress("DEPRECATION")
+                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                @Suppress("DEPRECATION")
+                decorView.systemUiVisibility = flags
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // If anything fails, at least try to set the colors
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    window.statusBarColor = android.graphics.Color.TRANSPARENT
-                    window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                }
-            } catch (ex: Exception) {
+                @Suppress("DEPRECATION")
+                window.statusBarColor = Color.TRANSPARENT
+                @Suppress("DEPRECATION")
+                window.navigationBarColor = Color.TRANSPARENT
+            } catch (_: Exception) {
                 // Ignore if even this fails
             }
         }

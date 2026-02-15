@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.EditText
 import android.widget.Toast
+import androidx.core.net.toUri
 
 /**
  * Handles voice search commands and executes appropriate actions
@@ -65,7 +66,7 @@ class VoiceCommandHandler(
                 val phoneNumber = getPhoneNumberForContact(contactName)
                 phoneNumber?.let {
                     val callIntent = Intent(Intent.ACTION_CALL)
-                    callIntent.data = Uri.parse("tel:$it")
+                    callIntent.data = "tel:$it".toUri()
                     activity.startActivity(callIntent)
                     searchBox.text.clear()
                     true
@@ -73,7 +74,7 @@ class VoiceCommandHandler(
             }
             command.startsWith("search ", ignoreCase = true) -> {
                 val query = command.substringAfter("search ", "").trim()
-                val searchIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=${Uri.encode(query)}"))
+                val searchIntent = Intent(Intent.ACTION_VIEW, "https://www.google.com/search?q=${Uri.encode(query)}".toUri())
                 activity.startActivity(searchIntent)
                 searchBox.text.clear()
                 true
@@ -83,17 +84,17 @@ class VoiceCommandHandler(
                 if (appName.isNotEmpty()) {
                     // Try exact match first, then container match
                     val matchingApp = appList.find { resolveInfo ->
-                        val label = resolveInfo.loadLabel(packageManager)?.toString()?.lowercase() ?: ""
+                        val label = resolveInfo.loadLabel(packageManager).toString().lowercase()
                         label == appName.lowercase()
                     } ?: appList.find { resolveInfo ->
-                        val label = resolveInfo.loadLabel(packageManager)?.toString()?.lowercase() ?: ""
+                        val label = resolveInfo.loadLabel(packageManager).toString().lowercase()
                         label.contains(appName.lowercase())
                     }
 
-                    matchingApp?.let {
-                        val intent = packageManager.getLaunchIntentForPackage(it.activityInfo.packageName)
-                        intent?.let { 
-                            activity.startActivity(it)
+                    matchingApp?.let { app ->
+                        val intent = packageManager.getLaunchIntentForPackage(app.activityInfo.packageName)
+                        intent?.let { launchIntent ->
+                            activity.startActivity(launchIntent)
                             searchBox.text.clear()
                             true
                         } ?: false
@@ -104,14 +105,14 @@ class VoiceCommandHandler(
                 val appName = command.substringAfter("uninstall ", "").trim()
                 if (appName.isNotEmpty()) {
                     val matchingApp = appList.find { resolveInfo ->
-                        val label = resolveInfo.loadLabel(packageManager)?.toString()?.lowercase() ?: ""
+                        val label = resolveInfo.loadLabel(packageManager).toString().lowercase()
                         label.contains(appName.lowercase())
                     }
                     
-                    matchingApp?.let {
-                        val packageName = it.activityInfo.packageName
-                        val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
-                            data = Uri.parse("package:$packageName")
+                    matchingApp?.let { app ->
+                        val packageName = app.activityInfo.packageName
+                        val intent = Intent(Intent.ACTION_DELETE).apply {
+                            data = "package:$packageName".toUri()
                         }
                         activity.startActivity(intent)
                         searchBox.text.clear()
@@ -126,14 +127,14 @@ class VoiceCommandHandler(
                     val destination = locations[1].trim()
                     // Check if it's likely a navigation command (at least one location is not empty)
                     if (origin.isNotEmpty() || destination.isNotEmpty()) {
-                        val uri = Uri.parse("https://www.google.com/maps/dir/?api=1&origin=${Uri.encode(origin)}&destination=${Uri.encode(destination)}&travelmode=driving")
-                        val mapIntent = Intent(Intent.ACTION_VIEW, uri)
+                        val uriString = "https://www.google.com/maps/dir/?api=1&origin=${Uri.encode(origin)}&destination=${Uri.encode(destination)}&travelmode=driving"
+                        val mapIntent = Intent(Intent.ACTION_VIEW, uriString.toUri())
                         mapIntent.setPackage("com.google.android.apps.maps")
                         try {
                             activity.startActivity(mapIntent)
                             searchBox.text.clear()
                             true
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             Toast.makeText(activity, "Google Maps not installed", Toast.LENGTH_SHORT).show()
                             false
                         }
@@ -165,12 +166,12 @@ class VoiceCommandHandler(
         val seenNames = mutableSetOf<String>()
         val matches = mutableListOf<Pair<String, String>>()
         
-        cursor?.use {
-            while (it.moveToNext()) {
-                val name = it.getString(0)?.trim() ?: continue
-                val number = it.getString(1)?.trim() ?: continue
+        cursor?.use { cursorObj ->
+            while (cursorObj.moveToNext()) {
+                val name = cursorObj.getString(0)?.trim() ?: continue
+                val number = cursorObj.getString(1)?.trim() ?: continue
                 
-                if (number.isEmpty() || !number.any { it.isDigit() }) continue
+                if (number.isEmpty() || !number.any { char -> char.isDigit() }) continue
                 
                 val nameParts = normalize(name)
                 
@@ -196,12 +197,13 @@ class VoiceCommandHandler(
     private fun sendWhatsAppMessage(phoneNumber: String, message: String) {
         try {
             val formattedPhoneNumber = phoneNumber.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+            val uriString = "https://wa.me/${Uri.encode(formattedPhoneNumber)}?text=${Uri.encode(message)}"
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("https://wa.me/${Uri.encode(formattedPhoneNumber)}?text=${Uri.encode(message)}")
+                data = uriString.toUri()
                 setPackage("com.whatsapp")
             }
             activity.startActivity(intent)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(activity, "WhatsApp not installed or failed to open message.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -217,19 +219,20 @@ class VoiceCommandHandler(
         
         cursor?.use {
             if (it.moveToFirst()) {
-                var phoneNumber = it.getString(0)
+                val phoneNumber = it.getString(0)
                     .replace(" ", "")
                     .replace("-", "")
                     .replace("(", "")
                     .replace(")", "")
                 
                 try {
+                    val uriString = "https://wa.me/${Uri.encode(phoneNumber)}"
                     val intent = Intent(Intent.ACTION_VIEW).apply {
-                        data = Uri.parse("https://wa.me/${Uri.encode(phoneNumber)}")
+                        data = uriString.toUri()
                         setPackage("com.whatsapp")
                     }
                     activity.startActivity(intent)
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(activity, "WhatsApp not installed.", Toast.LENGTH_SHORT).show()
                 }
             } else {
@@ -242,7 +245,7 @@ class VoiceCommandHandler(
         val phoneNumber = getPhoneNumberForContact(contactName)
         
         val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("smsto:$phoneNumber")
+            data = "smsto:$phoneNumber".toUri()
             putExtra("sms_body", "")
         }
         
@@ -252,7 +255,7 @@ class VoiceCommandHandler(
             } else {
                 Toast.makeText(activity, "No SMS app installed!", Toast.LENGTH_SHORT).show()
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(activity, "Failed to open messaging app.", Toast.LENGTH_SHORT).show()
         }
     }

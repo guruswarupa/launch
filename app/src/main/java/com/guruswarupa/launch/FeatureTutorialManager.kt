@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.graphics.Rect
 import android.view.View
@@ -8,7 +9,8 @@ import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
-import androidx.core.view.ViewCompat
+import androidx.core.content.edit
+import kotlin.math.abs
 
 /**
  * Manages the feature tutorial that shows users how to use each feature one by one
@@ -140,7 +142,7 @@ class FeatureTutorialManager(
         if (isTutorialActive) return
         
         currentStep = sharedPreferences.getInt(PREF_TUTORIAL_STEP, 0)
-        if (currentStep >= TutorialStep.values().size) {
+        if (currentStep >= TutorialStep.entries.size) {
             // Tutorial already completed
             markTutorialComplete()
             return
@@ -154,12 +156,12 @@ class FeatureTutorialManager(
      * Show the current tutorial step
      */
     private fun showCurrentStep() {
-        if (currentStep >= TutorialStep.values().size) {
+        if (currentStep >= TutorialStep.entries.size) {
             finishTutorial()
             return
         }
         
-        val step = TutorialStep.values()[currentStep]
+        val step = TutorialStep.entries[currentStep]
         
         // Special handling for drawer gesture
         if (step == TutorialStep.DRAWER_GESTURE) {
@@ -168,7 +170,7 @@ class FeatureTutorialManager(
         }
         
         // For drawer-based steps, ensure drawer is open first
-        val isInDrawer = isDrawerStep(step) && step != TutorialStep.DRAWER_GESTURE
+        val isInDrawer = isDrawerStep(step)
         if (isInDrawer) {
             if (!activity.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
                 activity.drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
@@ -191,13 +193,13 @@ class FeatureTutorialManager(
         val targetView = if (step.targetViewTag != null) {
             findViewByTag(step.targetViewTag)
         } else {
-            activity.findViewById<View>(step.targetViewId)
+            activity.findViewById(step.targetViewId)
         }
         
         if (targetView == null || !targetView.isAttachedToWindow) {
             // View not ready yet, try again after a delay
             // For drawer steps, ensure drawer is open
-            val isInDrawer = isDrawerStep(step) && step != TutorialStep.DRAWER_GESTURE
+            val isInDrawer = isDrawerStep(step)
             if (isInDrawer && !activity.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
                 activity.drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
                 activity.drawerLayout.postDelayed({
@@ -220,35 +222,17 @@ class FeatureTutorialManager(
     }
     
     /**
-     * Check if a view is visible on screen
-     */
-    private fun isViewVisibleOnScreen(view: View): Boolean {
-        val location = IntArray(2)
-        view.getLocationOnScreen(location)
-        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
-        val rootLocation = IntArray(2)
-        rootView?.getLocationOnScreen(rootLocation)
-        
-        val viewTop = location[1]
-        val viewBottom = location[1] + view.height
-        val screenTop = rootLocation[1]
-        val screenBottom = screenTop + (rootView?.height ?: 0)
-        
-        // View is visible if at least part of it is on screen
-        return viewTop < screenBottom && viewBottom > screenTop
-    }
-    
-    /**
      * Find a view by tag, searching in the app dock
      */
     private fun findViewByTag(tag: String): View? {
         val appDock = activity.findViewById<ViewGroup>(R.id.app_dock)
-        return appDock?.findViewWithTag<View>(tag)
+        return appDock?.findViewWithTag(tag)
     }
     
     /**
      * Show tutorial overlay for a specific view
      */
+    @SuppressLint("InflateParams")
     private fun showTutorialOverlay(step: TutorialStep, targetView: View) {
         // Remove existing overlay if any
         removeTutorialOverlay()
@@ -261,16 +245,18 @@ class FeatureTutorialManager(
         val parentView = if (isInDrawer) {
             // Find the drawer's root view (widgets_drawer FrameLayout)
             activity.findViewById<ViewGroup>(R.id.widgets_drawer) 
-                ?: activity.findViewById<ViewGroup>(android.R.id.content)
+                ?: activity.findViewById(android.R.id.content)
         } else {
-            activity.findViewById<ViewGroup>(android.R.id.content)
+            activity.findViewById(android.R.id.content)
         }
         
-        parentView?.addView(tutorialOverlay)
+        parentView.addView(tutorialOverlay)
         
         // Allow touch events to pass through to underlying views for scrolling
         // Return false to allow events to propagate to children (buttons) and underlying views (scroll views)
-        tutorialOverlay?.setOnTouchListener { _, _ ->
+        @SuppressLint("ClickableViewAccessibility")
+        tutorialOverlay?.setOnTouchListener { v, _ ->
+            v.performClick()
             // Return false to indicate we didn't consume the event
             // This allows child views (buttons) to handle clicks
             // and allows scroll gestures to pass through to underlying scroll views
@@ -291,7 +277,7 @@ class FeatureTutorialManager(
         titleText?.text = step.title
         descriptionText?.text = step.description
         
-        val isLastStep = currentStep == TutorialStep.values().size - 1
+        val isLastStep = currentStep == TutorialStep.entries.size - 1
         buttonsContainer?.visibility = if (isLastStep) View.GONE else View.VISIBLE
         nextButton?.visibility = if (isLastStep) View.GONE else View.VISIBLE
         gotItButton?.visibility = if (isLastStep) View.VISIBLE else View.GONE
@@ -332,7 +318,7 @@ class FeatureTutorialManager(
                 overlay.post {
                     // Get the parent view (could be main content or drawer)
                     val parentView = overlay.parent as? ViewGroup
-                        ?: activity.findViewById<ViewGroup>(android.R.id.content)
+                        ?: activity.findViewById(android.R.id.content)
                         ?: return@post
                     
                     // Ensure views are measured
@@ -457,11 +443,11 @@ class FeatureTutorialManager(
                         val textLocation = IntArray(2)
                         textContainer.getLocationOnScreen(textLocation)
                         val textHeight = textContainer.height
-                        val screenHeight = parentView.height
+                        val currentScreenHeight = parentView.height
                         
                         // If text container is off screen or not fully visible, center it
-                        val isOffScreen = textLocation[1] < padding || textLocation[1] + textHeight > screenHeight - padding
-                        val isPartiallyVisible = textLocation[1] < 0 || textLocation[1] + textHeight > screenHeight
+                        val isOffScreen = textLocation[1] < padding || textLocation[1] + textHeight > currentScreenHeight - padding
+                        val isPartiallyVisible = textLocation[1] < 0 || textLocation[1] + textHeight > currentScreenHeight
                         
                         if (isOffScreen || isPartiallyVisible) {
                             // Reposition to center
@@ -471,7 +457,7 @@ class FeatureTutorialManager(
                                     FrameLayout.LayoutParams.WRAP_CONTENT
                                 )
                             val actualTextHeight = if (textHeight > 0) textHeight else textContainerHeight
-                            fallbackParams.topMargin = ((screenHeight - actualTextHeight) / 2).coerceAtLeast(padding)
+                            fallbackParams.topMargin = ((currentScreenHeight - actualTextHeight) / 2).coerceAtLeast(padding)
                             fallbackParams.leftMargin = padding
                             fallbackParams.rightMargin = padding
                             textContainer.layoutParams = fallbackParams
@@ -508,11 +494,6 @@ class FeatureTutorialManager(
                     // Calculate view's Y position relative to scroll view's content
                     // The view's position in the scroll view = screen position difference + current scroll
                     val viewTopInContent = targetLocation[1] - scrollViewLocation[1] + currentScrollY
-                    val viewBottomInContent = viewTopInContent + targetView.height
-                    
-                    // Check if view is already visible
-                    val visibleTop = currentScrollY
-                    val visibleBottom = currentScrollY + scrollView.height
                     
                     // Always center the widget on screen for tutorial
                     // Calculate desired scroll position to center the widget vertically
@@ -548,7 +529,7 @@ class FeatureTutorialManager(
                     val finalScrollY = desiredScrollY.coerceIn(0, maxScrollY)
                     
                     // Only scroll if it's a significant change (more than 10 pixels)
-                    if (Math.abs(finalScrollY - currentScrollY) > 10) {
+                    if (abs(finalScrollY - currentScrollY) > 10) {
                         when (scrollView) {
                             is androidx.core.widget.NestedScrollView -> {
                                 // Use smooth scroll for better animation
@@ -564,7 +545,7 @@ class FeatureTutorialManager(
             } else {
                 // No scroll view found, try to center the view using requestRectangleOnScreen
                 targetView.post {
-                    val rect = android.graphics.Rect()
+                    val rect = Rect()
                     targetView.getHitRect(rect)
                     // Center the view on screen by expanding rect equally above and below
                     val screenHeight = activity.findViewById<ViewGroup>(android.R.id.content)?.height ?: 0
@@ -622,21 +603,11 @@ class FeatureTutorialManager(
     }
     
     /**
-     * Disable scrolling while tutorial is active
-     */
-    private fun disableScrolling() {
-        scrollViews.clear()
-        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
-        findAndDisableScrollViews(rootView)
-    }
-    
-    /**
      * Find and disable all scroll views recursively
      */
     private fun findAndDisableScrollViews(parent: ViewGroup) {
         for (i in 0 until parent.childCount) {
-            val child = parent.getChildAt(i)
-            when (child) {
+            when (val child = parent.getChildAt(i)) {
                 is androidx.core.widget.NestedScrollView -> {
                     // Disable nested scrolling to prevent automatic scrolling
                     child.isNestedScrollingEnabled = false
@@ -682,16 +653,16 @@ class FeatureTutorialManager(
      * Move to next tutorial step
      */
     private fun nextStep() {
-        val previousStep = if (currentStep > 0) TutorialStep.values()[currentStep - 1] else null
+        val previousStep = if (currentStep > 0) TutorialStep.entries[currentStep - 1] else null
         currentStep++
-        sharedPreferences.edit().putInt(PREF_TUTORIAL_STEP, currentStep).apply()
+        sharedPreferences.edit { putInt(PREF_TUTORIAL_STEP, currentStep) }
         
-        if (currentStep >= TutorialStep.values().size) {
+        if (currentStep >= TutorialStep.entries.size) {
             finishTutorial()
             return
         }
         
-        val nextStep = TutorialStep.values()[currentStep]
+        val nextStep = TutorialStep.entries[currentStep]
         val isNextDrawerStep = isDrawerStep(nextStep) && nextStep != TutorialStep.DRAWER_GESTURE
         val wasPreviousDrawerStep = previousStep != null && isDrawerStep(previousStep) && previousStep != TutorialStep.DRAWER_GESTURE
         
@@ -747,10 +718,10 @@ class FeatureTutorialManager(
      * Mark tutorial as complete
      */
     private fun markTutorialComplete() {
-        sharedPreferences.edit()
-            .putBoolean(PREF_TUTORIAL_SHOWN, true)
-            .putInt(PREF_TUTORIAL_STEP, TutorialStep.values().size)
-            .apply()
+        sharedPreferences.edit {
+            putBoolean(PREF_TUTORIAL_SHOWN, true)
+            putInt(PREF_TUTORIAL_STEP, TutorialStep.entries.size)
+        }
         isTutorialActive = false
     }
     
@@ -768,10 +739,11 @@ class FeatureTutorialManager(
     /**
      * Reset tutorial (for testing or if user wants to see it again)
      */
+    @Suppress("unused")
     fun resetTutorial() {
-        sharedPreferences.edit()
-            .putBoolean(PREF_TUTORIAL_SHOWN, false)
-            .putInt(PREF_TUTORIAL_STEP, 0)
-            .apply()
+        sharedPreferences.edit {
+            putBoolean(PREF_TUTORIAL_SHOWN, false)
+            putInt(PREF_TUTORIAL_STEP, 0)
+        }
     }
 }

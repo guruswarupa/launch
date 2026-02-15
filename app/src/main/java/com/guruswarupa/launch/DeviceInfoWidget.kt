@@ -11,8 +11,7 @@ import android.widget.TextView
 
 class DeviceInfoWidget(
     private val context: Context,
-    private val container: LinearLayout,
-    private val sharedPreferences: android.content.SharedPreferences
+    private val container: LinearLayout
 ) {
     private var isInitialized = false
     private lateinit var widgetView: View
@@ -75,20 +74,23 @@ class DeviceInfoWidget(
     }
     
     private fun updateDisplay() {
-        // ... RAM and Storage updates ...
         uptimeText.text = deviceInfoManager.getUptime()
+        
         // RAM
         val (usedRam, totalRam) = deviceInfoManager.getRamUsage()
         val usedRamGb = deviceInfoManager.formatBytes(usedRam)
         val totalRamGb = deviceInfoManager.formatBytes(totalRam)
-        ramUsageText.text = "$usedRamGb / $totalRamGb GB"
-        ramProgressBar.progress = ((usedRam.toDouble() / totalRam.toDouble()) * 100).toInt()
+        ramUsageText.text = context.getString(R.string.ram_usage_format, usedRamGb, totalRamGb)
+        
+        if (totalRam > 0) {
+            ramProgressBar.progress = ((usedRam.toDouble() / totalRam.toDouble()) * 100).toInt()
+        }
         
         // Storage
         val (usedStorage, totalStorage) = deviceInfoManager.getStorageUsage()
         val usedStorageGb = deviceInfoManager.formatBytes(usedStorage)
         val totalStorageGb = deviceInfoManager.formatBytes(totalStorage)
-        storageUsageText.text = "$usedStorageGb / $totalStorageGb GB"
+        storageUsageText.text = context.getString(R.string.storage_usage_format, usedStorageGb, totalStorageGb)
         
         if (totalStorage > 0) {
             storageProgressBar.progress = ((usedStorage.toDouble() / totalStorage.toDouble()) * 100).toInt()
@@ -97,7 +99,7 @@ class DeviceInfoWidget(
         // CPU Temp
         val temp = deviceInfoManager.getCpuTemperature()
         if (temp > 0) {
-            cpuTempText.text = "${String.format("%.1f", temp)}°C"
+            cpuTempText.text = context.getString(R.string.cpu_temp_format, temp)
         } else {
             cpuTempText.text = "--"
         }

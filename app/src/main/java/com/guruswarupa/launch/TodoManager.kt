@@ -1,11 +1,8 @@
 package com.guruswarupa.launch
 
 import android.content.SharedPreferences
-import android.os.Build
-import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
-import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageButton
@@ -14,11 +11,12 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Calendar
+import java.util.Locale
 
 /**
  * Manages todo items: loading, saving, adding, removing, and recurring task logic
@@ -32,12 +30,12 @@ class TodoManager(
 ) {
     private val todoItems = mutableListOf<TodoItem>()
     private lateinit var todoAdapter: TodoAdapter
-    
+
     fun initialize() {
         todoRecyclerView.layoutManager = LinearLayoutManager(activity)
         // Disable animations to prevent "Tmp detached view" crash during rapid updates
         todoRecyclerView.itemAnimator = null
-        
+
         todoAdapter = TodoAdapter(todoItems, { todoItem ->
             removeTodoItem(todoItem)
         }, {
@@ -46,26 +44,24 @@ class TodoManager(
             rescheduleTodoAlarms()
         })
         todoRecyclerView.adapter = todoAdapter
-        
+
         addTodoButton.setOnClickListener {
             showAddTodoDialog()
         }
-        
+
         loadTodoItems()
         rescheduleTodoAlarms()
     }
-    
-    fun getTodoItems(): MutableList<TodoItem> = todoItems
-    
+
     /**
      * Notify the adapter that theme has changed and views need to be refreshed
      */
     fun onThemeChanged() {
         if (::todoAdapter.isInitialized) {
-            todoAdapter.notifyDataSetChanged()
+            todoAdapter.notifyItemRangeChanged(0, todoItems.size)
         }
     }
-    
+
     fun showAddTodoDialog() {
         val dialogBuilder = android.app.AlertDialog.Builder(activity, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Add Todo Item")
@@ -87,14 +83,14 @@ class TodoManager(
         val intervalStartTimePicker = dialogView.findViewById<android.widget.TimePicker>(R.id.interval_start_time_picker)
 
         // Day checkboxes
-        val dayCheckboxes = listOf(
-            dialogView.findViewById<CheckBox>(R.id.checkbox_sunday),
-            dialogView.findViewById<CheckBox>(R.id.checkbox_monday),
-            dialogView.findViewById<CheckBox>(R.id.checkbox_tuesday),
-            dialogView.findViewById<CheckBox>(R.id.checkbox_wednesday),
-            dialogView.findViewById<CheckBox>(R.id.checkbox_thursday),
-            dialogView.findViewById<CheckBox>(R.id.checkbox_friday),
-            dialogView.findViewById<CheckBox>(R.id.checkbox_saturday)
+        val dayCheckboxes = listOf<CheckBox>(
+            dialogView.findViewById(R.id.checkbox_sunday),
+            dialogView.findViewById(R.id.checkbox_monday),
+            dialogView.findViewById(R.id.checkbox_tuesday),
+            dialogView.findViewById(R.id.checkbox_wednesday),
+            dialogView.findViewById(R.id.checkbox_thursday),
+            dialogView.findViewById(R.id.checkbox_friday),
+            dialogView.findViewById(R.id.checkbox_saturday)
         )
 
         // Setup category spinner
@@ -102,7 +98,7 @@ class TodoManager(
         categorySpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, categories)
 
         // Setup priority spinner
-        val priorities = TodoItem.Priority.values().map { it.displayName }.toTypedArray()
+        val priorities = TodoItem.Priority.entries.map { it.displayName }.toTypedArray()
         prioritySpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, priorities)
         prioritySpinner.setSelection(1) // Default to Medium
 
@@ -167,47 +163,27 @@ class TodoManager(
                 } else {
                     emptySet()
                 }
-                
+
                 val recurrenceInterval = if (isRecurring && recurrenceIntervalRadio.isChecked) {
                     intervalValues[intervalSpinner.selectedItemPosition]
                 } else {
                     null
                 }
-                
+
                 val intervalStartTime = if (isRecurring && recurrenceIntervalRadio.isChecked && recurrenceInterval != null) {
-                    val hour = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        intervalStartTimePicker.hour
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intervalStartTimePicker.currentHour
-                    }
-                    val minute = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        intervalStartTimePicker.minute
-                    } else {
-                        @Suppress("DEPRECATION")
-                        intervalStartTimePicker.currentMinute
-                    }
-                    String.format("%02d:%02d", hour, minute)
+                    val hour = intervalStartTimePicker.hour
+                    val minute = intervalStartTimePicker.minute
+                    String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
                 } else {
                     null
                 }
 
                 val category = categories[categorySpinner.selectedItemPosition]
-                val priority = TodoItem.Priority.values()[prioritySpinner.selectedItemPosition]
+                val priority = TodoItem.Priority.entries[prioritySpinner.selectedItemPosition]
                 val dueTime = if (enableTimeCheckbox.isChecked) {
-                    val hour = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        timePicker.hour
-                    } else {
-                        @Suppress("DEPRECATION")
-                        timePicker.currentHour
-                    }
-                    val minute = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        timePicker.minute
-                    } else {
-                        @Suppress("DEPRECATION")
-                        timePicker.currentMinute
-                    }
-                    String.format("%02d:%02d", hour, minute)
+                    val hour = timePicker.hour
+                    val minute = timePicker.minute
+                    String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
                 } else {
                     null
                 }
@@ -222,11 +198,11 @@ class TodoManager(
 
         val dialog = dialogBuilder.create()
         dialog.show()
-        
+
         // Fix dialog text colors
         fixDialogTextColors(dialog)
     }
-    
+
     private fun fixDialogTextColors(dialog: android.app.AlertDialog) {
         try {
             val textColor = ContextCompat.getColor(activity, R.color.text)
@@ -249,7 +225,7 @@ class TodoManager(
         todoItems.add(newTodo)
         todoAdapter.notifyItemInserted(index)
         saveTodoItems()
-        
+
         // Schedule alarm if due time is set or if it's interval-based
         if (dueTime != null || (newTodo.isIntervalBased() && newTodo.intervalStartTime != null)) {
             val requestCode = todoAlarmManager.getRequestCode(newTodo, index)
@@ -276,15 +252,15 @@ class TodoManager(
         if (todoString.isNotEmpty()) {
             val todoArray = todoString.split("|")
             todoItems.clear()
-            for (todoString in todoArray) {
-                if (todoString.isNotEmpty()) {
-                    val parts = todoString.split(":")
+            for (itemString in todoArray) {
+                if (itemString.isNotEmpty()) {
+                    val parts = itemString.split(":")
                     if (parts.size >= 7) {
                         // New format with all fields
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         val isRecurring = parts[2].toBoolean()
-                        val lastCompletedDate = if (parts[3].isNotEmpty()) parts[3] else null
+                        val lastCompletedDate = parts[3].ifEmpty { null }
                         val selectedDays = if (parts[4].isNotEmpty()) {
                             parts[4].split(",").mapNotNull { it.toIntOrNull() }.toSet()
                         } else {
@@ -292,7 +268,7 @@ class TodoManager(
                         }
                         val priority = try {
                             TodoItem.Priority.valueOf(parts[5])
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             TodoItem.Priority.MEDIUM
                         }
                         val category = parts[6]
@@ -325,7 +301,7 @@ class TodoManager(
                 }
             }
             checkRecurringTasks()
-            todoAdapter.notifyDataSetChanged()
+            todoAdapter.notifyItemRangeChanged(0, todoItems.size)
             
             // Reschedule alarms after loading
             rescheduleTodoAlarms()
@@ -337,7 +313,7 @@ class TodoManager(
             val selectedDaysString = it.selectedDays.joinToString(",")
             "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}:${selectedDaysString}:${it.priority.name}:${it.category}:${it.dueTime ?: ""}:${it.recurrenceInterval ?: ""}:${it.intervalStartTime ?: ""}"
         }
-        sharedPreferences.edit().putString("todo_items", todoString).apply()
+        sharedPreferences.edit { putString("todo_items", todoString) }
     }
 
     private fun checkRecurringTasks() {
@@ -368,7 +344,7 @@ class TodoManager(
                                     todoItem.lastCompletedDate = null
                                 }
                             }
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             // If parsing fails, treat as date string (legacy format)
                             if (todoItem.lastCompletedDate != currentDate) {
                                 todoItem.isChecked = false
@@ -384,11 +360,11 @@ class TodoManager(
                     if (todoItem.selectedDays.contains(currentDayOfWeek)) {
                         todoItem.isChecked = false
                     }
-                } else if (!todoItem.isDayBased() && todoItem.lastCompletedDate != currentDate) {
+                } else if (todoItem.lastCompletedDate != currentDate) {
                     // Daily recurring (legacy behavior)
                     todoItem.isChecked = false
                 }
-            } else if (!todoItem.isRecurring && todoItem.dueTime != null) {
+            } else if (todoItem.dueTime != null) {
                 // Check if non-recurring task with due time is overdue
                 val dueTimeParts = todoItem.dueTime.split(":")
                 if (dueTimeParts.size == 2) {
@@ -401,7 +377,7 @@ class TodoManager(
                         if (currentTimeInMinutes > dueTimeInMinutes) {
                             itemsToRemove.add(todoItem)
                         }
-                    } catch (e: NumberFormatException) {
+                    } catch (_: NumberFormatException) {
                         // Invalid time format, ignore
                     }
                 }

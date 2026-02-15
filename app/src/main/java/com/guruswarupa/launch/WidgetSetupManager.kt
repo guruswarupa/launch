@@ -1,20 +1,16 @@
 package com.guruswarupa.launch
 
-import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
 
 /**
  * Manages initialization and setup of all widgets
  */
 class WidgetSetupManager(
     private val activity: MainActivity,
-    private val handler: Handler,
     private val usageStatsManager: AppUsageStatsManager,
     private val weatherManager: WeatherManager,
     private val permissionManager: PermissionManager
@@ -41,7 +37,7 @@ class WidgetSetupManager(
 
         val screenTimeMillis = usageStatsManager.getTotalUsageForPeriod(startTime, endTime)
         val formattedTime = usageStatsManager.formatUsageTime(screenTimeMillis)
-        screenTimeTextView?.text = "Screen Time: $formattedTime"
+        screenTimeTextView?.text = activity.getString(R.string.screen_time_format, formattedTime)
     }
     
     fun setupWeather(weatherIcon: ImageView, weatherText: TextView) {
@@ -101,7 +97,7 @@ class WidgetSetupManager(
     
     fun setupPressureWidget(sharedPreferences: android.content.SharedPreferences): PressureWidget {
         val pressureContainer = activity.findViewById<android.widget.LinearLayout>(R.id.pressure_widget_container)
-        val pressureWidget = PressureWidget(activity, pressureContainer, sharedPreferences)
+        val pressureWidget = PressureWidget(activity, container = pressureContainer, sharedPreferences = sharedPreferences)
         pressureWidget.initialize()
         return pressureWidget
     }
@@ -141,16 +137,16 @@ class WidgetSetupManager(
         return countdownWidget
     }
 
-    fun setupNetworkStatsWidget(sharedPreferences: android.content.SharedPreferences): NetworkStatsWidget {
+    fun setupNetworkStatsWidget(): NetworkStatsWidget {
         val container = activity.findViewById<android.widget.LinearLayout>(R.id.network_stats_widget_container)
-        val widget = NetworkStatsWidget(activity, container, sharedPreferences)
+        val widget = NetworkStatsWidget(activity, container)
         widget.initialize()
         return widget
     }
 
-    fun setupDeviceInfoWidget(sharedPreferences: android.content.SharedPreferences): DeviceInfoWidget {
+    fun setupDeviceInfoWidget(): DeviceInfoWidget {
         val container = activity.findViewById<android.widget.LinearLayout>(R.id.device_info_widget_container)
-        val widget = DeviceInfoWidget(activity, container, sharedPreferences)
+        val widget = DeviceInfoWidget(activity, container)
         widget.initialize()
         return widget
     }

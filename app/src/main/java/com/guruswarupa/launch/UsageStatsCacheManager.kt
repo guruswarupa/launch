@@ -1,7 +1,6 @@
 package com.guruswarupa.launch
 
 import android.content.SharedPreferences
-import android.util.Log
 import java.util.concurrent.Executor
 
 /**
@@ -29,17 +28,9 @@ class UsageStatsCacheManager(
                     }
                 }
                 onComplete?.invoke(usageStatsCache)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 onComplete?.invoke(usageStatsCache)
             }
         }
-    }
-    
-    fun getCache(): Map<String, Int> = usageStatsCache.toMap()
-    
-    fun isCacheEmpty(): Boolean = usageStatsCache.isEmpty()
-    
-    fun clearCache() {
-        usageStatsCache.clear()
     }
 }

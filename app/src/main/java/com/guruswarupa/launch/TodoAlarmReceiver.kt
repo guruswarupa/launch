@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -73,7 +74,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             if (isIntervalBased && intervalMinutes > 0 && intervalStartTime != null) {
                 rescheduleIntervalAlarm(context, todoText, todoCategory, priorityName, requestCode, intervalMinutes, intervalStartTime)
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             // Handle case where notification permission is not granted
             // This will be handled by requesting permission in MainActivity
         }
@@ -95,7 +96,6 @@ class TodoAlarmReceiver : BroadcastReceiver() {
         
         val calendar = Calendar.getInstance()
         val currentTimeInMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
-        val startTimeInMinutes = startHour * 60 + startMinute
         
         // Calculate next alarm time (current time + interval)
         var nextAlarmTimeInMinutes = currentTimeInMinutes + intervalMinutes
@@ -104,12 +104,10 @@ class TodoAlarmReceiver : BroadcastReceiver() {
         if (nextAlarmTimeInMinutes >= 24 * 60) {
             calendar.add(Calendar.DAY_OF_YEAR, 1)
             nextAlarmTimeInMinutes -= 24 * 60
-        } else {
-            // Same day
-            calendar.set(Calendar.HOUR_OF_DAY, nextAlarmTimeInMinutes / 60)
-            calendar.set(Calendar.MINUTE, nextAlarmTimeInMinutes % 60)
         }
         
+        calendar.set(Calendar.HOUR_OF_DAY, nextAlarmTimeInMinutes / 60)
+        calendar.set(Calendar.MINUTE, nextAlarmTimeInMinutes % 60)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
 
@@ -130,16 +128,12 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                android.app.AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(android.app.AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-        }
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            pendingIntent
+        )
     }
     
     private fun parseTime(timeString: String): Pair<Int, Int>? {
@@ -154,7 +148,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             } else {
                 null
             }
-        } catch (e: NumberFormatException) {
+        } catch (_: NumberFormatException) {
             null
         }
     }

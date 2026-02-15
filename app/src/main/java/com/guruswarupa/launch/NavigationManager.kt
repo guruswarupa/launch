@@ -4,14 +4,12 @@ import android.os.Handler
 import android.os.Looper
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
-import androidx.fragment.app.FragmentActivity
 
 /**
  * Handles navigation and back press logic.
  * Extracted from MainActivity to reduce complexity.
  */
 class NavigationManager(
-    private val activity: FragmentActivity,
     private val drawerLayout: DrawerLayout,
     private val gestureHandler: GestureHandler,
     private val handler: Handler = Handler(Looper.getMainLooper())
@@ -56,5 +54,6 @@ class NavigationManager(
     /**
      * Returns whether back gestures are currently blocked.
      */
+    @Suppress("unused")
     fun isBlockingBackGesture(): Boolean = isBlockingBackGesture
 }

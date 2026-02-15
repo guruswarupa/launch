@@ -1,21 +1,19 @@
 package com.guruswarupa.launch
 
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.net.wifi.WifiManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 import java.util.concurrent.Executors
+import kotlin.math.abs
+import kotlin.math.min
 import kotlin.math.roundToInt
 
-class NetworkStatsManager(private val context: Context) {
+class NetworkStatsManager {
 
-    private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
 
@@ -60,7 +58,7 @@ class NetworkStatsManager(private val context: Context) {
         val pings = mutableListOf<Long>()
         val count = 5
         
-        for (i in 0 until count) {
+        repeat(count) {
             val start = System.currentTimeMillis()
             val isReachable = java.net.InetAddress.getByName(host).isReachable(1000)
             val end = System.currentTimeMillis()
@@ -76,7 +74,7 @@ class NetworkStatsManager(private val context: Context) {
         // Calculate Jitter (average deviation from the mean)
         var jitterSum = 0.0
         for (p in pings) {
-            jitterSum += Math.abs(p - avgPing)
+            jitterSum += abs(p - avgPing)
         }
         val jitter = (jitterSum / pings.size).toLong()
 
@@ -160,7 +158,7 @@ class NetworkStatsManager(private val context: Context) {
             val bufferSize = 64 * 1024 // 64KB write buffer
             var offset = 0
             while (offset < payloadSize && (System.currentTimeMillis() - startTime < maxDuration)) {
-                 val count = Math.min(bufferSize, payloadSize - offset)
+                 val count = min(bufferSize, payloadSize - offset)
                  outputStream.write(payload, offset, count)
                  offset += count
                  totalBytesWritten += count
@@ -171,6 +169,9 @@ class NetworkStatsManager(private val context: Context) {
             
             val endTime = System.currentTimeMillis()
             val responseCode = connection.responseCode // Wait for response to ensure upload completed
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                Log.w("NetworkStatsManager", "Upload test returned response code: $responseCode")
+            }
             connection.disconnect()
             
             val timeSeconds = (endTime - startTime) / 1000.0
@@ -217,7 +218,7 @@ class NetworkStatsManager(private val context: Context) {
                 }
             }
             "Not Connected"
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "Unknown"
         }
     }
@@ -225,10 +226,10 @@ class NetworkStatsManager(private val context: Context) {
     fun formatDataUsage(bytes: Long): String {
         if (bytes < 1024) return "$bytes B"
         val kb = bytes / 1024.0
-        if (kb < 1024) return String.format("%.1f KB", kb)
+        if (kb < 1024) return String.format(Locale.getDefault(), "%.1f KB", kb)
         val mb = kb / 1024.0
-        if (mb < 1024) return String.format("%.1f MB", mb)
+        if (mb < 1024) return String.format(Locale.getDefault(), "%.1f MB", mb)
         val gb = mb / 1024.0
-        return String.format("%.1f GB", gb)
+        return String.format(Locale.getDefault(), "%.1f GB", gb)
     }
 }

@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -91,6 +90,7 @@ class ShareManager(private val context: Context) {
     /**
      * Shows file picker dialog to select a file for sharing
      */
+    @Suppress("DEPRECATION")
     private fun showFileSharingDialog() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
             type = Constants.MIME_TYPE_ALL
@@ -105,9 +105,9 @@ class ShareManager(private val context: Context) {
             } else {
                 showToast(context.getString(R.string.activity_not_available))
             }
-        } catch (e: ActivityNotFoundException) {
+        } catch (_: ActivityNotFoundException) {
             showToast(context.getString(R.string.no_file_manager_available))
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             showToast(context.getString(R.string.no_file_manager_available))
         }
     }
@@ -159,6 +159,7 @@ class ShareManager(private val context: Context) {
     private fun getInstalledApps(): List<ShareableApp> {
         val packageManager = context.packageManager
         return try {
+            @Suppress("DEPRECATION")
             val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
             installedApps
                 .filter { app ->
@@ -179,7 +180,7 @@ class ShareManager(private val context: Context) {
                     }
                 }
                 .sortedBy { it.name }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -200,9 +201,9 @@ class ShareManager(private val context: Context) {
                         launchShareIntent(uri, appName)
                     }
                 }
-            } catch (e: PackageManager.NameNotFoundException) {
+            } catch (_: PackageManager.NameNotFoundException) {
                 showToast(context.getString(R.string.apk_file_not_found))
-            } catch (e: IOException) {
+            } catch (_: IOException) {
                 showToast(context.getString(R.string.error_copying_apk))
             } catch (e: Exception) {
                 showToast(context.getString(R.string.error_sharing_apk, e.message ?: ""))
@@ -246,15 +247,11 @@ class ShareManager(private val context: Context) {
         }
 
         // Create URI for sharing
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            FileProvider.getUriForFile(
-                context,
-                "${context.packageName}${Constants.FILE_PROVIDER_AUTHORITY_SUFFIX}",
-                copiedApk
-            )
-        } else {
-            Uri.fromFile(copiedApk)
-        }
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}${Constants.FILE_PROVIDER_AUTHORITY_SUFFIX}",
+            copiedApk
+        )
     }
     
     /**

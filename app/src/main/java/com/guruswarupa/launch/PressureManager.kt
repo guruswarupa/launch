@@ -9,7 +9,7 @@ import android.util.Log
 import kotlin.math.abs
 import kotlin.math.pow
 
-class PressureManager(private val context: Context) : SensorEventListener {
+class PressureManager(context: Context) : SensorEventListener {
     
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private var pressureSensor: Sensor? = null
@@ -18,11 +18,10 @@ class PressureManager(private val context: Context) : SensorEventListener {
     private var currentPressure: Float = 0f // in hPa (hectopascals)
     private var onPressureChanged: ((Float) -> Unit)? = null
     
-    // For altitude calculation (sea level pressure is approximately 1013.25 hPa)
-    private val SEA_LEVEL_PRESSURE = 1013.25f
-    
     companion object {
         private const val TAG = "PressureManager"
+        // For altitude calculation (sea level pressure is approximately 1013.25 hPa)
+        private const val SEA_LEVEL_PRESSURE = 1013.25f
     }
     
     init {
