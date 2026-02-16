@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -729,6 +730,9 @@ class MainActivity : FragmentActivity() {
         // Start app usage monitor for daily limits
         startService(Intent(this, AppUsageMonitor::class.java))
         
+        // Initialize screen dimmer service (if enabled)
+        updateScreenDimmerService()
+        
         // Initialize lifecycle manager
         initializeLifecycleManager()
 
@@ -776,6 +780,19 @@ class MainActivity : FragmentActivity() {
             action = ShakeDetectionService.ACTION_STOP
         }
         stopService(intent)
+    }
+
+    /**
+     * Updates screen dimmer service based on user preference
+     */
+    private fun updateScreenDimmerService() {
+        val isDimmerEnabled = sharedPreferences.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
+        if (isDimmerEnabled && Settings.canDrawOverlays(this)) {
+            val dimLevel = sharedPreferences.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+            ScreenDimmerService.startService(this, dimLevel)
+        } else {
+            ScreenDimmerService.stopService(this)
+        }
     }
     
     /**
@@ -901,6 +918,9 @@ class MainActivity : FragmentActivity() {
         
         // Update shake detection service based on preference
         updateShakeDetectionService()
+
+        // Update screen dimmer service based on preference
+        updateScreenDimmerService()
         
         // Force refresh hidden apps cache to ensure we have latest data
         if (::hiddenAppManager.isInitialized) {
@@ -1052,7 +1072,7 @@ class MainActivity : FragmentActivity() {
         
         // Cleanup compass widget
         if (::compassWidget.isInitialized) {
-            compassWidget.cleanup()
+            compassWidget.onPause()
         }
         
         // Cleanup pressure widget
@@ -1231,6 +1251,7 @@ class MainActivity : FragmentActivity() {
         
         // Pause pressure tracking
         if (::pressureWidget.isInitialized) {
+            // Ensure tracked state is synced
             pressureWidget.onPause()
         }
         
@@ -1452,7 +1473,7 @@ class MainActivity : FragmentActivity() {
             if (widgetMap["network_stats_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
             
         findViewById<View>(R.id.device_info_widget_container)?.visibility = 
-            if (widgetMap["device_info_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+            if (widgetMap["device_info_widget_container"]?.enabled == true) View.GONE else View.VISIBLE
         
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE

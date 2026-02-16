@@ -1,8 +1,10 @@
 package com.guruswarupa.launch
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import androidx.core.net.toUri
 import java.io.PrintWriter
@@ -12,6 +14,31 @@ class LaunchApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         setupCrashHandler()
+        initServices()
+    }
+
+    private fun initServices() {
+        val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        
+        // Start Screen Dimmer if enabled
+        val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
+        if (isDimmerEnabled && Settings.canDrawOverlays(this)) {
+            val dimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+            ScreenDimmerService.startService(this, dimLevel)
+        }
+        
+        // Start Shake Detection if enabled
+        val isShakeEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
+        if (isShakeEnabled) {
+            val intent = Intent(this, ShakeDetectionService::class.java).apply {
+                action = ShakeDetectionService.ACTION_START
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        }
     }
 
     private fun setupCrashHandler() {
