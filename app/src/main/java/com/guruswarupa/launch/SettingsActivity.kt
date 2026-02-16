@@ -321,6 +321,9 @@ class SettingsActivity : ComponentActivity() {
         // Setup screen dimmer
         setupScreenDimmer()
         
+        // Setup night mode
+        setupNightMode()
+        
         // Setup flip to dnd
         setupFlipToDnd()
 
@@ -383,6 +386,59 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, progress) }
                     if (screenDimmerSwitch.isChecked) {
                         ScreenDimmerService.updateDimLevel(this@SettingsActivity, progress)
+                    }
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+    }
+
+    private fun setupNightMode() {
+        val nightModeSwitch = findViewById<SwitchCompat>(R.id.night_mode_switch)
+        val nightModeSeekBar = findViewById<SeekBar>(R.id.night_mode_intensity_seekbar)
+        val nightModeValueText = findViewById<TextView>(R.id.night_mode_value_text)
+        val nightModeContainer = findViewById<View>(R.id.night_mode_container)
+        
+        val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
+        val currentIntensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+        
+        nightModeSwitch.isChecked = isNightModeEnabled
+        nightModeSeekBar.progress = currentIntensity
+        nightModeValueText.text = "$currentIntensity%"
+        nightModeContainer.isVisible = isNightModeEnabled
+        
+        nightModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                if (!Settings.canDrawOverlays(this)) {
+                    nightModeSwitch.isChecked = false
+                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                        .setTitle("Permission Required")
+                        .setMessage("Night Mode requires 'Display over other apps' permission to work. Please grant it in the Permissions section.")
+                        .setPositiveButton("Go to Permissions") { _, _ ->
+                            startActivity(Intent(this, PermissionsActivity::class.java))
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    prefs.edit { putBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, true) }
+                    nightModeContainer.isVisible = true
+                    NightModeService.startService(this, nightModeSeekBar.progress)
+                }
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false) }
+                nightModeContainer.isVisible = false
+                NightModeService.stopService(this)
+            }
+        }
+        
+        nightModeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                nightModeValueText.text = "$progress%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.NIGHT_MODE_INTENSITY, progress) }
+                    if (nightModeSwitch.isChecked) {
+                        NightModeService.updateIntensity(this@SettingsActivity, progress)
                     }
                 }
             }

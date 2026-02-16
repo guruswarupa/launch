@@ -715,6 +715,84 @@
                         android:alpha="0.2"
                         android:layout_marginVertical="16dp"/>
 
+                    <!-- Night Mode Toggle -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Night Mode"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"/>
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/night_mode_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:thumbTint="@color/text"
+                            app:trackTint="@color/text"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/night_mode_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Tint Intensity"
+                                android:textSize="16sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.9"/>
+
+                            <TextView
+                                android:id="@+id/night_mode_value_text"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="50%"
+                                android:textSize="16sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text"/>
+
+                        </LinearLayout>
+
+                        <SeekBar
+                            android:id="@+id/night_mode_intensity_seekbar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:max="100"
+                            android:progress="50"
+                            android:layout_marginTop="8dp"
+                            android:thumbTint="@color/text"
+                            android:progressTint="@color/text"
+                            android:progressBackgroundTint="@color/text"/>
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/text"
+                        android:alpha="0.2"
+                        android:layout_marginVertical="16dp"/>
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

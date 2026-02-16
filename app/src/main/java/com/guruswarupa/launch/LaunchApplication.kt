@@ -27,6 +27,13 @@ class LaunchApplication : Application() {
             ScreenDimmerService.startService(this, dimLevel)
         }
         
+        // Start Night Mode if enabled
+        val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
+        if (isNightModeEnabled && Settings.canDrawOverlays(this)) {
+            val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+            NightModeService.startService(this, intensity)
+        }
+        
         // Start Shake Detection if enabled
         val isShakeEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
         if (isShakeEnabled) {
