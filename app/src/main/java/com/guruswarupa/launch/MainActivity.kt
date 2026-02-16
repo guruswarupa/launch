@@ -800,6 +800,19 @@ class MainActivity : FragmentActivity() {
     }
 
     /**
+     * Updates night mode service based on user preference
+     */
+    private fun updateNightModeService() {
+        val isNightModeEnabled = sharedPreferences.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
+        if (isNightModeEnabled && Settings.canDrawOverlays(this)) {
+            val intensity = sharedPreferences.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+            NightModeService.startService(this, intensity)
+        } else {
+            NightModeService.stopService(this)
+        }
+    }
+
+    /**
      * Updates Flip to DND service based on user preference
      */
     private fun updateFlipToDndService() {
@@ -938,6 +951,9 @@ class MainActivity : FragmentActivity() {
 
         // Update screen dimmer service based on preference
         updateScreenDimmerService()
+
+        // Update night mode service based on preference
+        updateNightModeService()
 
         // Update Flip to DND service based on preference
         updateFlipToDndService()

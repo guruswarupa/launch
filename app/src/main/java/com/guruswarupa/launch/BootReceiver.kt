@@ -19,6 +19,14 @@ class BootReceiver : BroadcastReceiver() {
                 ScreenDimmerService.startService(context, dimLevel)
             }
             
+            // Handle Night Mode
+            val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
+            val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+            
+            if (isNightModeEnabled && Settings.canDrawOverlays(context)) {
+                NightModeService.startService(context, intensity)
+            }
+            
             // Handle Flip to DND
             val isFlipEnabled = prefs.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
