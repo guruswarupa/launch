@@ -1,7 +1,5 @@
 package com.guruswarupa.launch
 
-import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
@@ -12,7 +10,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 
 class FlipToDndService : Service(), SensorEventListener {
 
@@ -26,8 +23,7 @@ class FlipToDndService : Service(), SensorEventListener {
     private lateinit var notificationManager: NotificationManager
 
     companion object {
-        private const val NOTIFICATION_ID = 1003
-        private const val CHANNEL_ID = "flip_dnd_channel"
+        private const val SERVICE_NAME = "Flip to DND"
         
         fun startService(context: Context) {
             val intent = Intent(context, FlipToDndService::class.java)
@@ -50,8 +46,8 @@ class FlipToDndService : Service(), SensorEventListener {
         proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         
-        createNotificationChannel()
-        startForeground(NOTIFICATION_ID, createNotification())
+        val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
+        startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
         
         registerSensors()
     }
@@ -112,27 +108,6 @@ class FlipToDndService : Service(), SensorEventListener {
         if (notificationManager.isNotificationPolicyAccessGranted) {
             notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
         }
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Flip to DND",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun createNotification(): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Flip to DND Active")
-            .setContentText("Phone will enter DND when flipped face down")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .build()
+        ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
 }
