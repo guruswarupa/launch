@@ -11,6 +11,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
@@ -315,6 +316,9 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        // Setup screen dimmer
+        setupScreenDimmer()
+
         // Support & Feedback Section
         val supportHeader = findViewById<LinearLayout>(R.id.support_header)
         val supportContent = findViewById<LinearLayout>(R.id.support_content)
@@ -327,6 +331,59 @@ class SettingsActivity : ComponentActivity() {
         val launcherArrow = findViewById<TextView>(R.id.launcher_arrow)
         setupSectionToggle(launcherHeader, launcherContent, launcherArrow)
         
+    }
+    
+    private fun setupScreenDimmer() {
+        val screenDimmerSwitch = findViewById<SwitchCompat>(R.id.screen_dimmer_switch)
+        val dimmerSeekBar = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
+        val dimmerValueText = findViewById<TextView>(R.id.dimmer_value_text)
+        val dimmerContainer = findViewById<View>(R.id.screen_dimmer_container)
+        
+        val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
+        val currentDimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+        
+        screenDimmerSwitch.isChecked = isDimmerEnabled
+        dimmerSeekBar.progress = currentDimLevel
+        dimmerValueText.text = "$currentDimLevel%"
+        dimmerContainer.isVisible = isDimmerEnabled
+        
+        screenDimmerSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                if (!Settings.canDrawOverlays(this)) {
+                    screenDimmerSwitch.isChecked = false
+                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                        .setTitle("Permission Required")
+                        .setMessage("Screen Dimmer requires 'Display over other apps' permission to work. Please grant it in the Permissions section.")
+                        .setPositiveButton("Go to Permissions") { _, _ ->
+                            startActivity(Intent(this, PermissionsActivity::class.java))
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    prefs.edit { putBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, true) }
+                    dimmerContainer.isVisible = true
+                    ScreenDimmerService.startService(this, dimmerSeekBar.progress)
+                }
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false) }
+                dimmerContainer.isVisible = false
+                ScreenDimmerService.stopService(this)
+            }
+        }
+        
+        dimmerSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                dimmerValueText.text = "$progress%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, progress) }
+                    if (screenDimmerSwitch.isChecked) {
+                        ScreenDimmerService.updateDimLevel(this@SettingsActivity, progress)
+                    }
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
     }
     
     private fun setupSectionToggle(header: LinearLayout, content: LinearLayout, arrow: TextView) {

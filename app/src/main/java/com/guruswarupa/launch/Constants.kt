@@ -12,6 +12,8 @@ object Constants {
         const val PREFS_NAME = "com.guruswarupa.launch.PREFS"
         const val SHAKE_TORCH_ENABLED = "shake_torch_enabled"
         const val SHAKE_SENSITIVITY = "shake_sensitivity"
+        const val SCREEN_DIMMER_ENABLED = "screen_dimmer_enabled"
+        const val SCREEN_DIMMER_LEVEL = "screen_dimmer_level"
     }
     
     // FileProvider
