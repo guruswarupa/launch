@@ -2,7 +2,9 @@ package com.guruswarupa.launch
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.app.WallpaperManager
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -318,6 +320,9 @@ class SettingsActivity : ComponentActivity() {
 
         // Setup screen dimmer
         setupScreenDimmer()
+        
+        // Setup flip to dnd
+        setupFlipToDnd()
 
         // Support & Feedback Section
         val supportHeader = findViewById<LinearLayout>(R.id.support_header)
@@ -384,6 +389,38 @@ class SettingsActivity : ComponentActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+    }
+
+    private fun setupFlipToDnd() {
+        val flipDndSwitch = findViewById<SwitchCompat>(R.id.flip_dnd_switch)
+        val isFlipEnabled = prefs.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
+        
+        flipDndSwitch.isChecked = isFlipEnabled
+        
+        flipDndSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                if (!notificationManager.isNotificationPolicyAccessGranted) {
+                    flipDndSwitch.isChecked = false
+                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                        .setTitle("DND Access Required")
+                        .setMessage("Flip to DND requires Do Not Disturb access to change the DND state. Please grant it in the settings.")
+                        .setPositiveButton("Grant Access") { _, _ ->
+                            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, true) }
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                }
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, false) }
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+        }
     }
     
     private fun setupSectionToggle(header: LinearLayout, content: LinearLayout, arrow: TextView) {
@@ -1014,8 +1051,8 @@ class SettingsActivity : ComponentActivity() {
      */
     private fun importPhysicalActivityData(activityJson: JSONObject) {
         try {
-            val activityPrefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
-            activityPrefs.edit {
+            val activity_prefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
+            activity_prefs.edit {
                 importPreferences(activityJson, this)
             }
         } catch (_: Exception) {

@@ -708,10 +708,42 @@
 
                     </LinearLayout>
 
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/text"
+                        android:alpha="0.2"
+                        android:layout_marginVertical="16dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Flip to DND"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"/>
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/flip_dnd_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:thumbTint="@color/text"
+                            app:trackTint="@color/text"/>
+
+                    </LinearLayout>
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Reduce screen brightness below the system minimum by adding a dark overlay. Requires overlay permission."
+                        android:text="Enable Do Not Disturb mode automatically when the phone is placed face down. Requires DND access."
                         android:textSize="12sp"
                         android:textColor="@color/text"
                         android:alpha="0.7"
