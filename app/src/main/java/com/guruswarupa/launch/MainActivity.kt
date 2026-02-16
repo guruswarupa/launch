@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
+import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -732,6 +733,9 @@ class MainActivity : FragmentActivity() {
         
         // Initialize screen dimmer service (if enabled)
         updateScreenDimmerService()
+
+        // Initialize Flip to DND service (if enabled)
+        updateFlipToDndService()
         
         // Initialize lifecycle manager
         initializeLifecycleManager()
@@ -792,6 +796,19 @@ class MainActivity : FragmentActivity() {
             ScreenDimmerService.startService(this, dimLevel)
         } else {
             ScreenDimmerService.stopService(this)
+        }
+    }
+
+    /**
+     * Updates Flip to DND service based on user preference
+     */
+    private fun updateFlipToDndService() {
+        val isFlipEnabled = sharedPreferences.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (isFlipEnabled && notificationManager.isNotificationPolicyAccessGranted) {
+            FlipToDndService.startService(this)
+        } else {
+            FlipToDndService.stopService(this)
         }
     }
     
@@ -921,6 +938,9 @@ class MainActivity : FragmentActivity() {
 
         // Update screen dimmer service based on preference
         updateScreenDimmerService()
+
+        // Update Flip to DND service based on preference
+        updateFlipToDndService()
         
         // Force refresh hidden apps cache to ensure we have latest data
         if (::hiddenAppManager.isInitialized) {
@@ -1108,6 +1128,9 @@ class MainActivity : FragmentActivity() {
         
         // Stop shake detection service
         stopShakeDetectionService()
+
+        // Stop Flip to DND service
+        FlipToDndService.stopService(this)
     }
 
     // Broadcast receivers moved to BroadcastReceiverManager

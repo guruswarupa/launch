@@ -14,6 +14,7 @@ object Constants {
         const val SHAKE_SENSITIVITY = "shake_sensitivity"
         const val SCREEN_DIMMER_ENABLED = "screen_dimmer_enabled"
         const val SCREEN_DIMMER_LEVEL = "screen_dimmer_level"
+        const val FLIP_DND_ENABLED = "flip_dnd_enabled"
     }
     
     // FileProvider
