@@ -1,8 +1,5 @@
 package com.guruswarupa.launch
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -13,7 +10,6 @@ import android.os.IBinder
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import androidx.core.app.NotificationCompat
 
 class ScreenDimmerService : Service() {
 
@@ -22,8 +18,7 @@ class ScreenDimmerService : Service() {
     private var params: WindowManager.LayoutParams? = null
 
     companion object {
-        private const val NOTIFICATION_ID = 1001
-        private const val CHANNEL_ID = "screen_dimmer_channel"
+        private const val SERVICE_NAME = "Screen Dimmer"
         private const val ACTION_UPDATE_DIMMER = "com.guruswarupa.launch.UPDATE_DIMMER"
         private const val EXTRA_DIM_LEVEL = "extra_dim_level"
 
@@ -56,8 +51,9 @@ class ScreenDimmerService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        createNotificationChannel()
-        startForeground(NOTIFICATION_ID, createNotification())
+        
+        val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
+        startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -159,27 +155,6 @@ class ScreenDimmerService : Service() {
             }
             overlayView = null
         }
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                CHANNEL_ID,
-                "Screen Dimmer Service",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(serviceChannel)
-        }
-    }
-
-    private fun createNotification(): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Screen Dimmer Active")
-            .setContentText("Reducing brightness beyond system limits")
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .build()
+        ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
 }

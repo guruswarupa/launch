@@ -15,10 +15,17 @@ class AppUsageMonitor : Service() {
     private lateinit var appTimerManager: AppTimerManager
     private lateinit var usageStatsManager: UsageStatsManager
 
+    companion object {
+        private const val SERVICE_NAME = "App Usage Monitor"
+    }
+
     override fun onCreate() {
         super.onCreate()
         appTimerManager = AppTimerManager(this)
         usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        
+        val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
+        startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -27,6 +34,8 @@ class AppUsageMonitor : Service() {
     }
 
     private fun startMonitoring() {
+        if (monitoringRunnable != null) return
+        
         monitoringRunnable = object : Runnable {
             override fun run() {
                 checkForegroundAppUsage()
@@ -75,6 +84,7 @@ class AppUsageMonitor : Service() {
     override fun onDestroy() {
         super.onDestroy()
         monitoringRunnable?.let { handler.removeCallbacks(it) }
+        ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
