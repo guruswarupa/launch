@@ -9,6 +9,8 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
+import android.text.TextUtils
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -135,6 +137,43 @@ class PermissionManager(
                 }
                 @Suppress("DEPRECATION")
                 activity.startActivityForResult(intent, DEVICE_ADMIN_REQUEST)
+            }
+            .setNegativeButton(activity.getString(R.string.cancel_button), null)
+            .show()
+        
+        fixDialogTextColors(dialog)
+    }
+
+    /**
+     * Checks if Accessibility Service is enabled
+     */
+    fun isAccessibilityServiceEnabled(): Boolean {
+        val expectedComponentName = ComponentName(activity, ScreenLockAccessibilityService::class.java)
+        val enabledServices = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        if (enabledServices == null) return false
+        
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Request Accessibility Service permission
+     */
+    fun requestAccessibilityPermission() {
+        val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+            .setTitle(activity.getString(R.string.accessibility_permission_title))
+            .setMessage(activity.getString(R.string.accessibility_permission_message))
+            .setPositiveButton(activity.getString(R.string.grant_permission)) { _, _ ->
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                activity.startActivity(intent)
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)
             .show()

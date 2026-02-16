@@ -3,6 +3,11 @@
     <string name="settings_app_name">Launch Settings</string>
     <string name="search_text"> Search...</string>
     
+    <!-- Accessibility Strings -->
+    <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock.</string>
+    <string name="accessibility_permission_title">Accessibility Permission</string>
+    <string name="accessibility_permission_message">To lock the screen and keep fingerprint unlock working, please enable Launch in Accessibility settings.</string>
+
     <!-- Device Admin Strings -->
     <string name="device_admin_label">Launch Screen Off</string>
     <string name="device_admin_description">Allows the launcher to turn off the screen when double-tapped.</string>
@@ -117,6 +122,8 @@
     <string name="disable">Disable</string>
     <string name="enable">Enable</string>
     <string name="proximity_sensor_not_available">Proximity sensor not available on this device</string>
+    <string name="proximity_distance_near">Near</string>
+    <string name="proximity_distance_far">Far</string>
     <string name="pressure_sensor_not_available">Pressure sensor not available on this device</string>
     <string name="pressure_format">%1$s hPa</string>
     <string name="altitude_format">Altitude: %1$s m</string>

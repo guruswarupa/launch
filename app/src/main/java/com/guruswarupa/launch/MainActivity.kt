@@ -326,9 +326,25 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
-     * Attempts to turn off the screen using Device Admin.
+     * Attempts to turn off the screen. 
+     * Prioritizes Accessibility Service (Android P+) to allow biometric unlock.
+     * Falls back to Device Admin for older versions.
      */
     private fun lockScreen() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            if (permissionManager.isAccessibilityServiceEnabled()) {
+                val locked = ScreenLockAccessibilityService.instance?.lockScreen() ?: false
+                if (!locked) {
+                    Toast.makeText(this, "Failed to lock using accessibility service", Toast.LENGTH_SHORT).show()
+                }
+                return
+            } else {
+                permissionManager.requestAccessibilityPermission()
+                return
+            }
+        }
+
+        // Fallback for pre-Android P
         if (permissionManager.isDeviceAdminActive()) {
             val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
             try {
