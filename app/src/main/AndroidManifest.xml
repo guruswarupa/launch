@@ -120,7 +120,10 @@
         <service
             android:name=".AppUsageMonitor"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="App Usage Monitoring" />
+        </service>
 
         <service
             android:name=".PhysicalActivityTrackingService"
