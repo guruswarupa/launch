@@ -51,6 +51,76 @@ class AppUsageStatsManager(private val context: Context) {
         return Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
     }
 
+    /**
+     * Calculates foreground usage map using UsageEvents for higher accuracy.
+     * This avoids counting background services as foreground time.
+     */
+    private fun getForegroundUsageMap(startTime: Long, endTime: Long): Map<String, Long> {
+        val usageMap = mutableMapOf<String, Long>()
+        if (!hasUsageStatsPermission()) return usageMap
+
+        try {
+            val events = usageStatsManager.queryEvents(startTime, endTime)
+            val event = UsageEvents.Event()
+            val appStartTimes = mutableMapOf<String, Long>()
+
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                val pkg = event.packageName
+                
+                when (event.eventType) {
+                    UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                        appStartTimes[pkg] = event.timeStamp
+                    }
+                    UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                        val start = appStartTimes.remove(pkg)
+                        if (start != null) {
+                            val duration = event.timeStamp - start
+                            if (duration > 0) {
+                                usageMap[pkg] = (usageMap[pkg] ?: 0L) + duration
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Handle app currently in foreground if we're querying up to "now"
+            val now = System.currentTimeMillis()
+            if (endTime >= now - 10000) {
+                for ((pkg, start) in appStartTimes) {
+                    val duration = now - start
+                    if (duration > 0) {
+                        usageMap[pkg] = (usageMap[pkg] ?: 0L) + duration
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Fallback to aggregate stats if events query fails
+            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+            return statsMap.mapValues { it.value.totalTimeInForeground }
+        }
+        
+        return usageMap
+    }
+
+    /**
+     * Filters out system apps and the launcher itself to show only user-relevant apps.
+     */
+    private fun isReportableApp(packageName: String): Boolean {
+        if (packageName == "com.guruswarupa.launch" || 
+            packageName == "android" || 
+            packageName.startsWith("com.android.systemui")) {
+            return false
+        }
+        
+        // Only count apps that have a launcher intent (actual apps the user interacts with)
+        return try {
+            context.packageManager.getLaunchIntentForPackage(packageName) != null
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun getAppUsageTime(packageName: String): Long {
         if (!hasUsageStatsPermission()) return 0L
 
@@ -70,9 +140,8 @@ class AppUsageStatsManager(private val context: Context) {
         val startTime = calendar.timeInMillis
         val endTime = System.currentTimeMillis()
 
-        // Use queryAndAggregateUsageStats for a more reliable daily aggregate
-        val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
-        val usage = statsMap[packageName]?.totalTimeInForeground ?: 0L
+        val usageMap = getForegroundUsageMap(startTime, endTime)
+        val usage = usageMap[packageName] ?: 0L
         
         usageCache[packageName] = Pair(usage, currentTime)
         return usage
@@ -81,14 +150,11 @@ class AppUsageStatsManager(private val context: Context) {
     fun getTotalUsageForPeriod(startTime: Long, endTime: Long): Long {
         if (!hasUsageStatsPermission()) return 0L
         
-        val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
-        return statsMap.values
-            .filter { stats ->
-                !stats.packageName.startsWith("com.android") &&
-                !stats.packageName.startsWith("android") &&
-                stats.packageName != "com.guruswarupa.launch"
-            }
-            .sumOf { it.totalTimeInForeground }
+        val usageMap = getForegroundUsageMap(startTime, endTime)
+        return usageMap
+            .filter { (pkg, _) -> isReportableApp(pkg) }
+            .values
+            .sum()
     }
 
     fun formatUsageTime(timeInMillis: Long): String {
@@ -137,14 +203,11 @@ class AppUsageStatsManager(private val context: Context) {
                 calendar.timeInMillis
             }
 
-            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
-            val dayTotalUsage = statsMap.values
-                .filter { stats ->
-                    !stats.packageName.startsWith("com.android") &&
-                    !stats.packageName.startsWith("android") &&
-                    stats.packageName != "com.guruswarupa.launch"
-                }
-                .sumOf { it.totalTimeInForeground }
+            val usageMap = getForegroundUsageMap(startTime, endTime)
+            val dayTotalUsage = usageMap
+                .filter { (pkg, _) -> isReportableApp(pkg) }
+                .values
+                .sum()
 
             val dayFormat = when (i) {
                 0 -> "Today"
@@ -189,25 +252,20 @@ class AppUsageStatsManager(private val context: Context) {
                 calendar.timeInMillis
             }
 
-            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+            val usageMap = getForegroundUsageMap(startTime, endTime)
             val appUsageMap = mutableMapOf<String, Long>()
             
-            statsMap.values
-                .filter { stats ->
-                    stats.totalTimeInForeground > 0 &&
-                    !stats.packageName.startsWith("com.android") &&
-                    !stats.packageName.startsWith("android") &&
-                    stats.packageName != "com.guruswarupa.launch"
-                }
-                .forEach { stats ->
+            usageMap
+                .filter { (pkg, usage) -> usage > 0 && isReportableApp(pkg) }
+                .forEach { (pkg, usage) ->
                     val appName = try {
                         context.packageManager.getApplicationLabel(
-                            context.packageManager.getApplicationInfo(stats.packageName, 0)
+                            context.packageManager.getApplicationInfo(pkg, 0)
                         ).toString()
                     } catch (_: Exception) {
-                        stats.packageName.substringAfterLast(".")
+                        pkg.substringAfterLast(".")
                     }
-                    appUsageMap[appName] = (appUsageMap[appName] ?: 0) + stats.totalTimeInForeground
+                    appUsageMap[appName] = (appUsageMap[appName] ?: 0) + usage
                 }
 
             val sortedApps = appUsageMap.toList()
