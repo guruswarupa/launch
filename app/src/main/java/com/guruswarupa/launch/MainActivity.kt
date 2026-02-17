@@ -737,6 +737,9 @@ class MainActivity : FragmentActivity() {
         // Initialize Flip to DND service (if enabled)
         updateFlipToDndService()
         
+        // Initialize back tap service (if enabled)
+        updateBackTapService()
+        
         // Initialize lifecycle manager
         initializeLifecycleManager()
 
@@ -764,6 +767,40 @@ class MainActivity : FragmentActivity() {
         } else {
             stopShakeDetectionService()
         }
+    }
+    
+    /**
+     * Updates back tap detection service based on user preference
+     */
+    private fun updateBackTapService() {
+        val isBackTapEnabled = sharedPreferences.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+        Log.d("MainActivity", "Back tap enabled in settings: $isBackTapEnabled")
+        if (isBackTapEnabled) {
+            startBackTapService()
+        } else {
+            stopBackTapService()
+        }
+    }
+    
+    /**
+     * Starts the back tap detection service for background quick actions
+     */
+    private fun startBackTapService() {
+        Log.d("MainActivity", "Starting BackTapService from MainActivity")
+        val intent = Intent(this, BackTapService::class.java).apply {
+            action = BackTapService.ACTION_START
+        }
+        ContextCompat.startForegroundService(this, intent)
+    }
+    
+    /**
+     * Stops the back tap detection service
+     */
+    private fun stopBackTapService() {
+        val intent = Intent(this, BackTapService::class.java).apply {
+            action = BackTapService.ACTION_STOP
+        }
+        stopService(intent)
     }
     
     /**

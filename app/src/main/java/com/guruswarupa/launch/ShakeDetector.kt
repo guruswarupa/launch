@@ -14,19 +14,20 @@ import kotlin.math.sqrt
 /**
  * Detects shake gestures using the accelerometer sensor.
  * Supports triple shake detection with configurable thresholds.
+ * Optimized for "vigorous shake" to avoid accidental triggers.
  */
 class ShakeDetector(
     context: Context,
-    private val onDoubleShake: () -> Unit
+    private val onShakeDetected: () -> Unit
 ) : SensorEventListener {
     
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     
-    // Shake detection parameters
-    private var shakeThreshold = 12.0f // Initial value, will be updated by updateSensitivity
-    private val shakeTimeWindow = 800L
-    private val minTimeBetweenShakes = 200L // Minimum time between shakes in ms
+    // Shake detection parameters - higher thresholds for "vigorous" shake
+    private var shakeThreshold = 25.0f // Default vigorous threshold
+    private val shakeTimeWindow = 1000L // Slightly longer window for vigorous shakes
+    private val minTimeBetweenShakes = 150L 
     
     private var lastShakeTime = 0L
     private var shakeCount = 0
@@ -47,7 +48,7 @@ class ShakeDetector(
         if (isListening) return
         
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) // Fast enough for vigorous movement
             isListening = true
         }
     }
@@ -56,9 +57,11 @@ class ShakeDetector(
      * Updates shake sensitivity (1-10, where 10 is most sensitive)
      */
     fun updateSensitivity(sensitivity: Int) {
-        // Map 1-10 to threshold 20 - 8 (lower threshold = more sensitive)
-        shakeThreshold = 20f - (sensitivity.coerceIn(1, 10) - 1) * 1.33f
-        Log.d("ShakeDetector", "Updated sensitivity to $sensitivity, threshold set to $shakeThreshold")
+        // Map 1-10 to threshold 45 - 15 (higher threshold = less sensitive/more vigorous)
+        // 1 (least sensitive) -> 45.0f (extremely vigorous)
+        // 10 (most sensitive) -> 15.0f (moderate shake)
+        shakeThreshold = 45f - (sensitivity.coerceIn(1, 10) - 1) * 3.33f
+        Log.d("ShakeDetector", "Updated sensitivity to $sensitivity, vigorous threshold set to $shakeThreshold")
     }
     
     /**
@@ -76,6 +79,12 @@ class ShakeDetector(
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type != Sensor.TYPE_ACCELEROMETER) return
         
+        // Skip processing if we are in a gesture cooldown period
+        if (GestureCoordinator.isInCooldown()) {
+            shakeCount = 0
+            return
+        }
+        
         val currentTime = System.currentTimeMillis()
         val x = event.values[0]
         val y = event.values[1]
@@ -90,13 +99,13 @@ class ShakeDetector(
         }
         
         val timeDelta = currentTime - lastUpdateTime
-        if (timeDelta < 50) return // Skip if too soon (avoid too frequent checks)
+        if (timeDelta < 20) return // Sample at ~50Hz
         
         val deltaX = abs(x - lastX)
         val deltaY = abs(y - lastY)
         val deltaZ = abs(z - lastZ)
         
-        // Calculate total acceleration change
+        // Calculate total acceleration change (jerk)
         val acceleration = sqrt((deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ).toDouble()).toFloat()
         
         if (acceleration > shakeThreshold) {
@@ -111,8 +120,8 @@ class ShakeDetector(
                 resetShakeCountRunnable?.let { handler.removeCallbacks(it) }
                 
                 if (shakeCount >= 3) {
-                    // Triple shake detected!
-                    onDoubleShake()
+                    // Triple vigorous shake detected!
+                    onShakeDetected()
                     shakeCount = 0
                 } else {
                     // Reset shake count after time window if no third shake
@@ -130,13 +139,8 @@ class ShakeDetector(
         lastUpdateTime = currentTime
     }
     
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Not used
-    }
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     
-    /**
-     * Cleanup resources
-     */
     fun cleanup() {
         stop()
     }

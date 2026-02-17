@@ -827,6 +827,176 @@
                         android:alpha="0.7"
                         android:layout_marginTop="8dp"/>
 
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/text"
+                        android:alpha="0.2"
+                        android:layout_marginVertical="16dp"/>
+
+                    <!-- Back Tap Section -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Back Tap Gestures"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"/>
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/back_tap_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:thumbTint="@color/text"
+                            app:trackTint="@color/text"/>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/back_tap_settings_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp">
+
+                        <!-- Double Tap Action Selection -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Double Tap Action"
+                                android:textSize="16sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.9"/>
+
+                            <Spinner
+                                android:id="@+id/back_tap_double_action_spinner"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/rounded_background"
+                                android:padding="8dp"/>
+
+                        </LinearLayout>
+
+                        <!-- Triple Tap Action Selection -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Triple Tap Action"
+                                android:textSize="16sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.9"/>
+
+                            <Spinner
+                                android:id="@+id/back_tap_triple_action_spinner"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/rounded_background"
+                                android:padding="8dp"/>
+
+                        </LinearLayout>
+
+                        <!-- Sensitivity -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Sensitivity"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/text"
+                                    android:alpha="0.9"/>
+
+                                <TextView
+                                    android:id="@+id/back_tap_sensitivity_value"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="5"
+                                    android:textSize="16sp"
+                                    android:textStyle="bold"
+                                    android:textColor="@color/text"/>
+
+                            </LinearLayout>
+
+                            <SeekBar
+                                android:id="@+id/back_tap_sensitivity_seekbar"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:max="9"
+                                android:progress="4"
+                                android:layout_marginTop="8dp"
+                                android:thumbTint="@color/text"
+                                android:progressTint="@color/text"
+                                android:progressBackgroundTint="@color/text"/>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_marginTop="4dp">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Less Sensitive"
+                                    android:textSize="10sp"
+                                    android:textColor="@color/text"
+                                    android:alpha="0.6"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="More Sensitive"
+                                    android:textSize="10sp"
+                                    android:textColor="@color/text"
+                                    android:alpha="0.6"/>
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Double or triple tap the back of your device to trigger quick actions. Works even when the launcher is in the background."
+                        android:textSize="12sp"
+                        android:textColor="@color/text"
+                        android:alpha="0.7"
+                        android:layout_marginTop="8dp"/>
+
                 </LinearLayout>
 
             </LinearLayout>
