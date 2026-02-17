@@ -112,15 +112,9 @@ class BackTapDetector(
                 
                 triggerActionRunnable?.let { handler.removeCallbacks(it) }
                 
-                if (tapCount >= 3) {
-                    onBackTap(3)
+                if (tapCount >= 2) {
+                    onBackTap(2)
                     tapCount = 0
-                } else if (tapCount == 2) {
-                    triggerActionRunnable = Runnable {
-                        onBackTap(2)
-                        tapCount = 0
-                    }
-                    handler.postDelayed(triggerActionRunnable!!, confirmationDelay)
                 }
                 lastTapTime = now
             }

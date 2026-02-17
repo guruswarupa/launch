@@ -22,7 +22,6 @@ object Constants {
         const val BACK_TAP_SENSITIVITY = "back_tap_sensitivity"
         const val BACK_TAP_MULTIPLIER = "back_tap_multiplier"
         const val BACK_TAP_DOUBLE_ACTION = "back_tap_double_action"
-        const val BACK_TAP_TRIPLE_ACTION = "back_tap_triple_action"
     }
     
     // FileProvider
