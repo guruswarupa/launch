@@ -6,10 +6,12 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 
 /**
@@ -38,9 +40,8 @@ class ShakeDetectionService : Service() {
     override fun onCreate() {
         super.onCreate()
         try {
-            // Start foreground immediately in onCreate
-            val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+            // Start foreground immediately in onCreate to avoid timeout
+            startForegroundServiceStatus()
             
             // Initialize torch manager
             torchManager = TorchManager(this)
@@ -51,15 +52,31 @@ class ShakeDetectionService : Service() {
                 if (GestureCoordinator.requestTrigger()) {
                     try {
                         torchManager?.toggleTorch()
-                    } catch (_: Exception) {
-                        // Error toggling torch - silently fail
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error toggling torch", e)
                     }
                 } else {
                     Log.d(TAG, "Shake gesture ignored due to coordination")
                 }
             }
-        } catch (_: Exception) {
-            // Error in onCreate - silently fail
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onCreate", e)
+            // If startForeground fails, the service will likely crash or be killed by the system
+        }
+    }
+
+    private fun startForegroundServiceStatus() {
+        val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceCompat.startForeground(
+                this,
+                ServiceNotificationManager.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
         }
     }
     
@@ -70,10 +87,9 @@ class ShakeDetectionService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return try {
+        try {
             // Re-assert foreground state
-            val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+            startForegroundServiceStatus()
             
             // Apply current sensitivity
             applySensitivity()
@@ -81,7 +97,7 @@ class ShakeDetectionService : Service() {
             when (intent?.action) {
                 ACTION_STOP -> {
                     stopSelf()
-                    START_NOT_STICKY
+                    return START_NOT_STICKY
                 }
                 ACTION_START, null -> {
                     if (!isRunning) {
@@ -90,13 +106,12 @@ class ShakeDetectionService : Service() {
                         updateShakeDetectionState()
                         isRunning = true
                     }
-                    START_STICKY // Restart if killed by system
                 }
-                else -> START_STICKY
             }
-        } catch (_: Exception) {
-            START_STICKY
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onStartCommand", e)
         }
+        return START_STICKY // Restart if killed by system
     }
     
     /**
@@ -195,8 +210,8 @@ class ShakeDetectionService : Service() {
             torchManager?.turnOffTorch() // Turn off torch when service stops
             
             ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
-        } catch (_: Exception) {
-            // Error in onDestroy - silently fail
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onDestroy", e)
         }
     }
     

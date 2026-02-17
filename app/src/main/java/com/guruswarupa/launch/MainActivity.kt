@@ -983,7 +983,7 @@ class MainActivity : FragmentActivity() {
             updateAppSearchManager()
         }
         
-        // Update shake detection service based on preference
+        // Update shake detection service if preference changed
         updateShakeDetectionService()
 
         // Update screen dimmer service based on preference
@@ -1549,7 +1549,7 @@ class MainActivity : FragmentActivity() {
             if (widgetMap["network_stats_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
             
         findViewById<View>(R.id.device_info_widget_container)?.visibility = 
-            if (widgetMap["device_info_widget_container"]?.enabled == true) View.GONE else View.VISIBLE
+            if (widgetMap["device_info_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE

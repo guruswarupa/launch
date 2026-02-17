@@ -134,7 +134,10 @@
         <service
             android:name=".ShakeDetectionService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Shake detection for torch toggle" />
+        </service>
 
         <service
             android:name=".ScreenDimmerService"
@@ -155,12 +158,18 @@
         <service
             android:name=".FlipToDndService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Flip to DND sensing" />
+        </service>
 
         <service
             android:name=".BackTapService"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Back tap gesture detection" />
+        </service>
 
         <receiver
             android:name=".TodoAlarmReceiver"

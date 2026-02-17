@@ -4,12 +4,15 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
+import androidx.core.app.ServiceCompat
 
 class FlipToDndService : Service(), SensorEventListener {
 
@@ -23,6 +26,7 @@ class FlipToDndService : Service(), SensorEventListener {
     private lateinit var notificationManager: NotificationManager
 
     companion object {
+        private const val TAG = "FlipToDndService"
         private const val SERVICE_NAME = "Flip to DND"
         
         fun startService(context: Context) {
@@ -41,15 +45,33 @@ class FlipToDndService : Service(), SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
-        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        
+        try {
+            sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+            proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+            notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            
+            startForegroundServiceStatus()
+            
+            registerSensors()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onCreate", e)
+        }
+    }
+
+    private fun startForegroundServiceStatus() {
         val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-        startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
         
-        registerSensors()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceCompat.startForeground(
+                this,
+                ServiceNotificationManager.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+        }
     }
 
     private fun registerSensors() {
@@ -62,6 +84,11 @@ class FlipToDndService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        try {
+            startForegroundServiceStatus()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onStartCommand", e)
+        }
         return START_STICKY
     }
 
@@ -103,11 +130,15 @@ class FlipToDndService : Service(), SensorEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        sensorManager.unregisterListener(this)
-        // Reset DND if we're stopping the service
-        if (notificationManager.isNotificationPolicyAccessGranted) {
-            notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+        try {
+            sensorManager.unregisterListener(this)
+            // Reset DND if we're stopping the service
+            if (notificationManager.isNotificationPolicyAccessGranted) {
+                notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+            }
+            ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in onDestroy", e)
         }
-        ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
 }

@@ -5,14 +5,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.media.AudioManager
 import android.media.MediaActionSound
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 
 /**
@@ -56,8 +56,7 @@ class BackTapService : Service() {
     override fun onCreate() {
         super.onCreate()
         try {
-            val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+            startForegroundServiceStatus()
             
             torchManager = TorchManager(this)
             
@@ -70,6 +69,21 @@ class BackTapService : Service() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in onCreate: ${e.message}")
+        }
+    }
+
+    private fun startForegroundServiceStatus() {
+        val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ServiceCompat.startForeground(
+                this,
+                ServiceNotificationManager.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
         }
     }
     
@@ -85,16 +99,15 @@ class BackTapService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return try {
-            val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+        try {
+            startForegroundServiceStatus()
             
             applySettings()
             
             when (intent?.action) {
                 ACTION_STOP -> {
                     stopSelf()
-                    START_NOT_STICKY
+                    return START_NOT_STICKY
                 }
                 ACTION_START, null -> {
                     if (!isRunning) {
@@ -103,17 +116,17 @@ class BackTapService : Service() {
                         updateBackTapDetectionState()
                         isRunning = true
                     }
-                    START_STICKY
                 }
-                else -> START_STICKY
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in onStartCommand: ${e.message}")
-            START_STICKY
         }
+        return START_STICKY
     }
     
     private fun registerScreenReceiver() {
+        if (screenOnReceiver != null) return
+        
         screenOnReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
@@ -128,10 +141,17 @@ class BackTapService : Service() {
             addAction(Intent.ACTION_SCREEN_OFF)
         }
         
-        registerReceiver(screenOnReceiver, filter)
+        ContextCompat.registerReceiver(
+            this,
+            screenOnReceiver!!,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
     
     private fun registerSettingsReceiver() {
+        if (settingsReceiver != null) return
+        
         settingsReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
@@ -142,7 +162,13 @@ class BackTapService : Service() {
         }
         
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
-        registerReceiver(settingsReceiver, filter)
+        
+        ContextCompat.registerReceiver(
+            this,
+            settingsReceiver!!,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
     
     private fun updateBackTapDetectionState() {

@@ -26,7 +26,7 @@ class WidgetConfigurationManager(
             WidgetInfo("pressure_widget_container", "Pressure", false),
             WidgetInfo("proximity_widget_container", "Proximity", false),
             WidgetInfo("temperature_widget_container", "Temperature", false),
-            WidgetInfo("noise_decibel_analyzer", "Noise Decibel Analyzer", false),
+            WidgetInfo("noise_decibel_widget_container", "Noise Decibel Analyzer", false),
             WidgetInfo("workout_widget_container", "Workout Tracker", false),
             WidgetInfo("calculator_widget_container", "Calculator", false),
             WidgetInfo("todo_recycler_view", "Todo List", false),
