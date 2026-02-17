@@ -21,7 +21,7 @@ class BootReceiver : BroadcastReceiver() {
             
             // Handle Night Mode
             val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
-            val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+            val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
             
             if (isNightModeEnabled && Settings.canDrawOverlays(context)) {
                 NightModeService.startService(context, intensity)
