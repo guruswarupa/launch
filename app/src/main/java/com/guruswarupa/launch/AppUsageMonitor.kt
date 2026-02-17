@@ -7,6 +7,8 @@ import android.os.Handler
 import android.os.Looper
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.widget.Toast
 
 class AppUsageMonitor : Service() {
@@ -25,7 +27,16 @@ class AppUsageMonitor : Service() {
         usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         
         val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-        startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                ServiceNotificationManager.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

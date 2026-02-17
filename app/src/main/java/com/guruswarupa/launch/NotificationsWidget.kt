@@ -754,9 +754,6 @@ class NotificationAdapter(
                     Toast.makeText(context, "Could not open app", Toast.LENGTH_SHORT).show()
                 }
         }
-        
-        // Execute onAction if needed
-        onAction(item, ActionType.TOGGLE_EXPAND)
     }
 
     private fun sendReply(action: NotificationAction, replyText: String, holder: NotificationViewHolder) {
