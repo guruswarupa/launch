@@ -2,7 +2,9 @@ package com.guruswarupa.launch
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.app.WallpaperManager
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -11,6 +13,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
@@ -236,43 +239,43 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun setupExpandableSections() {
-        // Display Style Section
+        // Display Style Header
         val displayStyleHeader = findViewById<LinearLayout>(R.id.display_style_header)
         val displayStyleContent = findViewById<LinearLayout>(R.id.display_style_content)
         val displayStyleArrow = findViewById<TextView>(R.id.display_style_arrow)
         setupSectionToggle(displayStyleHeader, displayStyleContent, displayStyleArrow)
         
-        // Backup & Restore Section
+        // Backup Header
         val backupHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
         val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
         val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
         setupSectionToggle(backupHeader, backupContent, backupArrow)
         
-        // App Lock Section
+        // Security Header
         val appLockHeader = findViewById<LinearLayout>(R.id.app_lock_header)
         val appLockContent = findViewById<LinearLayout>(R.id.app_lock_content)
         val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
         setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
         
-        // Permissions Section
+        // Permissions Header
         val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)
         val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
         val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
         setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
         
-        // Wallpaper Section
+        // Wallpaper Header
         val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
         val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
         setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
         
-        // Tutorial Section
+        // Tutorial Header
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
         val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
         val tutorialArrow = findViewById<TextView>(R.id.tutorial_arrow)
         setupSectionToggle(tutorialHeader, tutorialContent, tutorialArrow)
         
-        // Quick Actions Section
+        // Quick Actions Header
         val quickActionsHeader = findViewById<LinearLayout>(R.id.quick_actions_header)
         val quickActionsContent = findViewById<LinearLayout>(R.id.quick_actions_content)
         val quickActionsArrow = findViewById<TextView>(R.id.quick_actions_arrow)
@@ -315,18 +318,168 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Support & Feedback Section
+        // Setup screen dimmer
+        setupScreenDimmer()
+        
+        // Setup night mode
+        setupNightMode()
+        
+        // Setup flip to dnd
+        setupFlipToDnd()
+        
+        // Setup back tap gestures
+        setupBackTap()
+
+        // Support Header
         val supportHeader = findViewById<LinearLayout>(R.id.support_header)
         val supportContent = findViewById<LinearLayout>(R.id.support_content)
         val supportArrow = findViewById<TextView>(R.id.support_arrow)
         setupSectionToggle(supportHeader, supportContent, supportArrow)
         
-        // Launcher Section
+        // Launcher Header
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
         val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
         val launcherArrow = findViewById<TextView>(R.id.launcher_arrow)
         setupSectionToggle(launcherHeader, launcherContent, launcherArrow)
         
+    }
+    
+    private fun setupScreenDimmer() {
+        val screenDimmerSwitch = findViewById<SwitchCompat>(R.id.screen_dimmer_switch)
+        val dimmerSeekBar = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
+        val dimmerValueText = findViewById<TextView>(R.id.dimmer_value_text)
+        val dimmerContainer = findViewById<View>(R.id.screen_dimmer_container)
+        
+        val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
+        val currentDimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+        
+        screenDimmerSwitch.isChecked = isDimmerEnabled
+        dimmerSeekBar.progress = currentDimLevel
+        dimmerValueText.text = "$currentDimLevel%"
+        dimmerContainer.isVisible = isDimmerEnabled
+        
+        screenDimmerSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                if (!Settings.canDrawOverlays(this)) {
+                    screenDimmerSwitch.isChecked = false
+                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                        .setTitle("Permission Required")
+                        .setMessage("Screen Dimmer requires 'Display over other apps' permission to work. Please grant it in the Permissions section.")
+                        .setPositiveButton("Go to Permissions") { _, _ ->
+                            startActivity(Intent(this, PermissionsActivity::class.java))
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    prefs.edit { putBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, true) }
+                    dimmerContainer.isVisible = true
+                    ScreenDimmerService.startService(this, dimmerSeekBar.progress)
+                }
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false) }
+                dimmerContainer.isVisible = false
+                ScreenDimmerService.stopService(this)
+            }
+        }
+        
+        dimmerSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                dimmerValueText.text = "$progress%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, progress) }
+                    if (screenDimmerSwitch.isChecked) {
+                        ScreenDimmerService.updateDimLevel(this@SettingsActivity, progress)
+                    }
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+    }
+
+    private fun setupNightMode() {
+        val nightModeSwitch = findViewById<SwitchCompat>(R.id.night_mode_switch)
+        val nightModeSeekBar = findViewById<SeekBar>(R.id.night_mode_intensity_seekbar)
+        val nightModeValueText = findViewById<TextView>(R.id.night_mode_value_text)
+        val nightModeContainer = findViewById<View>(R.id.night_mode_container)
+        
+        val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
+        val currentIntensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+        
+        nightModeSwitch.isChecked = isNightModeEnabled
+        nightModeSeekBar.progress = currentIntensity
+        nightModeValueText.text = "$currentIntensity%"
+        nightModeContainer.isVisible = isNightModeEnabled
+        
+        nightModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                if (!Settings.canDrawOverlays(this)) {
+                    nightModeSwitch.isChecked = false
+                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                        .setTitle("Permission Required")
+                        .setMessage("Night Mode requires 'Display over other apps' permission to work. Please grant it in the Permissions section.")
+                        .setPositiveButton("Go to Permissions") { _, _ ->
+                            startActivity(Intent(this, PermissionsActivity::class.java))
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    prefs.edit { putBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, true) }
+                    nightModeContainer.isVisible = true
+                    NightModeService.startService(this, nightModeSeekBar.progress)
+                }
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false) }
+                nightModeContainer.isVisible = false
+                NightModeService.stopService(this)
+            }
+        }
+        
+        nightModeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                nightModeValueText.text = "$progress%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.NIGHT_MODE_INTENSITY, progress) }
+                    if (nightModeSwitch.isChecked) {
+                        NightModeService.updateIntensity(this@SettingsActivity, progress)
+                    }
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+    }
+
+    private fun setupFlipToDnd() {
+        val flipDndSwitch = findViewById<SwitchCompat>(R.id.flip_dnd_switch)
+        val isFlipEnabled = prefs.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
+        
+        flipDndSwitch.isChecked = isFlipEnabled
+        
+        flipDndSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                if (!notificationManager.isNotificationPolicyAccessGranted) {
+                    flipDndSwitch.isChecked = false
+                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                        .setTitle("DND Access Required")
+                        .setMessage("Flip to DND requires Do Not Disturb access to change the DND state. Please grant it in the settings.")
+                        .setPositiveButton("Grant Access") { _, _ ->
+                            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, true) }
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                }
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, false) }
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+        }
     }
     
     private fun setupSectionToggle(header: LinearLayout, content: LinearLayout, arrow: TextView) {
@@ -957,8 +1110,8 @@ class SettingsActivity : ComponentActivity() {
      */
     private fun importPhysicalActivityData(activityJson: JSONObject) {
         try {
-            val activityPrefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
-            activityPrefs.edit {
+            val activity_prefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
+            activity_prefs.edit {
                 importPreferences(activityJson, this)
             }
         } catch (_: Exception) {
@@ -1046,5 +1199,99 @@ class SettingsActivity : ComponentActivity() {
         } catch (_: Exception) {
             // Silently fail if import fails
         }
+    }
+    
+    /**
+     * Setup back tap gesture settings
+     */
+    private fun setupBackTap() {
+        val backTapSwitch = findViewById<SwitchCompat>(R.id.back_tap_switch)
+        val backTapSettingsContainer = findViewById<View>(R.id.back_tap_settings_container)
+        val doubleActionSpinner = findViewById<android.widget.Spinner>(R.id.back_tap_double_action_spinner)
+        val sensitivitySeekBar = findViewById<SeekBar>(R.id.back_tap_sensitivity_seekbar)
+        val sensitivityValueText = findViewById<TextView>(R.id.back_tap_sensitivity_value)
+        
+        // Set default values if not set
+        if (!prefs.contains(Constants.Prefs.BACK_TAP_ENABLED)) {
+            prefs.edit { 
+                putBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+                putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)
+                putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7) // More sensitive by default
+            }
+        }
+        
+        val isBackTapEnabled = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+        val currentDoubleAction = prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE) 
+            ?: BackTapService.ACTION_SOUND_TOGGLE
+        val currentSensitivity = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7)
+        
+        backTapSwitch.isChecked = isBackTapEnabled
+        backTapSettingsContainer.isVisible = isBackTapEnabled
+        sensitivitySeekBar.progress = currentSensitivity - 1
+        sensitivityValueText.text = currentSensitivity.toString()
+        
+        // Setup actions
+        val actions = arrayOf(
+            "None",
+            "Toggle Torch",
+            "Take Screenshot",
+            "Toggle Notifications",
+            "Turn Screen Off",
+            "Toggle Sound"
+        )
+        val actionValues = arrayOf(
+            BackTapService.ACTION_NONE,
+            BackTapService.ACTION_TORCH_TOGGLE,
+            BackTapService.ACTION_SCREENSHOT,
+            BackTapService.ACTION_NOTIFICATIONS,
+            BackTapService.ACTION_SCREEN_OFF,
+            BackTapService.ACTION_SOUND_TOGGLE
+        )
+        
+        val actionAdapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, actions)
+        actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        
+        doubleActionSpinner.adapter = actionAdapter
+        
+        // Set current action selections
+        val doubleActionIndex = actionValues.indexOf(currentDoubleAction)
+        if (doubleActionIndex >= 0) {
+            doubleActionSpinner.setSelection(doubleActionIndex)
+        }
+        
+        // Setup switch listener
+        backTapSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.BACK_TAP_ENABLED, isChecked) }
+            backTapSettingsContainer.isVisible = isChecked
+            
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            sendBroadcast(intent)
+        }
+        
+        // Setup action spinner listeners
+        doubleActionSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedAction = actionValues[position]
+                prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, selectedAction) }
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
+        }
+        
+        // Setup sensitivity seekbar
+        sensitivitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val sensitivity = progress + 1
+                sensitivityValueText.text = sensitivity.toString()
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, sensitivity) }
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
     }
 }

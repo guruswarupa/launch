@@ -7,6 +7,8 @@ import android.os.Handler
 import android.os.Looper
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.widget.Toast
 
 class AppUsageMonitor : Service() {
@@ -15,10 +17,26 @@ class AppUsageMonitor : Service() {
     private lateinit var appTimerManager: AppTimerManager
     private lateinit var usageStatsManager: UsageStatsManager
 
+    companion object {
+        private const val SERVICE_NAME = "App Usage Monitor"
+    }
+
     override fun onCreate() {
         super.onCreate()
         appTimerManager = AppTimerManager(this)
         usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        
+        val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                ServiceNotificationManager.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -27,6 +45,8 @@ class AppUsageMonitor : Service() {
     }
 
     private fun startMonitoring() {
+        if (monitoringRunnable != null) return
+        
         monitoringRunnable = object : Runnable {
             override fun run() {
                 checkForegroundAppUsage()
@@ -75,6 +95,7 @@ class AppUsageMonitor : Service() {
     override fun onDestroy() {
         super.onDestroy()
         monitoringRunnable?.let { handler.removeCallbacks(it) }
+        ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

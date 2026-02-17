@@ -1,6 +1,10 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
+import android.app.NotificationManager
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -9,7 +13,10 @@ import androidx.core.content.ContextCompat
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -62,6 +69,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var rightDrawerWallpaper: ImageView
     private lateinit var rightDrawerTime: TextView
     private lateinit var rightDrawerDate: TextView
+    private lateinit var wallpaperDrawer: FrameLayout
 
     // Core managers
     internal lateinit var cacheManager: CacheManager
@@ -279,6 +287,7 @@ class MainActivity : FragmentActivity() {
         topWidgetContainer = findViewById(R.id.top_widget_container)
         
         // Right Drawer Views
+        wallpaperDrawer = findViewById(R.id.wallpaper_drawer)
         rightDrawerWallpaper = findViewById(R.id.right_drawer_wallpaper)
         rightDrawerTime = findViewById(R.id.right_drawer_time)
         rightDrawerDate = findViewById(R.id.right_drawer_date)
@@ -295,6 +304,59 @@ class MainActivity : FragmentActivity() {
         
         // Setup search box listener to show/hide top widget
         setupSearchBoxListener()
+        
+        // Setup double tap for right drawer
+        setupRightDrawerDoubleTap()
+    }
+    
+    /**
+     * Sets up double tap listener for the right drawer to turn screen off.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupRightDrawerDoubleTap() {
+        val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                lockScreen()
+                return true
+            }
+        })
+        
+        wallpaperDrawer.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+            true
+        }
+    }
+    
+    /**
+     * Attempts to turn off the screen. 
+     * Prioritizes Accessibility Service (Android P+) to allow biometric unlock.
+     * Falls back to Device Admin for older versions.
+     */
+    private fun lockScreen() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            if (permissionManager.isAccessibilityServiceEnabled()) {
+                val locked = ScreenLockAccessibilityService.instance?.lockScreen() ?: false
+                if (!locked) {
+                    Toast.makeText(this, "Failed to lock using accessibility service", Toast.LENGTH_SHORT).show()
+                }
+                return
+            } else {
+                permissionManager.requestAccessibilityPermission()
+                return
+            }
+        }
+
+        // Fallback for pre-Android P
+        if (permissionManager.isDeviceAdminActive()) {
+            val devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            try {
+                devicePolicyManager.lockNow()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Error locking screen: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            permissionManager.requestDeviceAdminPermission()
+        }
     }
     
     /**
@@ -669,6 +731,15 @@ class MainActivity : FragmentActivity() {
         // Start app usage monitor for daily limits
         startService(Intent(this, AppUsageMonitor::class.java))
         
+        // Initialize screen dimmer service (if enabled)
+        updateScreenDimmerService()
+
+        // Initialize Flip to DND service (if enabled)
+        updateFlipToDndService()
+        
+        // Initialize back tap service (if enabled)
+        updateBackTapService()
+        
         // Initialize lifecycle manager
         initializeLifecycleManager()
 
@@ -699,6 +770,40 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
+     * Updates back tap detection service based on user preference
+     */
+    private fun updateBackTapService() {
+        val isBackTapEnabled = sharedPreferences.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+        Log.d("MainActivity", "Back tap enabled in settings: $isBackTapEnabled")
+        if (isBackTapEnabled) {
+            startBackTapService()
+        } else {
+            stopBackTapService()
+        }
+    }
+    
+    /**
+     * Starts the back tap detection service for background quick actions
+     */
+    private fun startBackTapService() {
+        Log.d("MainActivity", "Starting BackTapService from MainActivity")
+        val intent = Intent(this, BackTapService::class.java).apply {
+            action = BackTapService.ACTION_START
+        }
+        ContextCompat.startForegroundService(this, intent)
+    }
+    
+    /**
+     * Stops the back tap detection service
+     */
+    private fun stopBackTapService() {
+        val intent = Intent(this, BackTapService::class.java).apply {
+            action = BackTapService.ACTION_STOP
+        }
+        stopService(intent)
+    }
+    
+    /**
      * Starts the shake detection service for background quick actions
      */
     private fun startShakeDetectionService() {
@@ -716,6 +821,45 @@ class MainActivity : FragmentActivity() {
             action = ShakeDetectionService.ACTION_STOP
         }
         stopService(intent)
+    }
+
+    /**
+     * Updates screen dimmer service based on user preference
+     */
+    private fun updateScreenDimmerService() {
+        val isDimmerEnabled = sharedPreferences.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
+        if (isDimmerEnabled && Settings.canDrawOverlays(this)) {
+            val dimLevel = sharedPreferences.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+            ScreenDimmerService.startService(this, dimLevel)
+        } else {
+            ScreenDimmerService.stopService(this)
+        }
+    }
+
+    /**
+     * Updates night mode service based on user preference
+     */
+    private fun updateNightModeService() {
+        val isNightModeEnabled = sharedPreferences.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
+        if (isNightModeEnabled && Settings.canDrawOverlays(this)) {
+            val intensity = sharedPreferences.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+            NightModeService.startService(this, intensity)
+        } else {
+            NightModeService.stopService(this)
+        }
+    }
+
+    /**
+     * Updates Flip to DND service based on user preference
+     */
+    private fun updateFlipToDndService() {
+        val isFlipEnabled = sharedPreferences.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (isFlipEnabled && notificationManager.isNotificationPolicyAccessGranted) {
+            FlipToDndService.startService(this)
+        } else {
+            FlipToDndService.stopService(this)
+        }
     }
     
     /**
@@ -839,8 +983,17 @@ class MainActivity : FragmentActivity() {
             updateAppSearchManager()
         }
         
-        // Update shake detection service based on preference
+        // Update shake detection service if preference changed
         updateShakeDetectionService()
+
+        // Update screen dimmer service based on preference
+        updateScreenDimmerService()
+
+        // Update night mode service based on preference
+        updateNightModeService()
+
+        // Update Flip to DND service based on preference
+        updateFlipToDndService()
         
         // Force refresh hidden apps cache to ensure we have latest data
         if (::hiddenAppManager.isInitialized) {
@@ -992,7 +1145,7 @@ class MainActivity : FragmentActivity() {
         
         // Cleanup compass widget
         if (::compassWidget.isInitialized) {
-            compassWidget.cleanup()
+            compassWidget.onPause()
         }
         
         // Cleanup pressure widget
@@ -1028,6 +1181,9 @@ class MainActivity : FragmentActivity() {
         
         // Stop shake detection service
         stopShakeDetectionService()
+
+        // Stop Flip to DND service
+        FlipToDndService.stopService(this)
     }
 
     // Broadcast receivers moved to BroadcastReceiverManager
@@ -1171,6 +1327,7 @@ class MainActivity : FragmentActivity() {
         
         // Pause pressure tracking
         if (::pressureWidget.isInitialized) {
+            // Ensure tracked state is synced
             pressureWidget.onPause()
         }
         

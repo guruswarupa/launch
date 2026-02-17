@@ -32,6 +32,7 @@ class PermissionsActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
     private var hasRequestedUsageStats = false
+    private var hasRequestedOverlay = false
     private lateinit var permissionsList: LinearLayout
     private val permissionToggles = mutableMapOf<String, SwitchCompat>()
 
@@ -158,7 +159,8 @@ class PermissionsActivity : ComponentActivity() {
             val description: String,
             val isGranted: Boolean,
             val isSpecial: Boolean = false,
-            val isLauncher: Boolean = false
+            val isLauncher: Boolean = false,
+            val isOverlay: Boolean = false
         )
 
         val allPermissions = mutableListOf<PermissionItem>()
@@ -242,6 +244,15 @@ class PermissionsActivity : ComponentActivity() {
             isSpecial = true
         ))
 
+        val overlayGranted = Settings.canDrawOverlays(this)
+        allPermissions.add(PermissionItem(
+            permission = null,
+            name = "Display Over Other Apps",
+            description = "Required for Screen Dimmer feature",
+            isGranted = overlayGranted,
+            isOverlay = true
+        ))
+
         val isDefaultLauncher = isDefaultLauncher()
         allPermissions.add(PermissionItem(
             permission = null,
@@ -269,6 +280,8 @@ class PermissionsActivity : ComponentActivity() {
                         requestUsageStatsPermission()
                     } else if (perm.isLauncher) {
                         openDefaultLauncherSettings()
+                    } else if (perm.isOverlay) {
+                        requestOverlayPermission()
                     } else if (perm.permission != null) {
                         ActivityCompat.requestPermissions(
                             this,
@@ -302,6 +315,8 @@ class PermissionsActivity : ComponentActivity() {
                 permissionToggles["USAGE_STATS"] = toggle
             } else if (perm.isLauncher) {
                 permissionToggles["DEFAULT_LAUNCHER"] = toggle
+            } else if (perm.isOverlay) {
+                permissionToggles["OVERLAY"] = toggle
             }
 
             permissionsList.addView(itemView)
@@ -326,6 +341,17 @@ class PermissionsActivity : ComponentActivity() {
         } catch (_: Exception) {
             Toast.makeText(this, "Could not open usage stats settings", Toast.LENGTH_SHORT).show()
             hasRequestedUsageStats = false
+        }
+    }
+
+    private fun requestOverlayPermission() {
+        try {
+            hasRequestedOverlay = true
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            startActivity(intent)
+        } catch (_: Exception) {
+            Toast.makeText(this, "Could not open overlay settings", Toast.LENGTH_SHORT).show()
+            hasRequestedOverlay = false
         }
     }
 
@@ -365,6 +391,13 @@ class PermissionsActivity : ComponentActivity() {
                         }
                         .show()
                 }
+            }
+        }
+
+        if (hasRequestedOverlay) {
+            hasRequestedOverlay = false
+            if (Settings.canDrawOverlays(this)) {
+                Toast.makeText(this, "Overlay permission granted", Toast.LENGTH_SHORT).show()
             }
         }
         

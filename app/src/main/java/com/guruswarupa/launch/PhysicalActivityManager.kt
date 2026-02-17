@@ -38,6 +38,7 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
     private var lastStepCount = 0
     private var todayStepCount = 0
     private var lastResetDate = ""
+    private var totalStepsBase = 0 // Base count when app started tracking
     
     // Batch saving to reduce I/O operations
     private var lastSavedStepCount = 0
@@ -116,6 +117,12 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
         lastStepCount = prefs.getInt(PREF_LAST_STEP_COUNT, 0)
         todayStepCount = prefs.getInt(PREF_TODAY_STEP_COUNT, 0)
         lastResetDate = prefs.getString(PREF_LAST_RESET_DATE, "") ?: ""
+        totalStepsBase = prefs.getInt(PREF_TOTAL_STEPS_BASE, 0)
+        
+        // Validate data integrity
+        if (lastStepCount < 0) lastStepCount = 0
+        if (todayStepCount < 0) todayStepCount = 0
+        if (totalStepsBase < 0) totalStepsBase = 0
         
         // Check if we need to reset for a new day
         val today = getCurrentDate()
@@ -129,7 +136,11 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                 val strideLength = getStrideLengthMeters()
                 todayDistanceKm = (todayStepCount * strideLength) / 1000.0
             }
+            // Validate distance is not negative
+            if (todayDistanceKm < 0.0) todayDistanceKm = 0.0
         }
+        
+        Log.d(TAG, "Loaded data: lastStepCount=$lastStepCount, todayStepCount=$todayStepCount, base=$totalStepsBase")
     }
     
     fun getCurrentDate(): String {
@@ -376,54 +387,112 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
                 // Step counter gives cumulative count since last reboot
                 val currentTotalSteps = event.values[0].toInt()
                 
-                // Get the base count (steps before app started tracking)
-                val baseSteps = prefs.getInt(PREF_TOTAL_STEPS_BASE, 0)
+                // Validate sensor data
+                if (currentTotalSteps < 0) {
+                    Log.w(TAG, "Invalid step count from sensor: $currentTotalSteps")
+                    return
+                }
                 
-                if (baseSteps == 0) {
+                // Load current base steps
+                if (totalStepsBase == 0) {
                     // First time, save current count as base
+                    Log.d(TAG, "Setting initial base step count: $currentTotalSteps")
+                    totalStepsBase = currentTotalSteps
                     prefs.edit { 
                         putInt(PREF_TOTAL_STEPS_BASE, currentTotalSteps)
                     }
                     lastStepCount = currentTotalSteps
-                } else {
-                    // Calculate steps since base
-                    val stepsSinceBase = currentTotalSteps - baseSteps
-                    
-                    // Calculate today's steps
+                    return // Don't process further on first initialization
+                }
+                
+                // Validate base steps
+                if (totalStepsBase < 0) {
+                    Log.w(TAG, "Invalid base step count: $totalStepsBase, resetting")
+                    totalStepsBase = currentTotalSteps
+                    prefs.edit { putInt(PREF_TOTAL_STEPS_BASE, currentTotalSteps) }
+                    lastStepCount = currentTotalSteps
+                    return
+                }
+                
+                // Calculate steps since base
+                val stepsSinceBase = currentTotalSteps - totalStepsBase
+                
+                // Validate calculation - if negative, sensor likely reset
+                if (stepsSinceBase < 0) {
+                    Log.w(TAG, "Sensor reset detected: stepsSinceBase=$stepsSinceBase, current=$currentTotalSteps, base=$totalStepsBase")
+                    // Reset base to current count
+                    totalStepsBase = currentTotalSteps
+                    prefs.edit { putInt(PREF_TOTAL_STEPS_BASE, currentTotalSteps) }
+                    lastStepCount = currentTotalSteps
+                    // Reset today's count to prevent accumulation from old data
                     val today = getCurrentDate()
-                    if (lastResetDate != today) {
-                        // New day, reset
-                        resetDailyCount()
-                        // Update base to current count
-                        prefs.edit { 
-                            putInt(PREF_TOTAL_STEPS_BASE, currentTotalSteps)
-                        }
+                    if (lastResetDate == today) {
+                        Log.d(TAG, "Resetting today's count due to sensor reset")
+                        todayStepCount = 0
+                        todayDistanceKm = 0.0
+                        hourlySteps.clear()
+                        hourlyDistances.clear()
+                    }
+                    return
+                }
+                
+                // Validate steps since base is reasonable (less than 1M steps)
+                if (stepsSinceBase > 1000000) {
+                    Log.w(TAG, "Unrealistic cumulative steps: $stepsSinceBase, resetting base")
+                    totalStepsBase = currentTotalSteps
+                    prefs.edit { putInt(PREF_TOTAL_STEPS_BASE, currentTotalSteps) }
+                    lastStepCount = currentTotalSteps
+                    return
+                }
+                
+                // Calculate today's steps
+                val today = getCurrentDate()
+                if (lastResetDate != today) {
+                    // New day, reset
+                    Log.d(TAG, "New day detected: $today, resetting counts")
+                    resetDailyCount()
+                    // Update base to current count
+                    totalStepsBase = currentTotalSteps
+                    prefs.edit { putInt(PREF_TOTAL_STEPS_BASE, currentTotalSteps) }
+                    lastStepCount = currentTotalSteps
+                } else {
+                    // Same day, calculate difference
+                    val previousStepsFromBase = lastStepCount - totalStepsBase
+                    val stepsToday = stepsSinceBase - previousStepsFromBase
+                    
+                    // Validate step difference is reasonable
+                    if (stepsToday > 0 && stepsToday <= 5000) { // Max 5000 steps per sensor update
+                        todayStepCount += stepsToday
+                        // Calculate and store distance using calibrated stride length
+                        val strideLength = getStrideLengthMeters()
+                        val distanceKm = (stepsToday * strideLength) / 1000.0
+                        todayDistanceKm += distanceKm
                         lastStepCount = currentTotalSteps
-                    } else {
-                        // Same day, calculate difference
-                        val stepsToday = stepsSinceBase - (lastStepCount - baseSteps)
-                        if (stepsToday > 0) {
-                            todayStepCount += stepsToday
-                            // Calculate and store distance using calibrated stride length
-                            val strideLength = getStrideLengthMeters()
-                            val distanceKm = (stepsToday * strideLength) / 1000.0
-                            todayDistanceKm += distanceKm
-                            lastStepCount = currentTotalSteps
-                            updateHourlySteps(stepsToday, distanceKm)
-                            scheduleSave() // Batch save instead of immediate
-                        }
+                        updateHourlySteps(stepsToday, distanceKm)
+                        Log.d(TAG, "Added $stepsToday steps (sensor diff), total today: $todayStepCount")
+                        scheduleSave()
+                    } else if (stepsToday > 5000) {
+                        Log.w(TAG, "Ignoring unrealistic step count: $stepsToday (current=$currentTotalSteps, last=$lastStepCount, base=$totalStepsBase)")
+                        // Still update lastStepCount to prevent large jumps on next reading
+                        lastStepCount = currentTotalSteps
+                    } else if (stepsToday < 0) {
+                        Log.w(TAG, "Negative step difference: $stepsToday (current=$currentTotalSteps, last=$lastStepCount, base=$totalStepsBase)")
+                        // This might happen due to small timing differences, just update lastStepCount
+                        lastStepCount = currentTotalSteps
                     }
                 }
             }
             Sensor.TYPE_STEP_DETECTOR -> {
                 // Step detector fires once per step
                 if (event.values[0] == 1.0f) {
+                    // Validate we're not getting too many steps too quickly
                     todayStepCount++
                     // Calculate and store distance using calibrated stride length
                     val strideLength = getStrideLengthMeters()
                     val distanceKm = strideLength / 1000.0
                     todayDistanceKm += distanceKm
                     updateHourlySteps(1, distanceKm)
+                    Log.d(TAG, "Step detected, total: $todayStepCount")
                     scheduleSave() // Batch save instead of immediate
                 }
             }
@@ -446,10 +515,31 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
     private fun saveCurrentData() {
         val today = getCurrentDate()
         
+        // Validate data before saving - prevent saving corrupted data
+        if (todayStepCount < 0) {
+            Log.w(TAG, "Invalid step count for saving: $todayStepCount")
+            return
+        }
+        if (todayDistanceKm < 0.0) {
+            Log.w(TAG, "Invalid distance for saving: $todayDistanceKm")
+            todayDistanceKm = 0.0
+        }
+        
+        // Additional validation to prevent saving obviously wrong data
+        if (todayStepCount > 100000) { // More than 100k steps in a day is unrealistic
+            Log.w(TAG, "Unrealistic step count detected: $todayStepCount, not saving")
+            return
+        }
+        if (todayDistanceKm > 100.0) { // More than 100km in a day is unrealistic
+            Log.w(TAG, "Unrealistic distance detected: $todayDistanceKm km, not saving")
+            return
+        }
+        
         // Batch all writes together
         prefs.edit { 
             putInt(PREF_TODAY_STEP_COUNT, todayStepCount)
             putInt(PREF_LAST_STEP_COUNT, lastStepCount)
+            putInt(PREF_TOTAL_STEPS_BASE, totalStepsBase)
         }
         lastSavedStepCount = todayStepCount
         
@@ -458,6 +548,7 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
             saveHistoricalData(today, todayStepCount, todayDistanceKm)
             // Save hourly data
             saveHourlyData(today, hourlySteps, hourlyDistances)
+            Log.d(TAG, "Saved data: $todayStepCount steps, $todayDistanceKm km")
         }
     }
     
@@ -581,7 +672,29 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
      * Get activity data for today
      */
     fun getTodayActivity(): ActivityData {
-        return ActivityData(todayStepCount, todayDistanceKm, getCurrentDate())
+        // Check for obviously corrupted data and reset if needed
+        if (todayStepCount > 100000 || todayDistanceKm > 100.0) {
+            Log.w(TAG, "Corrupted data detected: steps=$todayStepCount, distance=$todayDistanceKm km")
+            // Reset the corrupted data
+            todayStepCount = 0
+            todayDistanceKm = 0.0
+            hourlySteps.clear()
+            hourlyDistances.clear()
+            // Don't reset the base count as it might be valid
+        }
+        
+        // Validate and sanitize data
+        val validSteps = todayStepCount.coerceAtLeast(0)
+        val validDistance = todayDistanceKm.coerceAtLeast(0.0)
+        
+        if (validSteps != todayStepCount || validDistance != todayDistanceKm) {
+            Log.w(TAG, "Data validation corrected: steps $todayStepCount->$validSteps, distance $todayDistanceKm->$validDistance")
+            // Update invalid data
+            if (todayStepCount < 0) todayStepCount = 0
+            if (todayDistanceKm < 0.0) todayDistanceKm = 0.0
+        }
+        
+        return ActivityData(validSteps, validDistance, getCurrentDate())
     }
     
     /**
@@ -604,6 +717,41 @@ class PhysicalActivityManager(private val context: Context) : SensorEventListene
     fun getTodaySteps(): Int = todayStepCount
     
     fun getTodayDistanceKm(): Double = todayDistanceKm
+    
+    /**
+     * Reset all activity data to fix corrupted counts
+     */
+    fun resetAllData() {
+        Log.w(TAG, "Resetting all activity data due to corruption")
+        
+        // Reset all counters
+        todayStepCount = 0
+        todayDistanceKm = 0.0
+        lastStepCount = 0
+        totalStepsBase = 0
+        lastResetDate = ""
+        hourlySteps.clear()
+        hourlyDistances.clear()
+        currentHour = -1
+        
+        // Clear all saved data
+        prefs.edit {
+            remove(PREF_LAST_STEP_COUNT)
+            remove(PREF_TODAY_STEP_COUNT)
+            remove(PREF_LAST_RESET_DATE)
+            remove(PREF_TOTAL_STEPS_BASE)
+            remove(PREF_HISTORICAL_DATA)
+            remove(PREF_HOURLY_DATA)
+            remove(PREF_STRIDE_LENGTH_METERS)
+            remove(PREF_USER_HEIGHT_CM)
+        }
+        
+        // Clear caches
+        historicalDataCache = null
+        hourlyDataCache = null
+        
+        Log.d(TAG, "All activity data has been reset")
+    }
     
     fun cleanup() {
         stopTracking()

@@ -2,9 +2,15 @@ package com.guruswarupa.launch
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
+import android.text.TextUtils
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,6 +30,7 @@ class PermissionManager(
         const val VOICE_SEARCH_REQUEST = 500
         const val USAGE_STATS_REQUEST = 600
         const val NOTIFICATION_PERMISSION_REQUEST = 900
+        const val DEVICE_ADMIN_REQUEST = 1000
     }
     
     /**
@@ -106,6 +113,74 @@ class PermissionManager(
         }
     }
     
+    /**
+     * Checks if Device Admin is enabled for screen off functionality
+     */
+    fun isDeviceAdminActive(): Boolean {
+        val devicePolicyManager = activity.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val componentName = ComponentName(activity, ScreenOffAdminReceiver::class.java)
+        return devicePolicyManager.isAdminActive(componentName)
+    }
+
+    /**
+     * Request Device Admin permission
+     */
+    fun requestDeviceAdminPermission() {
+        val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+            .setTitle(activity.getString(R.string.request_device_admin_title))
+            .setMessage(activity.getString(R.string.request_device_admin_message))
+            .setPositiveButton(activity.getString(R.string.grant_permission)) { _, _ ->
+                val componentName = ComponentName(activity, ScreenOffAdminReceiver::class.java)
+                val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
+                    putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, activity.getString(R.string.device_admin_description))
+                }
+                @Suppress("DEPRECATION")
+                activity.startActivityForResult(intent, DEVICE_ADMIN_REQUEST)
+            }
+            .setNegativeButton(activity.getString(R.string.cancel_button), null)
+            .show()
+        
+        fixDialogTextColors(dialog)
+    }
+
+    /**
+     * Checks if Accessibility Service is enabled
+     */
+    fun isAccessibilityServiceEnabled(): Boolean {
+        val expectedComponentName = ComponentName(activity, ScreenLockAccessibilityService::class.java)
+        val enabledServices = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+        if (enabledServices == null) return false
+        
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Request Accessibility Service permission
+     */
+    fun requestAccessibilityPermission() {
+        val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+            .setTitle(activity.getString(R.string.accessibility_permission_title))
+            .setMessage(activity.getString(R.string.accessibility_permission_message))
+            .setPositiveButton(activity.getString(R.string.grant_permission)) { _, _ ->
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                activity.startActivity(intent)
+            }
+            .setNegativeButton(activity.getString(R.string.cancel_button), null)
+            .show()
+        
+        fixDialogTextColors(dialog)
+    }
+
     private fun fixDialogTextColors(dialog: AlertDialog) {
         try {
             val textColor = ContextCompat.getColor(activity, R.color.text)

@@ -45,7 +45,7 @@ class PhysicalActivityWidget(
             if (isInitialized && activityManager.hasActivityRecognitionPermission()) {
                 updateDisplay()
             }
-            handler.postDelayed(this, 30000) // Update every 30 seconds
+            handler.postDelayed(this, 10000) // Update every 10 seconds for better responsiveness
         }
     }
     
@@ -85,7 +85,13 @@ class PhysicalActivityWidget(
         }
 
         calibrationButton.setOnClickListener {
-            showCalibrationDialog()
+            // Check if data looks corrupted and offer reset option
+            val activityData = activityManager.getTodayActivity()
+            if (activityData.steps > 100000 || activityData.distanceKm > 100.0) {
+                showResetDataDialog()
+            } else {
+                showCalibrationDialog()
+            }
         }
         
         // Initialize calendar view
@@ -209,11 +215,13 @@ class PhysicalActivityWidget(
         // Start tracking in widget (for immediate display)
         activityManager.startTracking()
         
-        // Initial update
-        updateDisplay()
+        // Initial update with delay to ensure data is loaded
+        handler.postDelayed({
+            updateDisplay()
+        }, 1000)
         
         // Start periodic updates
-        handler.post(updateRunnable)
+        handler.postDelayed(updateRunnable, 5000) // First update after 5 seconds
     }
     
     private fun startTrackingService() {
@@ -303,18 +311,23 @@ class PhysicalActivityWidget(
     
     private fun updateDisplay() {
         try {
+            // Force refresh data from manager
             val activityData = activityManager.getTodayActivity()
             
-            // Format steps
+            // Validate data before display
+            if (activityData.steps < 0) {
+                return
+            }
+            
+            // Format steps with validation
             val stepsFormatted = String.format(Locale.getDefault(), "%,d", activityData.steps)
             stepsText.text = context.getString(R.string.steps_format, stepsFormatted)
             
-            // Format distance
+            // Format distance with validation
             val df = DecimalFormat("#.##")
-            val distanceFormatted = df.format(activityData.distanceKm)
+            val distanceFormatted = df.format(activityData.distanceKm.coerceAtLeast(0.0))
             distanceText.text = context.getString(R.string.distance_km_format, distanceFormatted)
         } catch (_: Exception) {
-            // Handle error silently
         }
     }
 
@@ -406,11 +419,39 @@ class PhysicalActivityWidget(
         if (isInitialized && activityManager.hasActivityRecognitionPermission()) {
             // Service handles background tracking, widget just displays
             activityManager.startTracking()
+            // Force refresh data
+            handler.postDelayed({
+                updateDisplay()
+                if (isCalendarView) {
+                    calendarView?.refreshData()
+                }
+            }, 500)
+        }
+    }
+    
+    /**
+     * Force refresh the widget display with current data
+     */
+    fun refreshData() {
+        if (isInitialized) {
             updateDisplay()
             if (isCalendarView) {
                 calendarView?.refreshData()
             }
         }
+    }
+    
+    private fun showResetDataDialog() {
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Corrupted Data Detected")
+            .setMessage("The step count or distance appears to be corrupted (${activityManager.getTodaySteps()} steps, ${String.format("%.2f", activityManager.getTodayDistanceKm())} km). Would you like to reset all activity data?")
+            .setPositiveButton("Reset Data") { _, _ ->
+                activityManager.resetAllData()
+                Toast.makeText(context, "Activity data has been reset", Toast.LENGTH_SHORT).show()
+                updateDisplay()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
     
     fun onPause() {
