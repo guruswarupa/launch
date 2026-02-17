@@ -17,6 +17,12 @@ object Constants {
         const val NIGHT_MODE_ENABLED = "night_mode_enabled"
         const val NIGHT_MODE_INTENSITY = "night_mode_intensity"
         const val FLIP_DND_ENABLED = "flip_dnd_enabled"
+        const val BACK_TAP_ENABLED = "back_tap_enabled"
+        const val BACK_TAP_ACTION = "back_tap_action"
+        const val BACK_TAP_SENSITIVITY = "back_tap_sensitivity"
+        const val BACK_TAP_MULTIPLIER = "back_tap_multiplier"
+        const val BACK_TAP_DOUBLE_ACTION = "back_tap_double_action"
+        const val BACK_TAP_TRIPLE_ACTION = "back_tap_triple_action"
     }
     
     // FileProvider

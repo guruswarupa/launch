@@ -46,6 +46,21 @@ class LaunchApplication : Application() {
                 startService(intent)
             }
         }
+        
+        // Start Back Tap Detection if enabled
+        val isBackTapEnabled = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+        Log.d("LaunchApplication", "Back tap enabled: $isBackTapEnabled")
+        if (isBackTapEnabled) {
+            val intent = Intent(this, BackTapService::class.java).apply {
+                action = BackTapService.ACTION_START
+            }
+            Log.d("LaunchApplication", "Starting BackTapService")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        }
     }
 
     private fun setupCrashHandler() {

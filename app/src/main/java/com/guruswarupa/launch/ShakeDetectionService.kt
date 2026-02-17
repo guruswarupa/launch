@@ -48,10 +48,14 @@ class ShakeDetectionService : Service() {
             // Initialize shake detector with torch toggle callback
             shakeDetector = ShakeDetector(this) {
                 // Triple shake detected - toggle torch
-                try {
-                    torchManager?.toggleTorch()
-                } catch (_: Exception) {
-                    // Error toggling torch - silently fail
+                if (GestureCoordinator.requestTrigger()) {
+                    try {
+                        torchManager?.toggleTorch()
+                    } catch (_: Exception) {
+                        // Error toggling torch - silently fail
+                    }
+                } else {
+                    Log.d(TAG, "Shake gesture ignored due to coordination")
                 }
             }
         } catch (_: Exception) {

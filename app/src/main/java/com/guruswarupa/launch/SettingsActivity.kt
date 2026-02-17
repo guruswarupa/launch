@@ -326,6 +326,9 @@ class SettingsActivity : ComponentActivity() {
         
         // Setup flip to dnd
         setupFlipToDnd()
+        
+        // Setup back tap gestures
+        setupBackTap()
 
         // Support & Feedback Section
         val supportHeader = findViewById<LinearLayout>(R.id.support_header)
@@ -1196,5 +1199,119 @@ class SettingsActivity : ComponentActivity() {
         } catch (_: Exception) {
             // Silently fail if import fails
         }
+    }
+    
+    /**
+     * Setup back tap gesture settings
+     */
+    private fun setupBackTap() {
+        val backTapSwitch = findViewById<SwitchCompat>(R.id.back_tap_switch)
+        val backTapSettingsContainer = findViewById<View>(R.id.back_tap_settings_container)
+        val doubleActionSpinner = findViewById<android.widget.Spinner>(R.id.back_tap_double_action_spinner)
+        val tripleActionSpinner = findViewById<android.widget.Spinner>(R.id.back_tap_triple_action_spinner)
+        val sensitivitySeekBar = findViewById<SeekBar>(R.id.back_tap_sensitivity_seekbar)
+        val sensitivityValueText = findViewById<TextView>(R.id.back_tap_sensitivity_value)
+        
+        // Set default values if not set
+        if (!prefs.contains(Constants.Prefs.BACK_TAP_ENABLED)) {
+            prefs.edit { 
+                putBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+                putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)
+                putString(Constants.Prefs.BACK_TAP_TRIPLE_ACTION, BackTapService.ACTION_SCREENSHOT)
+                putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7) // More sensitive by default
+            }
+        }
+        
+        val isBackTapEnabled = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+        val currentDoubleAction = prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE) 
+            ?: BackTapService.ACTION_SOUND_TOGGLE
+        val currentTripleAction = prefs.getString(Constants.Prefs.BACK_TAP_TRIPLE_ACTION, BackTapService.ACTION_SCREENSHOT) 
+            ?: BackTapService.ACTION_SCREENSHOT
+        val currentSensitivity = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7)
+        
+        backTapSwitch.isChecked = isBackTapEnabled
+        backTapSettingsContainer.isVisible = isBackTapEnabled
+        sensitivitySeekBar.progress = currentSensitivity - 1
+        sensitivityValueText.text = currentSensitivity.toString()
+        
+        // Setup actions
+        val actions = arrayOf(
+            "None",
+            "Toggle Torch",
+            "Take Screenshot",
+            "Toggle Notifications",
+            "Turn Screen Off",
+            "Toggle Sound"
+        )
+        val actionValues = arrayOf(
+            BackTapService.ACTION_NONE,
+            BackTapService.ACTION_TORCH_TOGGLE,
+            BackTapService.ACTION_SCREENSHOT,
+            BackTapService.ACTION_NOTIFICATIONS,
+            BackTapService.ACTION_SCREEN_OFF,
+            BackTapService.ACTION_SOUND_TOGGLE
+        )
+        
+        val actionAdapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, actions)
+        actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        
+        doubleActionSpinner.adapter = actionAdapter
+        tripleActionSpinner.adapter = actionAdapter
+        
+        // Set current action selections
+        val doubleActionIndex = actionValues.indexOf(currentDoubleAction)
+        if (doubleActionIndex >= 0) {
+            doubleActionSpinner.setSelection(doubleActionIndex)
+        }
+        
+        val tripleActionIndex = actionValues.indexOf(currentTripleAction)
+        if (tripleActionIndex >= 0) {
+            tripleActionSpinner.setSelection(tripleActionIndex)
+        }
+        
+        // Setup switch listener
+        backTapSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.BACK_TAP_ENABLED, isChecked) }
+            backTapSettingsContainer.isVisible = isChecked
+            
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            sendBroadcast(intent)
+        }
+        
+        // Setup action spinner listeners
+        doubleActionSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedAction = actionValues[position]
+                prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, selectedAction) }
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
+        }
+        
+        tripleActionSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedAction = actionValues[position]
+                prefs.edit { putString(Constants.Prefs.BACK_TAP_TRIPLE_ACTION, selectedAction) }
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
+        }
+        
+        // Setup sensitivity seekbar
+        sensitivitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val sensitivity = progress + 1
+                sensitivityValueText.text = sensitivity.toString()
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, sensitivity) }
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
     }
 }
