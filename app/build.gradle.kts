@@ -35,13 +35,6 @@ android {
         checkReleaseBuilds = false
     }
     
-    // Enable code splitting and optimize APK size
-    splits {
-        abi {
-            isEnable = false 
-        }
-    }
-    
     packaging {
         resources {
             excludes += setOf(
