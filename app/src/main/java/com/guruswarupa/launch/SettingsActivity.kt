@@ -239,43 +239,43 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private fun setupExpandableSections() {
-        // Display Style Section
+        // Display Style Header
         val displayStyleHeader = findViewById<LinearLayout>(R.id.display_style_header)
         val displayStyleContent = findViewById<LinearLayout>(R.id.display_style_content)
         val displayStyleArrow = findViewById<TextView>(R.id.display_style_arrow)
         setupSectionToggle(displayStyleHeader, displayStyleContent, displayStyleArrow)
         
-        // Backup & Restore Section
+        // Backup Header
         val backupHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
         val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
         val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
         setupSectionToggle(backupHeader, backupContent, backupArrow)
         
-        // App Lock Section
+        // Security Header
         val appLockHeader = findViewById<LinearLayout>(R.id.app_lock_header)
         val appLockContent = findViewById<LinearLayout>(R.id.app_lock_content)
         val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
         setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
         
-        // Permissions Section
+        // Permissions Header
         val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)
         val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
         val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
         setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
         
-        // Wallpaper Section
+        // Wallpaper Header
         val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
         val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
         setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
         
-        // Tutorial Section
+        // Tutorial Header
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
         val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
         val tutorialArrow = findViewById<TextView>(R.id.tutorial_arrow)
         setupSectionToggle(tutorialHeader, tutorialContent, tutorialArrow)
         
-        // Quick Actions Section
+        // Quick Actions Header
         val quickActionsHeader = findViewById<LinearLayout>(R.id.quick_actions_header)
         val quickActionsContent = findViewById<LinearLayout>(R.id.quick_actions_content)
         val quickActionsArrow = findViewById<TextView>(R.id.quick_actions_arrow)
@@ -330,13 +330,13 @@ class SettingsActivity : ComponentActivity() {
         // Setup back tap gestures
         setupBackTap()
 
-        // Support & Feedback Section
+        // Support Header
         val supportHeader = findViewById<LinearLayout>(R.id.support_header)
         val supportContent = findViewById<LinearLayout>(R.id.support_content)
         val supportArrow = findViewById<TextView>(R.id.support_arrow)
         setupSectionToggle(supportHeader, supportContent, supportArrow)
         
-        // Launcher Section
+        // Launcher Header
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
         val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
         val launcherArrow = findViewById<TextView>(R.id.launcher_arrow)
@@ -1208,7 +1208,6 @@ class SettingsActivity : ComponentActivity() {
         val backTapSwitch = findViewById<SwitchCompat>(R.id.back_tap_switch)
         val backTapSettingsContainer = findViewById<View>(R.id.back_tap_settings_container)
         val doubleActionSpinner = findViewById<android.widget.Spinner>(R.id.back_tap_double_action_spinner)
-        val tripleActionSpinner = findViewById<android.widget.Spinner>(R.id.back_tap_triple_action_spinner)
         val sensitivitySeekBar = findViewById<SeekBar>(R.id.back_tap_sensitivity_seekbar)
         val sensitivityValueText = findViewById<TextView>(R.id.back_tap_sensitivity_value)
         
@@ -1217,7 +1216,6 @@ class SettingsActivity : ComponentActivity() {
             prefs.edit { 
                 putBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
                 putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)
-                putString(Constants.Prefs.BACK_TAP_TRIPLE_ACTION, BackTapService.ACTION_SCREENSHOT)
                 putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7) // More sensitive by default
             }
         }
@@ -1225,8 +1223,6 @@ class SettingsActivity : ComponentActivity() {
         val isBackTapEnabled = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
         val currentDoubleAction = prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE) 
             ?: BackTapService.ACTION_SOUND_TOGGLE
-        val currentTripleAction = prefs.getString(Constants.Prefs.BACK_TAP_TRIPLE_ACTION, BackTapService.ACTION_SCREENSHOT) 
-            ?: BackTapService.ACTION_SCREENSHOT
         val currentSensitivity = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7)
         
         backTapSwitch.isChecked = isBackTapEnabled
@@ -1256,17 +1252,11 @@ class SettingsActivity : ComponentActivity() {
         actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         
         doubleActionSpinner.adapter = actionAdapter
-        tripleActionSpinner.adapter = actionAdapter
         
         // Set current action selections
         val doubleActionIndex = actionValues.indexOf(currentDoubleAction)
         if (doubleActionIndex >= 0) {
             doubleActionSpinner.setSelection(doubleActionIndex)
-        }
-        
-        val tripleActionIndex = actionValues.indexOf(currentTripleAction)
-        if (tripleActionIndex >= 0) {
-            tripleActionSpinner.setSelection(tripleActionIndex)
         }
         
         // Setup switch listener
@@ -1283,16 +1273,6 @@ class SettingsActivity : ComponentActivity() {
             override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
                 val selectedAction = actionValues[position]
                 prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, selectedAction) }
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
-        }
-        
-        tripleActionSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
-                val selectedAction = actionValues[position]
-                prefs.edit { putString(Constants.Prefs.BACK_TAP_TRIPLE_ACTION, selectedAction) }
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
                 sendBroadcast(intent)
             }

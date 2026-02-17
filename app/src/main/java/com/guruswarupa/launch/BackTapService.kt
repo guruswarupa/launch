@@ -35,7 +35,6 @@ class BackTapService : Service() {
     
     // Action types
     private var doubleTapAction = ACTION_SOUND_TOGGLE
-    private var tripleTapAction = ACTION_SCREENSHOT
     
     companion object {
         private const val TAG = "BackTapService"
@@ -78,10 +77,9 @@ class BackTapService : Service() {
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
         val sensitivity = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 5)
         
-        // Load independent actions for double and triple tap
+        // Load independent actions for double tap
         // Default to user's requested values if not set
         doubleTapAction = prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, ACTION_SOUND_TOGGLE) ?: ACTION_SOUND_TOGGLE
-        tripleTapAction = prefs.getString(Constants.Prefs.BACK_TAP_TRIPLE_ACTION, ACTION_SCREENSHOT) ?: ACTION_SCREENSHOT
         
         backTapDetector?.updateSensitivity(sensitivity)
     }
@@ -160,7 +158,9 @@ class BackTapService : Service() {
     
     private fun handleBackTapAction(tapCount: Int) {
         try {
-            val action = if (tapCount == 2) doubleTapAction else if (tapCount >= 3) tripleTapAction else return
+            // We only care about 2 or more taps now, and we use the doubleTapAction
+            if (tapCount < 2) return
+            val action = doubleTapAction
             
             Log.d(TAG, "Back tap action triggered: $action (count: $tapCount)")
             
