@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/widget_background"
+    android:padding="12dp"
+    android:gravity="center">
+
+    <!-- Proximity Icon -->
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_proximity"
+        android:layout_marginBottom="12dp"
+        android:tint="@color/nord9" />
+
+    <!-- Distance -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="5.2 cm"
+        android:textColor="@color/nord8"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Status -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Near"
+        android:textColor="@color/nord14"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+
+</LinearLayout>
