@@ -1,8 +1,12 @@
 package com.guruswarupa.launch
 
 import android.app.WallpaperManager
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -20,11 +24,15 @@ class WallpaperManagerHelper(
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private var currentWallpaperBitmap: Bitmap? = null
+    private val prefs by lazy { activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE) }
     
     /**
      * Set wallpaper background, with optional force reload
      */
     fun setWallpaperBackground(forceReload: Boolean = false) {
+        // Apply blur based on preference
+        applyBlurToViews()
+
         // Check if we have a cached wallpaper bitmap
         if (!forceReload && currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
             wallpaperBackground.setImageBitmap(currentWallpaperBitmap)
@@ -124,6 +132,27 @@ class WallpaperManagerHelper(
                     drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
                 }
             }
+        }
+    }
+
+    /**
+     * Applies or removes blur effect based on user preference
+     */
+    fun applyBlurToViews() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val effect = if (blurLevel > 0) {
+                val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
+                RenderEffect.createBlurEffect(blurRadius, blurRadius, Shader.TileMode.CLAMP)
+            } else {
+                null
+            }
+            
+            wallpaperBackground.setRenderEffect(effect)
+            drawerWallpaperBackground?.setRenderEffect(effect)
+            
+            // Ensure right drawer wallpaper never has blur applied
+            activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.setRenderEffect(null)
         }
     }
     

@@ -202,6 +202,25 @@ class SettingsActivity : ComponentActivity() {
             // Default wallpaper if permission not granted
             wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
         }
+        
+        // Apply blur to settings wallpaper if enabled
+        applyWallpaperBlur(wallpaperImageView)
+    }
+
+    private fun applyWallpaperBlur(imageView: ImageView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            if (blurLevel > 0) {
+                val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
+                imageView.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(
+                        blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP
+                    )
+                )
+            } else {
+                imageView.setRenderEffect(null)
+            }
+        }
     }
 
     private fun sendFeedback() {
@@ -270,6 +289,29 @@ class SettingsActivity : ComponentActivity() {
         val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
         setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
         
+        // Setup wallpaper blur slider
+        val wallpaperBlurSeekBar = findViewById<SeekBar>(R.id.wallpaper_blur_seekbar)
+        val wallpaperBlurValueText = findViewById<TextView>(R.id.wallpaper_blur_value_text)
+        
+        val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+        
+        wallpaperBlurSeekBar.progress = blurLevel
+        wallpaperBlurValueText.text = "$blurLevel%"
+        
+        wallpaperBlurSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                wallpaperBlurValueText.text = "$progress%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, progress) }
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    sendBroadcast(intent)
+                    applyWallpaperBlur(findViewById(R.id.wallpaper_background))
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
         // Tutorial Header
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
         val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
