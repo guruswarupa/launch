@@ -17,4 +17,6 @@
     <dimen name="onboarding_workspaces_apps_height">350dp</dimen>
     <dimen name="onboarding_workspaces_apps_min_height">250dp</dimen>
     <dimen name="onboarding_workspaces_apps_max_height">450dp</dimen>
+    <!-- Search bar margin dimensions -->
+    <dimen name="search_top_margin_when_widget_hidden">48dp</dimen>
 </resources>
