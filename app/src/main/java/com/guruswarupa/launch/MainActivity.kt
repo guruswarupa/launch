@@ -3,7 +3,6 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -45,6 +44,7 @@ class MainActivity : FragmentActivity() {
 
     // Views
     private lateinit var recyclerView: RecyclerView
+    private lateinit var fastScroller: FastScroller
     private lateinit var appList: MutableList<ResolveInfo>
     private lateinit var adapter: AppAdapter
     private lateinit var timeTextView: TextView
@@ -275,6 +275,9 @@ class MainActivity : FragmentActivity() {
         searchBox = findViewById(R.id.search_box)
         searchContainer = findViewById(R.id.search_container)
         recyclerView = findViewById(R.id.app_list)
+        fastScroller = findViewById(R.id.fast_scroller)
+        fastScroller.setRecyclerView(recyclerView)
+        
         // Disable animations to prevent "Tmp detached view" crash during rapid updates
         recyclerView.itemAnimator = null
         voiceSearchButton = findViewById(R.id.voice_search_button)
@@ -371,14 +374,32 @@ class MainActivity : FragmentActivity() {
                 if (query.isEmpty()) {
                     // Show top widget when search is empty
                     topWidgetContainer.visibility = View.VISIBLE
+                    updateFastScrollerVisibility()
                 } else {
                     // Hide top widget when searching
                     topWidgetContainer.visibility = View.GONE
+                    fastScroller.visibility = View.GONE
                 }
             }
             
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+    }
+
+    /**
+     * Updates FastScroller visibility based on view mode and search query
+     */
+    private fun updateFastScrollerVisibility() {
+        val viewPreference = sharedPreferences.getString("view_preference", "list")
+        val isGridMode = viewPreference == "grid"
+        val query = searchBox.text.toString().trim()
+        
+        // Show fast scroller only in list mode when not searching
+        if (!isGridMode && query.isEmpty() && appList.isNotEmpty()) {
+            fastScroller.visibility = View.VISIBLE
+        } else {
+            fastScroller.visibility = View.GONE
+        }
     }
     
     /**
@@ -465,6 +486,7 @@ class MainActivity : FragmentActivity() {
         }
         
         recyclerView.visibility = View.VISIBLE
+        updateFastScrollerVisibility()
         
         // Initialize or update AppSearchManager with new app data
         if (!::appSearchManager.isInitialized && !isFinishing && !isDestroyed && ::adapter.isInitialized) {
@@ -581,6 +603,7 @@ class MainActivity : FragmentActivity() {
             }
             adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
             recyclerView.adapter = adapter
+            updateFastScrollerVisibility()
         }
 
         // Refresh apps after appDockManager is fully initialized
@@ -603,6 +626,7 @@ class MainActivity : FragmentActivity() {
         adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
         recyclerView.adapter = adapter
         recyclerView.visibility = View.VISIBLE
+        updateFastScrollerVisibility()
 
         // Initialize usage stats display manager (after adapter is created)
         usageStatsDisplayManager = UsageStatsDisplayManager(this, usageStatsManager, weeklyUsageGraph, adapter, recyclerView, handler)
@@ -677,7 +701,7 @@ class MainActivity : FragmentActivity() {
         handler.postDelayed({
             if (::rightDrawerWallpaper.isInitialized && ::wallpaperManagerHelper.isInitialized) {
                 // Since WallpaperManagerHelper currently supports two ImageViews (main and left drawer),
-                // we'll manually set the bitmap for the right drawer.
+                // we\'ll manually set the bitmap for the right drawer.
                 // In a production app, we should update WallpaperManagerHelper to handle multiple ImageViews.
                 try {
                     val wallpaperManager = android.app.WallpaperManager.getInstance(this)
@@ -748,7 +772,7 @@ class MainActivity : FragmentActivity() {
                 if (::navigationManager.isInitialized) {
                     navigationManager.handleBackPressed { 
                         // If navigation manager says we can proceed with standard back
-                        // but it's the home screen, we usually don't want to do anything
+                        // but it\'s the home screen, we usually don\'t want to do anything
                     }
                 }
             }
@@ -899,7 +923,7 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
-     * Updates LifecycleManager with deferred widgets after they're initialized.
+     * Updates LifecycleManager with deferred widgets after they\'re initialized.
      */
     private fun updateLifecycleManagerWithDeferredWidgets() {
         if (::lifecycleManager.isInitialized) {
@@ -983,6 +1007,9 @@ class MainActivity : FragmentActivity() {
             updateAppSearchManager()
         }
         
+        // Update fast scroller visibility
+        updateFastScrollerVisibility()
+
         // Update shake detection service if preference changed
         updateShakeDetectionService()
 
@@ -1046,6 +1073,7 @@ class MainActivity : FragmentActivity() {
             if (::adapter.isInitialized) {
                 adapter.updateAppList(appList)
             }
+            updateFastScrollerVisibility()
         }
         
         if (!isRemoved) {
@@ -1232,7 +1260,7 @@ class MainActivity : FragmentActivity() {
         // Check for theme changes and update widget backgrounds if needed
         checkAndUpdateThemeIfNeeded()
         
-        // Ensure search box doesn't gain focus when returning to home screen
+        // Ensure search box doesn\'t gain focus when returning to home screen
         if (::searchBox.isInitialized) {
             searchBox.clearFocus()
         }
@@ -1558,7 +1586,7 @@ class MainActivity : FragmentActivity() {
         // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
         val drawer = findViewById<FrameLayout>(R.id.widgets_drawer)
         val scrollView = drawer?.let { view ->
-            // Find NestedScrollView (it's a child of the FrameLayout)
+            // Find NestedScrollView (it\'s a child of the FrameLayout)
             for (i in 0 until view.childCount) {
                 val child = view.getChildAt(i)
                 if (child is androidx.core.widget.NestedScrollView) {
@@ -1597,7 +1625,7 @@ class MainActivity : FragmentActivity() {
                 view?.let { viewMap[widget.id] = it }
             }
             
-            // Remove only the widgets we're managing (in reverse order to avoid index issues)
+            // Remove only the widgets we\'re managing (in reverse order to avoid index issues)
             val viewsToRemove = viewMap.values.filter { it.parent == layout }.toList()
             viewsToRemove.reversed().forEach { view ->
                 layout.removeView(view)

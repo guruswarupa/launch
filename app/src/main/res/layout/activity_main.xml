@@ -20,6 +20,7 @@
 
         <!-- Scrollable Content -->
         <androidx.core.widget.NestedScrollView
+            android:id="@+id/main_scroll_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true">
@@ -184,6 +185,16 @@
                     android:nestedScrollingEnabled="false"/>
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
+
+        <!-- Fast Scroller -->
+        <com.guruswarupa.launch.FastScroller
+            android:id="@+id/fast_scroller"
+            android:layout_width="30dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:layout_marginTop="100dp"
+            android:layout_marginBottom="100dp"
+            android:visibility="gone" />
 
         <!-- Visual Cues for Gesture Areas (Top Half) -->
         <LinearLayout
