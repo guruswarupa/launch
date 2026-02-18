@@ -1,7 +1,7 @@
 <resources>
     <!-- Dark Mode Colors -->
     <color name="background">#121212</color> <!-- Matte black background -->
-    <color name="text">#E0E0E0</color> <!-- Light grey text for contrast -->
+    <color name="text">#FFFFFF</color> <!-- Pure white text for dark mode -->
     <color name="text_secondary">#B0B0B0</color> <!-- Lighter grey for secondary text -->
     <color name="card_background">#80000000</color> <!-- Translucent black card background -->
     <color name="card_elevation">#333333</color> <!-- Slightly lighter card elevation -->
