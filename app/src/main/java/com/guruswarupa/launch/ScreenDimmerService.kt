@@ -3,6 +3,7 @@ package com.guruswarupa.launch
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
@@ -68,6 +69,17 @@ class ScreenDimmerService : Service() {
         return START_STICKY
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (overlayView != null && params != null) {
+            try {
+                windowManager?.updateViewLayout(overlayView, params)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun showOverlay(dimLevel: Int) {
         if (overlayView != null) {
             updateOverlay(dimLevel)
@@ -76,9 +88,7 @@ class ScreenDimmerService : Service() {
 
         overlayView = View(this)
         overlayView?.setBackgroundColor(Color.BLACK)
-        overlayView?.alpha = dimLevel / 100f
         
-        // Use system UI flags to hide standard boundaries
         @Suppress("DEPRECATION")
         overlayView?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
@@ -91,36 +101,21 @@ class ScreenDimmerService : Service() {
             WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
         }
 
-        // Get real screen dimensions including navigation bar
-        val metrics = android.util.DisplayMetrics()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val windowMetrics = windowManager?.currentWindowMetrics
-            windowMetrics?.bounds?.let {
-                metrics.widthPixels = it.width()
-                metrics.heightPixels = it.height()
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            windowManager?.defaultDisplay?.getRealMetrics(metrics)
-        }
-
         params = WindowManager.LayoutParams(
-            metrics.widthPixels,
-            metrics.heightPixels,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
             layoutType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN or
-                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION or
-                    WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS,
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = 0
             y = 0
+            alpha = (dimLevel / 100f).coerceIn(0f, 0.9f)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
@@ -135,8 +130,8 @@ class ScreenDimmerService : Service() {
     }
 
     private fun updateOverlay(dimLevel: Int) {
-        overlayView?.alpha = dimLevel / 100f
         params?.let {
+            it.alpha = (dimLevel / 100f).coerceIn(0f, 0.9f)
             try {
                 windowManager?.updateViewLayout(overlayView, it)
             } catch (e: Exception) {

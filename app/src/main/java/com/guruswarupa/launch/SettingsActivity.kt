@@ -10,6 +10,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -351,7 +352,7 @@ class SettingsActivity : ComponentActivity() {
         val dimmerContainer = findViewById<View>(R.id.screen_dimmer_container)
         
         val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
-        val currentDimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+        val currentDimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 10)
         
         screenDimmerSwitch.isChecked = isDimmerEnabled
         dimmerSeekBar.progress = currentDimLevel
@@ -404,7 +405,7 @@ class SettingsActivity : ComponentActivity() {
         val nightModeContainer = findViewById<View>(R.id.night_mode_container)
         
         val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
-        val currentIntensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+        val currentIntensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
         
         nightModeSwitch.isChecked = isNightModeEnabled
         nightModeSeekBar.progress = currentIntensity
