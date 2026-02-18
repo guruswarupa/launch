@@ -150,7 +150,7 @@ class MainActivity : FragmentActivity() {
      * Applies theme-appropriate backgrounds to all widget containers based on current theme mode.
      */
     fun applyThemeBasedWidgetBackgrounds() {
-        // Check if we're in night mode (dark theme)
+        // Check if we\'re in night mode (dark theme)
         val isNightMode = (resources.configuration.uiMode and 
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
             android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -688,11 +688,6 @@ class MainActivity : FragmentActivity() {
         // Initialize WidgetManager
         val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
         widgetManager = WidgetManager(this, drawerContentLayout)
-        activityInitializer.setupAddWidgetButton(
-            findViewById(R.id.add_widget_button),
-            widgetManager,
-            ActivityResultHandler.REQUEST_PICK_WIDGET
-        )
         
         // Setup widget configuration button
         val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
@@ -1032,13 +1027,13 @@ class MainActivity : FragmentActivity() {
         // Update shake detection service if preference changed
         updateShakeDetectionService()
 
-        // Update screen dimmer service based on preference
+        // Update screen dimmer service if preference changed
         updateScreenDimmerService()
 
-        // Update night mode service based on preference
+        // Update night mode service if preference changed
         updateNightModeService()
 
-        // Update Flip to DND service based on preference
+        // Update Flip to DND service if preference changed
         updateFlipToDndService()
         
         // Force refresh hidden apps cache to ensure we have latest data
@@ -1636,7 +1631,7 @@ class MainActivity : FragmentActivity() {
                 view?.let { viewMap[widget.id] = it }
             }
             
-            // Collect other views that aren't managed widgets (like headers, empty state, add button)
+            // Collect other views that aren\'t managed widgets (like headers, empty state, add button)
             val nonWidgetViews = mutableListOf<View>()
             for (i in 0 until layout.childCount) {
                 val child = layout.getChildAt(i)
