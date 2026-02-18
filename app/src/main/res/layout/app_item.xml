@@ -5,22 +5,18 @@
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:padding="16dp"
-    android:background="@drawable/rounded_background"
-    android:layout_marginBottom="8dp"
-    android:layout_marginTop="8dp"
+    android:layout_marginBottom="4dp"
+    android:layout_marginTop="4dp"
     android:layout_marginStart="8dp"
-    android:layout_marginEnd="8dp"
-    android:elevation="4dp"
-    android:outlineProvider="background">
+    android:layout_marginEnd="8dp">
 
     <ImageView
         android:id="@+id/app_icon"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:scaleType="centerCrop"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:scaleType="fitCenter"
         android:layout_marginEnd="16dp"
         android:layout_gravity="center"
-        android:background="@drawable/circular_background"
         />
 
     <LinearLayout
@@ -34,11 +30,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="18sp"
-            android:textColor="@color/text"
+            android:textColor="@color/white"
             android:maxLines="1"
             android:ellipsize="end"
             android:gravity="start"
-            android:fontFamily="sans-serif-medium"/>
+            android:fontFamily="sans-serif-medium"
+            android:shadowColor="#BF000000"
+            android:shadowDx="1.2"
+            android:shadowDy="1.2"
+            android:shadowRadius="2"/>
     </LinearLayout>
 
     <TextView
@@ -46,7 +46,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="12sp"
-        android:textColor="@color/text"
+        android:textColor="@color/white"
         android:alpha="0.7"
         android:layout_marginStart="8dp"
         android:gravity="end"

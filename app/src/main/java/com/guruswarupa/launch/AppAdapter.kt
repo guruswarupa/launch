@@ -249,26 +249,10 @@ class AppAdapter(
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
 
-            if (!isGridMode) {
-                // Check if we're in night mode (dark theme)
-                val isNightMode = (activity.resources.configuration.uiMode and 
-                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
-                    android.content.res.Configuration.UI_MODE_NIGHT_YES
-                
-                // Use light background in light mode, dark background in dark mode
-                val backgroundDrawable = if (isNightMode) {
-                    R.drawable.rounded_background // Semi-transparent black
-                } else {
-                    R.drawable.rounded_background_light // Semi-transparent white
-                }
-                
-                holder.itemView.setBackgroundResource(backgroundDrawable)
-                holder.itemView.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
-                holder.appIcon.setBackgroundResource(R.drawable.circular_background)
-            } else {
-                holder.itemView.background = null
-                holder.appIcon.background = null
-            }
+        // Clear backgrounds for both modes to support transparency/shadow look
+        holder.itemView.background = null
+        holder.appIcon.background = null
+        holder.itemView.elevation = 0f
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
