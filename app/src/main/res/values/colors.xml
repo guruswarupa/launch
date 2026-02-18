@@ -41,6 +41,7 @@
     
     <!-- Dialog Colors -->
     <color name="dialog_background">#F2FFFFFF</color>
+    <color name="dialog_button_background">#33FFFFFF</color> <!-- White translucent for light mode -->
     <color name="menu_background_color">#E6FFFFFF</color>
     <color name="dialog_text">@color/text</color>
     <color name="dialog_text_secondary">@color/text_secondary</color>
@@ -51,6 +52,8 @@
     <color name="widget_divider">#33000000</color>
     <color name="widget_item_background">#1A000000</color>
     <color name="widget_item_stroke">#33000000</color>
+    <color name="widget_background">@color/card_background</color>
+    <color name="widget_border">@color/outlineColor</color>
     
     <!-- Settings Specific Colors -->
     <color name="settings_overlay">#66FFFFFF</color> <!-- Lighter overlay for light mode -->

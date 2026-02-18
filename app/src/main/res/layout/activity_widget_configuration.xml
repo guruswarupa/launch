@@ -67,6 +67,23 @@
             android:layout_marginBottom="16dp"
             android:layout_marginStart="8dp"/>
 
+        <!-- Search Bar -->
+        <EditText
+            android:id="@+id/search_widget_input"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search widgets..."
+            android:textColor="@android:color/white"
+            android:textColorHint="@android:color/white"
+            android:alpha="0.7"
+            android:background="@drawable/search_background"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"
+            android:drawableStart="@android:drawable/ic_menu_search"
+            android:drawablePadding="8dp"
+            android:inputType="text"
+            android:imeOptions="actionSearch"/>
+
         <!-- Widgets List -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/widgets_recycler_view"

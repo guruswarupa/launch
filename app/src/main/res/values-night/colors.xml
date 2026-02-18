@@ -41,6 +41,7 @@
     
     <!-- Dialog Colors -->
     <color name="dialog_background">#80000000</color> <!-- Original semi-transparent black for dark mode -->
+    <color name="dialog_button_background">#33000000</color> <!-- Black translucent for dark mode -->
     <color name="menu_background_color">#80000000</color> <!-- Original semi-transparent black for dark mode -->
     <color name="dialog_text">#FFFFFF</color> <!-- Restore pure white for dialog text in dark mode -->
     <color name="dialog_text_secondary">#B0B0B0</color>

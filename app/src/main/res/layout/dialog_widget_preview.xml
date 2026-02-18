@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@drawable/menu_background">
+
+    <!-- Preview Image -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginBottom="16dp">
+
+        <ImageView
+            android:id="@+id/dialog_preview_image"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:background="@drawable/widget_preview_background"
+            android:contentDescription="Widget preview" />
+
+        <ProgressBar
+            android:id="@+id/dialog_loading_progress"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/nord8" />
+
+    </FrameLayout>
+
+    <!-- Widget Name -->
+    <TextView
+        android:id="@+id/dialog_widget_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Widget Name"
+        android:textSize="20sp"
+        android:textColor="@color/dialog_text"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Widget Description -->
+    <TextView
+        android:id="@+id/dialog_widget_description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Widget description"
+        android:textSize="14sp"
+        android:textColor="@color/dialog_text_secondary"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_close"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Close"
+            android:background="@drawable/dialog_button_background"
+            android:textColor="@color/dialog_text"
+            android:paddingHorizontal="24dp"
+            android:layout_marginEnd="8dp"
+            android:textAllCaps="false"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:paddingVertical="8dp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btn_enable"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enable"
+            android:background="@drawable/dialog_button_background"
+            android:textColor="@color/dialog_text"
+            android:paddingHorizontal="24dp"
+            android:textAllCaps="false"
+            android:minHeight="0dp"
+            android:minWidth="0dp"
+            android:paddingVertical="8dp" />
+
+    </LinearLayout>
+
+</LinearLayout>
