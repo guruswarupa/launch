@@ -11,11 +11,10 @@
     <!-- Icon ImageView -->
     <ImageView
         android:id="@+id/app_icon"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        android:scaleType="centerCrop"
-        android:background="@drawable/circular_background"
-        android:padding="8dp" />
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:scaleType="fitCenter"
+        android:layout_marginBottom="8dp" />
 
     <!-- App Name TextView -->
     <TextView
@@ -24,13 +23,15 @@
         android:layout_height="wrap_content"
         android:textSize="12sp"
         android:textColor="@color/text"
-        android:layout_marginTop="4dp"
         android:ellipsize="end"
         android:maxLines="1"
         android:maxWidth="72dp"
         android:gravity="center"
-        android:background="@drawable/grid_item_background"
-        android:padding="4dp" />
+        android:padding="2dp"
+        android:shadowColor="#BF000000"
+        android:shadowDx="1.5"
+        android:shadowDy="1.5"
+        android:shadowRadius="3" />
 
     <!-- Usage Time TextView -->
     <TextView
@@ -39,10 +40,13 @@
         android:layout_height="wrap_content"
         android:textSize="10sp"
         android:textColor="@color/text_secondary"
-        android:alpha="0.7"
+        android:alpha="0.8"
         android:layout_marginBottom="4dp"
         android:maxWidth="72dp"
         android:gravity="center"
-        android:background="@drawable/grid_item_background"
-        android:padding="4dp" />
+        android:padding="2dp"
+        android:shadowColor="#BF000000"
+        android:shadowDx="1.2"
+        android:shadowDy="1.2"
+        android:shadowRadius="2" />
 </LinearLayout>
