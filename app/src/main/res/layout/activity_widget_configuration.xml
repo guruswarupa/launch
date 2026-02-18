@@ -55,6 +55,18 @@
                 android:textColor="@android:color/white"
                 android:layout_marginStart="8dp"/>
 
+            <Button
+                android:id="@+id/add_system_widget_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add System Widget"
+                android:textAllCaps="false"
+                android:background="@drawable/button_background"
+                android:textColor="@android:color/white"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:minWidth="0dp"/>
+
         </LinearLayout>
 
         <TextView
@@ -83,6 +95,18 @@
             android:drawablePadding="8dp"
             android:inputType="text"
             android:imeOptions="actionSearch"/>
+
+        <!-- In-App Widgets Header -->
+        <TextView
+            android:id="@+id/in_app_widgets_header"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="In-App Widgets"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="8dp"
+            android:layout_marginBottom="8dp"/>
 
         <!-- Widgets List -->
         <androidx.recyclerview.widget.RecyclerView
