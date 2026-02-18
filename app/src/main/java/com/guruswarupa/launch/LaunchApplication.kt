@@ -30,7 +30,7 @@ class LaunchApplication : Application() {
         // Start Night Mode if enabled
         val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
         if (isNightModeEnabled && Settings.canDrawOverlays(this)) {
-            val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+            val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
             NightModeService.startService(this, intensity)
         }
         
