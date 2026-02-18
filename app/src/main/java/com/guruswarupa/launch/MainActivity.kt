@@ -374,10 +374,28 @@ class MainActivity : FragmentActivity() {
                 if (query.isEmpty()) {
                     // Show top widget when search is empty
                     topWidgetContainer.visibility = View.VISIBLE
+                    // Reset margin when top widget is shown
+                    val layoutParams = searchContainer.layoutParams as ViewGroup.MarginLayoutParams
+                    layoutParams.setMargins(
+                        layoutParams.leftMargin,
+                        0, // Reset to default margin
+                        layoutParams.rightMargin,
+                        layoutParams.bottomMargin
+                    )
+                    searchContainer.layoutParams = layoutParams
                     updateFastScrollerVisibility()
                 } else {
                     // Hide top widget when searching
                     topWidgetContainer.visibility = View.GONE
+                    // Add extra margin to compensate for hidden widget and prevent touching navbar
+                    val layoutParams = searchContainer.layoutParams as ViewGroup.MarginLayoutParams
+                    layoutParams.setMargins(
+                        layoutParams.leftMargin,
+                        resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden), // Add margin when widget is hidden
+                        layoutParams.rightMargin,
+                        layoutParams.bottomMargin
+                    )
+                    searchContainer.layoutParams = layoutParams
                     fastScroller.visibility = View.GONE
                 }
             }
