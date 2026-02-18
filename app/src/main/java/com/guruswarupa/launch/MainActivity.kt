@@ -3,6 +3,8 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
+import android.appwidget.AppWidgetHostView
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -165,7 +167,6 @@ class MainActivity : FragmentActivity() {
         
         // Apply backgrounds to all widget containers
         findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
-        findViewById<View>(R.id.widgets_section)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.notifications_widget_container)?.parent?.let { parent ->
             if (parent is View) parent.setBackgroundResource(widgetBackground)
         }
@@ -685,8 +686,8 @@ class MainActivity : FragmentActivity() {
         })
         
         // Initialize WidgetManager
-        val widgetContainer = findViewById<LinearLayout>(R.id.widget_container)
-        widgetManager = WidgetManager(this, widgetContainer)
+        val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
+        widgetManager = WidgetManager(this, drawerContentLayout)
         activityInitializer.setupAddWidgetButton(
             findViewById(R.id.add_widget_button),
             widgetManager,
@@ -1541,10 +1542,6 @@ class MainActivity : FragmentActivity() {
         val emptyState = findViewById<View>(R.id.widgets_empty_state)
         emptyState?.visibility = if (hasEnabledWidgets) View.GONE else View.VISIBLE
         
-        // Update visibility for each widget
-        findViewById<View>(R.id.widgets_section)?.visibility = 
-            if (widgetMap["widgets_section"]?.enabled == true) View.VISIBLE else View.GONE
-        
         // Notifications widget - the parent LinearLayout contains the container
         val notificationsParent = findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? ViewGroup
         notificationsParent?.visibility = if (widgetMap["notifications_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
@@ -1601,59 +1598,62 @@ class MainActivity : FragmentActivity() {
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
         // Reorder widgets - get the parent LinearLayout that contains all widgets
-        // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
-        val drawer = findViewById<FrameLayout>(R.id.widgets_drawer)
-        val scrollView = drawer?.let { view ->
-            // Find NestedScrollView (it\'s a child of the FrameLayout)
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                if (child is androidx.core.widget.NestedScrollView) {
-                    return@let child
-                }
-            }
-            null
-        }
-        val contentLayout = scrollView?.getChildAt(0) as? LinearLayout
+        val contentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
         
         contentLayout?.let { layout ->
             // Store all views with their widget IDs
             val viewMap = mutableMapOf<String, View>()
             
             widgets.forEach { widget ->
-                val view = when (widget.id) {
-                    "widgets_section" -> findViewById(R.id.widgets_section)
-                    "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
-                    "calendar_events_widget_container" -> findViewById(R.id.calendar_events_widget_container)
-                    "countdown_widget_container" -> findViewById(R.id.countdown_widget_container)
-                    "physical_activity_widget_container" -> findViewById(R.id.physical_activity_widget_container)
-                    "compass_widget_container" -> findViewById(R.id.compass_widget_container)
-                    "pressure_widget_container" -> findViewById(R.id.pressure_widget_container)
-                    "proximity_widget_container" -> findViewById(R.id.proximity_widget_container)
-                    "temperature_widget_container" -> findViewById(R.id.temperature_widget_container)
-                    "noise_decibel_widget_container" -> findViewById(R.id.noise_decibel_widget_container)
-                    "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
-                    "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
-                    "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
-                    "finance_widget" -> findViewById(R.id.finance_widget)
-                    "weekly_usage_widget" -> findViewById(R.id.weekly_usage_widget)
-                    "network_stats_widget_container" -> findViewById(R.id.network_stats_widget_container)
-                    "device_info_widget_container" -> findViewById(R.id.device_info_widget_container)
-                    else -> null
+                val view = if (widget.isSystemWidget) {
+                    // System widgets are dynamically added to the bottom of the drawer
+                    // We need to find them by tag in the layout
+                    val widgetId = widget.id.removePrefix("system_widget_").toIntOrNull()
+                    if (widgetId != null) {
+                        layout.findViewWithTag<View>(widgetId)
+                    } else null
+                } else {
+                    when (widget.id) {
+                        "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
+                        "calendar_events_widget_container" -> findViewById(R.id.calendar_events_widget_container)
+                        "countdown_widget_container" -> findViewById(R.id.countdown_widget_container)
+                        "physical_activity_widget_container" -> findViewById(R.id.physical_activity_widget_container)
+                        "compass_widget_container" -> findViewById(R.id.compass_widget_container)
+                        "pressure_widget_container" -> findViewById(R.id.pressure_widget_container)
+                        "proximity_widget_container" -> findViewById(R.id.proximity_widget_container)
+                        "temperature_widget_container" -> findViewById(R.id.temperature_widget_container)
+                        "noise_decibel_widget_container" -> findViewById(R.id.noise_decibel_widget_container)
+                        "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
+                        "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
+                        "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
+                        "finance_widget" -> findViewById(R.id.finance_widget)
+                        "weekly_usage_widget" -> findViewById(R.id.weekly_usage_widget)
+                        "network_stats_widget_container" -> findViewById(R.id.network_stats_widget_container)
+                        "device_info_widget_container" -> findViewById(R.id.device_info_widget_container)
+                        else -> null
+                    }
                 }
                 view?.let { viewMap[widget.id] = it }
             }
             
-            // Remove only the widgets we\'re managing (in reverse order to avoid index issues)
-            val viewsToRemove = viewMap.values.filter { it.parent == layout }.toList()
-            viewsToRemove.reversed().forEach { view ->
-                layout.removeView(view)
+            // Collect other views that aren't managed widgets (like headers, empty state, add button)
+            val nonWidgetViews = mutableListOf<View>()
+            for (i in 0 until layout.childCount) {
+                val child = layout.getChildAt(i)
+                if (!viewMap.values.contains(child)) {
+                    nonWidgetViews.add(child)
+                }
             }
+
+            // Remove all views
+            layout.removeAllViews()
             
-            // Add views back in the exact configured order from widgets list
-            // This preserves the order set by the user, regardless of enabled/disabled state
+            // Add back non-widget views first (keeping them at the top)
+            nonWidgetViews.forEach { layout.addView(it) }
+            
+            // Add widget views back in the exact configured order
             widgets.forEach { widget ->
                 viewMap[widget.id]?.let { view ->
-                    // View should have no parent after removal, add it back
                     if (view.parent == null) {
                         layout.addView(view)
                     }
