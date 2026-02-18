@@ -57,6 +57,24 @@ class AppAdapter(
         usageCache.clear()
     }
 
+    /**
+     * Get the label for an app at a given position.
+     * Uses cache if available, otherwise falls back to activity name or package name.
+     */
+    fun getAppLabel(position: Int): String {
+        if (position < 0 || position >= appList.size) return ""
+        val appInfo = appList[position]
+        val packageName = appInfo.activityInfo.packageName
+        
+        // Special entries
+        if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
+                "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+            return appInfo.activityInfo.name ?: ""
+        }
+        
+        return labelCache[packageName] ?: appInfo.activityInfo.name ?: packageName
+    }
+
     companion object {
         private const val VIEW_TYPE_LIST = 0
         private const val VIEW_TYPE_GRID = 1
@@ -649,9 +667,7 @@ class AppAdapter(
                 // Update UI on main thread - use notifyItemChanged to ensure update even if recycled
                 (context as? Activity)?.runOnUiThread {
                     // Check if this holder still shows the same item
-                    if (holder.bindingAdapterPosition == position && 
-                        position < appList.size && 
-                        appList[position].activityInfo.packageName == packageName) {
+                    if (holder.bindingAdapterPosition == position) {
                         holder.appName?.text = label
                     } else {
                         // If view was recycled, notify the adapter to refresh this position
@@ -663,9 +679,7 @@ class AppAdapter(
                 val fallbackLabel = appInfo.activityInfo.packageName
                 labelCache[packageName] = fallbackLabel
                 (context as? Activity)?.runOnUiThread {
-                    if (holder.bindingAdapterPosition == position && 
-                        position < appList.size && 
-                        appList[position].activityInfo.packageName == packageName) {
+                    if (holder.bindingAdapterPosition == position) {
                         holder.appName?.text = fallbackLabel
                     } else {
                         // If view was recycled, notify the adapter to refresh this position
