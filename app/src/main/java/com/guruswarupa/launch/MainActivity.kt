@@ -754,12 +754,17 @@ class MainActivity : FragmentActivity() {
                 val monthlySpentText = findViewById<TextView>(R.id.monthly_spent_text)
                 val amountInput = findViewById<EditText>(R.id.amount_input)
                 val descriptionInput = findViewById<EditText>(R.id.description_input)
-                financeWidgetManager = FinanceWidgetManager(
-                    this, sharedPreferences, financeManager,
-                    balanceText, monthlySpentText, amountInput, descriptionInput
-                )
-                financeWidgetManager.setup()
-                financeWidgetManager.updateDisplay()
+                
+                // Only initialize finance widget manager if all views are found
+                if (balanceText != null && monthlySpentText != null && 
+                    amountInput != null && descriptionInput != null) {
+                    financeWidgetManager = FinanceWidgetManager(
+                        this, sharedPreferences, financeManager,
+                        balanceText, monthlySpentText, amountInput, descriptionInput
+                    )
+                    financeWidgetManager.setup()
+                    financeWidgetManager.updateDisplay()
+                }
             }
         }, 100)
         
@@ -1047,7 +1052,11 @@ class MainActivity : FragmentActivity() {
             appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
         }
         if (::financeWidgetManager.isInitialized) {
-            financeWidgetManager.updateDisplay() // Refresh finance display after reset
+            try {
+                financeWidgetManager.updateDisplay() // Refresh finance display after reset
+            } catch (_: Exception) {
+                // Ignore if finance widget manager fails
+            }
         }
         
         // Refresh wallpaper in case it was changed from settings
@@ -1122,6 +1131,8 @@ class MainActivity : FragmentActivity() {
             updateWidgetVisibility()
             // Refresh system widgets in the drawer
             refreshSystemWidgets()
+            // Update visibility again after refreshing system widgets
+            updateWidgetVisibility()
             // Refresh calendar widget when it becomes visible
             if (::calendarEventsWidget.isInitialized) {
                 val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
@@ -1651,7 +1662,10 @@ class MainActivity : FragmentActivity() {
             // Add widget views back in the exact configured order
             widgets.forEach { widget ->
                 viewMap[widget.id]?.let { view ->
-                    if (view.parent == null) {
+                    // Set visibility based on enabled state
+                    view.visibility = if (widget.enabled) View.VISIBLE else View.GONE
+                    
+                    if (view.parent == null && widget.enabled) {
                         layout.addView(view)
                     }
                 }
