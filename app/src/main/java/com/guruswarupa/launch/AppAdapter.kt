@@ -264,8 +264,11 @@ class AppAdapter(
                 
                 holder.itemView.setBackgroundResource(backgroundDrawable)
                 holder.itemView.elevation = activity.resources.getDimension(R.dimen.widget_elevation)
+                holder.appIcon.setBackgroundResource(R.drawable.circular_background)
+            } else {
+                holder.itemView.background = null
+                holder.appIcon.background = null
             }
-            holder.appIcon.setBackgroundResource(R.drawable.circular_background)
 
         // Always show the name in both grid and list mode
         holder.appName?.visibility = View.VISIBLE
@@ -863,17 +866,6 @@ class AppAdapter(
                         // Ignore
                     }
                 }, 50)
-                
-                // Fix after an even longer delay (for very slow rendering)
-                lv.postDelayed({
-                    try {
-                        for (i in 0 until lv.childCount) {
-                            fixTextColors(lv.getChildAt(i))
-                        }
-                    } catch (_: Exception) {
-                        // Ignore
-                    }
-                }, 150)
                 
                 // Also set a global layout listener to catch any late-rendered items
                 lv.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
