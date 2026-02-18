@@ -57,6 +57,7 @@ class ActivityInitializer(
             appLauncher.launchAppWithLockCheck("com.google.android.deskclock", "Google Clock")
         }
 
+        // Setup date widget click listener to open calendar
         dateTextView.setOnClickListener {
             appLauncher.launchAppWithLockCheck("com.google.android.calendar", "Google Calendar")
         }
@@ -67,7 +68,7 @@ class ActivityInitializer(
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
-            
+
             // Left drawer
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
@@ -75,7 +76,7 @@ class ActivityInitializer(
                 params.width = drawerWidth
                 it.layoutParams = params
             }
-            
+
             // Right drawer
             val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
             rightDrawerView?.let {
@@ -90,17 +91,11 @@ class ActivityInitializer(
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.END)
     }
 
-    fun setupAddWidgetButton(addWidgetButton: Button, widgetManager: WidgetManager, requestCode: Int) {
-        addWidgetButton.setOnClickListener {
-            widgetManager.requestPickWidget(activity, requestCode)
-        }
-    }
-
     fun setupVoiceSearchButton(voiceSearchButton: ImageButton, voiceSearchManager: VoiceSearchManager) {
         voiceSearchButton.setOnClickListener {
             voiceSearchManager.startVoiceSearch()
         }
-        
+
         voiceSearchButton.setOnLongClickListener {
             voiceSearchManager.triggerSystemAssistant()
             true

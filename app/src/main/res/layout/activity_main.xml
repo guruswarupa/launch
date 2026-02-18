@@ -326,20 +326,6 @@
                     android:gravity="center" />
             </LinearLayout>
 
-            <!-- Add Widget Button (Now standalone at the top of drawer if no system widgets are added) -->
-            <Button
-                android:id="@+id/add_widget_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/button_neutral_ripple"
-                android:paddingHorizontal="20dp"
-                android:paddingVertical="10dp"
-                android:text="Add System Widget"
-                android:textColor="@color/widget_text"
-                android:textSize="14sp" />
-
             <!-- Notifications Widget -->
             <LinearLayout
                 android:id="@+id/notifications_widget_main_container"
