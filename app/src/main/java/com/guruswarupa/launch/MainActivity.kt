@@ -1120,6 +1120,8 @@ class MainActivity : FragmentActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION && resultCode == RESULT_OK) {
             updateWidgetVisibility()
+            // Refresh system widgets in the drawer
+            refreshSystemWidgets()
             // Refresh calendar widget when it becomes visible
             if (::calendarEventsWidget.isInitialized) {
                 val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
@@ -1654,6 +1656,16 @@ class MainActivity : FragmentActivity() {
                     }
                 }
             }
+        }
+    }
+    
+    /**
+     * Refreshes system widgets in the drawer by reloading them from WidgetManager
+     */
+    private fun refreshSystemWidgets() {
+        // Reload widgets from WidgetManager
+        if (::widgetManager.isInitialized) {
+            widgetManager.reloadWidgets()
         }
     }
     
