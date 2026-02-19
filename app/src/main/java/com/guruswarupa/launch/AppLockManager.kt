@@ -14,6 +14,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.security.MessageDigest
+import java.security.SecureRandom
 
 class AppLockManager(private val context: Context) {
 
@@ -37,18 +38,45 @@ class AppLockManager(private val context: Context) {
 
     companion object {
         private const val PREF_PIN_HASH = "pin_hash"
+        private const val PREF_PIN_SALT = "pin_salt"
         private const val PREF_LOCKED_APPS = "locked_apps"
         private const val PREF_IS_APP_LOCK_ENABLED = "is_app_lock_enabled"
         private const val PREF_LAST_AUTH_TIME = "last_auth_time"
         private const val PREF_FINGERPRINT_ENABLED = "fingerprint_enabled"
         private const val AUTH_TIMEOUT = 1 * 60 * 1000L // 1 min
+        private const val SALT_LENGTH_BYTES = 16
     }
 
-    // Hash the PIN for secure storage
-    private fun hashPin(pin: String): String {
+    private fun generateSalt(): String {
+        val salt = ByteArray(SALT_LENGTH_BYTES)
+        SecureRandom().nextBytes(salt)
+        return salt.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun hashPinWithSalt(pin: String, salt: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
-        val hashBytes = digest.digest(pin.toByteArray())
+        val hashBytes = digest.digest((salt + pin).toByteArray())
         return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun hashPin(pin: String): String {
+        val existingSalt = sharedPreferences.getString(PREF_PIN_SALT, null)
+        return if (existingSalt != null) {
+            hashPinWithSalt(pin, existingSalt)
+        } else {
+            val digest = MessageDigest.getInstance("SHA-256")
+            val hashBytes = digest.digest(pin.toByteArray())
+            hashBytes.joinToString("") { "%02x".format(it) }
+        }
+    }
+
+    private fun saveNewPin(pin: String) {
+        val salt = generateSalt()
+        val hash = hashPinWithSalt(pin, salt)
+        sharedPreferences.edit {
+            putString(PREF_PIN_SALT, salt)
+            putString(PREF_PIN_HASH, hash)
+        }
     }
 
     // Set up PIN for the first time
@@ -83,8 +111,8 @@ class AppLockManager(private val context: Context) {
                         .setPositiveButton("Confirm") { _, _ ->
                             val confirmPin = confirmInput.text.toString()
                             if (pin == confirmPin) {
+                                saveNewPin(pin)
                                 sharedPreferences.edit {
-                                    putString(PREF_PIN_HASH, hashPin(pin))
                                     putBoolean(PREF_IS_APP_LOCK_ENABLED, true)
                                 }
                                 Toast.makeText(context, "App Lock PIN set successfully!", Toast.LENGTH_SHORT).show()
@@ -350,6 +378,7 @@ class AppLockManager(private val context: Context) {
     private fun resetAppLockData() {
         sharedPreferences.edit {
             remove(PREF_PIN_HASH)
+            remove(PREF_PIN_SALT)
             remove(PREF_LOCKED_APPS)
             remove(PREF_IS_APP_LOCK_ENABLED)
             remove(PREF_LAST_AUTH_TIME)
