@@ -1662,10 +1662,9 @@ class MainActivity : FragmentActivity() {
             // Add widget views back in the exact configured order
             widgets.forEach { widget ->
                 viewMap[widget.id]?.let { view ->
-                    // Set visibility based on enabled state
                     view.visibility = if (widget.enabled) View.VISIBLE else View.GONE
-                    
-                    if (view.parent == null && widget.enabled) {
+
+                    if (view.parent == null) {
                         layout.addView(view)
                     }
                 }
