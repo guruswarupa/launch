@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
@@ -10,12 +11,21 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import java.util.concurrent.Executors
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
     private lateinit var workspaceList: ListView
     private lateinit var createWorkspaceButton: Button
+    private lateinit var wallpaperBackground: ImageView
+    private lateinit var themeOverlay: View
+    private lateinit var titleText: TextView
+    private lateinit var subtitleText: TextView
+    private lateinit var workspacesContainer: LinearLayout
+    
+    private val backgroundExecutor = Executors.newSingleThreadExecutor()
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +40,14 @@ class WorkspaceConfigActivity : ComponentActivity() {
         
         workspaceList = findViewById(R.id.workspace_list)
         createWorkspaceButton = findViewById(R.id.create_workspace_button)
+        wallpaperBackground = findViewById(R.id.wallpaper_background)
+        themeOverlay = findViewById(R.id.theme_overlay)
+        titleText = findViewById(R.id.title_text)
+        subtitleText = findViewById(R.id.subtitle_text)
+        workspacesContainer = findViewById(R.id.workspaces_container)
+        
+        // Apply theme and wallpaper
+        applyThemeAndWallpaper()
         
         createWorkspaceButton.setOnClickListener {
             showCreateWorkspaceDialog()
@@ -38,9 +56,47 @@ class WorkspaceConfigActivity : ComponentActivity() {
         loadWorkspaces()
     }
     
+    private fun applyThemeAndWallpaper() {
+        // Set system wallpaper
+        try {
+            val wallpaperManager = android.app.WallpaperManager.getInstance(this)
+            val drawable = wallpaperManager.drawable
+            wallpaperBackground.setImageDrawable(drawable)
+        } catch (_: Exception) {
+            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
+        }
+        
+        // Apply theme-based colors and backgrounds
+        val isNightMode = (resources.configuration.uiMode and 
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+            
+        val overlayColor = if (isNightMode) {
+            Color.parseColor("#90000000") // Darker overlay for dark mode
+        } else {
+            Color.parseColor("#40000000") // Lighter overlay for light mode
+        }
+        themeOverlay.setBackgroundColor(overlayColor)
+        
+        val widgetBg = if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
+        workspacesContainer.setBackgroundResource(widgetBg)
+        
+        val textColor = ContextCompat.getColor(this, if (isNightMode) R.color.white else R.color.black)
+        val subTextColor = ContextCompat.getColor(this, if (isNightMode) R.color.gray_light else R.color.gray)
+        
+        titleText.setTextColor(textColor)
+        subtitleText.setTextColor(subTextColor)
+        createWorkspaceButton.setTextColor(textColor)
+        
+        // Button background is already set to ripple, but we can ensure it matches theme
+        createWorkspaceButton.setBackgroundResource(R.drawable.button_neutral_ripple)
+    }
+    
     override fun onResume() {
         super.onResume()
         loadWorkspaces()
+        // Refresh wallpaper in case it changed
+        applyThemeAndWallpaper()
     }
     
     private fun loadWorkspaces() {
@@ -50,7 +106,20 @@ class WorkspaceConfigActivity : ComponentActivity() {
             "${it.name} ($appCount apps)"
         }.toTypedArray()
         
-        val adapter = ArrayAdapter(this, R.layout.item_workspace, workspaceNames)
+        // Use a themed item layout for the list
+        val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, workspaceNames) {
+            override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                val text = view.findViewById<TextView>(android.R.id.text1)
+                
+                val isNightMode = (context.resources.configuration.uiMode and 
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES
+                
+                text.setTextColor(ContextCompat.getColor(context, if (isNightMode) R.color.white else R.color.black))
+                return view
+            }
+        }
         workspaceList.adapter = adapter
         
         workspaceList.setOnItemClickListener { _, _, position, _ ->
@@ -257,5 +326,10 @@ class WorkspaceConfigActivity : ComponentActivity() {
                 // Ignore if even this fails
             }
         }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        backgroundExecutor.shutdown()
     }
 }
