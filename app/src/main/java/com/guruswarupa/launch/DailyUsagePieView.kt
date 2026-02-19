@@ -21,10 +21,14 @@ class DailyUsagePieView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
+    private val strokeColor = "#1A1A1A".toColorInt()
+    private val noDataColor = "#666666".toColorInt()
+    private val zeroUsageColor = "#2A2A2A".toColorInt()
+
     private val strokePaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
-        color = "#1A1A1A".toColorInt()
+        color = strokeColor
         strokeWidth = 3f
     }
 
@@ -106,7 +110,7 @@ class DailyUsagePieView @JvmOverloads constructor(
 
         if (appUsages.isEmpty()) {
             textPaint.textSize = 32f
-            textPaint.color = "#666666".toColorInt()
+            textPaint.color = noDataColor
             canvas.drawText(
                 "No usage data",
                 width / 2f,
@@ -122,7 +126,7 @@ class DailyUsagePieView @JvmOverloads constructor(
 
         val totalUsage = appUsages.values.sum()
         if (totalUsage == 0L) {
-            piePaint.color = "#2A2A2A".toColorInt()
+            piePaint.color = zeroUsageColor
             canvas.drawCircle(centerX, centerY, radius, piePaint)
             canvas.drawCircle(centerX, centerY, radius, strokePaint)
             return
