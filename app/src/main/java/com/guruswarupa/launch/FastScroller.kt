@@ -29,13 +29,13 @@ class FastScroller @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        textSize = 30f
+        textSize = 20f
     }
     
     private val selectedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        textSize = 45f
+        textSize = 30f
         isFakeBoldText = true
     }
 
@@ -94,7 +94,8 @@ class FastScroller @JvmOverloads constructor(
                 
                 // Draw preview bubble in the middle of the screen (to the left of scroller)
                 val bubbleSize = 150f
-                val bubbleX = -bubbleSize // Position it to the left of the view
+                // Position it further to the left of the view
+                val bubbleX = -bubbleSize
                 val bubbleY = height.toFloat() / 2
                 val rect = RectF(bubbleX - bubbleSize/2, bubbleY - bubbleSize/2, bubbleX + bubbleSize/2, bubbleY + bubbleSize/2)
                 bubblePaint.alpha = (currentAlpha * 200).toInt()
@@ -110,8 +111,8 @@ class FastScroller @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Only trigger if touch is within the view width
-        if (event.x < 0 || event.x > width && !isSliding) return false
+        // Only trigger if touch is within the view width or currently sliding
+        if (event.x < -width || event.x > width * 2 && !isSliding) return false
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
@@ -178,8 +179,6 @@ class FastScroller @JvmOverloads constructor(
                         parent.smoothScrollTo(0, top)
                     } else {
                         // Estimate top if view is not visible yet
-                        // NestedScrollView usually needs the exact Y
-                        // If it's a huge list, this might be tricky, but scroll to position usually works
                         recyclerView?.scrollToPosition(targetPosition)
                         // Forced scroll to top of RV if it's the first match
                         if (targetPosition == 0) {
