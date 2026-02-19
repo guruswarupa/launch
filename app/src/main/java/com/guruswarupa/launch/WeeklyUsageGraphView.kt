@@ -135,9 +135,6 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Ensure paints are up to date
-        updatePaints()
-
         val dataToUse = appUsageData.ifEmpty {
             usageData.map { it.first to mapOf("Total" to it.second) }
         }
