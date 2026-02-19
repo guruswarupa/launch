@@ -83,6 +83,19 @@ class AppSearchManager(
         searchCache.clear()
     }
 
+    /**
+     * Generates a sort key that puts numbers and '#' at the end.
+     */
+    private fun getSortKey(label: String): String {
+        if (label.isEmpty()) return label
+        val firstChar = label[0]
+        return if (firstChar.isDigit() || firstChar == '#') {
+            "\uFFFF$label"
+        } else {
+            label
+        }
+    }
+
     fun filterAppsAndContacts(query: String) {
         // This method is already called from background thread (searchExecutor)
         val queryLower = query.lowercase().trim()
@@ -121,10 +134,10 @@ class AppSearchManager(
 
                 // Sort alphabetically for matches found
                 val sortedExact = filteredExactMatches.sortedBy {
-                    appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase()
+                    getSortKey(appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase())
                 }
                 val sortedPartial = filteredPartialMatches.sortedBy {
-                    appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase()
+                    getSortKey(appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase())
                 }
 
                 // 1. Add apps first
@@ -168,7 +181,7 @@ class AppSearchManager(
                 
                 // Sort alphabetically by app name
                 val sorted = appsToSort.sortedBy {
-                    appLabelMap[it]?.lowercase() ?: run {
+                    val label = appLabelMap[it]?.lowercase() ?: run {
                         // Use pre-loaded metadata cache if available
                         val cachedMetadata = appMetadataCache?.get(it.activityInfo.packageName)
                         cachedMetadata?.label?.lowercase()
@@ -181,6 +194,7 @@ class AppSearchManager(
                                 it.activityInfo.packageName.lowercase()
                             }
                     }
+                    getSortKey(label)
                 }
                 newFilteredList.addAll(sorted)
                 searchCache[emptyQueryKey] = ArrayList(sorted)
