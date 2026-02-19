@@ -68,8 +68,8 @@ class LaunchNotificationListenerService : NotificationListenerService() {
     }
     
     private fun updateWidget() {
-        // Send broadcast to update widget
         val intent = android.content.Intent("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
+        intent.setPackage(packageName)
         sendBroadcast(intent)
     }
     
