@@ -55,12 +55,14 @@ class SettingsActivity : ComponentActivity() {
     private val hiddenAppsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
             sendBroadcast(intent)
         }
     }
 
     private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+        intent.setPackage(packageName)
         sendBroadcast(intent)
         setupWallpaper()
     }
@@ -304,6 +306,7 @@ class SettingsActivity : ComponentActivity() {
                 if (fromUser) {
                     prefs.edit { putInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, progress) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
                     sendBroadcast(intent)
                     applyWallpaperBlur(findViewById(R.id.wallpaper_background))
                 }
@@ -332,6 +335,7 @@ class SettingsActivity : ComponentActivity() {
         shakeTorchSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked) }
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
             sendBroadcast(intent)
             
             // Show/hide sensitivity container
@@ -354,6 +358,7 @@ class SettingsActivity : ComponentActivity() {
                 if (fromUser) {
                     prefs.edit { putInt(Constants.Prefs.SHAKE_SENSITIVITY, sensitivity) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
                     sendBroadcast(intent)
                 }
             }
@@ -515,11 +520,13 @@ class SettingsActivity : ComponentActivity() {
                 } else {
                     prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, true) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
                     sendBroadcast(intent)
                 }
             } else {
                 prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, false) }
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
                 sendBroadcast(intent)
             }
         }
@@ -551,6 +558,7 @@ class SettingsActivity : ComponentActivity() {
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()
 
         val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+        intent.setPackage(packageName)
         sendBroadcast(intent)
 
         finish()
@@ -1308,6 +1316,7 @@ class SettingsActivity : ComponentActivity() {
             backTapSettingsContainer.isVisible = isChecked
             
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
             sendBroadcast(intent)
         }
         
@@ -1317,6 +1326,7 @@ class SettingsActivity : ComponentActivity() {
                 val selectedAction = actionValues[position]
                 prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, selectedAction) }
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
                 sendBroadcast(intent)
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
@@ -1330,6 +1340,7 @@ class SettingsActivity : ComponentActivity() {
                 if (fromUser) {
                     prefs.edit { putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, sensitivity) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
                     sendBroadcast(intent)
                 }
             }
