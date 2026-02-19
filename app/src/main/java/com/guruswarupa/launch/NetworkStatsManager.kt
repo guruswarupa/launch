@@ -85,7 +85,7 @@ class NetworkStatsManager {
         val urls = listOf(
             "https://speed.cloudflare.com/__down?bytes=10485760", // 10MB Cloudflare
             "https://dl.google.com/android/repository/platform-tools-latest-linux.zip",
-            "http://speedtest.tele2.net/10MB.zip" // Fallback HTTP
+            "https://speedtest.tele2.net/10MB.zip"
         )
         
         for (fileUrl in urls) {
@@ -134,7 +134,7 @@ class NetworkStatsManager {
     }
     
     private fun measureUploadSpeed(): Float {
-        val uploadUrl = "http://speedtest.tele2.net/upload.php"
+        val uploadUrl = "https://speedtest.tele2.net/upload.php"
         var totalBytesWritten = 0L
         val maxDuration = 5000L
         
