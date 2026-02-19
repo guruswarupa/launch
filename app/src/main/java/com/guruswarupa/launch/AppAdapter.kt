@@ -67,8 +67,7 @@ class AppAdapter(
         val packageName = appInfo.activityInfo.packageName
         
         // Special entries
-        if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
-                "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+        if (packageName in SPECIAL_PACKAGE_NAMES) {
             return appInfo.activityInfo.name ?: ""
         }
         
@@ -78,6 +77,10 @@ class AppAdapter(
     companion object {
         private const val VIEW_TYPE_LIST = 0
         private const val VIEW_TYPE_GRID = 1
+        private val SPECIAL_PACKAGE_NAMES = setOf(
+            "contact_search", "whatsapp_contact", "sms_contact",
+            "play_store_search", "maps_search", "yt_search", "browser_search", "math_result"
+        )
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -165,8 +168,7 @@ class AppAdapter(
                 val packageName = app.activityInfo.packageName
                 
                 // Skip special entries
-                if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
-                        "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                if (packageName in SPECIAL_PACKAGE_NAMES) {
                     continue
                 }
                 
@@ -197,8 +199,7 @@ class AppAdapter(
                 for (app in batch) {
                     val packageName = app.activityInfo.packageName
                     
-                    if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
-                            "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                    if (packageName in SPECIAL_PACKAGE_NAMES) {
                         continue
                     }
                     
@@ -236,8 +237,7 @@ class AppAdapter(
             for (app in appsToPreload) {
                 val packageName = app.activityInfo.packageName
                 
-                if (packageName in listOf("contact_search", "whatsapp_contact", "sms_contact", 
-                        "play_store_search", "maps_search", "yt_search", "browser_search", "math_result")) {
+                if (packageName in SPECIAL_PACKAGE_NAMES) {
                     continue
                 }
                 
