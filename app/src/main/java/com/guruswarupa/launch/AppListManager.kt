@@ -63,12 +63,27 @@ class AppListManager(
     
     /**
      * Sorts apps alphabetically by name using metadata cache when available.
+     * Apps starting with numbers or '#' are placed at the end.
      */
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
         val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         return apps.sortedBy {
-            metadataCache[it.activityInfo.packageName]?.label?.lowercase() 
+            val label = metadataCache[it.activityInfo.packageName]?.label?.lowercase() 
                 ?: it.activityInfo.packageName.lowercase()
+            getSortKey(label)
+        }
+    }
+
+    /**
+     * Generates a sort key that puts numbers and '#' at the end.
+     */
+    fun getSortKey(label: String): String {
+        if (label.isEmpty()) return label
+        val firstChar = label[0]
+        return if (firstChar.isDigit() || firstChar == '#') {
+            "\uFFFF$label"
+        } else {
+            label
         }
     }
     
