@@ -264,6 +264,18 @@ class MainActivity : FragmentActivity() {
                 if (::physicalActivityWidget.isInitialized) {
                     physicalActivityWidget.onPermissionGranted()
                 }
+            },
+            onDndStateChanged = {
+                if (::appDockManager.isInitialized && appDockManager.getCurrentMode()) {
+                    // Check if Dnd was disabled manually during focus mode
+                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    if (notificationManager.isNotificationPolicyAccessGranted && 
+                        notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
+                        // Re-enable DND
+                        notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+                        Toast.makeText(this, "DND re-enabled (Focus Mode active)", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         )
         broadcastReceiverManager.registerReceivers()
@@ -1571,7 +1583,7 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.pressure_widget_container)?.visibility = 
             if (widgetMap["pressure_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
-        findViewById<View>(R.id.proximity_widget_container)?.visibility = 
+        findViewById<View>(R.id.proximity_widget_container)?.visibility =
             if (widgetMap["proximity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         findViewById<View>(R.id.temperature_widget_container)?.visibility = 

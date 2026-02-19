@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -24,6 +25,7 @@ class FlipToDndService : Service(), SensorEventListener {
     private var isProximityNear = false
     
     private lateinit var notificationManager: NotificationManager
+    private lateinit var sharedPreferences: SharedPreferences
 
     companion object {
         private const val TAG = "FlipToDndService"
@@ -50,6 +52,7 @@ class FlipToDndService : Service(), SensorEventListener {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
             proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
             notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            sharedPreferences = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
             
             startForegroundServiceStatus()
             
@@ -115,6 +118,10 @@ class FlipToDndService : Service(), SensorEventListener {
     private fun updateDndState() {
         if (!notificationManager.isNotificationPolicyAccessGranted) return
 
+        // Skip DND toggle if Focus Mode is already active to avoid conflicts
+        val isFocusModeActive = sharedPreferences.getBoolean("focus_mode_enabled", false)
+        if (isFocusModeActive) return
+
         if (isFaceDown && isProximityNear) {
             if (notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_PRIORITY) {
                 notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
@@ -132,8 +139,10 @@ class FlipToDndService : Service(), SensorEventListener {
         super.onDestroy()
         try {
             sensorManager.unregisterListener(this)
-            // Reset DND if we're stopping the service
-            if (notificationManager.isNotificationPolicyAccessGranted) {
+            
+            // Only reset DND if Focus Mode isn't keeping it active
+            val isFocusModeActive = sharedPreferences.getBoolean("focus_mode_enabled", false)
+            if (!isFocusModeActive && notificationManager.isNotificationPolicyAccessGranted) {
                 notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
             }
             ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)

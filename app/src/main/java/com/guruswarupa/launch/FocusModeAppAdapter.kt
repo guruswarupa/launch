@@ -1,4 +1,3 @@
-
 package com.guruswarupa.launch
 
 import android.content.pm.ResolveInfo
@@ -12,8 +11,10 @@ import androidx.recyclerview.widget.RecyclerView
 
 class FocusModeAppAdapter(
     private val appList: List<ResolveInfo>,
-    private val focusModeManager: FocusModeManager
+    focusModeManager: FocusModeManager
 ) : RecyclerView.Adapter<FocusModeAppAdapter.ViewHolder>() {
+
+    private val selectedApps = focusModeManager.getAllowedApps().toMutableSet()
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
@@ -34,20 +35,27 @@ class FocusModeAppAdapter(
 
         holder.appIcon.setImageDrawable(appInfo.loadIcon(packageManager))
         holder.appName.text = appInfo.loadLabel(packageManager)
-        holder.appCheckbox.isChecked = focusModeManager.getAllowedApps().contains(packageName)
+        
+        // CRITICAL: Remove listener before setting state to prevent recycle glitch
+        holder.appCheckbox.setOnCheckedChangeListener(null)
+        holder.appCheckbox.isChecked = selectedApps.contains(packageName)
 
         holder.appCheckbox.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                focusModeManager.addAllowedApp(packageName)
+                selectedApps.add(packageName)
             } else {
-                focusModeManager.removeAllowedApp(packageName)
+                selectedApps.remove(packageName)
             }
         }
 
         holder.itemView.setOnClickListener {
-            holder.appCheckbox.isChecked = !holder.appCheckbox.isChecked
+            val newState = !holder.appCheckbox.isChecked
+            holder.appCheckbox.isChecked = newState
+            // Listener above will handle the set update
         }
     }
+
+    fun getSelectedApps(): Set<String> = selectedApps
 
     override fun getItemCount() = appList.size
 }
