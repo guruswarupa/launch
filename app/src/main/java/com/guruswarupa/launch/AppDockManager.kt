@@ -1,6 +1,7 @@
 package com.guruswarupa.launch
 
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -15,7 +16,7 @@ import androidx.core.content.edit
 import java.util.Locale
 
 class AppDockManager(
-    activity: MainActivity,
+    private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
     private val packageManager: PackageManager,
@@ -23,7 +24,7 @@ class AppDockManager(
 ) {
     private val context: Context = activity
     private val focusModeKey = "focus_mode_enabled"
-    private val focusModeHiddenAppsKey = "focus_mode_hidden_apps"
+    private val focusModeAllowedAppsKey = "focus_mode_allowed_apps"
     private val focusModeEndTimeKey = "focus_mode_end_time"
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
@@ -34,6 +35,7 @@ class AppDockManager(
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
     private val workspaceManager: WorkspaceManager
+    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     init {
         isFocusMode = sharedPreferences.getBoolean(focusModeKey, false)
@@ -62,6 +64,7 @@ class AppDockManager(
             if (endTime > System.currentTimeMillis()) {
                 startTimerDisplay()
                 startFocusModeTimer(endTime)
+                updateDndState(true)
             } else {
                 // Timer expired, disable focus mode
                 disableFocusMode()
@@ -485,6 +488,11 @@ class AppDockManager(
     }
 
     private fun enableFocusMode(durationMinutes: Int) {
+        if (!notificationManager.isNotificationPolicyAccessGranted) {
+            showDndPermissionDialog()
+            return
+        }
+
         isFocusMode = true
         val endTime = System.currentTimeMillis() + (durationMinutes * 60 * 1000)
 
@@ -495,11 +503,39 @@ class AppDockManager(
         updateDockVisibility()
         refreshAppsForFocusMode()
         startTimerDisplay()
+        updateDndState(true)
 
         Toast.makeText(context, "Focus mode enabled for $durationMinutes minutes", Toast.LENGTH_LONG).show()
 
         // Start timer to automatically disable focus mode
         startFocusModeTimer(endTime)
+    }
+
+    private fun showDndPermissionDialog() {
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("DND Access Required")
+            .setMessage("Focus Mode requires Do Not Disturb access to block notifications. Please grant it in the settings.")
+            .setPositiveButton("Grant Access") { _, _ ->
+                context.startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun updateDndState(enabled: Boolean) {
+        if (!notificationManager.isNotificationPolicyAccessGranted) return
+
+        val filter = if (enabled) {
+            NotificationManager.INTERRUPTION_FILTER_PRIORITY
+        } else {
+            NotificationManager.INTERRUPTION_FILTER_ALL
+        }
+
+        if (notificationManager.currentInterruptionFilter != filter) {
+            try {
+                notificationManager.setInterruptionFilter(filter)
+            } catch (_: Exception) {}
+        }
     }
 
     private fun disableFocusMode() {
@@ -511,6 +547,7 @@ class AppDockManager(
         updateDockVisibility()
         refreshAppsForFocusMode()
         stopTimerDisplay()
+        updateDndState(false)
 
         Toast.makeText(context, "Focus mode disabled", Toast.LENGTH_SHORT).show()
     }
@@ -522,11 +559,17 @@ class AppDockManager(
                 if (isFocusMode && System.currentTimeMillis() >= endTime) {
                     disableFocusMode()
                 } else if (isFocusMode) {
-                    handler.postDelayed(this, 60000) // Check every minute
+                    // Force DND if user disabled it
+                    if (notificationManager.isNotificationPolicyAccessGranted && 
+                        notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
+                        updateDndState(true)
+                        Toast.makeText(context, "DND re-enabled (Focus Mode active)", Toast.LENGTH_SHORT).show()
+                    }
+                    handler.postDelayed(this, 30000) // Check every 30 seconds
                 }
             }
         }
-        handler.postDelayed(checkTimer, 60000)
+        handler.postDelayed(checkTimer, 30000)
     }
 
     private fun updateFocusModeIcon() {
@@ -604,59 +647,17 @@ class AppDockManager(
     }
 
     private fun showFocusModeSettings() {
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-
-        val apps = packageManager.queryIntentActivities(intent, 0)
-        val sortedApps = apps.filter { it.activityInfo.name != "com.guruswarupa.launch.MainActivity" }
-            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
-        val appNames = sortedApps.map { it.loadLabel(packageManager).toString() }
-        val appPackageNames = sortedApps.map { it.activityInfo.packageName }
-
-        val hiddenApps = getHiddenAppsInFocusMode()
-        val checkedItems = BooleanArray(appNames.size) { index ->
-            hiddenApps.contains(appPackageNames[index])
-        }
-
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Focus Mode — Select apps to hide")
-            .setMultiChoiceItems(appNames.toTypedArray(), checkedItems) { _, which, isChecked ->
-                val packageName = appPackageNames[which]
-                if (isChecked) {
-                    addAppToHiddenList(packageName)
-                } else {
-                    removeAppFromHiddenList(packageName)
-                }
-            }
-            .setPositiveButton("Done") { _, _ ->
-                if (isFocusMode) {
-                    refreshAppsForFocusMode()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        val intent = Intent(context, FocusModeConfigActivity::class.java)
+        context.startActivity(intent)
     }
 
-    private fun getHiddenAppsInFocusMode(): Set<String> {
-        return sharedPreferences.getStringSet(focusModeHiddenAppsKey, mutableSetOf()) ?: mutableSetOf()
-    }
-
-    private fun addAppToHiddenList(packageName: String) {
-        val hiddenApps = getHiddenAppsInFocusMode().toMutableSet()
-        hiddenApps.add(packageName)
-        sharedPreferences.edit { putStringSet(focusModeHiddenAppsKey, hiddenApps) }
-    }
-
-    private fun removeAppFromHiddenList(packageName: String) {
-        val hiddenApps = getHiddenAppsInFocusMode().toMutableSet()
-        hiddenApps.remove(packageName)
-        sharedPreferences.edit { putStringSet(focusModeHiddenAppsKey, hiddenApps) }
+    private fun getAllowedAppsInFocusMode(): Set<String> {
+        return sharedPreferences.getStringSet(focusModeAllowedAppsKey, mutableSetOf()) ?: mutableSetOf()
     }
 
     fun isAppHiddenInFocusMode(packageName: String): Boolean {
         return if (isFocusMode) {
-            getHiddenAppsInFocusMode().contains(packageName)
+            !getAllowedAppsInFocusMode().contains(packageName)
         } else {
             false
         }

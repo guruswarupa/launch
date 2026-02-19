@@ -1,59 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/background"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
-    <TextView
+    <!-- Wallpaper Background -->
+    <ImageView
+        android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Configure Focus Mode"
-        android:textSize="24sp"
-        android:textColor="@color/text"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:layout_marginBottom="16dp"/>
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="Background"/>
 
-    <TextView
+    <!-- Semi-transparent overlay -->
+    <View
+        android:id="@+id/theme_overlay"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Select apps that will be visible in Focus Mode:"
-        android:textSize="16sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginBottom="16dp"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/focus_mode_app_list"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"/>
+        android:layout_height="match_parent"
+        android:background="#80000000"/>
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
 
-        <Button
-            android:id="@+id/cancel_focus_config"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/title_text"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Cancel"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/button_background"/>
+            android:text="Focus Mode"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="@color/text"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="16dp"/>
 
-        <Button
-            android:id="@+id/save_focus_config"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+        <!-- Apps Selection Container (Matches Workspace style) -->
+        <LinearLayout
+            android:id="@+id/apps_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="1"
-            android:text="Save"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/button_background"/>
+            android:orientation="vertical"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/widget_background"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/subtitle_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Select apps allowed in Focus Mode"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"
+                android:alpha="0.7"
+                android:layout_marginBottom="12dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/focus_mode_app_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"/>
+
+        </LinearLayout>
+
+        <!-- Action Buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
+
+            <Button
+                android:id="@+id/cancel_focus_config"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Cancel"
+                android:textAllCaps="false"
+                android:background="@drawable/button_neutral_ripple"
+                android:textColor="@color/text"
+                android:padding="16dp"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/save_focus_config"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Save"
+                android:textAllCaps="false"
+                android:background="@drawable/button_neutral_ripple"
+                android:textColor="@color/text"
+                android:padding="16dp"
+                android:layout_marginStart="8dp"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
-</LinearLayout>
+</FrameLayout>
