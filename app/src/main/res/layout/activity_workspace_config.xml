@@ -9,11 +9,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:src="@drawable/wallpaper_background"
         android:contentDescription="Background"/>
 
     <!-- Semi-transparent overlay for better text visibility -->
     <View
+        android:id="@+id/theme_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#80000000"/>
@@ -33,31 +33,34 @@
 
             <!-- Title -->
             <TextView
+                android:id="@+id/title_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Workspaces"
                 android:textSize="32sp"
                 android:textStyle="bold"
-                android:textColor="@android:color/white"
+                android:textColor="@color/text"
                 android:gravity="center"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="32dp"/>
 
             <!-- Workspaces Section -->
             <LinearLayout
+                android:id="@+id/workspaces_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
+                android:background="@drawable/widget_background"
                 android:padding="16dp">
 
                 <TextView
+                    android:id="@+id/subtitle_text"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Tap to edit, long press to delete"
                     android:textSize="14sp"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/text_secondary"
                     android:alpha="0.7"
                     android:layout_marginBottom="12dp" />
 
@@ -78,8 +81,8 @@
                 android:layout_height="wrap_content"
                 android:text="Create New Workspace"
                 android:textAllCaps="false"
-                android:background="@drawable/button_background"
-                android:textColor="@android:color/white"
+                android:background="@drawable/button_neutral_ripple"
+                android:textColor="@color/text"
                 android:padding="16dp"
                 android:layout_marginBottom="24dp"/>
 
