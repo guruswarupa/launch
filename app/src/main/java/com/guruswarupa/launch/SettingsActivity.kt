@@ -573,6 +573,17 @@ class SettingsActivity : ComponentActivity() {
         importLauncher.launch(intent)
     }
 
+    private val sensitiveMainKeys = setOf(
+        "weather_api_key"
+    )
+
+    private val sensitiveAppLockKeys = setOf(
+        "pin_hash",
+        "pin_salt",
+        "last_auth_time",
+        "fingerprint_enabled"
+    )
+
     private fun exportSettingsToFile(uri: Uri) {
         try {
             val settingsJson = JSONObject()
@@ -580,6 +591,7 @@ class SettingsActivity : ComponentActivity() {
             val mainPrefs = prefs.all
             val mainPrefsJson = JSONObject()
             for ((key, value) in mainPrefs) {
+                if (key in sensitiveMainKeys) continue
                 when (value) {
                     is String -> mainPrefsJson.put(key, value)
                     is Boolean -> mainPrefsJson.put(key, value)
@@ -621,6 +633,7 @@ class SettingsActivity : ComponentActivity() {
             if (appLockAll.isNotEmpty()) {
                 val appLockJson = JSONObject()
                 for ((key, value) in appLockAll) {
+                    if (key in sensitiveAppLockKeys) continue
                     when (value) {
                         is String -> appLockJson.put(key, value)
                         is Boolean -> appLockJson.put(key, value)
