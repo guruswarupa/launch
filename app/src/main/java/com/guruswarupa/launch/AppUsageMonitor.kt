@@ -19,6 +19,7 @@ class AppUsageMonitor : Service() {
 
     companion object {
         private const val SERVICE_NAME = "App Usage Monitor"
+        private const val POLLING_INTERVAL_MS = 3000L // Check every 3 seconds for battery efficiency
     }
 
     override fun onCreate() {
@@ -50,8 +51,8 @@ class AppUsageMonitor : Service() {
         monitoringRunnable = object : Runnable {
             override fun run() {
                 checkForegroundAppUsage()
-                // Check every second for immediate enforcement
-                handler.postDelayed(this, 1000)
+                // Schedule next check
+                handler.postDelayed(this, POLLING_INTERVAL_MS)
             }
         }
         handler.post(monitoringRunnable!!)
