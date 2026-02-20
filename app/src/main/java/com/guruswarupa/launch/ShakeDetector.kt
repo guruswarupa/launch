@@ -48,7 +48,8 @@ class ShakeDetector(
         if (isListening) return
         
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME) // Fast enough for vigorous movement
+            // Using SENSOR_DELAY_UI for better battery life while still detecting vigorous movement
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
             isListening = true
         }
     }
@@ -99,7 +100,8 @@ class ShakeDetector(
         }
         
         val timeDelta = currentTime - lastUpdateTime
-        if (timeDelta < 20) return // Sample at ~50Hz
+        // SENSOR_DELAY_UI samples at ~16Hz, so this throttle is mostly for safety
+        if (timeDelta < 20) return 
         
         val deltaX = abs(x - lastX)
         val deltaY = abs(y - lastY)
