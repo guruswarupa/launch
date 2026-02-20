@@ -24,6 +24,7 @@ class WallpaperManagerHelper(
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private var currentWallpaperBitmap: Bitmap? = null
+    private var lastWallpaperId: Int = -1
     private val prefs by lazy { activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE) }
     
     /**
@@ -33,16 +34,27 @@ class WallpaperManagerHelper(
         // Apply blur based on preference
         applyBlurToViews()
 
-        // Check if we have a cached wallpaper bitmap
-        if (!forceReload && currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
-            wallpaperBackground.setImageBitmap(currentWallpaperBitmap)
-            drawerWallpaperBackground?.setImageBitmap(currentWallpaperBitmap)
+        val wallpaperManager = WallpaperManager.getInstance(activity)
+        val wallpaperId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            wallpaperManager.getWallpaperId(WallpaperManager.FLAG_SYSTEM)
+        } else {
+            -1
+        }
+
+        // Check if wallpaper has actually changed or if we need a force reload
+        val needsReload = forceReload || 
+                         currentWallpaperBitmap == null || 
+                         currentWallpaperBitmap!!.isRecycled ||
+                         (wallpaperId != -1 && wallpaperId != lastWallpaperId)
+
+        if (!needsReload) {
             return
         }
         
+        lastWallpaperId = wallpaperId
+        
         // Try to load wallpaper synchronously first (for BitmapDrawable, this is very fast)
         try {
-            val wallpaperManager = WallpaperManager.getInstance(activity)
             val drawable = wallpaperManager.drawable
             
             if (drawable != null && drawable is BitmapDrawable) {
@@ -73,7 +85,6 @@ class WallpaperManagerHelper(
         // For non-BitmapDrawable or if sync load failed, load in background
         backgroundExecutor.execute {
             try {
-                val wallpaperManager = WallpaperManager.getInstance(activity)
                 val drawable = wallpaperManager.drawable
                 
                 if (drawable == null) {
@@ -162,6 +173,7 @@ class WallpaperManagerHelper(
     fun clearCache() {
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
+        lastWallpaperId = -1
     }
     
     /**
@@ -172,5 +184,6 @@ class WallpaperManagerHelper(
         drawerWallpaperBackground?.setImageDrawable(null)
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
+        lastWallpaperId = -1
     }
 }
