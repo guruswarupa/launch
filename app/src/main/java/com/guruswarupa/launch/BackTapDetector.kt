@@ -52,8 +52,8 @@ class BackTapDetector(
         if (isListening) return
         
         sensor?.let {
-            // Using SENSOR_DELAY_FASTEST for low-latency tap detection
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
+            // Using SENSOR_DELAY_GAME for improved battery life over FASTEST
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
             isListening = true
             Log.d(TAG, "Back tap detector started using ${if (isUsingLinearAcc) "Linear Acc" else "Accelerometer"}")
         }
