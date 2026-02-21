@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Button
 import android.widget.EditText
@@ -35,7 +36,19 @@ class ActivityInitializer(
         // Search box will naturally gain focus when tapped by user
 
         searchBox.setOnLongClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, "https://www.google.com".toUri())
+            val prefs = searchBox.context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+            val engine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
+            val url = when (engine) {
+                "Bing" -> "https://www.bing.com"
+                "DuckDuckGo" -> "https://duckduckgo.com"
+                "Ecosia" -> "https://www.ecosia.org"
+                "Brave" -> "https://search.brave.com"
+                "Startpage" -> "https://www.startpage.com"
+                "Yahoo" -> "https://www.yahoo.com"
+                "Qwant" -> "https://www.qwant.com"
+                else -> "https://www.google.com"
+            }
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {
                 searchBox.context.startActivity(intent)
