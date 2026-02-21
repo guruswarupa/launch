@@ -23,6 +23,7 @@ class AppDockManager(
     private val favoriteAppManager: FavoriteAppManager
 ) {
     private val context: Context = activity
+    private val dockIconPaddingPx = (6 * context.resources.displayMetrics.density).toInt()
     private val focusModeKey = "focus_mode_enabled"
     private val focusModeAllowedAppsKey = "focus_mode_allowed_apps"
     private val focusModeEndTimeKey = "focus_mode_end_time"
@@ -80,9 +81,8 @@ class AppDockManager(
                 layoutParams = LinearLayout.LayoutParams(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(12, 12, 12, 12)
-                }
+                )
+                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
                 setOnClickListener { showApkShareDialog() }
                 setOnLongClickListener {
                     Toast.makeText(context, "Share Apps/Files", Toast.LENGTH_SHORT).show()
@@ -162,9 +162,8 @@ class AppDockManager(
                 layoutParams = LinearLayout.LayoutParams(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    setPadding(12,12,12,12)
-                }
+                )
+                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
                 setOnClickListener { toggleFocusMode() }
                 setOnLongClickListener {
                     if (!isFocusMode) {
@@ -220,9 +219,9 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(12, 12, 12, 12)
                     marginStart = 8
                 }
+                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
                 setOnClickListener { toggleWorkspace() }
                 setOnLongClickListener {
                     showWorkspaceSettings()
@@ -329,9 +328,9 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(12, 12, 12, 12)
                     marginStart = 8
                 }
+                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
                 setOnClickListener {
                     val intent = Intent(context, SettingsActivity::class.java)
                     context.startActivity(intent)
@@ -354,9 +353,9 @@ class AppDockManager(
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size),
                     context.resources.getDimensionPixelSize(R.dimen.squircle_size)
                 ).apply {
-                    setPadding(12, 12, 12, 12)
                     marginStart = 8
                 }
+                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
                 setOnClickListener { toggleFavoriteMode() }
                 setOnLongClickListener {
                     val mode = if (favoriteAppManager.isShowAllAppsMode()) "All Apps" else "Favorites"
