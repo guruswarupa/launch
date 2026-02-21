@@ -11,6 +11,8 @@
     <item
         android:drawable="@drawable/ic_workspace_inactive_icon"
         android:gravity="center"
-        android:width="28dp"
-        android:height="28dp" />
+        android:left="6dp"
+        android:top="6dp"
+        android:right="6dp"
+        android:bottom="6dp" />
 </layer-list>
