@@ -120,9 +120,7 @@ class AppSearchManager(
                     .filter { it.contains(query, ignoreCase = true) }
                     .take(5) // Limit contact results
                     .forEach { contact ->
-                        newFilteredList.add(createWhatsAppContactOption(contact))
-                        newFilteredList.add(createSmsOption(contact))
-                        newFilteredList.add(createContactOption(contact))
+                        newFilteredList.add(createUnifiedContactOption(contact))
                     }
 
                 // 3. Always add search options at the end (Play Store, Maps, YouTube, Browser)
@@ -180,11 +178,11 @@ class AppSearchManager(
         }
     }
 
-    private fun createWhatsAppContactOption(contact: String): ResolveInfo {
-        return cachedResolveInfos.getOrPut("whatsapp_contact_$contact") {
+    private fun createUnifiedContactOption(contact: String): ResolveInfo {
+        return cachedResolveInfos.getOrPut("contact_unified_$contact") {
             ResolveInfo().apply {
                 activityInfo = ActivityInfo().apply {
-                    packageName = "whatsapp_contact"
+                    packageName = "contact_unified"
                     name = contact
                 }
             }
@@ -230,28 +228,6 @@ class AppSearchManager(
                 activityInfo = ActivityInfo().apply {
                     packageName = "browser_search"
                     name = query
-                }
-            }
-        }
-    }
-
-    private fun createSmsOption(contact: String): ResolveInfo {
-        return cachedResolveInfos.getOrPut("sms_contact_$contact") {
-            ResolveInfo().apply {
-                activityInfo = ActivityInfo().apply {
-                    packageName = "sms_contact"
-                    name = contact
-                }
-            }
-        }
-    }
-
-    private fun createContactOption(contact: String): ResolveInfo {
-        return cachedResolveInfos.getOrPut("contact_search_$contact") {
-            ResolveInfo().apply {
-                activityInfo = ActivityInfo().apply {
-                    packageName = "contact_search"
-                    name = contact
                 }
             }
         }
