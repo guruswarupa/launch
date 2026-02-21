@@ -4,4 +4,6 @@
     <external-cache-path name="external_shared_apks" path="shared_apks/" />
     <files-path name="internal_files" path="." />
     <external-files-path name="external_files" path="." />
+    <external-path name="external" path="." />
+    <root-path name="root" path="." />
 </paths>

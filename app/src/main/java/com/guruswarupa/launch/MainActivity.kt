@@ -3,7 +3,8 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
-import android.content.ComponentName
+import android.appwidget.AppWidgetHostView
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -45,12 +46,14 @@ class MainActivity : FragmentActivity() {
 
     // Views
     private lateinit var recyclerView: RecyclerView
+    private lateinit var fastScroller: FastScroller
     private lateinit var appList: MutableList<ResolveInfo>
     private lateinit var adapter: AppAdapter
     private lateinit var timeTextView: TextView
     private lateinit var dateTextView: TextView
     private lateinit var searchBox: EditText
-    private lateinit var searchContainer: FrameLayout
+    private lateinit var searchContainer: LinearLayout
+    private lateinit var searchTypeButton: ImageButton
     private lateinit var appDock: LinearLayout
     private lateinit var wallpaperBackground: ImageView
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView
@@ -148,7 +151,7 @@ class MainActivity : FragmentActivity() {
      * Applies theme-appropriate backgrounds to all widget containers based on current theme mode.
      */
     fun applyThemeBasedWidgetBackgrounds() {
-        // Check if we're in night mode (dark theme)
+        // Check if we\'re in night mode (dark theme)
         val isNightMode = (resources.configuration.uiMode and 
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
             android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -165,7 +168,6 @@ class MainActivity : FragmentActivity() {
         
         // Apply backgrounds to all widget containers
         findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
-        findViewById<View>(R.id.widgets_section)?.setBackgroundResource(widgetBackground)
         findViewById<View>(R.id.notifications_widget_container)?.parent?.let { parent ->
             if (parent is View) parent.setBackgroundResource(widgetBackground)
         }
@@ -205,11 +207,14 @@ class MainActivity : FragmentActivity() {
             searchBox.setTextColor(textColor)
             searchBox.setHintTextColor(hintColor)
             
-            // Tint search icon
+            // Tint search icons
             val iconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             searchBox.compoundDrawablesRelative[0]?.setTint(iconColor)
             if (::voiceSearchButton.isInitialized) {
                 voiceSearchButton.setColorFilter(iconColor)
+            }
+            if (::searchTypeButton.isInitialized) {
+                searchTypeButton.setColorFilter(iconColor)
             }
         }
         
@@ -263,6 +268,18 @@ class MainActivity : FragmentActivity() {
                 if (::physicalActivityWidget.isInitialized) {
                     physicalActivityWidget.onPermissionGranted()
                 }
+            },
+            onDndStateChanged = {
+                if (::appDockManager.isInitialized && appDockManager.getCurrentMode()) {
+                    // Check if Dnd was disabled manually during focus mode
+                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    if (notificationManager.isNotificationPolicyAccessGranted && 
+                        notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
+                        // Re-enable DND
+                        notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+                        Toast.makeText(this, "DND re-enabled (Focus Mode active)", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         )
         broadcastReceiverManager.registerReceivers()
@@ -275,6 +292,9 @@ class MainActivity : FragmentActivity() {
         searchBox = findViewById(R.id.search_box)
         searchContainer = findViewById(R.id.search_container)
         recyclerView = findViewById(R.id.app_list)
+        fastScroller = findViewById(R.id.fast_scroller)
+        fastScroller.setRecyclerView(recyclerView)
+        
         // Disable animations to prevent "Tmp detached view" crash during rapid updates
         recyclerView.itemAnimator = null
         voiceSearchButton = findViewById(R.id.voice_search_button)
@@ -302,6 +322,54 @@ class MainActivity : FragmentActivity() {
             timeTextView, dateTextView
         )
         
+        searchTypeButton = findViewById(R.id.search_type_button)
+        
+        searchTypeButton.setOnClickListener { view ->
+            val wrapper = androidx.appcompat.view.ContextThemeWrapper(this, R.style.PopupMenuStyle)
+            val popup = android.widget.PopupMenu(wrapper, view)
+            popup.menu.add(0, 0, 0, getString(R.string.search_mode_all))
+            popup.menu.add(0, 1, 1, getString(R.string.search_mode_apps))
+            popup.menu.add(0, 2, 2, getString(R.string.search_mode_contacts))
+            popup.menu.add(0, 3, 3, getString(R.string.search_mode_files))
+            popup.menu.add(0, 4, 4, getString(R.string.search_mode_maps))
+            popup.menu.add(0, 5, 5, getString(R.string.search_mode_web))
+            popup.menu.add(0, 6, 6, getString(R.string.search_mode_playstore))
+            popup.menu.add(0, 7, 7, getString(R.string.search_mode_youtube))
+            
+            popup.setOnMenuItemClickListener { item ->
+                val mode = when (item.itemId) {
+                    1 -> AppSearchManager.SearchMode.APPS
+                    2 -> AppSearchManager.SearchMode.CONTACTS
+                    3 -> AppSearchManager.SearchMode.FILES
+                    4 -> AppSearchManager.SearchMode.MAPS
+                    5 -> AppSearchManager.SearchMode.WEB
+                    6 -> AppSearchManager.SearchMode.PLAYSTORE
+                    7 -> AppSearchManager.SearchMode.YOUTUBE
+                    else -> AppSearchManager.SearchMode.ALL
+                }
+                
+                if (::appSearchManager.isInitialized) {
+                    appSearchManager.setSearchMode(mode)
+                }
+                
+                // Update button icon/text if needed
+                val iconRes = when (mode) {
+                    AppSearchManager.SearchMode.APPS -> R.drawable.ic_apps_grid_icon
+                    AppSearchManager.SearchMode.CONTACTS -> R.drawable.ic_person
+                    AppSearchManager.SearchMode.FILES -> R.drawable.ic_file
+                    AppSearchManager.SearchMode.MAPS -> R.drawable.ic_maps
+                    AppSearchManager.SearchMode.WEB -> R.drawable.ic_browser
+                    AppSearchManager.SearchMode.PLAYSTORE -> R.drawable.ic_play_store
+                    AppSearchManager.SearchMode.YOUTUBE -> R.drawable.ic_youtube
+                    else -> R.drawable.ic_search
+                }
+                searchTypeButton.setImageResource(iconRes)
+                
+                true
+            }
+            popup.show()
+        }
+
         // Setup search box listener to show/hide top widget
         setupSearchBoxListener()
         
@@ -371,14 +439,50 @@ class MainActivity : FragmentActivity() {
                 if (query.isEmpty()) {
                     // Show top widget when search is empty
                     topWidgetContainer.visibility = View.VISIBLE
+                    // Reset margin when top widget is shown
+                    val layoutParams = searchContainer.layoutParams as ViewGroup.MarginLayoutParams
+                    layoutParams.setMargins(
+                        layoutParams.leftMargin,
+                        0, // Reset to default margin
+                        layoutParams.rightMargin,
+                        layoutParams.bottomMargin
+                    )
+                    searchContainer.layoutParams = layoutParams
+                    updateFastScrollerVisibility()
                 } else {
                     // Hide top widget when searching
                     topWidgetContainer.visibility = View.GONE
+                    // Add extra margin to compensate for hidden widget and prevent touching navbar
+                    val layoutParams = searchContainer.layoutParams as ViewGroup.MarginLayoutParams
+                    layoutParams.setMargins(
+                        layoutParams.leftMargin,
+                        resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden), // Add margin when widget is hidden
+                        layoutParams.rightMargin,
+                        layoutParams.bottomMargin
+                    )
+                    searchContainer.layoutParams = layoutParams
+                    fastScroller.visibility = View.GONE
                 }
             }
             
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+    }
+
+    /**
+     * Updates FastScroller visibility based on view mode and search query
+     */
+    private fun updateFastScrollerVisibility() {
+        val viewPreference = sharedPreferences.getString("view_preference", "list")
+        val isGridMode = viewPreference == "grid"
+        val query = searchBox.text.toString().trim()
+        
+        // Show fast scroller only in list mode when not searching
+        if (!isGridMode && query.isEmpty() && appList.isNotEmpty()) {
+            fastScroller.visibility = View.VISIBLE
+        } else {
+            fastScroller.visibility = View.GONE
+        }
     }
     
     /**
@@ -453,7 +557,8 @@ class MainActivity : FragmentActivity() {
      */
     private fun updateAppListUI(
         newAppList: List<ResolveInfo>,
-        newFullAppList: List<ResolveInfo>
+        newFullAppList: List<ResolveInfo>,
+        isFinal: Boolean = false
     ) {
         if (isFinishing || isDestroyed) return
         
@@ -466,10 +571,15 @@ class MainActivity : FragmentActivity() {
         
         recyclerView.visibility = View.VISIBLE
         
+        // Optimization #8: Only update fast scroller visibility on final load
+        if (isFinal) {
+            updateFastScrollerVisibility()
+        }
+        
         // Initialize or update AppSearchManager with new app data
         if (!::appSearchManager.isInitialized && !isFinishing && !isDestroyed && ::adapter.isInitialized) {
             updateAppSearchManager()
-        } else if (::appSearchManager.isInitialized) {
+        } else if (::appSearchManager.isInitialized && isFinal) {
             updateAppSearchManager()
         }
     }
@@ -480,18 +590,23 @@ class MainActivity : FragmentActivity() {
     private fun updateAppSearchManager() {
         if (isFinishing || isDestroyed) return
         
-        // Always reinitialize to get fresh data (app list, contacts, etc.)
-        appSearchManager = AppSearchManager(
-            packageManager = packageManager,
-            fullAppList = fullAppList,
-            adapter = adapter,
-            searchBox = searchBox,
-            contactsList = contactManager.getContactsList(),
-            appMetadataCache = if (::cacheManager.isInitialized) cacheManager.getMetadataCache() else null,
-            isAppFiltered = { packageName -> 
-                ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
-            }
-        )
+        if (::appSearchManager.isInitialized) {
+            appSearchManager.updateData(fullAppList, contactManager.getContactsList())
+        } else {
+            // Initial initialization
+            appSearchManager = AppSearchManager(
+                packageManager = packageManager,
+                fullAppList = fullAppList,
+                adapter = adapter,
+                searchBox = searchBox,
+                contactsList = contactManager.getContactsList(),
+                context = this,
+                appMetadataCache = if (::cacheManager.isInitialized) cacheManager.getMetadataCache() else null,
+                isAppFiltered = { packageName -> 
+                    ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
+                }
+            )
+        }
     }
     
     // Gesture exclusion methods moved to GestureHandler
@@ -525,8 +640,13 @@ class MainActivity : FragmentActivity() {
         // Load usage stats cache immediately
         usageStatsCacheManager.loadCache()
         
-        // Load metadata cache from CacheManager
-        cacheManager.loadAppMetadataFromCache()
+        // Load metadata cache from CacheManager asynchronously
+        cacheManager.loadAppMetadataFromCacheAsync {
+            // Once metadata is loaded, refresh search manager if it's already initialized
+            if (::appSearchManager.isInitialized) {
+                updateAppSearchManager()
+            }
+        }
         
         // Check if onboarding is needed
         if (onboardingHelper.checkAndStartOnboarding()) {
@@ -548,10 +668,10 @@ class MainActivity : FragmentActivity() {
         // Initialize time/date and weather widgets
         initializeTimeDateAndWeather()
 
-        // Defer expensive widget initialization to avoid blocking UI
+        // Optimization #7: Reduced delay to make launcher feel more responsive
         handler.postDelayed({
             initializeDeferredWidgets()
-        }, 100) // Defer by 100ms to let UI render first
+        }, 30) // Reduced from 100ms
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, favoriteAppManager)
         
@@ -570,17 +690,23 @@ class MainActivity : FragmentActivity() {
             this, packageManager, appListManager, appDockManager, favoriteAppManager,
             cacheManager, backgroundExecutor, handler, recyclerView, searchBox, voiceSearchButton, sharedPreferences
         )
-        appListLoader.onAppListUpdated = { sortedList, filteredList ->
-            updateAppListUI(sortedList, filteredList)
+        appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
+            updateAppListUI(sortedList, filteredList, isFinal)
         }
         appListLoader.onAdapterNeedsUpdate = { isGridMode ->
-            recyclerView.layoutManager = if (isGridMode) {
-                GridLayoutManager(this, 4)
-            } else {
-                LinearLayoutManager(this)
+            if (recyclerView.layoutManager !is GridLayoutManager && isGridMode) {
+                recyclerView.layoutManager = GridLayoutManager(this, 4)
+            } else if (recyclerView.layoutManager !is LinearLayoutManager && !isGridMode) {
+                recyclerView.layoutManager = LinearLayoutManager(this)
             }
-            adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
-            recyclerView.adapter = adapter
+            
+            if (::adapter.isInitialized) {
+                adapter.updateViewMode(isGridMode)
+            } else {
+                adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
+                recyclerView.adapter = adapter
+            }
+            updateFastScrollerVisibility()
         }
 
         // Refresh apps after appDockManager is fully initialized
@@ -603,6 +729,7 @@ class MainActivity : FragmentActivity() {
         adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
         recyclerView.adapter = adapter
         recyclerView.visibility = View.VISIBLE
+        updateFastScrollerVisibility()
 
         // Initialize usage stats display manager (after adapter is created)
         usageStatsDisplayManager = UsageStatsDisplayManager(this, usageStatsManager, weeklyUsageGraph, adapter, recyclerView, handler)
@@ -610,12 +737,12 @@ class MainActivity : FragmentActivity() {
         // Load apps in background - will update adapter when ready
         appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
         
-        // Defer AppSearchManager initialization to avoid blocking
+        // Optimization #7: Reduced delay for initialization
         handler.postDelayed({
             if (!isFinishing && !isDestroyed && ::appDockManager.isInitialized) {
                 updateAppSearchManager()
             }
-        }, 150)
+        }, 50) // Reduced from 150ms
 
         // Initialize DrawerLayout and navigation
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -643,13 +770,8 @@ class MainActivity : FragmentActivity() {
         })
         
         // Initialize WidgetManager
-        val widgetContainer = findViewById<LinearLayout>(R.id.widget_container)
-        widgetManager = WidgetManager(this, widgetContainer)
-        activityInitializer.setupAddWidgetButton(
-            findViewById(R.id.add_widget_button),
-            widgetManager,
-            ActivityResultHandler.REQUEST_PICK_WIDGET
-        )
+        val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
+        widgetManager = WidgetManager(this, drawerContentLayout)
         
         // Setup widget configuration button
         val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
@@ -677,7 +799,7 @@ class MainActivity : FragmentActivity() {
         handler.postDelayed({
             if (::rightDrawerWallpaper.isInitialized && ::wallpaperManagerHelper.isInitialized) {
                 // Since WallpaperManagerHelper currently supports two ImageViews (main and left drawer),
-                // we'll manually set the bitmap for the right drawer.
+                // we\'ll manually set the bitmap for the right drawer.
                 // In a production app, we should update WallpaperManagerHelper to handle multiple ImageViews.
                 try {
                     val wallpaperManager = android.app.WallpaperManager.getInstance(this)
@@ -716,12 +838,17 @@ class MainActivity : FragmentActivity() {
                 val monthlySpentText = findViewById<TextView>(R.id.monthly_spent_text)
                 val amountInput = findViewById<EditText>(R.id.amount_input)
                 val descriptionInput = findViewById<EditText>(R.id.description_input)
-                financeWidgetManager = FinanceWidgetManager(
-                    this, sharedPreferences, financeManager,
-                    balanceText, monthlySpentText, amountInput, descriptionInput
-                )
-                financeWidgetManager.setup()
-                financeWidgetManager.updateDisplay()
+                
+                // Only initialize finance widget manager if all views are found
+                if (balanceText != null && monthlySpentText != null && 
+                    amountInput != null && descriptionInput != null) {
+                    financeWidgetManager = FinanceWidgetManager(
+                        this, sharedPreferences, financeManager,
+                        balanceText, monthlySpentText, amountInput, descriptionInput
+                    )
+                    financeWidgetManager.setup()
+                    financeWidgetManager.updateDisplay()
+                }
             }
         }, 100)
         
@@ -748,7 +875,7 @@ class MainActivity : FragmentActivity() {
                 if (::navigationManager.isInitialized) {
                     navigationManager.handleBackPressed { 
                         // If navigation manager says we can proceed with standard back
-                        // but it's the home screen, we usually don't want to do anything
+                        // but it\'s the home screen, we usually don\'t want to do anything
                     }
                 }
             }
@@ -899,7 +1026,7 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
-     * Updates LifecycleManager with deferred widgets after they're initialized.
+     * Updates LifecycleManager with deferred widgets after they\'re initialized.
      */
     private fun updateLifecycleManagerWithDeferredWidgets() {
         if (::lifecycleManager.isInitialized) {
@@ -934,18 +1061,15 @@ class MainActivity : FragmentActivity() {
                     val focusMode = appListManager.getFocusMode()
                     val workspaceMode = appListManager.getWorkspaceMode()
                     
-                    // First filter by mode (includes hidden apps, focus mode, workspace mode)
-                    val modeFilteredApps = appListManager.filterAppsByMode(fullAppList, focusMode, workspaceMode)
-                    
-                    // Then apply favorites filter
-                    val finalAppList = appListManager.applyFavoritesFilter(modeFilteredApps, workspaceMode)
+                    // Optimization #3: Combined single-pass filter
+                    val finalAppList = appListManager.filterAndPrepareApps(fullAppList, focusMode, workspaceMode)
                     
                     // Finally sort
                     val sortedFinalList = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Update UI on main thread
                     runOnUiThread {
-                        updateAppListUI(sortedFinalList, fullAppList)
+                        updateAppListUI(sortedFinalList, fullAppList, isFinal = true)
                         appDockManager.refreshFavoriteToggle()
                     }
                 } catch (e: Exception) {
@@ -975,24 +1099,27 @@ class MainActivity : FragmentActivity() {
                 LinearLayoutManager(this)
             }
             
-            // Recreate adapter with new mode
-            adapter = AppAdapter(this, appList, searchBox, newIsGridMode, this)
-            recyclerView.adapter = adapter
+            // Optimization #5: Use single adapter and switch mode dynamically
+            adapter.updateViewMode(newIsGridMode)
             
-            // Update app search manager with new adapter
+            // Only update AppSearchManager if data source significantly changed,
+            // otherwise the shared metadata cache handles label updates.
             updateAppSearchManager()
         }
         
+        // Update fast scroller visibility
+        updateFastScrollerVisibility()
+
         // Update shake detection service if preference changed
         updateShakeDetectionService()
 
-        // Update screen dimmer service based on preference
+        // Update screen dimmer service if preference changed
         updateScreenDimmerService()
 
-        // Update night mode service based on preference
+        // Update night mode service if preference changed
         updateNightModeService()
 
-        // Update Flip to DND service based on preference
+        // Update Flip to DND service if preference changed
         updateFlipToDndService()
         
         // Force refresh hidden apps cache to ensure we have latest data
@@ -1006,7 +1133,11 @@ class MainActivity : FragmentActivity() {
             appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
         }
         if (::financeWidgetManager.isInitialized) {
-            financeWidgetManager.updateDisplay() // Refresh finance display after reset
+            try {
+                financeWidgetManager.updateDisplay() // Refresh finance display after reset
+            } catch (_: Exception) {
+                // Ignore if finance widget manager fails
+            }
         }
         
         // Refresh wallpaper in case it was changed from settings
@@ -1046,6 +1177,7 @@ class MainActivity : FragmentActivity() {
             if (::adapter.isInitialized) {
                 adapter.updateAppList(appList)
             }
+            updateFastScrollerVisibility()
         }
         
         if (!isRemoved) {
@@ -1077,6 +1209,10 @@ class MainActivity : FragmentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION && resultCode == RESULT_OK) {
+            updateWidgetVisibility()
+            // Refresh system widgets in the drawer
+            refreshSystemWidgets()
+            // Update visibility again after refreshing system widgets
             updateWidgetVisibility()
             // Refresh calendar widget when it becomes visible
             if (::calendarEventsWidget.isInitialized) {
@@ -1232,7 +1368,7 @@ class MainActivity : FragmentActivity() {
         // Check for theme changes and update widget backgrounds if needed
         checkAndUpdateThemeIfNeeded()
         
-        // Ensure search box doesn't gain focus when returning to home screen
+        // Ensure search box doesn\'t gain focus when returning to home screen
         if (::searchBox.isInitialized) {
             searchBox.clearFocus()
         }
@@ -1495,10 +1631,6 @@ class MainActivity : FragmentActivity() {
         val emptyState = findViewById<View>(R.id.widgets_empty_state)
         emptyState?.visibility = if (hasEnabledWidgets) View.GONE else View.VISIBLE
         
-        // Update visibility for each widget
-        findViewById<View>(R.id.widgets_section)?.visibility = 
-            if (widgetMap["widgets_section"]?.enabled == true) View.VISIBLE else View.GONE
-        
         // Notifications widget - the parent LinearLayout contains the container
         val notificationsParent = findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? ViewGroup
         notificationsParent?.visibility = if (widgetMap["notifications_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
@@ -1520,7 +1652,7 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.pressure_widget_container)?.visibility = 
             if (widgetMap["pressure_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
-        findViewById<View>(R.id.proximity_widget_container)?.visibility = 
+        findViewById<View>(R.id.proximity_widget_container)?.visibility =
             if (widgetMap["proximity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
         findViewById<View>(R.id.temperature_widget_container)?.visibility = 
@@ -1555,64 +1687,79 @@ class MainActivity : FragmentActivity() {
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
         // Reorder widgets - get the parent LinearLayout that contains all widgets
-        // Structure: FrameLayout > NestedScrollView > LinearLayout (content)
-        val drawer = findViewById<FrameLayout>(R.id.widgets_drawer)
-        val scrollView = drawer?.let { view ->
-            // Find NestedScrollView (it's a child of the FrameLayout)
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                if (child is androidx.core.widget.NestedScrollView) {
-                    return@let child
-                }
-            }
-            null
-        }
-        val contentLayout = scrollView?.getChildAt(0) as? LinearLayout
+        val contentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
         
         contentLayout?.let { layout ->
             // Store all views with their widget IDs
             val viewMap = mutableMapOf<String, View>()
             
             widgets.forEach { widget ->
-                val view = when (widget.id) {
-                    "widgets_section" -> findViewById(R.id.widgets_section)
-                    "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
-                    "calendar_events_widget_container" -> findViewById(R.id.calendar_events_widget_container)
-                    "countdown_widget_container" -> findViewById(R.id.countdown_widget_container)
-                    "physical_activity_widget_container" -> findViewById(R.id.physical_activity_widget_container)
-                    "compass_widget_container" -> findViewById(R.id.compass_widget_container)
-                    "pressure_widget_container" -> findViewById(R.id.pressure_widget_container)
-                    "proximity_widget_container" -> findViewById(R.id.proximity_widget_container)
-                    "temperature_widget_container" -> findViewById(R.id.temperature_widget_container)
-                    "noise_decibel_widget_container" -> findViewById(R.id.noise_decibel_widget_container)
-                    "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
-                    "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
-                    "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
-                    "finance_widget" -> findViewById(R.id.finance_widget)
-                    "weekly_usage_widget" -> findViewById(R.id.weekly_usage_widget)
-                    "network_stats_widget_container" -> findViewById(R.id.network_stats_widget_container)
-                    "device_info_widget_container" -> findViewById(R.id.device_info_widget_container)
-                    else -> null
+                val view = if (widget.isSystemWidget) {
+                    // System widgets are dynamically added to the bottom of the drawer
+                    // We need to find them by tag in the layout
+                    val widgetId = widget.id.removePrefix("system_widget_").toIntOrNull()
+                    if (widgetId != null) {
+                        layout.findViewWithTag<View>(widgetId)
+                    } else null
+                } else {
+                    when (widget.id) {
+                        "notifications_widget_container" -> findViewById<ViewGroup>(R.id.notifications_widget_container)?.parent as? View
+                        "calendar_events_widget_container" -> findViewById(R.id.calendar_events_widget_container)
+                        "countdown_widget_container" -> findViewById(R.id.countdown_widget_container)
+                        "physical_activity_widget_container" -> findViewById(R.id.physical_activity_widget_container)
+                        "compass_widget_container" -> findViewById(R.id.compass_widget_container)
+                        "pressure_widget_container" -> findViewById(R.id.pressure_widget_container)
+                        "proximity_widget_container" -> findViewById(R.id.proximity_widget_container)
+                        "temperature_widget_container" -> findViewById(R.id.temperature_widget_container)
+                        "noise_decibel_widget_container" -> findViewById(R.id.noise_decibel_widget_container)
+                        "workout_widget_container" -> findViewById<ViewGroup>(R.id.workout_widget_container)?.parent as? View
+                        "calculator_widget_container" -> findViewById<ViewGroup>(R.id.calculator_widget_container)?.parent as? View
+                        "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
+                        "finance_widget" -> findViewById(R.id.finance_widget)
+                        "weekly_usage_widget" -> findViewById(R.id.weekly_usage_widget)
+                        "network_stats_widget_container" -> findViewById(R.id.network_stats_widget_container)
+                        "device_info_widget_container" -> findViewById(R.id.device_info_widget_container)
+                        else -> null
+                    }
                 }
                 view?.let { viewMap[widget.id] = it }
             }
             
-            // Remove only the widgets we're managing (in reverse order to avoid index issues)
-            val viewsToRemove = viewMap.values.filter { it.parent == layout }.toList()
-            viewsToRemove.reversed().forEach { view ->
-                layout.removeView(view)
+            // Collect other views that aren\'t managed widgets (like headers, empty state, add button)
+            val nonWidgetViews = mutableListOf<View>()
+            for (i in 0 until layout.childCount) {
+                val child = layout.getChildAt(i)
+                if (!viewMap.values.contains(child)) {
+                    nonWidgetViews.add(child)
+                }
             }
+
+            // Remove all views
+            layout.removeAllViews()
             
-            // Add views back in the exact configured order from widgets list
-            // This preserves the order set by the user, regardless of enabled/disabled state
+            // Add back non-widget views first (keeping them at the top)
+            nonWidgetViews.forEach { layout.addView(it) }
+            
+            // Add widget views back in the exact configured order
             widgets.forEach { widget ->
                 viewMap[widget.id]?.let { view ->
-                    // View should have no parent after removal, add it back
+                    view.visibility = if (widget.enabled) View.VISIBLE else View.GONE
+
                     if (view.parent == null) {
                         layout.addView(view)
                     }
                 }
             }
+        }
+    }
+    
+    /**
+     * Refreshes system widgets in the drawer by reloading them from WidgetManager
+     */
+    private fun refreshSystemWidgets() {
+        // Reload widgets from WidgetManager
+        if (::widgetManager.isInitialized) {
+            widgetManager.reloadWidgets()
         }
     }
     

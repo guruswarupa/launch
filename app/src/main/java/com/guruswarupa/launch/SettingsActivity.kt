@@ -10,6 +10,7 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -54,12 +55,14 @@ class SettingsActivity : ComponentActivity() {
     private val hiddenAppsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
             sendBroadcast(intent)
         }
     }
 
     private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+        intent.setPackage(packageName)
         sendBroadcast(intent)
         setupWallpaper()
     }
@@ -201,6 +204,25 @@ class SettingsActivity : ComponentActivity() {
             // Default wallpaper if permission not granted
             wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
         }
+        
+        // Apply blur to settings wallpaper if enabled
+        applyWallpaperBlur(wallpaperImageView)
+    }
+
+    private fun applyWallpaperBlur(imageView: ImageView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            if (blurLevel > 0) {
+                val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
+                imageView.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(
+                        blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP
+                    )
+                )
+            } else {
+                imageView.setRenderEffect(null)
+            }
+        }
     }
 
     private fun sendFeedback() {
@@ -245,6 +267,43 @@ class SettingsActivity : ComponentActivity() {
         val displayStyleArrow = findViewById<TextView>(R.id.display_style_arrow)
         setupSectionToggle(displayStyleHeader, displayStyleContent, displayStyleArrow)
         
+        // Wallpaper Header
+        val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
+        val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
+        val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
+        setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
+        
+        // Setup wallpaper blur slider
+        val wallpaperBlurSeekBar = findViewById<SeekBar>(R.id.wallpaper_blur_seekbar)
+        val wallpaperBlurValueText = findViewById<TextView>(R.id.wallpaper_blur_value_text)
+        
+        val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+        
+        wallpaperBlurSeekBar.progress = blurLevel
+        wallpaperBlurValueText.text = "$blurLevel%"
+        
+        wallpaperBlurSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                wallpaperBlurValueText.text = "$progress%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, progress) }
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
+                    sendBroadcast(intent)
+                    applyWallpaperBlur(findViewById(R.id.wallpaper_background))
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        // Search Engine Header
+        val searchEngineHeader = findViewById<LinearLayout>(R.id.search_engine_header)
+        val searchEngineContent = findViewById<LinearLayout>(R.id.search_engine_content)
+        val searchEngineArrow = findViewById<TextView>(R.id.search_engine_arrow)
+        setupSectionToggle(searchEngineHeader, searchEngineContent, searchEngineArrow)
+        setupSearchEngine()
+
         // Backup Header
         val backupHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
         val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
@@ -262,13 +321,7 @@ class SettingsActivity : ComponentActivity() {
         val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
         val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
         setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
-        
-        // Wallpaper Header
-        val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
-        val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
-        val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
-        setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
-        
+
         // Tutorial Header
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
         val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
@@ -289,6 +342,7 @@ class SettingsActivity : ComponentActivity() {
         shakeTorchSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked) }
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
             sendBroadcast(intent)
             
             // Show/hide sensitivity container
@@ -311,6 +365,7 @@ class SettingsActivity : ComponentActivity() {
                 if (fromUser) {
                     prefs.edit { putInt(Constants.Prefs.SHAKE_SENSITIVITY, sensitivity) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
                     sendBroadcast(intent)
                 }
             }
@@ -344,6 +399,32 @@ class SettingsActivity : ComponentActivity() {
         
     }
     
+    private fun setupSearchEngine() {
+        val searchEngineSpinner = findViewById<Spinner>(R.id.search_engine_spinner)
+        val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, engines)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        searchEngineSpinner.adapter = adapter
+
+        val currentEngine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
+        val index = engines.indexOf(currentEngine)
+        if (index >= 0) {
+            searchEngineSpinner.setSelection(index)
+        }
+
+        searchEngineSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedEngine = engines[position]
+                prefs.edit { putString(Constants.Prefs.SEARCH_ENGINE, selectedEngine) }
+                
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
     private fun setupScreenDimmer() {
         val screenDimmerSwitch = findViewById<SwitchCompat>(R.id.screen_dimmer_switch)
         val dimmerSeekBar = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
@@ -351,7 +432,7 @@ class SettingsActivity : ComponentActivity() {
         val dimmerContainer = findViewById<View>(R.id.screen_dimmer_container)
         
         val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
-        val currentDimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+        val currentDimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 10)
         
         screenDimmerSwitch.isChecked = isDimmerEnabled
         dimmerSeekBar.progress = currentDimLevel
@@ -404,7 +485,7 @@ class SettingsActivity : ComponentActivity() {
         val nightModeContainer = findViewById<View>(R.id.night_mode_container)
         
         val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
-        val currentIntensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+        val currentIntensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
         
         nightModeSwitch.isChecked = isNightModeEnabled
         nightModeSeekBar.progress = currentIntensity
@@ -472,11 +553,13 @@ class SettingsActivity : ComponentActivity() {
                 } else {
                     prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, true) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
                     sendBroadcast(intent)
                 }
             } else {
                 prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, false) }
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
                 sendBroadcast(intent)
             }
         }
@@ -508,6 +591,7 @@ class SettingsActivity : ComponentActivity() {
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()
 
         val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+        intent.setPackage(packageName)
         sendBroadcast(intent)
 
         finish()
@@ -530,6 +614,17 @@ class SettingsActivity : ComponentActivity() {
         importLauncher.launch(intent)
     }
 
+    private val sensitiveMainKeys = setOf(
+        "weather_api_key"
+    )
+
+    private val sensitiveAppLockKeys = setOf(
+        "pin_hash",
+        "pin_salt",
+        "last_auth_time",
+        "fingerprint_enabled"
+    )
+
     private fun exportSettingsToFile(uri: Uri) {
         try {
             val settingsJson = JSONObject()
@@ -537,6 +632,7 @@ class SettingsActivity : ComponentActivity() {
             val mainPrefs = prefs.all
             val mainPrefsJson = JSONObject()
             for ((key, value) in mainPrefs) {
+                if (key in sensitiveMainKeys) continue
                 when (value) {
                     is String -> mainPrefsJson.put(key, value)
                     is Boolean -> mainPrefsJson.put(key, value)
@@ -578,6 +674,7 @@ class SettingsActivity : ComponentActivity() {
             if (appLockAll.isNotEmpty()) {
                 val appLockJson = JSONObject()
                 for ((key, value) in appLockAll) {
+                    if (key in sensitiveAppLockKeys) continue
                     when (value) {
                         is String -> appLockJson.put(key, value)
                         is Boolean -> appLockJson.put(key, value)
@@ -1265,6 +1362,7 @@ class SettingsActivity : ComponentActivity() {
             backTapSettingsContainer.isVisible = isChecked
             
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
             sendBroadcast(intent)
         }
         
@@ -1274,6 +1372,7 @@ class SettingsActivity : ComponentActivity() {
                 val selectedAction = actionValues[position]
                 prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, selectedAction) }
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
                 sendBroadcast(intent)
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
@@ -1287,6 +1386,7 @@ class SettingsActivity : ComponentActivity() {
                 if (fromUser) {
                     prefs.edit { putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, sensitivity) }
                     val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
                     sendBroadcast(intent)
                 }
             }

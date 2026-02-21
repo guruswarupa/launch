@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -32,6 +33,24 @@ class BootReceiver : BroadcastReceiver() {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (isFlipEnabled && notificationManager.isNotificationPolicyAccessGranted) {
                 FlipToDndService.startService(context)
+            }
+            
+            // Handle Back Tap
+            val isBackTapEnabled = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+            if (isBackTapEnabled) {
+                val backTapIntent = Intent(context, BackTapService::class.java).apply {
+                    action = BackTapService.ACTION_START
+                }
+                ContextCompat.startForegroundService(context, backTapIntent)
+            }
+            
+            // Handle Shake Detection
+            val isShakeEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
+            if (isShakeEnabled) {
+                val shakeIntent = Intent(context, ShakeDetectionService::class.java).apply {
+                    action = ShakeDetectionService.ACTION_START
+                }
+                ContextCompat.startForegroundService(context, shakeIntent)
             }
         }
     }

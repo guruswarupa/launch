@@ -33,6 +33,7 @@ class ContactManager(
         backgroundExecutor.execute {
             try {
                 val tempContactsList = mutableListOf<String>()
+                val seenNames = HashSet<String>()
                 val cursor = contentResolver.query(
                     ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                     arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
@@ -43,7 +44,7 @@ class ContactManager(
                 cursor?.use {
                     while (it.moveToNext()) {
                         val name = it.getString(it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME))
-                        if (name != null && !tempContactsList.contains(name)) {
+                        if (name != null && seenNames.add(name)) {
                             tempContactsList.add(name)
                         }
                     }

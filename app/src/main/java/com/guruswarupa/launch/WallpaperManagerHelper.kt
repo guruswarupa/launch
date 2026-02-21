@@ -1,8 +1,12 @@
 package com.guruswarupa.launch
 
 import android.app.WallpaperManager
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -20,21 +24,37 @@ class WallpaperManagerHelper(
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private var currentWallpaperBitmap: Bitmap? = null
+    private var lastWallpaperId: Int = -1
+    private val prefs by lazy { activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE) }
     
     /**
      * Set wallpaper background, with optional force reload
      */
     fun setWallpaperBackground(forceReload: Boolean = false) {
-        // Check if we have a cached wallpaper bitmap
-        if (!forceReload && currentWallpaperBitmap != null && !currentWallpaperBitmap!!.isRecycled) {
-            wallpaperBackground.setImageBitmap(currentWallpaperBitmap)
-            drawerWallpaperBackground?.setImageBitmap(currentWallpaperBitmap)
+        // Apply blur based on preference
+        applyBlurToViews()
+
+        val wallpaperManager = WallpaperManager.getInstance(activity)
+        val wallpaperId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            wallpaperManager.getWallpaperId(WallpaperManager.FLAG_SYSTEM)
+        } else {
+            -1
+        }
+
+        // Check if wallpaper has actually changed or if we need a force reload
+        val needsReload = forceReload || 
+                         currentWallpaperBitmap == null || 
+                         currentWallpaperBitmap!!.isRecycled ||
+                         (wallpaperId != -1 && wallpaperId != lastWallpaperId)
+
+        if (!needsReload) {
             return
         }
         
+        lastWallpaperId = wallpaperId
+        
         // Try to load wallpaper synchronously first (for BitmapDrawable, this is very fast)
         try {
-            val wallpaperManager = WallpaperManager.getInstance(activity)
             val drawable = wallpaperManager.drawable
             
             if (drawable != null && drawable is BitmapDrawable) {
@@ -65,7 +85,6 @@ class WallpaperManagerHelper(
         // For non-BitmapDrawable or if sync load failed, load in background
         backgroundExecutor.execute {
             try {
-                val wallpaperManager = WallpaperManager.getInstance(activity)
                 val drawable = wallpaperManager.drawable
                 
                 if (drawable == null) {
@@ -126,6 +145,27 @@ class WallpaperManagerHelper(
             }
         }
     }
+
+    /**
+     * Applies or removes blur effect based on user preference
+     */
+    fun applyBlurToViews() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val effect = if (blurLevel > 0) {
+                val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
+                RenderEffect.createBlurEffect(blurRadius, blurRadius, Shader.TileMode.CLAMP)
+            } else {
+                null
+            }
+            
+            wallpaperBackground.setRenderEffect(effect)
+            drawerWallpaperBackground?.setRenderEffect(effect)
+            
+            // Ensure right drawer wallpaper never has blur applied
+            activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.setRenderEffect(null)
+        }
+    }
     
     /**
      * Clear cached wallpaper bitmap
@@ -133,6 +173,7 @@ class WallpaperManagerHelper(
     fun clearCache() {
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
+        lastWallpaperId = -1
     }
     
     /**
@@ -143,5 +184,6 @@ class WallpaperManagerHelper(
         drawerWallpaperBackground?.setImageDrawable(null)
         currentWallpaperBitmap?.recycle()
         currentWallpaperBitmap = null
+        lastWallpaperId = -1
     }
 }

@@ -20,6 +20,7 @@
 
         <!-- Scrollable Content -->
         <androidx.core.widget.NestedScrollView
+            android:id="@+id/main_scroll_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:fillViewport="true">
@@ -128,36 +129,50 @@
                 </LinearLayout>
 
                 <!-- Search Box -->
-                <FrameLayout
+                <LinearLayout
                     android:id="@+id/search_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
-                    android:background="@drawable/search_box_transparent_bg">
+                    android:background="@drawable/search_box_transparent_bg"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/search_type_button"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_search"
+                        android:contentDescription="Search Type"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        android:tint="@color/white"/>
+
                     <EditText
                         android:id="@+id/search_box"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:hint="@string/search_text"
                         android:textColor="@color/white"
                         android:textColorHint="@color/white"
                         android:padding="12dp"
-                        android:paddingEnd="48dp"
                         android:background="@null"
-                        android:drawableStart="@drawable/ic_search"
-                        android:drawablePadding="8dp"
                         android:textSize="16sp"
                         android:singleLine="true"
                         android:imeOptions="actionSearch"/>
+
                     <ImageButton
                         android:id="@+id/voice_search_button"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:layout_gravity="end|center_vertical"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_mic"
-                        android:contentDescription="Voice Search"/>
-                </FrameLayout>
+                        android:contentDescription="Voice Search"
+                        android:tint="@color/white"/>
+                </LinearLayout>
+
 
                 <!-- App Dock -->
                 <HorizontalScrollView
@@ -184,6 +199,50 @@
                     android:nestedScrollingEnabled="false"/>
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
+
+        <!-- Fast Scroller -->
+        <com.guruswarupa.launch.FastScroller
+            android:id="@+id/fast_scroller"
+            android:layout_width="20dp"
+            android:layout_height="300dp"
+            android:layout_gravity="end|top"
+            android:layout_marginTop="380dp"
+            android:layout_marginEnd="28dp"
+            android:visibility="gone" />
+
+        <!-- Visual Cues for Gesture Areas (Top Half) -->
+        <LinearLayout
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="start"
+            android:orientation="vertical">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="#40FFFFFF" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+        
+        <LinearLayout
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:orientation="vertical">
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="#40FFFFFF" />
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+
     </FrameLayout>
 
     <!-- Sidebar Drawer for Widgets (Left Drawer) -->
@@ -248,6 +307,7 @@
             android:paddingTop="88dp">
 
             <LinearLayout
+                android:id="@+id/drawer_content_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -278,52 +338,6 @@
                     android:textColor="@color/widget_text_secondary"
                     android:textSize="14sp"
                     android:gravity="center" />
-            </LinearLayout>
-
-            <!-- Android Widgets Section -->
-            <LinearLayout
-                android:id="@+id/widgets_section"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginTop="0dp"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/widget_background"
-                android:padding="20dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="16dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Android Widgets"
-                        android:textColor="@color/widget_text"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/add_widget_button"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/button_neutral_ripple"
-                        android:paddingHorizontal="20dp"
-                        android:paddingVertical="10dp"
-                        android:text="Add Widget"
-                        android:textColor="@color/widget_text"
-                        android:textSize="14sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/widget_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical" />
             </LinearLayout>
 
             <!-- Notifications Widget -->

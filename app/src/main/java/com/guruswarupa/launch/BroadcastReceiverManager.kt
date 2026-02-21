@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -19,7 +20,8 @@ class BroadcastReceiverManager(
     private val onPackageChanged: (String?, Boolean) -> Unit, // packageName, isRemoved
     private val onWallpaperChanged: () -> Unit,
     private val onBatteryChanged: () -> Unit,
-    private val onActivityRecognitionPermissionGranted: () -> Unit = {}
+    private val onActivityRecognitionPermissionGranted: () -> Unit = {},
+    private val onDndStateChanged: () -> Unit = {}
 ) {
     private val settingsUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -92,6 +94,16 @@ class BroadcastReceiverManager(
             }
         }
     }
+
+    private val dndReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED) {
+                activity.runOnUiThread {
+                    onDndStateChanged()
+                }
+            }
+        }
+    }
     
     /**
      * Register all receivers
@@ -125,6 +137,9 @@ class BroadcastReceiverManager(
         // Activity recognition permission receiver
         val activityRecognitionFilter = IntentFilter("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
         registerReceiverCompat(activityRecognitionPermissionReceiver, activityRecognitionFilter, exported = false)
+
+        // DND state change receiver
+        registerReceiverCompat(dndReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED), exported = true)
     }
 
     private fun registerReceiverCompat(receiver: BroadcastReceiver, filter: IntentFilter, exported: Boolean) {
@@ -136,7 +151,7 @@ class BroadcastReceiverManager(
                 activity,
                 receiver,
                 filter,
-                ContextCompat.RECEIVER_NOT_EXPORTED
+                if (exported) ContextCompat.RECEIVER_EXPORTED else ContextCompat.RECEIVER_NOT_EXPORTED
             )
         }
     }
@@ -151,7 +166,8 @@ class BroadcastReceiverManager(
             packageReceiver,
             wallpaperChangeReceiver,
             batteryChangeReceiver,
-            activityRecognitionPermissionReceiver
+            activityRecognitionPermissionReceiver,
+            dndReceiver
         )
 
         for (receiver in receivers) {

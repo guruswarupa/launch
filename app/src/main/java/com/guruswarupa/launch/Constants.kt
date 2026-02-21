@@ -22,6 +22,8 @@ object Constants {
         const val BACK_TAP_SENSITIVITY = "back_tap_sensitivity"
         const val BACK_TAP_MULTIPLIER = "back_tap_multiplier"
         const val BACK_TAP_DOUBLE_ACTION = "back_tap_double_action"
+        const val WALLPAPER_BLUR_LEVEL = "wallpaper_blur_level"
+        const val SEARCH_ENGINE = "search_engine"
     }
     
     // FileProvider

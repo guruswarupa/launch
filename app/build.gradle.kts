@@ -9,11 +9,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.guruswarupa.launchh"
+        applicationId = "com.guruswarupa.launch"
         minSdk = 24
         targetSdk = 35
-        versionCode = 14
-        versionName = "5.8"
+        versionCode = 15
+        versionName = "5.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,13 +33,6 @@ android {
         baseline = file("lint-baseline.xml")
         abortOnError = false
         checkReleaseBuilds = false
-    }
-    
-    // Enable code splitting and optimize APK size
-    splits {
-        abi {
-            isEnable = false 
-        }
     }
     
     packaging {

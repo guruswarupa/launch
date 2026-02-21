@@ -1,5 +1,6 @@
 package com.guruswarupa.launch
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Button
 import android.widget.EditText
@@ -35,7 +36,19 @@ class ActivityInitializer(
         // Search box will naturally gain focus when tapped by user
 
         searchBox.setOnLongClickListener {
-            val intent = Intent(Intent.ACTION_VIEW, "https://www.google.com".toUri())
+            val prefs = searchBox.context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+            val engine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
+            val url = when (engine) {
+                "Bing" -> "https://www.bing.com"
+                "DuckDuckGo" -> "https://duckduckgo.com"
+                "Ecosia" -> "https://www.ecosia.org"
+                "Brave" -> "https://search.brave.com"
+                "Startpage" -> "https://www.startpage.com"
+                "Yahoo" -> "https://www.yahoo.com"
+                "Qwant" -> "https://www.qwant.com"
+                else -> "https://www.google.com"
+            }
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             try {
                 searchBox.context.startActivity(intent)
@@ -57,6 +70,7 @@ class ActivityInitializer(
             appLauncher.launchAppWithLockCheck("com.google.android.deskclock", "Google Clock")
         }
 
+        // Setup date widget click listener to open calendar
         dateTextView.setOnClickListener {
             appLauncher.launchAppWithLockCheck("com.google.android.calendar", "Google Calendar")
         }
@@ -67,7 +81,7 @@ class ActivityInitializer(
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
-            
+
             // Left drawer
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
@@ -75,7 +89,7 @@ class ActivityInitializer(
                 params.width = drawerWidth
                 it.layoutParams = params
             }
-            
+
             // Right drawer
             val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
             rightDrawerView?.let {
@@ -90,17 +104,11 @@ class ActivityInitializer(
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.END)
     }
 
-    fun setupAddWidgetButton(addWidgetButton: Button, widgetManager: WidgetManager, requestCode: Int) {
-        addWidgetButton.setOnClickListener {
-            widgetManager.requestPickWidget(activity, requestCode)
-        }
-    }
-
     fun setupVoiceSearchButton(voiceSearchButton: ImageButton, voiceSearchManager: VoiceSearchManager) {
         voiceSearchButton.setOnClickListener {
             voiceSearchManager.startVoiceSearch()
         }
-        
+
         voiceSearchButton.setOnLongClickListener {
             voiceSearchManager.triggerSystemAssistant()
             true

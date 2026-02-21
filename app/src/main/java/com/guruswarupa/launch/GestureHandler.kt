@@ -71,10 +71,10 @@ class GestureHandler(
                 val exclusionWidthPx = (100 * activity.resources.displayMetrics.density).toInt()
                 val exclusionRects = if (isGesturesEnabled) {
                     listOf(
-                        // Left edge exclusion
-                        Rect(0, 0, exclusionWidthPx, mainContent.height),
-                        // Right edge exclusion
-                        Rect(mainContent.width - exclusionWidthPx, 0, mainContent.width, mainContent.height)
+                        // Left edge exclusion - Only top half to allow system back gesture in bottom half
+                        Rect(0, 0, exclusionWidthPx, mainContent.height / 2),
+                        // Right edge exclusion - Only top half to allow system back gesture in bottom half
+                        Rect(mainContent.width - exclusionWidthPx, 0, mainContent.width, mainContent.height / 2)
                     )
                 } else {
                     // No exclusion when gestures are disabled
@@ -111,8 +111,9 @@ class GestureHandler(
                 MotionEvent.ACTION_DOWN -> {
                     touchStartX = event.x
                     touchStartY = event.y
-                    isSwipeFromLeftEdge = event.x < edgeThresholdPx
-                    isSwipeFromRightEdge = event.x > (mainContent.width - edgeThresholdPx)
+                    // Only trigger drawer swipes from the top half of the screen
+                    isSwipeFromLeftEdge = event.x < edgeThresholdPx && event.y < (v.height / 2)
+                    isSwipeFromRightEdge = event.x > (v.width - edgeThresholdPx) && event.y < (v.height / 2)
                     isSwipeFromLeftEdge || isSwipeFromRightEdge
                 }
                 MotionEvent.ACTION_MOVE -> {

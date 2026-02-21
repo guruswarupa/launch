@@ -154,28 +154,24 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     @Suppress("unused")
     fun getTransactionHistory(): List<Triple<String, Double, String>> {
         val allPrefs = sharedPreferences.all
-        val transactions = mutableListOf<Triple<String, Double, String>>()
+        val transactionEntries = mutableListOf<Pair<Long, Triple<String, Double, String>>>()
 
-        allPrefs.keys.filter { it.startsWith("transaction_") }.forEach { key ->
-            val transactionData = sharedPreferences.getString(key, "") ?: ""
-            val parts = transactionData.split(":")
-            if (parts.size >= 3) {
-                val type = parts[0]
-                val amount = parts[1].toDoubleOrNull() ?: 0.0
-                val description = if (parts.size > 3) parts[3] else ""
-                transactions.add(Triple(type, amount, description))
+        allPrefs.forEach { (key, value) ->
+            if (key.startsWith("transaction_") && value is String) {
+                val parts = value.split(":")
+                if (parts.size >= 3) {
+                    val type = parts[0]
+                    val amount = parts[1].toDoubleOrNull() ?: 0.0
+                    val timestamp = parts[2].toLongOrNull() ?: 0L
+                    val description = if (parts.size > 3) parts[3] else ""
+                    transactionEntries.add(timestamp to Triple(type, amount, description))
+                }
             }
         }
 
-        return transactions.sortedByDescending { transaction ->
-            allPrefs.keys.filter { it.startsWith("transaction_") }
-                .find { key ->
-                    val data = sharedPreferences.getString(key, "") ?: ""
-                    data.split(":").let { parts ->
-                        parts.size >= 3 && parts[0] == transaction.first && parts[1].toDoubleOrNull() == transaction.second
-                    }
-                }?.substringAfter("transaction_")?.toLongOrNull() ?: 0L
-        }
+        return transactionEntries
+            .sortedByDescending { it.first }
+            .map { it.second }
     }
 
     private fun cleanupOldTransactions() {

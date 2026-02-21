@@ -266,18 +266,26 @@ class NotificationsWidget(rootView: View) {
                 val largeIcon = try {
                     val largeIconObj = notification.getLargeIcon()
                     if (largeIconObj != null) {
-                        val drawable = largeIconObj.loadDrawable(context)
+                        // Use remote context to load resources from the correct package
+                        val remoteContext = try {
+                            context.createPackageContext(sbn.packageName, 0)
+                        } catch (_: Exception) {
+                            context
+                        }
+                        val drawable = largeIconObj.loadDrawable(remoteContext)
                         if (drawable != null) {
                             convertDrawableToBitmap(drawable)
                         } else {
                             null
                         }
                     } else {
-                        null
+                        // Fallback to legacy large icon
+                        @Suppress("DEPRECATION")
+                        val bitmap = extras?.getParcelable(Notification.EXTRA_LARGE_ICON) as? Bitmap
+                        bitmap
                     }
-                } catch (_: Exception) {
-                    @Suppress("DEPRECATION")
-                    extras?.getParcelable(Notification.EXTRA_LARGE_ICON)
+                } catch (_: Throwable) {
+                    null
                 }
                 
                 // Extract big picture
@@ -322,20 +330,28 @@ class NotificationsWidget(rootView: View) {
                         val icon: Drawable? = try {
                             // On API 23+, getIcon() returns Icon?
                             val iconObj = action.getIcon()
-                            iconObj?.loadDrawable(context)
-                        } catch (_: Exception) {
-                            // On older APIs, icon is an Int resource ID (deprecated)
-                            @Suppress("DEPRECATION")
-                            val iconResId = action.icon
-                            if (iconResId != 0) {
-                                try {
-                                    ContextCompat.getDrawable(context, iconResId)
+                            if (iconObj != null) {
+                                val remoteContext = try {
+                                    context.createPackageContext(groupSbn.packageName, 0)
                                 } catch (_: Exception) {
-                                    null
+                                    context
                                 }
+                                iconObj.loadDrawable(remoteContext)
                             } else {
-                                null
+                                // Fallback to icon resource ID if Icon object is null
+                                val iconResId = @Suppress("DEPRECATION") action.icon
+                                if (iconResId != 0) {
+                                    val remoteContext = try {
+                                        context.createPackageContext(groupSbn.packageName, 0)
+                                    } catch (_: Exception) {
+                                        context
+                                    }
+                                    ContextCompat.getDrawable(remoteContext, iconResId)
+                                } else null
                             }
+                        } catch (_: Throwable) {
+                            // If all else fails, return null
+                            null
                         }
                         
                             // Add action even if title is empty - we'll use icon or default icon
@@ -467,16 +483,20 @@ class NotificationsWidget(rootView: View) {
     }
     
     private fun convertDrawableToBitmap(drawable: Drawable): Bitmap {
-        val bitmap = createBitmap(
-            drawable.intrinsicWidth,
-            drawable.intrinsicHeight,
-            Bitmap.Config.ARGB_8888
-        )
-        bitmap.applyCanvas {
-            drawable.setBounds(0, 0, width, height)
-            drawable.draw(this)
+        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 128
+        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 128
+        
+        return try {
+            val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            bitmap.applyCanvas {
+                drawable.setBounds(0, 0, width, height)
+                drawable.draw(this)
+            }
+            bitmap
+        } catch (_: Throwable) {
+            // Fallback for OOM or other issues
+            createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
-        return bitmap
     }
     
     private fun showEmptyState(message: String) {

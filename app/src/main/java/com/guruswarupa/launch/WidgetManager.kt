@@ -422,6 +422,23 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         }
     }
     
+    /**
+     * Reloads widgets from SharedPreferences and recreates views
+     */
+    fun reloadWidgets() {
+        val viewsToRemove = mutableListOf<View>()
+        for (i in 0 until widgetContainer.childCount) {
+            val child = widgetContainer.getChildAt(i)
+            if (child.tag is Int) {
+                viewsToRemove.add(child)
+            }
+        }
+        viewsToRemove.forEach { widgetContainer.removeView(it) }
+        widgets.clear()
+
+        loadWidgets()
+    }
+    
     fun onDestroy() {
         try {
             appWidgetHost.stopListening()
