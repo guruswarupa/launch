@@ -424,7 +424,19 @@ class AppAdapter(
                 holder.appIcon.setImageResource(R.drawable.ic_browser)
                 holder.appName?.text = activity.getString(R.string.search_in_browser, appInfo.activityInfo.name)
                 holder.itemView.setOnClickListener {
-                    activity.startActivity(Intent(Intent.ACTION_VIEW, "https://www.google.com/search?q=${appInfo.activityInfo.name}".toUri()))
+                    val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+                    val engine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
+                    val baseUrl = when (engine) {
+                        "Bing" -> "https://www.bing.com/search?q="
+                        "DuckDuckGo" -> "https://duckduckgo.com/?q="
+                        "Ecosia" -> "https://www.ecosia.org/search?q="
+                        "Brave" -> "https://search.brave.com/search?q="
+                        "Startpage" -> "https://www.startpage.com/sp/search?query="
+                        "Yahoo" -> "https://search.yahoo.com/search?p="
+                        "Qwant" -> "https://www.qwant.com/?q="
+                        else -> "https://www.google.com/search?q="
+                    }
+                    activity.startActivity(Intent(Intent.ACTION_VIEW, "$baseUrl${Uri.encode(appInfo.activityInfo.name)}".toUri()))
                     searchBox.text.clear()
                 }
             }

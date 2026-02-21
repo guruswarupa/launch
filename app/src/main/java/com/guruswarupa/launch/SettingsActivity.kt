@@ -267,24 +267,6 @@ class SettingsActivity : ComponentActivity() {
         val displayStyleArrow = findViewById<TextView>(R.id.display_style_arrow)
         setupSectionToggle(displayStyleHeader, displayStyleContent, displayStyleArrow)
         
-        // Backup Header
-        val backupHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
-        val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
-        val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
-        setupSectionToggle(backupHeader, backupContent, backupArrow)
-        
-        // Security Header
-        val appLockHeader = findViewById<LinearLayout>(R.id.app_lock_header)
-        val appLockContent = findViewById<LinearLayout>(R.id.app_lock_content)
-        val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
-        setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
-        
-        // Permissions Header
-        val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)
-        val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
-        val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
-        setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
-        
         // Wallpaper Header
         val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
         val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
@@ -314,6 +296,31 @@ class SettingsActivity : ComponentActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+
+        // Search Engine Header
+        val searchEngineHeader = findViewById<LinearLayout>(R.id.search_engine_header)
+        val searchEngineContent = findViewById<LinearLayout>(R.id.search_engine_content)
+        val searchEngineArrow = findViewById<TextView>(R.id.search_engine_arrow)
+        setupSectionToggle(searchEngineHeader, searchEngineContent, searchEngineArrow)
+        setupSearchEngine()
+
+        // Backup Header
+        val backupHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
+        val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
+        val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
+        setupSectionToggle(backupHeader, backupContent, backupArrow)
+        
+        // Security Header
+        val appLockHeader = findViewById<LinearLayout>(R.id.app_lock_header)
+        val appLockContent = findViewById<LinearLayout>(R.id.app_lock_content)
+        val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
+        setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
+        
+        // Permissions Header
+        val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)
+        val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
+        val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
+        setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
 
         // Tutorial Header
         val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
@@ -392,6 +399,32 @@ class SettingsActivity : ComponentActivity() {
         
     }
     
+    private fun setupSearchEngine() {
+        val searchEngineSpinner = findViewById<Spinner>(R.id.search_engine_spinner)
+        val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, engines)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        searchEngineSpinner.adapter = adapter
+
+        val currentEngine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
+        val index = engines.indexOf(currentEngine)
+        if (index >= 0) {
+            searchEngineSpinner.setSelection(index)
+        }
+
+        searchEngineSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedEngine = engines[position]
+                prefs.edit { putString(Constants.Prefs.SEARCH_ENGINE, selectedEngine) }
+                
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
     private fun setupScreenDimmer() {
         val screenDimmerSwitch = findViewById<SwitchCompat>(R.id.screen_dimmer_switch)
         val dimmerSeekBar = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
