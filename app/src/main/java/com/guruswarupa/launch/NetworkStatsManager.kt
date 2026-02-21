@@ -19,7 +19,7 @@ class NetworkStatsManager {
 
     data class SpeedTestResult(
         val downloadSpeedMbps: Float,
-        val uploadSpeedMbps: Float, // Simplified, maybe just mock or basic check
+        val uploadSpeedMbps: Float,
         val pingMs: Long,
         val jitterMs: Long
     )
@@ -29,7 +29,7 @@ class NetworkStatsManager {
         
         executor.execute {
             try {
-                // 1. Ping Test
+                // 1. Latency Test
                 onProgress("Measuring latency...")
                 val (ping, jitter) = measurePing()
                 
@@ -60,10 +60,15 @@ class NetworkStatsManager {
         
         repeat(count) {
             val start = System.currentTimeMillis()
-            val isReachable = java.net.InetAddress.getByName(host).isReachable(1000)
-            val end = System.currentTimeMillis()
-            if (isReachable) {
+            try {
+                // Using Socket connection as isReachable often fails on Android without ICMP privileges
+                val socket = java.net.Socket()
+                socket.connect(java.net.InetSocketAddress(host, 53), 1000)
+                val end = System.currentTimeMillis()
                 pings.add(end - start)
+                socket.close()
+            } catch (e: Exception) {
+                Log.w("NetworkStatsManager", "Ping attempt failed: ${e.message}")
             }
         }
 
@@ -134,61 +139,66 @@ class NetworkStatsManager {
     }
     
     private fun measureUploadSpeed(): Float {
-        val uploadUrl = "https://speedtest.tele2.net/upload.php"
-        var totalBytesWritten = 0L
-        val maxDuration = 5000L
+        val uploadUrls = listOf(
+            "https://speedtest.tele2.net/upload.php",
+            "http://speedtest.belwue.net/upload-dummy.php"
+        )
         
-        try {
-            val url = URL(uploadUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.doOutput = true
-            connection.requestMethod = "POST"
-            connection.connectTimeout = 5000
-            connection.readTimeout = 10000
+        for (uploadUrl in uploadUrls) {
+            var totalBytesWritten = 0L
+            val maxDuration = 5000L
             
-            // 10MB payload for upload test to ensure we have enough data for high speeds
-            val payloadSize = 10 * 1024 * 1024 
-            val payload = ByteArray(payloadSize)
-            java.util.Random().nextBytes(payload)
-            
-            connection.setFixedLengthStreamingMode(payloadSize)
-            val startTime = System.currentTimeMillis()
-            val outputStream = connection.outputStream
-            
-            val bufferSize = 64 * 1024 // 64KB write buffer
-            var offset = 0
-            while (offset < payloadSize && (System.currentTimeMillis() - startTime < maxDuration)) {
-                 val count = min(bufferSize, payloadSize - offset)
-                 outputStream.write(payload, offset, count)
-                 offset += count
-                 totalBytesWritten += count
+            try {
+                val url = URL(uploadUrl)
+                val connection = url.openConnection() as HttpURLConnection
+                connection.doOutput = true
+                connection.requestMethod = "POST"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 7000
+                
+                // Use chunked mode to avoid huge buffer allocation and allow early termination
+                connection.setChunkedStreamingMode(0) 
+                connection.setRequestProperty("Content-Type", "application/octet-stream")
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0")
+                
+                val bufferSize = 64 * 1024
+                val buffer = ByteArray(bufferSize)
+                java.util.Random().nextBytes(buffer)
+                
+                val startTime = System.currentTimeMillis()
+                val outputStream = connection.outputStream
+                
+                while (System.currentTimeMillis() - startTime < maxDuration) {
+                    outputStream.write(buffer)
+                    totalBytesWritten += bufferSize
+                    // Cap at 50MB for safety
+                    if (totalBytesWritten > 50 * 1024 * 1024) break
+                }
+                
+                outputStream.flush()
+                outputStream.close()
+                
+                // Finalize connection and get response code
+                val responseCode = connection.responseCode
+                val endTime = System.currentTimeMillis()
+                connection.disconnect()
+                
+                if (totalBytesWritten > 0) {
+                    val timeSeconds = (endTime - startTime) / 1000.0
+                    if (timeSeconds > 0.1) {
+                        val bitsUploaded = totalBytesWritten * 8
+                        val mbps = (bitsUploaded / timeSeconds) / 1_000_000.0
+                        return (mbps * 10).roundToInt() / 10.0f
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("NetworkStatsManager", "Upload test failed for $uploadUrl", e)
             }
-            
-            outputStream.flush()
-            outputStream.close()
-            
-            val endTime = System.currentTimeMillis()
-            val responseCode = connection.responseCode // Wait for response to ensure upload completed
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                Log.w("NetworkStatsManager", "Upload test returned response code: $responseCode")
-            }
-            connection.disconnect()
-            
-            val timeSeconds = (endTime - startTime) / 1000.0
-            if (timeSeconds <= 0.1) return 0f
-            
-            val bitsUploaded = totalBytesWritten * 8
-            val mbps = (bitsUploaded / timeSeconds) / 1_000_000.0
-            return (mbps * 10).roundToInt() / 10.0f
-            
-        } catch (e: Exception) {
-             e.printStackTrace()
-             return 0f
         }
+        return 0f
     }
     
     fun getNetworkUsage(): Pair<Long, Long> {
-        // Returns Pair(MobileBytes, WifiBytes) since boot
         val mobileRx = android.net.TrafficStats.getMobileRxBytes()
         val mobileTx = android.net.TrafficStats.getMobileTxBytes()
         val totalRx = android.net.TrafficStats.getTotalRxBytes()
