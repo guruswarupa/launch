@@ -33,6 +33,8 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.core.view.size
 import androidx.core.view.get
+import java.io.File
+import androidx.core.content.FileProvider
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -57,7 +59,8 @@ class AppAdapter(
         private const val VIEW_TYPE_LIST = 0
         private const val VIEW_TYPE_GRID = 1
         private val SPECIAL_PACKAGE_NAMES = setOf(
-            "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result"
+            "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result",
+            "file_result", "settings_result"
         )
         
         // Priority levels for progressive loading
@@ -431,6 +434,43 @@ class AppAdapter(
                         else -> "https://www.google.com/search?q="
                     }
                     activity.startActivity(Intent(Intent.ACTION_VIEW, "$baseUrl${Uri.encode(appInfo.activityInfo.name)}".toUri()))
+                    searchBox.text.clear()
+                }
+            }
+
+            "settings_result" -> {
+                holder.appIcon.setImageResource(R.drawable.ic_settings)
+                holder.appName?.text = appInfo.activityInfo.name
+                holder.itemView.setOnClickListener {
+                    val setting = appInfo.activityInfo.name
+                    val intent = Intent(activity, SettingsActivity::class.java)
+                    activity.startActivity(intent)
+                    searchBox.text.clear()
+                }
+            }
+
+            "file_result" -> {
+                holder.appIcon.setImageResource(R.drawable.ic_file)
+                holder.appName?.text = appInfo.activityInfo.name
+                holder.itemView.setOnClickListener {
+                    val filePath = appInfo.activityInfo.nonLocalizedLabel.toString()
+                    val file = java.io.File(filePath)
+                    if (file.exists()) {
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            activity,
+                            "${activity.packageName}.fileprovider",
+                            file
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, activity.contentResolver.getType(uri))
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        try {
+                            activity.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(activity, "No app found to open this file", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                     searchBox.text.clear()
                 }
             }

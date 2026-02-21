@@ -5,8 +5,10 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Handler
 import android.os.Looper
+import android.os.Environment
 import android.widget.EditText
 import net.objecthunter.exp4j.ExpressionBuilder
+import java.io.File
 import java.util.concurrent.Executors
 
 class AppSearchManager(
@@ -15,6 +17,7 @@ class AppSearchManager(
     private val adapter: AppAdapter,
     private val searchBox: EditText,
     private val contactsList: List<String>,
+    private val context: android.content.Context,
     private val appMetadataCache: Map<String, AppMetadata>? = null,
     private val isAppFiltered: ((String) -> Boolean)? = null
 ) {
@@ -115,7 +118,12 @@ class AppSearchManager(
                 newFilteredList.addAll(sortedExact)
                 newFilteredList.addAll(sortedPartial)
 
-                // 2. Add contacts second
+                // 2. Add settings matches
+                getSettingsMatches(queryLower).forEach { setting ->
+                    newFilteredList.add(createSettingsOption(setting))
+                }
+
+                // 3. Add contacts second
                 contactsList.asSequence()
                     .filter { it.contains(query, ignoreCase = true) }
                     .take(5) // Limit contact results
@@ -123,7 +131,12 @@ class AppSearchManager(
                         newFilteredList.add(createUnifiedContactOption(contact))
                     }
 
-                // 3. Always add search options at the end (Play Store, Maps, YouTube, Browser)
+                // 4. Add file matches
+                getFileMatches(queryLower).forEach { file ->
+                    newFilteredList.add(createFileOption(file))
+                }
+
+                // 5. Always add search options at the end (Play Store, Maps, YouTube, Browser)
                 newFilteredList.add(createPlayStoreSearchOption(query))
                 newFilteredList.add(createGoogleMapsSearchOption(query))
                 newFilteredList.add(createYoutubeSearchOption(query))
@@ -164,6 +177,103 @@ class AppSearchManager(
             result.toString()
         } catch (_: Exception) {
             null // Return null if it's not a valid math expression
+        }
+    }
+
+    private fun getSettingsMatches(query: String): List<String> {
+        val settings = listOf(
+            "Display Style", "Wallpaper", "App Lock", "Hidden Apps", "Permissions",
+            "Privacy Dashboard", "Tutorial", "Shake to Torch", "Screen Dimmer",
+            "Night Mode", "Flip to DND", "Back Tap"
+        )
+        return settings.filter { it.contains(query, ignoreCase = true) }.take(3)
+    }
+
+    private fun createSettingsOption(setting: String): ResolveInfo {
+        return cachedResolveInfos.getOrPut("settings_result_$setting") {
+            ResolveInfo().apply {
+                activityInfo = ActivityInfo().apply {
+                    packageName = "settings_result"
+                    name = setting
+                }
+            }
+        }
+    }
+
+    private fun getFileMatches(query: String): List<java.io.File> {
+        val results = mutableListOf<java.io.File>()
+        try {
+            val projection = arrayOf(
+                android.provider.MediaStore.Files.FileColumns.DATA,
+                android.provider.MediaStore.Files.FileColumns.DISPLAY_NAME
+            )
+            
+            val selection = "${android.provider.MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ?"
+            val selectionArgs = arrayOf("%$query%")
+            
+            val queryUri = android.provider.MediaStore.Files.getContentUri("external")
+            
+            context.contentResolver.query(
+                queryUri,
+                projection,
+                selection,
+                selectionArgs,
+                "${android.provider.MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
+            )?.use { cursor ->
+                val dataColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Files.FileColumns.DATA)
+                while (cursor.moveToNext() && results.size < 10) {
+                    val path = cursor.getString(dataColumn)
+                    if (path != null) {
+                        val file = java.io.File(path)
+                        if (file.exists() && !file.isDirectory) {
+                            results.add(file)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Fallback to basic search if MediaStore fails or permission is missing
+            try {
+                val dirsToSearch = listOf(
+                    android.os.Environment.DIRECTORY_DOWNLOADS,
+                    android.os.Environment.DIRECTORY_DOCUMENTS,
+                    android.os.Environment.DIRECTORY_DCIM,
+                    android.os.Environment.DIRECTORY_PICTURES
+                )
+                for (dirName in dirsToSearch) {
+                    val dir = android.os.Environment.getExternalStoragePublicDirectory(dirName)
+                    if (dir.exists() && dir.isDirectory) {
+                        searchFilesRecursively(dir, query, results, 0)
+                        if (results.size >= 10) break
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+        return results
+    }
+
+    private fun searchFilesRecursively(dir: java.io.File, query: String, results: MutableList<java.io.File>, depth: Int) {
+        if (depth > 2 || results.size >= 10) return
+        dir.listFiles()?.forEach { file ->
+            if (file.isDirectory) {
+                searchFilesRecursively(file, query, results, depth + 1)
+            } else if (file.name.contains(query, ignoreCase = true)) {
+                results.add(file)
+            }
+            if (results.size >= 10) return
+        }
+    }
+
+    private fun createFileOption(file: java.io.File): ResolveInfo {
+        return cachedResolveInfos.getOrPut("file_result_${file.absolutePath}") {
+            ResolveInfo().apply {
+                activityInfo = ActivityInfo().apply {
+                    packageName = "file_result"
+                    name = file.name
+                    // Store path in a field we can retrieve
+                    nonLocalizedLabel = file.absolutePath
+                }
+            }
         }
     }
 

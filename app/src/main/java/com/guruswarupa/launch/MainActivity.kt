@@ -545,6 +545,7 @@ class MainActivity : FragmentActivity() {
             adapter = adapter,
             searchBox = searchBox,
             contactsList = contactManager.getContactsList(),
+            context = this,
             appMetadataCache = if (::cacheManager.isInitialized) cacheManager.getMetadataCache() else null,
             isAppFiltered = { packageName -> 
                 ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
