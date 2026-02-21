@@ -129,36 +129,50 @@
                 </LinearLayout>
 
                 <!-- Search Box -->
-                <FrameLayout
+                <LinearLayout
                     android:id="@+id/search_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
-                    android:background="@drawable/search_box_transparent_bg">
+                    android:background="@drawable/search_box_transparent_bg"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/search_type_button"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_search"
+                        android:contentDescription="Search Type"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        android:tint="@color/white"/>
+
                     <EditText
                         android:id="@+id/search_box"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:hint="@string/search_text"
                         android:textColor="@color/white"
                         android:textColorHint="@color/white"
                         android:padding="12dp"
-                        android:paddingEnd="48dp"
                         android:background="@null"
-                        android:drawableStart="@drawable/ic_search"
-                        android:drawablePadding="8dp"
                         android:textSize="16sp"
                         android:singleLine="true"
                         android:imeOptions="actionSearch"/>
+
                     <ImageButton
                         android:id="@+id/voice_search_button"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:layout_gravity="end|center_vertical"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_mic"
-                        android:contentDescription="Voice Search"/>
-                </FrameLayout>
+                        android:contentDescription="Voice Search"
+                        android:tint="@color/white"/>
+                </LinearLayout>
+
 
                 <!-- App Dock -->
                 <HorizontalScrollView

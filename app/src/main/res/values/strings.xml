@@ -24,6 +24,16 @@
     <string name="youtube_not_installed_opening_browser">YouTube app not installed. Opening in browser.</string>
     <string name="cannot_launch_app">Cannot launch app</string>
     <string name="hidden_apps_feature_not_available">Hidden apps feature not available</string>
+    
+    <!-- Search Mode Selector -->
+    <string name="search_mode_all">All</string>
+    <string name="search_mode_apps">Apps</string>
+    <string name="search_mode_contacts">Contacts</string>
+    <string name="search_mode_files">Files</string>
+    <string name="search_mode_maps">Maps</string>
+    <string name="search_mode_web">Web</string>
+    <string name="search_mode_playstore">Play Store</string>
+    <string name="search_mode_youtube">YouTube</string>
     <string name="removed_from_favorites">Removed %1$s from favorites</string>
     <string name="added_to_favorites">Added %1$s to favorites</string>
     <string name="unhid_app">Unhid %1$s</string>
