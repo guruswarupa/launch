@@ -38,8 +38,8 @@ class AppListLoader(
     private var lastCacheTime = 0L
     private val cacheDuration = 300000L // Cache for 5 minutes
     
-    // Callbacks
-    var onAppListUpdated: ((List<ResolveInfo>, List<ResolveInfo>) -> Unit)? = null
+    // Callbacks: (appList, fullAppList, isFinal)
+    var onAppListUpdated: ((List<ResolveInfo>, List<ResolveInfo>, Boolean) -> Unit)? = null
     var onAdapterNeedsUpdate: ((Boolean) -> Unit)? = null
     
     /**
@@ -87,20 +87,19 @@ class AppListLoader(
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
-                    val cachedFiltered = appListManager.filterAppsByMode(cachedApps, focusMode, workspaceMode)
-                    val cachedFinalList = appListManager.applyFavoritesFilter(cachedFiltered, workspaceMode)
+                    val cachedFinalList = appListManager.filterAndPrepareApps(cachedApps, focusMode, workspaceMode)
                     
                     if (cachedFinalList.isNotEmpty() && adapter != null) {
                         val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                         
                         handler.post {
-                            // Pass cachedApps (all apps) as second parameter, not cachedFiltered
-                            onAppListUpdated?.invoke(sorted, cachedApps)
+                            // Pass false as isFinal because version check is pending
+                            onAppListUpdated?.invoke(sorted, cachedApps, false)
                         }
                         
-                        // Verify version in background (non-blocking) - refresh if changed
+                        // Verify version in background (non-blocking) - use list-based check to avoid re-querying PM
                         safeExecute {
-                            if (!cacheManager.isVersionCurrent()) {
+                            if (!cacheManager.isVersionCurrentWithList(cachedApps)) {
                                 handler.post {
                                     if (!activity.isFinishing && !activity.isDestroyed) {
                                         loadApps(forceRefresh = false, fullAppList, appList, adapter) // Refresh without clearing cache
@@ -126,15 +125,14 @@ class AppListLoader(
                 val focusMode = appDockManager.getCurrentMode()
                 val workspaceMode = appDockManager.isWorkspaceModeActive()
                 
-                val cachedFiltered = appListManager.filterAppsByMode(cachedUnsortedList!!, focusMode, workspaceMode)
-                val cachedFinalList = appListManager.applyFavoritesFilter(cachedFiltered, workspaceMode)
+                val cachedFinalList = appListManager.filterAndPrepareApps(cachedUnsortedList!!, focusMode, workspaceMode)
                 
                 if (cachedFinalList.isNotEmpty() && adapter != null) {
                     val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                     
                     handler.post {
-                        // Pass cachedUnsortedList (all apps) as second parameter, not cachedFiltered
-                        onAppListUpdated?.invoke(sorted, cachedUnsortedList!!)
+                        // Pass false as isFinal
+                        onAppListUpdated?.invoke(sorted, cachedUnsortedList!!, false)
                     }
                 }
             } catch (_: Exception) {
@@ -167,10 +165,31 @@ class AppListLoader(
                     (currentTime - lastCacheTime) < cacheDuration) {
                     cachedUnsortedList!!
                 } else {
-                    // Reload from package manager - use flag 0 to get all launcher activities
-                    val mainIntent = Intent(Intent.ACTION_MAIN, null)
-                    mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-                    val list = packageManager.queryIntentActivities(mainIntent, 0)
+                    // Optimization #1: Use getInstalledApplications instead of queryIntentActivities
+                    // This is significantly faster on most Android versions
+                    val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+                    val list = mutableListOf<ResolveInfo>()
+                    
+                    for (app in installedApps) {
+                        try {
+                            // Only include enabled apps with launch intents
+                            if (!app.enabled) continue
+                            
+                            val launchIntent = packageManager.getLaunchIntentForPackage(app.packageName)
+                            if (launchIntent != null) {
+                                val resolveInfo = ResolveInfo()
+                                // Create a dummy ActivityInfo since we only need package and class name
+                                val activityInfo = android.content.pm.ActivityInfo()
+                                activityInfo.packageName = app.packageName
+                                activityInfo.name = launchIntent.component?.className ?: ""
+                                activityInfo.applicationInfo = app
+                                resolveInfo.activityInfo = activityInfo
+                                list.add(resolveInfo)
+                            }
+                        } catch (_: Exception) {
+                            // Skip apps that fail to resolve launch intent
+                        }
+                    }
                     
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
@@ -201,9 +220,8 @@ class AppListLoader(
                     val focusMode = appListManager.getFocusMode()
                     val workspaceMode = appListManager.getWorkspaceMode()
                     
-                    // STEP 1: Fast filtering without expensive operations
-                    val filteredApps = appListManager.filterAppsByMode(unsortedList, focusMode, workspaceMode).toMutableList()
-                    val finalAppList = appListManager.applyFavoritesFilter(filteredApps, workspaceMode)
+                    // STEP 1: Fast single-pass filtering without expensive operations
+                    val finalAppList = appListManager.filterAndPrepareApps(unsortedList, focusMode, workspaceMode)
                     
                     // STEP 2: Sort using cached metadata for instant sorted display
                     // This ensures all apps are shown, just sorted using cache (fast)
@@ -221,32 +239,28 @@ class AppListLoader(
                         }
                         
                         // Show list immediately with cached sorting to prevent freeze
-                        // Pass unsortedList (all apps) as second parameter, not filteredApps
-                        onAppListUpdated?.invoke(initiallySorted, unsortedList)
+                        onAppListUpdated?.invoke(initiallySorted, unsortedList, false)
                         
-                        // Optimize: Update existing adapter instead of creating new one
+                        // Optimize: Use existing adapter instead of creating new one
                         if (adapter == null) {
-                            recyclerView.layoutManager = if (isGridMode) {
-                                GridLayoutManager(activity, 4)
-                            } else {
-                                LinearLayoutManager(activity)
-                            }
                             onAdapterNeedsUpdate?.invoke(isGridMode)
+                        } else if (recyclerView.adapter != adapter) {
+                            recyclerView.adapter = adapter
                         }
                     }
                     
-                    // Defer expensive operations to avoid blocking UI
-                    handler.postDelayed({
+                    // Dock toggle refresh (use post instead of postDelayed to avoid artificial latency)
+                    handler.post {
                         if (activity.isFinishing || activity.isDestroyed) {
-                            return@postDelayed
+                            return@post
                         }
                         
-                        // Update dock toggle icon (non-critical, can be deferred)
+                        // Update dock toggle icon (non-critical)
                         appDockManager.refreshFavoriteToggle()
-                    }, 50) // Small delay to let UI render first
+                    }
                     
                     // STEP 3: Refine sorting in background with fresh labels (after UI is shown)
-                    // This improves sorting accuracy but doesn't block initial display
+                    // Reduced delay from 200ms to 100ms to improve responsiveness
                     handler.postDelayed({
                         safeExecute {
                             try {
@@ -255,7 +269,7 @@ class AppListLoader(
                                 val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
                                 
                                 // Load all labels (use cache when available)
-                                filteredApps.forEach { app ->
+                                finalAppList.forEach { app ->
                                     val packageName = app.activityInfo.packageName
                                     val cached = metadataCache[packageName]
                                     if (cached != null) {
@@ -278,7 +292,7 @@ class AppListLoader(
                                 }
                                 
                                 // Final sort with all labels loaded (more accurate than cache-only sort)
-                                val sortedApps = filteredApps.sortedBy { app ->
+                                val sortedApps = finalAppList.sortedBy { app ->
                                     val label = labelCache[app.activityInfo.packageName] ?: app.activityInfo.packageName.lowercase()
                                     appListManager.getSortKey(label)
                                 }
@@ -286,23 +300,19 @@ class AppListLoader(
                                 // Save updated metadata cache
                                 cacheManager?.saveAppMetadataToCache(cacheManager.getMetadataCache())
                                 
-                                val currentWorkspaceMode = appListManager.getWorkspaceMode()
-                                val sortedFinalList = appListManager.applyFavoritesFilter(sortedApps, currentWorkspaceMode)
-                                
                                 // Update UI with refined sort (only if different from initial)
                                 handler.post {
                                     if (activity.isFinishing || activity.isDestroyed) {
                                         return@post
                                     }
                                     
-                                    // Only update if the sort actually changed (avoid unnecessary updates)
-                                    // Pass unsortedList (all apps) as second parameter, not sortedApps
-                                    onAppListUpdated?.invoke(sortedFinalList, unsortedList)
+                                    // Mark as final update
+                                    onAppListUpdated?.invoke(sortedApps, unsortedList, true)
                                 }
                             } catch (_: Exception) {
                             }
                         }
-                    }, 200) // Small delay to let UI render first
+                    }, 100)
                 }
             } catch (e: Exception) {
                 handler.post {

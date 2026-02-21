@@ -29,21 +29,18 @@ class AppSearchManager(
     }
 
     private val appLabelCache = mutableMapOf<String, String>()
-
-    private var appLabelMap: Map<ResolveInfo, String> = emptyMap()
     private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
 
     init {
-        // Load labels in background thread
-        searchExecutor.execute {
-            refreshAppList()
-        }
+        // Optimization #4: Avoid rebuilding label map in background. 
+        // We'll use appMetadataCache directly during search.
         searchBox.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 handler.removeCallbacks(debounceRunnable)
-                handler.postDelayed(debounceRunnable, 30)
+                // Reduced from 30ms to 10ms for better responsiveness
+                handler.postDelayed(debounceRunnable, 10)
             }
 
             override fun afterTextChanged(s: android.text.Editable?) {}
@@ -53,34 +50,20 @@ class AppSearchManager(
     fun updateContactsList() {
         // Update contacts list and clear search cache
         searchCache.clear()
-        // Refresh app list in background
-        searchExecutor.execute {
-            refreshAppList()
-        }
+        // Contacts list is refreshed by the caller, no need for background task here
     }
 
-    private fun refreshAppList() {
-        // Filter out apps that should be hidden (e.g., in focus mode)
-        val filteredAppList = if (isAppFiltered != null) {
-            fullAppList.filter { !isAppFiltered(it.activityInfo.packageName) }
-        } else {
-            fullAppList
-        }
-        
-        appLabelMap = filteredAppList.associateWith { resolveInfo ->
-            val packageName = resolveInfo.activityInfo.packageName
-            // Use pre-loaded metadata cache if available
-            val cachedMetadata = appMetadataCache?.get(packageName)
-            cachedMetadata?.label?.lowercase()
-                ?: appLabelCache.getOrPut(packageName) {
-                    try {
-                        resolveInfo.loadLabel(packageManager).toString().lowercase()
-                    } catch (_: Exception) {
-                        packageName.lowercase()
-                    }
+    private fun getAppLabel(info: ResolveInfo): String {
+        val packageName = info.activityInfo.packageName
+        // Use pre-loaded metadata cache if available
+        return appMetadataCache?.get(packageName)?.label?.lowercase()
+            ?: appLabelCache.getOrPut(packageName) {
+                try {
+                    info.loadLabel(packageManager).toString().lowercase()
+                } catch (_: Exception) {
+                    packageName.lowercase()
                 }
-        }
-        searchCache.clear()
+            }
     }
 
     /**
@@ -112,7 +95,11 @@ class AppSearchManager(
                 val exactMatches = ArrayList<ResolveInfo>()
                 val partialMatches = ArrayList<ResolveInfo>()
 
-                appLabelMap.forEach { (info, label) ->
+                fullAppList.forEach { info ->
+                    val packageName = info.activityInfo.packageName
+                    if (isAppFiltered?.invoke(packageName) == true) return@forEach
+                    
+                    val label = getAppLabel(info)
                     when {
                         label == queryLower -> exactMatches.add(info)
                         label.startsWith(queryLower) -> partialMatches.add(0, info)
@@ -120,25 +107,9 @@ class AppSearchManager(
                     }
                 }
 
-                // Filter out apps that should be hidden (e.g., in focus mode)
-                val filteredExactMatches = if (isAppFiltered != null) {
-                    exactMatches.filter { !isAppFiltered(it.activityInfo.packageName) }
-                } else {
-                    exactMatches
-                }
-                val filteredPartialMatches = if (isAppFiltered != null) {
-                    partialMatches.filter { !isAppFiltered(it.activityInfo.packageName) }
-                } else {
-                    partialMatches
-                }
-
                 // Sort alphabetically for matches found
-                val sortedExact = filteredExactMatches.sortedBy {
-                    getSortKey(appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase())
-                }
-                val sortedPartial = filteredPartialMatches.sortedBy {
-                    getSortKey(appLabelMap[it]?.lowercase() ?: it.activityInfo.packageName.lowercase())
-                }
+                val sortedExact = exactMatches.sortedBy { getSortKey(getAppLabel(it)) }
+                val sortedPartial = partialMatches.sortedBy { getSortKey(getAppLabel(it)) }
 
                 // 1. Add apps first
                 newFilteredList.addAll(sortedExact)
@@ -167,35 +138,15 @@ class AppSearchManager(
             if (cachedEmpty != null) {
                 newFilteredList.addAll(cachedEmpty)
             } else {
-                // Ensure appLabelMap is ready before sorting
-                if (appLabelMap.isEmpty() && fullAppList.isNotEmpty()) {
-                    refreshAppList()
-                }
-                
                 // Filter out apps that should be hidden (e.g., in focus mode)
                 val appsToSort = if (isAppFiltered != null) {
-                    fullAppList.filter { !isAppFiltered(it.activityInfo.packageName) }
+                    fullAppList.filter { !isAppFiltered.invoke(it.activityInfo.packageName) }
                 } else {
                     fullAppList
                 }
                 
                 // Sort alphabetically by app name
-                val sorted = appsToSort.sortedBy {
-                    val label = appLabelMap[it]?.lowercase() ?: run {
-                        // Use pre-loaded metadata cache if available
-                        val cachedMetadata = appMetadataCache?.get(it.activityInfo.packageName)
-                        cachedMetadata?.label?.lowercase()
-                            ?: // Fallback: load label only if not in cache
-                            try {
-                                appLabelCache.getOrPut(it.activityInfo.packageName) {
-                                    it.loadLabel(packageManager).toString().lowercase()
-                                }.lowercase()
-                            } catch (_: Exception) {
-                                it.activityInfo.packageName.lowercase()
-                            }
-                    }
-                    getSortKey(label)
-                }
+                val sorted = appsToSort.sortedBy { getSortKey(getAppLabel(it)) }
                 newFilteredList.addAll(sorted)
                 searchCache[emptyQueryKey] = ArrayList(sorted)
             }

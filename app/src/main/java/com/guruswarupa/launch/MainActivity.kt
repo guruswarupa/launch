@@ -505,7 +505,8 @@ class MainActivity : FragmentActivity() {
      */
     private fun updateAppListUI(
         newAppList: List<ResolveInfo>,
-        newFullAppList: List<ResolveInfo>
+        newFullAppList: List<ResolveInfo>,
+        isFinal: Boolean = false
     ) {
         if (isFinishing || isDestroyed) return
         
@@ -517,12 +518,16 @@ class MainActivity : FragmentActivity() {
         }
         
         recyclerView.visibility = View.VISIBLE
-        updateFastScrollerVisibility()
+        
+        // Optimization #8: Only update fast scroller visibility on final load
+        if (isFinal) {
+            updateFastScrollerVisibility()
+        }
         
         // Initialize or update AppSearchManager with new app data
         if (!::appSearchManager.isInitialized && !isFinishing && !isDestroyed && ::adapter.isInitialized) {
             updateAppSearchManager()
-        } else if (::appSearchManager.isInitialized) {
+        } else if (::appSearchManager.isInitialized && isFinal) {
             updateAppSearchManager()
         }
     }
@@ -578,8 +583,13 @@ class MainActivity : FragmentActivity() {
         // Load usage stats cache immediately
         usageStatsCacheManager.loadCache()
         
-        // Load metadata cache from CacheManager
-        cacheManager.loadAppMetadataFromCache()
+        // Load metadata cache from CacheManager asynchronously
+        cacheManager.loadAppMetadataFromCacheAsync {
+            // Once metadata is loaded, refresh search manager if it's already initialized
+            if (::appSearchManager.isInitialized) {
+                updateAppSearchManager()
+            }
+        }
         
         // Check if onboarding is needed
         if (onboardingHelper.checkAndStartOnboarding()) {
@@ -601,10 +611,10 @@ class MainActivity : FragmentActivity() {
         // Initialize time/date and weather widgets
         initializeTimeDateAndWeather()
 
-        // Defer expensive widget initialization to avoid blocking UI
+        // Optimization #7: Reduced delay to make launcher feel more responsive
         handler.postDelayed({
             initializeDeferredWidgets()
-        }, 100) // Defer by 100ms to let UI render first
+        }, 30) // Reduced from 100ms
 
         appDockManager = AppDockManager(this, sharedPreferences, appDock, packageManager, favoriteAppManager)
         
@@ -623,17 +633,22 @@ class MainActivity : FragmentActivity() {
             this, packageManager, appListManager, appDockManager, favoriteAppManager,
             cacheManager, backgroundExecutor, handler, recyclerView, searchBox, voiceSearchButton, sharedPreferences
         )
-        appListLoader.onAppListUpdated = { sortedList, filteredList ->
-            updateAppListUI(sortedList, filteredList)
+        appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
+            updateAppListUI(sortedList, filteredList, isFinal)
         }
         appListLoader.onAdapterNeedsUpdate = { isGridMode ->
-            recyclerView.layoutManager = if (isGridMode) {
-                GridLayoutManager(this, 4)
-            } else {
-                LinearLayoutManager(this)
+            if (recyclerView.layoutManager !is GridLayoutManager && isGridMode) {
+                recyclerView.layoutManager = GridLayoutManager(this, 4)
+            } else if (recyclerView.layoutManager !is LinearLayoutManager && !isGridMode) {
+                recyclerView.layoutManager = LinearLayoutManager(this)
             }
-            adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
-            recyclerView.adapter = adapter
+            
+            if (::adapter.isInitialized) {
+                adapter.updateViewMode(isGridMode)
+            } else {
+                adapter = AppAdapter(this, appList, searchBox, isGridMode, this)
+                recyclerView.adapter = adapter
+            }
             updateFastScrollerVisibility()
         }
 
@@ -665,12 +680,12 @@ class MainActivity : FragmentActivity() {
         // Load apps in background - will update adapter when ready
         appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (::adapter.isInitialized) adapter else null)
         
-        // Defer AppSearchManager initialization to avoid blocking
+        // Optimization #7: Reduced delay for initialization
         handler.postDelayed({
             if (!isFinishing && !isDestroyed && ::appDockManager.isInitialized) {
                 updateAppSearchManager()
             }
-        }, 150)
+        }, 50) // Reduced from 150ms
 
         // Initialize DrawerLayout and navigation
         drawerLayout = findViewById(R.id.drawer_layout)
@@ -989,18 +1004,15 @@ class MainActivity : FragmentActivity() {
                     val focusMode = appListManager.getFocusMode()
                     val workspaceMode = appListManager.getWorkspaceMode()
                     
-                    // First filter by mode (includes hidden apps, focus mode, workspace mode)
-                    val modeFilteredApps = appListManager.filterAppsByMode(fullAppList, focusMode, workspaceMode)
-                    
-                    // Then apply favorites filter
-                    val finalAppList = appListManager.applyFavoritesFilter(modeFilteredApps, workspaceMode)
+                    // Optimization #3: Combined single-pass filter
+                    val finalAppList = appListManager.filterAndPrepareApps(fullAppList, focusMode, workspaceMode)
                     
                     // Finally sort
                     val sortedFinalList = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Update UI on main thread
                     runOnUiThread {
-                        updateAppListUI(sortedFinalList, fullAppList)
+                        updateAppListUI(sortedFinalList, fullAppList, isFinal = true)
                         appDockManager.refreshFavoriteToggle()
                     }
                 } catch (e: Exception) {
@@ -1030,11 +1042,11 @@ class MainActivity : FragmentActivity() {
                 LinearLayoutManager(this)
             }
             
-            // Recreate adapter with new mode
-            adapter = AppAdapter(this, appList, searchBox, newIsGridMode, this)
-            recyclerView.adapter = adapter
+            // Optimization #5: Use single adapter and switch mode dynamically
+            adapter.updateViewMode(newIsGridMode)
             
-            // Update app search manager with new adapter
+            // Only update AppSearchManager if data source significantly changed,
+            // otherwise the shared metadata cache handles label updates.
             updateAppSearchManager()
         }
         
