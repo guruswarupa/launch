@@ -16,7 +16,7 @@ class AppSearchManager(
     private val fullAppList: MutableList<ResolveInfo>,
     private val adapter: AppAdapter,
     private val searchBox: EditText,
-    private val contactsList: List<String>,
+    private var contactsList: List<String>,
     private val context: android.content.Context,
     private val appMetadataCache: Map<String, AppMetadata>? = null,
     private val isAppFiltered: ((String) -> Boolean)? = null
@@ -82,65 +82,121 @@ class AppSearchManager(
         }
     }
 
-    fun filterAppsAndContacts(query: String) {
-        // This method is already called from background thread (searchExecutor)
-        val queryLower = query.lowercase().trim()
+    enum class SearchMode {
+        ALL, APPS, CONTACTS, FILES, MAPS, WEB, PLAYSTORE, YOUTUBE
+    }
 
+    private var currentSearchMode = SearchMode.ALL
+
+    fun setSearchMode(mode: SearchMode) {
+        currentSearchMode = mode
+        refreshSearch()
+    }
+
+    fun updateData(newFullAppList: List<ResolveInfo>, newContactsList: List<String>) {
+        // Update data without resetting currentSearchMode
+        fullAppList.clear()
+        fullAppList.addAll(newFullAppList)
+        contactsList = newContactsList
+        searchCache.clear()
+        refreshSearch()
+    }
+
+    private fun refreshSearch() {
+        handler.removeCallbacks(debounceRunnable)
+        handler.post(debounceRunnable)
+    }
+
+    fun filterAppsAndContacts(query: String) {
+        val queryLower = query.lowercase().trim()
         val newFilteredList = ArrayList<ResolveInfo>()
         
-        // Removed unused usageCache population
-
         if (queryLower.isNotEmpty()) {
             evaluateMathExpression(query)?.let { result ->
                 newFilteredList.add(createMathResultOption(query, result))
             } ?: run {
-                // Use more efficient filtering with early termination for exact matches
                 val exactMatches = ArrayList<ResolveInfo>()
                 val partialMatches = ArrayList<ResolveInfo>()
 
-                fullAppList.forEach { info ->
-                    val packageName = info.activityInfo.packageName
-                    if (isAppFiltered?.invoke(packageName) == true) return@forEach
+                // 1. Search Apps
+                if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.APPS) {
+                    fullAppList.forEach { info ->
+                        val packageName = info.activityInfo.packageName
+                        if (isAppFiltered?.invoke(packageName) == true) return@forEach
+                        
+                        val label = getAppLabel(info)
+                        when {
+                            label == queryLower -> exactMatches.add(info)
+                            label.startsWith(queryLower) -> partialMatches.add(0, info)
+                            label.contains(queryLower) -> partialMatches.add(info)
+                        }
+                    }
+
+                    // Sort alphabetically for matches found
+                    val sortedExact = exactMatches.sortedBy { getSortKey(getAppLabel(it)) }
+                    val sortedPartial = partialMatches.sortedBy { getSortKey(getAppLabel(it)) }
+
+                    newFilteredList.addAll(sortedExact)
+                    newFilteredList.addAll(sortedPartial)
+
+                    // Add settings matches (only in ALL or APPS mode)
+                    getSettingsMatches(queryLower).forEach { setting ->
+                        newFilteredList.add(createSettingsOption(setting))
+                    }
                     
-                    val label = getAppLabel(info)
-                    when {
-                        label == queryLower -> exactMatches.add(info)
-                        label.startsWith(queryLower) -> partialMatches.add(0, info)
-                        label.contains(queryLower) -> partialMatches.add(info)
+                    if (currentSearchMode == SearchMode.APPS) return@run // STRICT
+                }
+
+                // 2. Search Contacts
+                if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.CONTACTS) {
+                    contactsList.asSequence()
+                        .filter { it.contains(query, ignoreCase = true) }
+                        .take(if (currentSearchMode == SearchMode.ALL) 5 else 20)
+                        .forEach { contact ->
+                            newFilteredList.add(createUnifiedContactOption(contact))
+                        }
+                    
+                    if (currentSearchMode == SearchMode.CONTACTS) return@run // STRICT
+                }
+
+                // 3. Search Files
+                if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.FILES) {
+                    // This is the heavy part, so we only do it if requested
+                    getFileMatches(queryLower).forEach { file ->
+                        newFilteredList.add(createFileOption(file))
                     }
+                    
+                    if (currentSearchMode == SearchMode.FILES) return@run // STRICT
                 }
 
-                // Sort alphabetically for matches found
-                val sortedExact = exactMatches.sortedBy { getSortKey(getAppLabel(it)) }
-                val sortedPartial = partialMatches.sortedBy { getSortKey(getAppLabel(it)) }
-
-                // 1. Add apps first
-                newFilteredList.addAll(sortedExact)
-                newFilteredList.addAll(sortedPartial)
-
-                // 2. Add settings matches
-                getSettingsMatches(queryLower).forEach { setting ->
-                    newFilteredList.add(createSettingsOption(setting))
+                // 4. Platform-specific searches (STRICT FILTERING)
+                if (currentSearchMode == SearchMode.MAPS) {
+                    newFilteredList.add(createGoogleMapsSearchOption(query))
+                    return@run // Exit early to only show Maps
+                }
+                
+                if (currentSearchMode == SearchMode.PLAYSTORE) {
+                    newFilteredList.add(createPlayStoreSearchOption(query))
+                    return@run
+                }
+                
+                if (currentSearchMode == SearchMode.YOUTUBE) {
+                    newFilteredList.add(createYoutubeSearchOption(query))
+                    return@run
+                }
+                
+                if (currentSearchMode == SearchMode.WEB) {
+                    newFilteredList.add(createBrowserSearchOption(query))
+                    return@run
                 }
 
-                // 3. Add contacts second
-                contactsList.asSequence()
-                    .filter { it.contains(query, ignoreCase = true) }
-                    .take(5) // Limit contact results
-                    .forEach { contact ->
-                        newFilteredList.add(createUnifiedContactOption(contact))
-                    }
-
-                // 4. Add file matches
-                getFileMatches(queryLower).forEach { file ->
-                    newFilteredList.add(createFileOption(file))
+                // If in ALL mode, add specialized ones at the bottom
+                if (currentSearchMode == SearchMode.ALL) {
+                    newFilteredList.add(createGoogleMapsSearchOption(query))
+                    newFilteredList.add(createPlayStoreSearchOption(query))
+                    newFilteredList.add(createYoutubeSearchOption(query))
+                    newFilteredList.add(createBrowserSearchOption(query))
                 }
-
-                // 5. Always add search options at the end (Play Store, Maps, YouTube, Browser)
-                newFilteredList.add(createPlayStoreSearchOption(query))
-                newFilteredList.add(createGoogleMapsSearchOption(query))
-                newFilteredList.add(createYoutubeSearchOption(query))
-                newFilteredList.add(createBrowserSearchOption(query))
             }
         } else {
             // Cache sorted app list for empty queries
@@ -163,7 +219,6 @@ class AppSearchManager(
             }
         }
 
-        // Update adapter on main thread
         handler.post {
             adapter.updateAppList(newFilteredList)
         }
