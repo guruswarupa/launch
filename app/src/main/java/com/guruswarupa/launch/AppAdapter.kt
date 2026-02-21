@@ -19,6 +19,8 @@ import android.content.Context
 import android.database.Cursor
 import android.graphics.drawable.Drawable
 import android.provider.ContactsContract
+import android.widget.ArrayAdapter
+import android.widget.LinearLayout
 
 import android.provider.Settings
 import android.view.Gravity
@@ -55,8 +57,7 @@ class AppAdapter(
         private const val VIEW_TYPE_LIST = 0
         private const val VIEW_TYPE_GRID = 1
         private val SPECIAL_PACKAGE_NAMES = setOf(
-            "contact_search", "whatsapp_contact", "sms_contact",
-            "play_store_search", "maps_search", "yt_search", "browser_search", "math_result"
+            "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result"
         )
         
         // Priority levels for progressive loading
@@ -292,29 +293,11 @@ class AppAdapter(
         holder.appUsageTime?.visibility = View.GONE
 
         when (packageName) {
-            "contact_search" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_phone)
+            "contact_unified" -> {
+                holder.appIcon.setImageResource(R.drawable.ic_person)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
-                    showCallConfirmationDialog(appInfo.activityInfo.name)
-                    searchBox.text.clear()
-                }
-            }
-
-            "whatsapp_contact" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_whatsapp)
-                holder.appName?.text = appInfo.activityInfo.name
-                holder.itemView.setOnClickListener {
-                    activity.openWhatsAppChat(appInfo.activityInfo.name)
-                    searchBox.text.clear()
-                }
-            }
-
-            "sms_contact" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_message)
-                holder.appName?.text = appInfo.activityInfo.name
-                holder.itemView.setOnClickListener {
-                    activity.openSMSChat(appInfo.activityInfo.name)
+                    showContactChoiceDialog(appInfo.activityInfo.name)
                     searchBox.text.clear()
                 }
             }
@@ -740,6 +723,79 @@ class AppAdapter(
         } catch (_: UninitializedPropertyAccessException) {
             Toast.makeText(activity, activity.getString(R.string.hidden_apps_feature_not_available), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showContactChoiceDialog(contactName: String) {
+        val phoneNumber = getPhoneNumberForContact(contactName)
+        val photoUri = getPhotoUriForContact(contactName)
+        
+        val options = listOf(
+            activity.getString(R.string.call_button) to R.drawable.ic_phone,
+            activity.getString(R.string.whatsapp) to R.drawable.ic_whatsapp,
+            activity.getString(R.string.sms) to R.drawable.ic_message
+        )
+        
+        val adapter = object : ArrayAdapter<Pair<String, Int>>(activity, R.layout.dialog_contact_item, options) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.dialog_contact_item, parent, false)
+                val item = getItem(position)!!
+                
+                view.findViewById<ImageView>(R.id.option_icon).setImageResource(item.second)
+                view.findViewById<TextView>(R.id.option_text).text = item.first
+                
+                return view
+            }
+        }
+
+        val builder = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+        
+        // Custom title view for premium look
+        val titleView = LayoutInflater.from(activity).inflate(R.layout.dialog_contact_title, null)
+        titleView.findViewById<TextView>(R.id.contact_name).text = contactName
+        titleView.findViewById<TextView>(R.id.contact_number).text = phoneNumber
+        
+        val photoImageView = titleView.findViewById<ImageView>(R.id.contact_photo)
+        if (photoUri != null) {
+            try {
+                val inputStream = activity.contentResolver.openInputStream(photoUri.toUri())
+                val drawable = Drawable.createFromStream(inputStream, photoUri)
+                if (drawable != null) photoImageView.setImageDrawable(drawable)
+                else photoImageView.setImageResource(R.drawable.ic_person)
+            } catch (_: Exception) {
+                photoImageView.setImageResource(R.drawable.ic_person)
+            }
+        } else {
+            photoImageView.setImageResource(R.drawable.ic_person)
+        }
+        
+        builder.setCustomTitle(titleView)
+            .setAdapter(adapter) { _, which ->
+                when (which) {
+                    0 -> showCallConfirmationDialog(contactName)
+                    1 -> activity.openWhatsAppChat(contactName)
+                    2 -> activity.openSMSChat(contactName)
+                }
+            }
+            .setNegativeButton(activity.getString(R.string.cancel_button), null)
+            .show()
+    }
+
+    private fun getPhotoUriForContact(contactName: String): String? {
+        val cursor = activity.contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            arrayOf(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI),
+            "${ContactsContract.Contacts.DISPLAY_NAME} = ?",
+            arrayOf(contactName),
+            null
+        )
+        var photoUri: String? = null
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val index = it.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI)
+                if (index != -1) photoUri = it.getString(index)
+            }
+        }
+        return photoUri
     }
 
     fun showCallConfirmationDialog(contactName: String) {

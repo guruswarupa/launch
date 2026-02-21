@@ -33,6 +33,8 @@
     <string name="call_button">Call</string>
     <string name="cancel_button">Cancel</string>
     <string name="timer_zero">00:00</string>
+    <string name="whatsapp">WhatsApp</string>
+    <string name="sms">SMS</string>
 
     <!-- App Lock Strings -->
     <string name="set_pin">Set PIN</string>
