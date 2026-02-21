@@ -52,7 +52,8 @@ class MainActivity : FragmentActivity() {
     private lateinit var timeTextView: TextView
     private lateinit var dateTextView: TextView
     private lateinit var searchBox: EditText
-    private lateinit var searchContainer: FrameLayout
+    private lateinit var searchContainer: LinearLayout
+    private lateinit var searchTypeButton: ImageButton
     private lateinit var appDock: LinearLayout
     private lateinit var wallpaperBackground: ImageView
     private lateinit var weeklyUsageGraph: WeeklyUsageGraphView
@@ -206,11 +207,14 @@ class MainActivity : FragmentActivity() {
             searchBox.setTextColor(textColor)
             searchBox.setHintTextColor(hintColor)
             
-            // Tint search icon
+            // Tint search icons
             val iconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             searchBox.compoundDrawablesRelative[0]?.setTint(iconColor)
             if (::voiceSearchButton.isInitialized) {
                 voiceSearchButton.setColorFilter(iconColor)
+            }
+            if (::searchTypeButton.isInitialized) {
+                searchTypeButton.setColorFilter(iconColor)
             }
         }
         
@@ -318,6 +322,54 @@ class MainActivity : FragmentActivity() {
             timeTextView, dateTextView
         )
         
+        searchTypeButton = findViewById(R.id.search_type_button)
+        
+        searchTypeButton.setOnClickListener { view ->
+            val wrapper = androidx.appcompat.view.ContextThemeWrapper(this, R.style.PopupMenuStyle)
+            val popup = android.widget.PopupMenu(wrapper, view)
+            popup.menu.add(0, 0, 0, getString(R.string.search_mode_all))
+            popup.menu.add(0, 1, 1, getString(R.string.search_mode_apps))
+            popup.menu.add(0, 2, 2, getString(R.string.search_mode_contacts))
+            popup.menu.add(0, 3, 3, getString(R.string.search_mode_files))
+            popup.menu.add(0, 4, 4, getString(R.string.search_mode_maps))
+            popup.menu.add(0, 5, 5, getString(R.string.search_mode_web))
+            popup.menu.add(0, 6, 6, getString(R.string.search_mode_playstore))
+            popup.menu.add(0, 7, 7, getString(R.string.search_mode_youtube))
+            
+            popup.setOnMenuItemClickListener { item ->
+                val mode = when (item.itemId) {
+                    1 -> AppSearchManager.SearchMode.APPS
+                    2 -> AppSearchManager.SearchMode.CONTACTS
+                    3 -> AppSearchManager.SearchMode.FILES
+                    4 -> AppSearchManager.SearchMode.MAPS
+                    5 -> AppSearchManager.SearchMode.WEB
+                    6 -> AppSearchManager.SearchMode.PLAYSTORE
+                    7 -> AppSearchManager.SearchMode.YOUTUBE
+                    else -> AppSearchManager.SearchMode.ALL
+                }
+                
+                if (::appSearchManager.isInitialized) {
+                    appSearchManager.setSearchMode(mode)
+                }
+                
+                // Update button icon/text if needed
+                val iconRes = when (mode) {
+                    AppSearchManager.SearchMode.APPS -> R.drawable.ic_apps_grid_icon
+                    AppSearchManager.SearchMode.CONTACTS -> R.drawable.ic_person
+                    AppSearchManager.SearchMode.FILES -> R.drawable.ic_file
+                    AppSearchManager.SearchMode.MAPS -> R.drawable.ic_maps
+                    AppSearchManager.SearchMode.WEB -> R.drawable.ic_browser
+                    AppSearchManager.SearchMode.PLAYSTORE -> R.drawable.ic_play_store
+                    AppSearchManager.SearchMode.YOUTUBE -> R.drawable.ic_youtube
+                    else -> R.drawable.ic_search
+                }
+                searchTypeButton.setImageResource(iconRes)
+                
+                true
+            }
+            popup.show()
+        }
+
         // Setup search box listener to show/hide top widget
         setupSearchBoxListener()
         
@@ -538,19 +590,23 @@ class MainActivity : FragmentActivity() {
     private fun updateAppSearchManager() {
         if (isFinishing || isDestroyed) return
         
-        // Always reinitialize to get fresh data (app list, contacts, etc.)
-        appSearchManager = AppSearchManager(
-            packageManager = packageManager,
-            fullAppList = fullAppList,
-            adapter = adapter,
-            searchBox = searchBox,
-            contactsList = contactManager.getContactsList(),
-            context = this,
-            appMetadataCache = if (::cacheManager.isInitialized) cacheManager.getMetadataCache() else null,
-            isAppFiltered = { packageName -> 
-                ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
-            }
-        )
+        if (::appSearchManager.isInitialized) {
+            appSearchManager.updateData(fullAppList, contactManager.getContactsList())
+        } else {
+            // Initial initialization
+            appSearchManager = AppSearchManager(
+                packageManager = packageManager,
+                fullAppList = fullAppList,
+                adapter = adapter,
+                searchBox = searchBox,
+                contactsList = contactManager.getContactsList(),
+                context = this,
+                appMetadataCache = if (::cacheManager.isInitialized) cacheManager.getMetadataCache() else null,
+                isAppFiltered = { packageName -> 
+                    ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
+                }
+            )
+        }
     }
     
     // Gesture exclusion methods moved to GestureHandler
