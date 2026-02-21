@@ -36,9 +36,20 @@ class AppAdapter(
     private val activity: MainActivity,
     var appList: MutableList<ResolveInfo>,
     private val searchBox: EditText,
-    private val isGridMode: Boolean,
+    private var isGridMode: Boolean,
     private val context: Context // Added context
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
+
+    /**
+     * Updates the view mode (grid vs list) without recreating the adapter.
+     */
+    @SuppressLint("NotifyDataSetChanged")
+    fun updateViewMode(isGrid: Boolean) {
+        if (this.isGridMode != isGrid) {
+            this.isGridMode = isGrid
+            notifyDataSetChanged()
+        }
+    }
 
     companion object {
         private const val VIEW_TYPE_LIST = 0

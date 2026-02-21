@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.os.Handler
+import android.os.Looper
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -29,24 +31,56 @@ class CacheManager(
 
     private val appMetadataCache = mutableMapOf<String, AppMetadata>()
     private var cachedAppListVersion: String? = null
+    @Volatile
+    private var metadataLoaded = false
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     /**
-     * Get app list version based on installed launcher activities
+     * Get app list version based on installed packages and their timestamps.
+     * Uses getInstalledPackages() which is faster than querying intent activities one by one.
      */
     fun getAppListVersion(): String {
         return try {
-            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
+            val packages = packageManager.getInstalledPackages(0)
+            // Use sum of update times and package count as a version identifier
+            var timestampSum = 0L
+            for (pkg in packages) {
+                timestampSum += pkg.lastUpdateTime
             }
-            val apps = packageManager.queryIntentActivities(mainIntent, 0)
-            val packages = apps
-                .map { it.activityInfo.packageName + "|" + it.activityInfo.name }
-                .sorted()
-                .joinToString("")
-            packages.hashCode().toString()
+            "${packages.size}_$timestampSum"
         } catch (_: Exception) {
             System.currentTimeMillis().toString()
         }
+    }
+
+    /**
+     * Fast version check using cached app list.
+     * Replaced with basic getAppListVersion check for consistency.
+     */
+    fun getAppListVersionFromList(apps: List<ResolveInfo>): String {
+        return getAppListVersion()
+    }
+
+    /**
+     * Check if version matches current system state.
+     */
+    fun isVersionCurrentWithList(apps: List<ResolveInfo>): Boolean {
+        val currentVersion = getAppListVersion()
+        val cachedVersion = try {
+            if (appListVersionFile.exists()) {
+                appListVersionFile.readText().trim()
+            } else null
+        } catch (_: Exception) {
+            null
+        }
+        return currentVersion == cachedVersion
+    }
+
+    /**
+     * Check if version matches current version
+     */
+    fun isVersionCurrent(): Boolean {
+        return isVersionCurrentWithList(emptyList())
     }
 
     /**
@@ -63,21 +97,6 @@ class CacheManager(
         }
 
         return cacheAge < CACHE_DURATION
-    }
-
-    /**
-     * Check if cached version matches current version
-     */
-    fun isVersionCurrent(): Boolean {
-        val currentVersion = getAppListVersion()
-        val cachedVersion = try {
-            if (appListVersionFile.exists()) {
-                appListVersionFile.readText().trim()
-            } else null
-        } catch (_: Exception) {
-            null
-        }
-        return currentVersion == cachedVersion
     }
 
     /**
@@ -156,12 +175,36 @@ class CacheManager(
 
             appMetadataCache.clear()
             appMetadataCache.putAll(metadata)
+            metadataLoaded = true
 
             metadata
         } catch (_: Exception) {
+            metadataLoaded = true
             emptyMap()
         }
     }
+
+    /**
+     * Load app metadata asynchronously in background.
+     * Calls onLoaded on the main thread when complete.
+     */
+    fun loadAppMetadataFromCacheAsync(onLoaded: (() -> Unit)? = null) {
+        if (metadataLoaded) {
+            onLoaded?.invoke()
+            return
+        }
+        backgroundExecutor.execute {
+            loadAppMetadataFromCache()
+            onLoaded?.let { callback ->
+                mainHandler.post { callback() }
+            }
+        }
+    }
+
+    /**
+     * Check if metadata has been loaded
+     */
+    fun isMetadataLoaded(): Boolean = metadataLoaded
 
     /**
      * Save app metadata to persistent cache
