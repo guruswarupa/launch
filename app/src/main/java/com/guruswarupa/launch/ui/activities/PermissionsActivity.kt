@@ -2,7 +2,10 @@ package com.guruswarupa.launch.ui.activities
 
 import android.Manifest
 import android.app.AppOpsManager
+import android.app.NotificationManager
 import android.app.WallpaperManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -27,6 +30,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.utils.BlurUtils
 
@@ -167,7 +171,8 @@ class PermissionsActivity : ComponentActivity() {
             val isGranted: Boolean,
             val isSpecial: Boolean = false,
             val isLauncher: Boolean = false,
-            val isOverlay: Boolean = false
+            val isOverlay: Boolean = false,
+            val specialType: String? = null
         )
 
         val allPermissions = mutableListOf<PermissionItem>()
@@ -248,7 +253,8 @@ class PermissionsActivity : ComponentActivity() {
             name = "Usage Stats",
             description = "Show app usage time and statistics",
             isGranted = usageStatsGranted,
-            isSpecial = true
+            isSpecial = true,
+            specialType = "USAGE_STATS"
         ))
 
         val overlayGranted = Settings.canDrawOverlays(this)
@@ -258,6 +264,36 @@ class PermissionsActivity : ComponentActivity() {
             description = "Required for Screen Dimmer feature",
             isGranted = overlayGranted,
             isOverlay = true
+        ))
+
+        val notificationPolicyGranted = hasNotificationPolicyPermission()
+        allPermissions.add(PermissionItem(
+            permission = null,
+            name = "Notification Policy Access",
+            description = "Manage Do Not Disturb features and notification settings",
+            isGranted = notificationPolicyGranted,
+            isSpecial = true,
+            specialType = "NOTIFICATION_POLICY"
+        ))
+
+        val accessibilityGranted = hasAccessibilityServicePermission()
+        allPermissions.add(PermissionItem(
+            permission = null,
+            name = "Accessibility Service",
+            description = "Enable advanced features like screen lock with double tap and screenshot functionality",
+            isGranted = accessibilityGranted,
+            isSpecial = true,
+            specialType = "ACCESSIBILITY_SERVICE"
+        ))
+
+        val notificationListenerGranted = hasNotificationListenerPermission()
+        allPermissions.add(PermissionItem(
+            permission = null,
+            name = "Notification Access",
+            description = "Read and manage notifications in the notification widget",
+            isGranted = notificationListenerGranted,
+            isSpecial = true,
+            specialType = "NOTIFICATION_LISTENER"
         ))
 
         val isDefaultLauncher = isDefaultLauncher()
@@ -283,18 +319,32 @@ class PermissionsActivity : ComponentActivity() {
 
             toggle.setOnCheckedChangeListener { _, isChecked ->
                 if (isChecked && !perm.isGranted) {
-                    if (perm.isSpecial) {
-                        requestUsageStatsPermission()
-                    } else if (perm.isLauncher) {
-                        openDefaultLauncherSettings()
-                    } else if (perm.isOverlay) {
-                        requestOverlayPermission()
-                    } else if (perm.permission != null) {
-                        ActivityCompat.requestPermissions(
-                            this,
-                            arrayOf(perm.permission),
-                            PERMISSION_REQUEST_CODE
-                        )
+                    when {
+                        perm.specialType == "USAGE_STATS" -> {
+                            requestUsageStatsPermission()
+                        }
+                        perm.specialType == "NOTIFICATION_POLICY" -> {
+                            requestNotificationPolicyPermission()
+                        }
+                        perm.specialType == "ACCESSIBILITY_SERVICE" -> {
+                            requestAccessibilityServicePermission()
+                        }
+                        perm.specialType == "NOTIFICATION_LISTENER" -> {
+                            requestNotificationListenerPermission()
+                        }
+                        perm.isLauncher -> {
+                            openDefaultLauncherSettings()
+                        }
+                        perm.isOverlay -> {
+                            requestOverlayPermission()
+                        }
+                        perm.permission != null -> {
+                            ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(perm.permission),
+                                PERMISSION_REQUEST_CODE
+                            )
+                        }
                     }
                 } else if (!isChecked && perm.isGranted) {
                     if (perm.isLauncher) {
@@ -318,8 +368,8 @@ class PermissionsActivity : ComponentActivity() {
 
             if (perm.permission != null) {
                 permissionToggles[perm.permission] = toggle
-            } else if (perm.isSpecial) {
-                permissionToggles["USAGE_STATS"] = toggle
+            } else if (perm.specialType != null) {
+                permissionToggles[perm.specialType] = toggle
             } else if (perm.isLauncher) {
                 permissionToggles["DEFAULT_LAUNCHER"] = toggle
             } else if (perm.isOverlay) {
@@ -341,6 +391,49 @@ class PermissionsActivity : ComponentActivity() {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
+    @Suppress("DEPRECATION")
+    private fun hasNotificationPolicyPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            return notificationManager.isNotificationPolicyAccessGranted
+        }
+        return false
+    }
+
+    private fun hasAccessibilityServicePermission(): Boolean {
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            ?: return false
+        
+        val expectedComponentName = ComponentName(this, com.guruswarupa.launch.services.ScreenLockAccessibilityService::class.java)
+        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun hasNotificationListenerPermission(): Boolean {
+        val enabledServices = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+            ?: return false
+        
+        val expectedComponentName = ComponentName(this, com.guruswarupa.launch.services.LaunchNotificationListenerService::class.java)
+        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun requestUsageStatsPermission() {
         try {
             hasRequestedUsageStats = true
@@ -351,10 +444,34 @@ class PermissionsActivity : ComponentActivity() {
         }
     }
 
+    private fun requestNotificationPolicyPermission() {
+        try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Could not open notification policy settings", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun requestAccessibilityServicePermission() {
+        try {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Could not open accessibility settings", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun requestNotificationListenerPermission() {
+        try {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        } catch (_: Exception) {
+            Toast.makeText(this, "Could not open notification listener settings", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun requestOverlayPermission() {
         try {
             hasRequestedOverlay = true
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())
             startActivity(intent)
         } catch (_: Exception) {
             Toast.makeText(this, "Could not open overlay settings", Toast.LENGTH_SHORT).show()

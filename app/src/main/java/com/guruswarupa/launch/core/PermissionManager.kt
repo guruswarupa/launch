@@ -2,6 +2,7 @@ package com.guruswarupa.launch.core
 
 import android.Manifest
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -19,6 +20,7 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.receivers.ScreenOffAdminReceiver
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
+import com.guruswarupa.launch.services.LaunchNotificationListenerService
 
 /**
  * Manages all permission requests for the launcher
@@ -35,6 +37,7 @@ class PermissionManager(
         const val USAGE_STATS_REQUEST = 600
         const val NOTIFICATION_PERMISSION_REQUEST = 900
         const val DEVICE_ADMIN_REQUEST = 1000
+        const val NOTIFICATION_POLICY_REQUEST = 1100
     }
     
     /**
@@ -177,6 +180,71 @@ class PermissionManager(
             .setMessage(activity.getString(R.string.accessibility_permission_message))
             .setPositiveButton(activity.getString(R.string.grant_permission)) { _, _ ->
                 val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                activity.startActivity(intent)
+            }
+            .setNegativeButton(activity.getString(R.string.cancel_button), null)
+            .show()
+        
+        fixDialogTextColors(dialog)
+    }
+
+    /**
+     * Checks if Notification Policy access is enabled (for DND features)
+     */
+    fun isNotificationPolicyAccessGranted(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            return notificationManager.isNotificationPolicyAccessGranted
+        }
+        return false
+    }
+
+    /**
+     * Request Notification Policy access permission
+     */
+    fun requestNotificationPolicyPermission() {
+        val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+            .setTitle(activity.getString(R.string.notification_policy_permission_title))
+            .setMessage(activity.getString(R.string.notification_policy_permission_message))
+            .setPositiveButton(activity.getString(R.string.grant_permission)) { _, _ ->
+                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                activity.startActivity(intent)
+            }
+            .setNegativeButton(activity.getString(R.string.cancel_button), null)
+            .show()
+        
+        fixDialogTextColors(dialog)
+    }
+
+    /**
+     * Checks if Notification Listener service is enabled
+     */
+    fun isNotificationListenerServiceEnabled(): Boolean {
+        val enabledServices = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            ?: return false
+        
+        val componentName = ComponentName(activity, LaunchNotificationListenerService::class.java)
+        val colonSplitter = TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == componentName) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Request Notification Listener service permission
+     */
+    fun requestNotificationListenerPermission() {
+        val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+            .setTitle(activity.getString(R.string.notification_listener_permission_title))
+            .setMessage(activity.getString(R.string.notification_listener_permission_message))
+            .setPositiveButton(activity.getString(R.string.grant_permission)) { _, _ ->
+                val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
                 activity.startActivity(intent)
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)
