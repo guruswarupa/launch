@@ -3,6 +3,8 @@ package com.guruswarupa.launch.ui.activities
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -25,6 +27,7 @@ import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import android.app.AppOpsManager
+import android.os.Environment
 import androidx.core.content.edit
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
@@ -166,6 +169,30 @@ class OnboardingActivity : ComponentActivity() {
                 103
             ))
         }
+        
+        // Add notification policy access permission
+        add(PermissionInfo(
+            "", // Special permission that doesn't use Manifest.permission
+            "Notification Policy Access",
+            "To use Do Not Disturb features and control notification settings, please grant notification policy access. This allows the launcher to manage your notification preferences and DND modes.",
+            106 // Using 106 as the request code
+        ))
+        
+        // Add accessibility service permission
+        add(PermissionInfo(
+            "", // Special permission that doesn't use Manifest.permission
+            "Accessibility Service",
+            "To enable advanced features like screen lock with double tap and screenshot functionality, please enable Launch in Accessibility settings. This allows the launcher to perform system-level actions.",
+            107 // Using 107 as the request code
+        ))
+        
+        // Add notification listener permission
+        add(PermissionInfo(
+            "", // Special permission that doesn't use Manifest.permission
+            "Notification Access",
+            "To read and manage notifications in the notification widget, please enable Launch in Notification Access settings. This allows the launcher to display and interact with your notifications.",
+            108 // Using 108 as the request code
+        ))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -575,9 +602,44 @@ class OnboardingActivity : ComponentActivity() {
         currentPermissionIndex++
         while (currentPermissionIndex < permissionList.size) {
             val permissionInfo = permissionList[currentPermissionIndex]
-            if (ContextCompat.checkSelfPermission(this, permissionInfo.permission) != PackageManager.PERMISSION_GRANTED) {
-                showPermissionExplanation(permissionInfo)
-                return
+            
+            // Handle special permissions that don't use standard permission checking
+            when (permissionInfo.permission) {
+                "" -> {
+                    // Special permission that requires custom handling
+                    when (permissionInfo.requestCode) {
+                        106 -> { // Notification policy access
+                            if (!hasNotificationPolicyPermission()) {
+                                showPermissionExplanation(permissionInfo)
+                                return
+                            }
+                        }
+                        107 -> { // Accessibility service
+                            if (!hasAccessibilityServicePermission()) {
+                                showPermissionExplanation(permissionInfo)
+                                return
+                            }
+                        }
+                        108 -> { // Notification listener
+                            if (!hasNotificationListenerPermission()) {
+                                showPermissionExplanation(permissionInfo)
+                                return
+                            }
+                        }
+                        else -> {
+                            // For any other special permissions
+                            showPermissionExplanation(permissionInfo)
+                            return
+                        }
+                    }
+                }
+                else -> {
+                    // Standard permission check
+                    if (ContextCompat.checkSelfPermission(this, permissionInfo.permission) != PackageManager.PERMISSION_GRANTED) {
+                        showPermissionExplanation(permissionInfo)
+                        return
+                    }
+                }
             }
             currentPermissionIndex++
         }
@@ -589,11 +651,25 @@ class OnboardingActivity : ComponentActivity() {
             .setTitle(permissionInfo.title)
             .setMessage(permissionInfo.explanation)
             .setPositiveButton("Allow") { _, _ ->
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(permissionInfo.permission),
-                    permissionInfo.requestCode
-                )
+                when (permissionInfo.requestCode) {
+                    106 -> { // Notification policy access
+                        startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                    }
+                    107 -> { // Accessibility service
+                        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    }
+                    108 -> { // Notification listener
+                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                    }
+                    else -> {
+                        // For standard permissions
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(permissionInfo.permission),
+                            permissionInfo.requestCode
+                        )
+                    }
+                }
             }
             .setNegativeButton("Skip") { _, _ ->
                 markPermissionAsDenied(permissionInfo.permission)
@@ -676,7 +752,7 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun hasStoragePermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try { android.os.Environment.isExternalStorageManager() } catch (_: Exception) { false }
+            try { Environment.isExternalStorageManager() } catch (_: Exception) { false }
         } else {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
         }
@@ -717,6 +793,49 @@ class OnboardingActivity : ComponentActivity() {
         val appOpsManager = getSystemService(APP_OPS_SERVICE) as AppOpsManager
         val mode = appOpsManager.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
         return mode == AppOpsManager.MODE_ALLOWED
+    }
+
+    @Suppress("DEPRECATION")
+    private fun hasNotificationPolicyPermission(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            return notificationManager.isNotificationPolicyAccessGranted
+        }
+        return false
+    }
+
+    private fun hasAccessibilityServicePermission(): Boolean {
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            ?: return false
+        
+        val expectedComponentName = ComponentName(this, com.guruswarupa.launch.services.ScreenLockAccessibilityService::class.java)
+        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun hasNotificationListenerPermission(): Boolean {
+        val enabledServices = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+            ?: return false
+        
+        val expectedComponentName = ComponentName(this, com.guruswarupa.launch.services.LaunchNotificationListenerService::class.java)
+        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun setDefaultLauncher() {
@@ -934,7 +1053,7 @@ class OnboardingActivity : ComponentActivity() {
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
-        super.onRequestPermissionsResult(requestCode, permissions = arrayOf(), grantResults = intArrayOf())
+        super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_BACKUP_REQUEST_CODE) {
             data.data?.let { importBackupFromFile(it) }
         }

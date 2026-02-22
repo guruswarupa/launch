@@ -14,6 +14,10 @@
     <string name="request_device_admin_title">Enable Screen Off</string>
     <string name="request_device_admin_message">To turn off the screen with a double-tap, Launch needs Device Administrator permission.</string>
     <string name="grant_permission">Grant</string>
+    <string name="notification_policy_permission_title">Notification Policy Access</string>
+    <string name="notification_policy_permission_message">To use Do Not Disturb features and control notification settings, please grant notification policy access in the next screen.</string>
+    <string name="notification_listener_permission_title">Notification Access</string>
+    <string name="notification_listener_permission_message">To read and manage notifications in the notification widget, please enable Launch in Notification Access settings.</string>
 
     <!-- App Search Strings -->
     <string name="search_on_play_store">Search %1$s on Play Store</string>
