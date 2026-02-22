@@ -579,7 +579,7 @@ class MainActivity : FragmentActivity() {
         // Initialize or update AppSearchManager with new app data
         if (!::appSearchManager.isInitialized && !isFinishing && !isDestroyed && ::adapter.isInitialized) {
             updateAppSearchManager()
-        } else if (::appSearchManager.isInitialized && isFinal) {
+        } else if (::appSearchManager.isInitialized) {
             updateAppSearchManager()
         }
     }
@@ -591,12 +591,13 @@ class MainActivity : FragmentActivity() {
         if (isFinishing || isDestroyed) return
         
         if (::appSearchManager.isInitialized) {
-            appSearchManager.updateData(fullAppList, contactManager.getContactsList())
+            appSearchManager.updateData(fullAppList, appList, contactManager.getContactsList())
         } else {
             // Initial initialization
             appSearchManager = AppSearchManager(
                 packageManager = packageManager,
                 fullAppList = fullAppList,
+                homeAppList = appList,
                 adapter = adapter,
                 searchBox = searchBox,
                 contactsList = contactManager.getContactsList(),

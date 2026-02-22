@@ -14,6 +14,7 @@ import java.util.concurrent.Executors
 class AppSearchManager(
     private val packageManager: PackageManager,
     private val fullAppList: MutableList<ResolveInfo>,
+    private var homeAppList: List<ResolveInfo>,
     private val adapter: AppAdapter,
     private val searchBox: EditText,
     private var contactsList: List<String>,
@@ -33,6 +34,7 @@ class AppSearchManager(
 
     private val appLabelCache = mutableMapOf<String, String>()
     private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
+    private val dataLock = Any()
 
     init {
         // Optimization #4: Avoid rebuilding label map in background. 
@@ -51,9 +53,11 @@ class AppSearchManager(
     }
 
     fun updateContactsList() {
-        // Update contacts list and clear search cache
-        searchCache.clear()
-        // Contacts list is refreshed by the caller, no need for background task here
+        synchronized(dataLock) {
+            // Update contacts list and clear search cache
+            searchCache.clear()
+        }
+        // Contacts list is refreshed by the caller via updateData
     }
 
     private fun getAppLabel(info: ResolveInfo): String {
@@ -93,12 +97,15 @@ class AppSearchManager(
         refreshSearch()
     }
 
-    fun updateData(newFullAppList: List<ResolveInfo>, newContactsList: List<String>) {
-        // Update data without resetting currentSearchMode
-        fullAppList.clear()
-        fullAppList.addAll(newFullAppList)
-        contactsList = newContactsList
-        searchCache.clear()
+    fun updateData(newFullAppList: List<ResolveInfo>, newHomeAppList: List<ResolveInfo>, newContactsList: List<String>) {
+        synchronized(dataLock) {
+            // Update data without resetting currentSearchMode
+            fullAppList.clear()
+            fullAppList.addAll(newFullAppList)
+            homeAppList = ArrayList(newHomeAppList)
+            contactsList = newContactsList
+            searchCache.clear()
+        }
         refreshSearch()
     }
 
@@ -111,6 +118,17 @@ class AppSearchManager(
         val queryLower = query.lowercase().trim()
         val newFilteredList = ArrayList<ResolveInfo>()
         
+        // Take snapshots under lock to prevent ConcurrentModificationException
+        val fullAppListSnapshot: List<ResolveInfo>
+        val homeAppListSnapshot: List<ResolveInfo>
+        val contactsListSnapshot: List<String>
+        
+        synchronized(dataLock) {
+            fullAppListSnapshot = ArrayList(fullAppList)
+            homeAppListSnapshot = ArrayList(homeAppList)
+            contactsListSnapshot = ArrayList(contactsList)
+        }
+        
         if (queryLower.isNotEmpty()) {
             evaluateMathExpression(query)?.let { result ->
                 newFilteredList.add(createMathResultOption(query, result))
@@ -120,8 +138,9 @@ class AppSearchManager(
 
                 // 1. Search Apps
                 if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.APPS) {
-                    fullAppList.forEach { info ->
+                    fullAppListSnapshot.forEach { info ->
                         val packageName = info.activityInfo.packageName
+                        // Always respect filtering for Focus Mode or Hidden Apps even during search
                         if (isAppFiltered?.invoke(packageName) == true) return@forEach
                         
                         val label = getAppLabel(info)
@@ -149,7 +168,7 @@ class AppSearchManager(
 
                 // 2. Search Contacts
                 if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.CONTACTS) {
-                    contactsList.asSequence()
+                    contactsListSnapshot.asSequence()
                         .filter { it.contains(query, ignoreCase = true) }
                         .take(if (currentSearchMode == SearchMode.ALL) 5 else 20)
                         .forEach { contact ->
@@ -199,24 +218,8 @@ class AppSearchManager(
                 }
             }
         } else {
-            // Cache sorted app list for empty queries
-            val emptyQueryKey = ""
-            val cachedEmpty = searchCache[emptyQueryKey]
-            if (cachedEmpty != null) {
-                newFilteredList.addAll(cachedEmpty)
-            } else {
-                // Filter out apps that should be hidden (e.g., in focus mode)
-                val appsToSort = if (isAppFiltered != null) {
-                    fullAppList.filter { !isAppFiltered.invoke(it.activityInfo.packageName) }
-                } else {
-                    fullAppList
-                }
-                
-                // Sort alphabetically by app name
-                val sorted = appsToSort.sortedBy { getSortKey(getAppLabel(it)) }
-                newFilteredList.addAll(sorted)
-                searchCache[emptyQueryKey] = ArrayList(sorted)
-            }
+            // EMPTY QUERY: Show exactly what\'s on the home screen (filtered for focus mode, favorites, etc.)
+            newFilteredList.addAll(homeAppListSnapshot)
         }
 
         handler.post {
