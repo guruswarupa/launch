@@ -418,7 +418,7 @@
                         android:paddingHorizontal="16dp"
                         android:layout_marginBottom="16dp"/>
 
-                    <com.guruswarupa.launch.WrapContentRecyclerView
+                    <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
                         android:id="@+id/favorites_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -501,7 +501,7 @@
                         android:layout_marginBottom="8dp"
                         android:visibility="gone"/>
 
-                    <com.guruswarupa.launch.WrapContentRecyclerView
+                    <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
                         android:id="@+id/workspaces_list_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -529,7 +529,7 @@
                         android:layout_marginTop="8dp"
                         android:layout_marginBottom="8dp"/>
 
-                    <com.guruswarupa.launch.WrapContentRecyclerView
+                    <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
                         android:id="@+id/workspaces_apps_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

@@ -17,12 +17,20 @@
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="android:textColor">@color/text</item>
         
-        <!-- Status bar -->
-        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+        <!-- Status bar - transparent for blur effect -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
         
-        <!-- Navigation bar -->
-        <item name="android:navigationBarColor">@color/colorPrimaryDark</item>
+        <!-- Navigation bar - transparent for blur effect -->
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        
+        <!-- Enable edge-to-edge display -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
         
         <!-- Window background -->
         <item name="android:windowBackground">@color/background</item>

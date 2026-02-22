@@ -25,6 +25,7 @@ import com.guruswarupa.launch.utils.WidgetPreviewManager
 import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.handlers.ActivityResultHandler
+import com.guruswarupa.launch.utils.BlurUtils
 
 class WidgetConfigurationActivity : AppCompatActivity() {
 

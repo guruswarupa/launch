@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.FocusModeManager
+import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.ui.adapters.FocusModeAppAdapter
 import java.util.concurrent.Executors
 
@@ -161,7 +162,13 @@ class FocusModeConfigActivity : ComponentActivity() {
                 @Suppress("DEPRECATION")
                 decorView.systemUiVisibility = flags
             }
-        } catch (_: Exception) {}
+            
+            // Apply blur effect to status bar
+            BlurUtils.applyBlurToStatusBar(this)
+        } catch (_: Exception) {
+            // Apply blur effect as fallback
+            BlurUtils.applyBlurToStatusBar(this)
+        }
     }
 
     override fun onDestroy() {

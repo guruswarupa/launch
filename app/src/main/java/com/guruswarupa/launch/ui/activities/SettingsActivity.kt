@@ -29,6 +29,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
@@ -1069,12 +1070,17 @@ class SettingsActivity : ComponentActivity() {
                 @Suppress("DEPRECATION")
                 decorView.systemUiVisibility = flags
             }
+            
+            // Apply blur effect to status bar
+            BlurUtils.applyBlurToStatusBar(this)
         } catch (_: Exception) {
             try {
                 @Suppress("DEPRECATION")
                 window.statusBarColor = Color.TRANSPARENT
                 @Suppress("DEPRECATION")
                 window.navigationBarColor = Color.TRANSPARENT
+                // Apply blur effect as fallback
+                BlurUtils.applyBlurToStatusBar(this)
             } catch (_: Exception) {
             }
         }

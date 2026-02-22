@@ -16,6 +16,7 @@ import com.guruswarupa.launch.managers.WorkspaceManager
 import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.Workspace
+import com.guruswarupa.launch.utils.BlurUtils
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
@@ -317,6 +318,9 @@ class WorkspaceConfigActivity : ComponentActivity() {
                 @Suppress("DEPRECATION")
                 decorView.systemUiVisibility = flags
             }
+            
+            // Apply blur effect to status bar
+            BlurUtils.applyBlurToStatusBar(this)
         } catch (_: Exception) {
             // If anything fails, at least try to set the colors
             try {
@@ -324,6 +328,8 @@ class WorkspaceConfigActivity : ComponentActivity() {
                 window.statusBarColor = Color.TRANSPARENT
                 @Suppress("DEPRECATION")
                 window.navigationBarColor = Color.TRANSPARENT
+                // Apply blur effect as fallback
+                BlurUtils.applyBlurToStatusBar(this)
             } catch (_: Exception) {
                 // Ignore if even this fails
             }

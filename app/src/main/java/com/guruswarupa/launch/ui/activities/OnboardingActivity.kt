@@ -35,6 +35,7 @@ import com.guruswarupa.launch.managers.WorkspaceManager
 import com.guruswarupa.launch.ui.adapters.FavoritesOnboardingAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesListAdapter
+import com.guruswarupa.launch.utils.BlurUtils
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -249,10 +250,15 @@ class OnboardingActivity : ComponentActivity() {
                 
                 decorView.systemUiVisibility = flags
             }
+            
+            // Apply blur effect to status bar
+            BlurUtils.applyBlurToStatusBar(this)
         } catch (_: Exception) {
             try {
                 window.statusBarColor = android.graphics.Color.TRANSPARENT
                 window.navigationBarColor = android.graphics.Color.TRANSPARENT
+                // Apply blur effect as fallback
+                BlurUtils.applyBlurToStatusBar(this)
             } catch (_: Exception) {}
         }
     }

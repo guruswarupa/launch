@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppLockManager
+import com.guruswarupa.launch.utils.BlurUtils
 
 class AppLockSettingsActivity : ComponentActivity() {
 
@@ -232,10 +233,15 @@ class AppLockSettingsActivity : ComponentActivity() {
                 }
                 decorView.systemUiVisibility = flags
             }
+            
+            // Apply blur effect to status bar
+            BlurUtils.applyBlurToStatusBar(this)
         } catch (_: Exception) {
             try {
                 window.statusBarColor = Color.TRANSPARENT
                 window.navigationBarColor = Color.TRANSPARENT
+                // Apply blur effect as fallback
+                BlurUtils.applyBlurToStatusBar(this)
             } catch (_: Exception) {
             }
         }
