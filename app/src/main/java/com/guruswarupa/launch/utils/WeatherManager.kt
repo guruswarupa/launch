@@ -45,6 +45,16 @@ class WeatherManager(private val context: Context) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
         return prefs.getString("weather_stored_city_name", null)
     }
+    
+    fun getTemperatureUnit(): String {
+        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        return prefs.getString("weather_temperature_unit", "celsius") ?: "celsius"
+    }
+    
+    private fun saveTemperatureUnit(unit: String) {
+        val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
+        prefs.edit { putString("weather_temperature_unit", unit) }
+    }
 
     private fun saveCityName(cityName: String) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
@@ -83,9 +93,23 @@ class WeatherManager(private val context: Context) {
         val ageMinutes = (currentTime - cachedWeather.timestamp) / (1000 * 60)
         return ageMinutes < maxAgeMinutes
     }
+    
+    private fun convertTemperatureToSelectedUnit(temperature: Int): Int {
+        // Since we now fetch in the correct units, no conversion needed
+        return temperature
+    }
+    
+    private fun getTemperatureFormatString(): String {
+        val unit = getTemperatureUnit()
+        return if (unit == "fahrenheit") {
+            context.getString(R.string.weather_temp_format_fahrenheit)
+        } else {
+            context.getString(R.string.weather_temp_format_celsius)
+        }
+    }
 
     private data class CachedWeather(
-        val temperature: Int,
+        val temperature: Int, // Original temperature in Celsius from API
         val description: String,
         val weatherId: Int,
         val timestamp: Long
@@ -118,7 +142,9 @@ class WeatherManager(private val context: Context) {
             val cachedWeather = getCachedWeather()
             if (cachedWeather != null && isCacheValid(cachedWeather)) {
                 handler.post {
-                    weatherText.text = context.getString(R.string.weather_temp_format, cachedWeather.temperature, cachedWeather.description)
+                    val convertedTemp = convertTemperatureToSelectedUnit(cachedWeather.temperature)
+                    val formatString = getTemperatureFormatString()
+                    weatherText.text = String.format(formatString, convertedTemp, cachedWeather.description)
                     setWeatherIcon(weatherIcon, cachedWeather.weatherId)
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
@@ -144,7 +170,8 @@ class WeatherManager(private val context: Context) {
         } catch (_: Exception) {
             cityName
         }
-        val url = "https://api.openweathermap.org/data/2.5/weather?q=$encodedCityName&appid=$apiKey&units=metric"
+        val unitParam = if (getTemperatureUnit() == "fahrenheit") "imperial" else "metric"
+        val url = "https://api.openweathermap.org/data/2.5/weather?q=$encodedCityName&appid=$apiKey&units=$unitParam"
 
         executor.execute {
             try {
@@ -162,7 +189,9 @@ class WeatherManager(private val context: Context) {
                 saveCityName(actualCityName)
                 
                 handler.post {
-                    weatherText.text = context.getString(R.string.weather_temp_format, temperature, description)
+                    val convertedTemp = convertTemperatureToSelectedUnit(temperature)
+                    val formatString = getTemperatureFormatString()
+                    weatherText.text = String.format(formatString, convertedTemp, description)
                     setWeatherIcon(weatherIcon, weatherId)
                     setupRefreshListeners(weatherIcon, weatherText)
                 }
@@ -215,9 +244,20 @@ class WeatherManager(private val context: Context) {
             val dialogView = inflater.inflate(R.layout.dialog_weather_settings, null)
             val apiKeyInput = dialogView.findViewById<EditText>(R.id.weather_api_key_input)
             val locationInput = dialogView.findViewById<EditText>(R.id.weather_location_input)
+            val unitGroup = dialogView.findViewById<android.widget.RadioGroup>(R.id.temperature_unit_group)
+            val celsiusRadio = dialogView.findViewById<android.widget.RadioButton>(R.id.unit_celsius)
+            val fahrenheitRadio = dialogView.findViewById<android.widget.RadioButton>(R.id.unit_fahrenheit)
             
             apiKeyInput.setText(getApiKey() ?: "")
             locationInput.setText(getStoredCityName() ?: "")
+            
+            // Set initial temperature unit selection
+            val currentUnit = getTemperatureUnit()
+            if (currentUnit == "fahrenheit") {
+                fahrenheitRadio.isChecked = true
+            } else {
+                celsiusRadio.isChecked = true
+            }
             
             val builder = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             builder.setTitle("Weather Settings")
@@ -225,6 +265,10 @@ class WeatherManager(private val context: Context) {
                 .setPositiveButton("Save") { _, _ ->
                     val apiKey = apiKeyInput.text.toString().trim()
                     val location = locationInput.text.toString().trim()
+                    val selectedUnit = if (fahrenheitRadio.isChecked) "fahrenheit" else "celsius"
+                    
+                    // Save temperature unit
+                    saveTemperatureUnit(selectedUnit)
                     
                     if (apiKey.isNotEmpty()) {
                         saveApiKey(apiKey)
