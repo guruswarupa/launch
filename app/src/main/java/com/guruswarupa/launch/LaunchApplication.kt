@@ -7,6 +7,11 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.net.toUri
+import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.services.BackTapService
+import com.guruswarupa.launch.services.NightModeService
+import com.guruswarupa.launch.services.ScreenDimmerService
+import com.guruswarupa.launch.services.ShakeDetectionService
 import java.io.PrintWriter
 import java.io.StringWriter
 

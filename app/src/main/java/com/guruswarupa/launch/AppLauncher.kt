@@ -3,6 +3,7 @@ package com.guruswarupa.launch
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
+import com.guruswarupa.launch.managers.AppLockManager
 
 /**
  * Handles app launching logic with lock and timer checks.

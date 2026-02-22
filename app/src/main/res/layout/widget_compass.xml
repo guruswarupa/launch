@@ -61,7 +61,7 @@
             android:layout_gravity="center"
             android:layout_marginBottom="24dp">
 
-            <com.guruswarupa.launch.CompassView
+            <com.guruswarupa.launch.ui.views.CompassView
                 android:id="@+id/compass_view"
                 android:layout_width="match_parent"
                 android:layout_height="300dp"

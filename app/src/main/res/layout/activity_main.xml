@@ -146,8 +146,7 @@
                         android:src="@drawable/ic_search"
                         android:contentDescription="Search Type"
                         android:padding="12dp"
-                        android:scaleType="fitCenter"
-                        android:tint="@color/white"/>
+                        android:scaleType="fitCenter" />
 
                     <EditText
                         android:id="@+id/search_box"
@@ -169,8 +168,7 @@
                         android:layout_height="48dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_mic"
-                        android:contentDescription="Voice Search"
-                        android:tint="@color/white"/>
+                        android:contentDescription="Voice Search" />
                 </LinearLayout>
 
 
@@ -201,7 +199,7 @@
         </androidx.core.widget.NestedScrollView>
 
         <!-- Fast Scroller -->
-        <com.guruswarupa.launch.FastScroller
+        <com.guruswarupa.launch.ui.views.FastScroller
             android:id="@+id/fast_scroller"
             android:layout_width="20dp"
             android:layout_height="300dp"
@@ -467,7 +465,7 @@
                     android:gravity="start"
                     android:layout_marginBottom="16dp"/>
 
-                <com.guruswarupa.launch.WeeklyUsageGraphView
+                <com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
                     android:id="@+id/weekly_usage_graph"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>

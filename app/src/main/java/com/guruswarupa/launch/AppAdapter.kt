@@ -2,39 +2,40 @@ package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.ResolveInfo
+import android.content.Context
+import android.database.Cursor
 import android.net.Uri
+import android.provider.ContactsContract
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.Gravity
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.PopupMenu
+import android.graphics.drawable.Drawable
 import android.widget.TextView
 import android.widget.Toast
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.DiffUtil
-import android.content.ContentResolver
-import android.content.Context
-import android.database.Cursor
-import android.graphics.drawable.Drawable
-import android.provider.ContactsContract
-import android.widget.ArrayAdapter
-import android.widget.LinearLayout
-
-import android.provider.Settings
-import android.view.Gravity
-import android.widget.PopupMenu
-import java.util.concurrent.*
-import android.app.Activity
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.net.toUri
-import androidx.core.view.size
-import androidx.core.view.get
-import java.io.File
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
+import androidx.core.view.get
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.DiffUtil
+import java.io.File
+import java.util.concurrent.*
+
+import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.core.ShareManager
+import com.guruswarupa.launch.models.AppMetadata
+import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.ui.activities.SettingsActivity
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -280,6 +281,7 @@ class AppAdapter(
         return ViewHolder(view)
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
@@ -442,7 +444,6 @@ class AppAdapter(
                 holder.appIcon.setImageResource(R.drawable.ic_settings)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
-                    val setting = appInfo.activityInfo.name
                     val intent = Intent(activity, SettingsActivity::class.java)
                     activity.startActivity(intent)
                     searchBox.text.clear()
@@ -454,9 +455,9 @@ class AppAdapter(
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val filePath = appInfo.activityInfo.nonLocalizedLabel.toString()
-                    val file = java.io.File(filePath)
+                    val file = File(filePath)
                     if (file.exists()) {
-                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                        val uri = FileProvider.getUriForFile(
                             activity,
                             "${activity.packageName}.fileprovider",
                             file
@@ -467,7 +468,7 @@ class AppAdapter(
                         }
                         try {
                             activity.startActivity(intent)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             Toast.makeText(activity, "No app found to open this file", Toast.LENGTH_SHORT).show()
                         }
                     }
@@ -586,7 +587,14 @@ class AppAdapter(
                 val label = appInfo.loadLabel(activity.packageManager).toString()
                 labelCache[packageName] = label
                 try {
-                    activity.cacheManager.updateMetadataCache(packageName, AppMetadata(packageName, appInfo.activityInfo.name, label, System.currentTimeMillis()))
+                    activity.cacheManager.updateMetadataCache(packageName,
+                        AppMetadata(
+                            packageName,
+                            appInfo.activityInfo.name,
+                            label,
+                            System.currentTimeMillis()
+                        )
+                    )
                 } catch (_: Exception) {}
                 
                 (context as? Activity)?.runOnUiThread {
@@ -649,7 +657,7 @@ class AppAdapter(
             }
         }
         
-        for (i in 0 until popupMenu.menu.size) {
+        for (i in 0 until popupMenu.menu.size()) {
             val item = popupMenu.menu[i]
             val title = item.title?.toString() ?: continue
             val spannable = android.text.SpannableString(title)
