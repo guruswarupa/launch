@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.ui.adapters.AppPrivacyInfo
+import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.ui.adapters.PrivacyDashboardAdapter
 import java.util.concurrent.Executors
 
@@ -193,12 +194,17 @@ class PrivacyDashboardActivity : ComponentActivity() {
                 @Suppress("DEPRECATION")
                 decorView.systemUiVisibility = flags
             }
+            
+            // Apply blur effect to status bar
+            BlurUtils.applyBlurToStatusBar(this)
         } catch (_: Exception) {
             try {
                 @Suppress("DEPRECATION")
                 window.statusBarColor = Color.TRANSPARENT
                 @Suppress("DEPRECATION")
                 window.navigationBarColor = Color.TRANSPARENT
+                // Apply blur effect as fallback
+                BlurUtils.applyBlurToStatusBar(this)
             } catch (_: Exception) {
             }
         }

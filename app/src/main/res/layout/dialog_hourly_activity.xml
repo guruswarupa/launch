@@ -84,7 +84,7 @@
     </LinearLayout>
 
     <!-- Chart -->
-    <com.guruswarupa.launch.HourlyStepsChartView
+    <com.guruswarupa.launch.ui.views.HourlyStepsChartView
         android:id="@+id/hourly_chart"
         android:layout_width="match_parent"
         android:layout_height="400dp"

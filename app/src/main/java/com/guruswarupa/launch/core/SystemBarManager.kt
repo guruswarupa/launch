@@ -9,17 +9,17 @@ import androidx.core.view.WindowInsetsControllerCompat
 /**
  * Manages system bar (status bar and navigation bar) transparency and appearance
  */
+import com.guruswarupa.launch.utils.BlurUtils
+
 class SystemBarManager(private val activity: androidx.fragment.app.FragmentActivity) {
     
     /**
-     * Make status bar and navigation bar transparent
+     * Make status bar and navigation bar translucent with blur effect
      */
     fun makeSystemBarsTransparent() {
         val window = activity.window
         
-        // Set colors to transparent. 
-        // Note: although direct color setting might show deprecation warnings in some contexts,
-        // it remains necessary for full transparency in combination with edge-to-edge.
+        // Set colors to transparent
         @Suppress("DEPRECATION")
         window.statusBarColor = Color.TRANSPARENT
         @Suppress("DEPRECATION")
@@ -44,5 +44,15 @@ class SystemBarManager(private val activity: androidx.fragment.app.FragmentActiv
             @Suppress("DEPRECATION")
             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
         }
+        
+        // Apply blur effect to status bar
+        BlurUtils.applyBlurToStatusBar(activity)
+    }
+    
+    /**
+     * Remove blur effect from status bar
+     */
+    fun removeBlurEffect() {
+        BlurUtils.removeBlurFromStatusBar(activity)
     }
 }

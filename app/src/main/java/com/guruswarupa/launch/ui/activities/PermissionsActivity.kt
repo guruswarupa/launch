@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.utils.BlurUtils
 
 class PermissionsActivity : ComponentActivity() {
 
@@ -141,10 +142,15 @@ class PermissionsActivity : ComponentActivity() {
                 }
                 decorView.systemUiVisibility = flags
             }
+            
+            // Apply blur effect to status bar
+            BlurUtils.applyBlurToStatusBar(this)
         } catch (_: Exception) {
             try {
                 window.statusBarColor = Color.TRANSPARENT
                 window.navigationBarColor = Color.TRANSPARENT
+                // Apply blur effect as fallback
+                BlurUtils.applyBlurToStatusBar(this)
             } catch (_: Exception) {
             }
         }
