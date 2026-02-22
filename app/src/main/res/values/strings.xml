@@ -216,7 +216,11 @@
     <string name="tap_to_set_api_key">Tap to set weather API key</string>
     <string name="tap_to_enter_location">Tap to enter location</string>
     <string name="weather_unavailable">Weather unavailable</string>
-    <string name="weather_temp_format">%1$d°C %2$s</string>
+    <string name="weather_temp_format_celsius">%1$d°C %2$s</string>
+    <string name="weather_temp_format_fahrenheit">%1$d°F %2$s</string>
+    <string name="temperature_unit">Temperature Unit</string>
+    <string name="celsius">Celsius (°C)</string>
+    <string name="fahrenheit">Fahrenheit (°F)</string>
 
     <!-- Workout Strings -->
     <string name="workout_start">Start</string>

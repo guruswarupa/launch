@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.TemperatureManager
+import com.guruswarupa.launch.utils.WeatherManager
 import java.text.DecimalFormat
 
 class TemperatureWidget(
@@ -30,6 +31,7 @@ class TemperatureWidget(
     private lateinit var widgetContainer: LinearLayout
     private lateinit var noSensorText: TextView
     private lateinit var widgetView: View
+    private lateinit var weatherManager: WeatherManager
     
     companion object {
         private const val PREF_TEMPERATURE_ENABLED = "temperature_enabled"
@@ -59,6 +61,7 @@ class TemperatureWidget(
         noSensorText = widgetView.findViewById(R.id.no_sensor_text)
         
         temperatureManager = TemperatureManager(context)
+        weatherManager = WeatherManager(context)
         
         temperatureManager.setOnTemperatureChangedListener { temperature ->
             handler.post {
@@ -129,10 +132,19 @@ class TemperatureWidget(
     
     private fun updateTemperatureDisplay(temperature: Float) {
         val df = DecimalFormat("#.#")
-        temperatureText.text = context.getString(R.string.temperature_c_format, df.format(temperature))
+        val selectedUnit = weatherManager.getTemperatureUnit() // This method needs to be made public
         
-        val fahrenheit = temperatureManager.getTemperatureInFahrenheit()
-        fahrenheitText.text = context.getString(R.string.temperature_f_format, df.format(fahrenheit))
+        if (selectedUnit == "fahrenheit") {
+            // Show Fahrenheit as main temperature
+            val fahrenheit = temperatureManager.getTemperatureInFahrenheit()
+            temperatureText.text = context.getString(R.string.temperature_f_format, df.format(fahrenheit))
+            fahrenheitText.text = context.getString(R.string.temperature_c_format, df.format(temperature))
+        } else {
+            // Show Celsius as main temperature (default)
+            temperatureText.text = context.getString(R.string.temperature_c_format, df.format(temperature))
+            val fahrenheit = temperatureManager.getTemperatureInFahrenheit()
+            fahrenheitText.text = context.getString(R.string.temperature_f_format, df.format(fahrenheit))
+        }
         
         val status = temperatureManager.getTemperatureStatus()
         statusText.text = context.getString(R.string.status_format, status)
