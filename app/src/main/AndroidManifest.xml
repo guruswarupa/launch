@@ -256,6 +256,12 @@
             android:excludeFromRecents="true" />
 
         <activity
+            android:name=".ui.activities.AppDataDisclosureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch"
+            android:excludeFromRecents="true" />
+
+        <activity
             android:name=".ui.activities.WidgetConfigurationActivity"
             android:exported="false"
             android:theme="@style/Theme.Launch.Settings"

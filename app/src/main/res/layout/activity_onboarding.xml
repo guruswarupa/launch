@@ -162,6 +162,15 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:text="✓ Data Privacy Disclosure"
+                            android:textSize="14sp"
+                            android:textColor="@color/onboarding_text"
+                            android:alpha="0.9"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
                             android:text="✓ Grant necessary permissions"
                             android:textSize="14sp"
                             android:textColor="@color/onboarding_text"
@@ -174,41 +183,102 @@
                             android:text="✓ Set as default launcher"
                             android:textSize="14sp"
                             android:textColor="@color/onboarding_text"
-                            android:alpha="0.9"
-                            android:layout_marginBottom="8dp"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="✓ Choose your display style"
-                            android:textSize="14sp"
-                            android:textColor="@color/onboarding_text"
                             android:alpha="0.9"/>
 
                     </LinearLayout>
 
-                    <!-- Privacy Notice -->
+                </LinearLayout>
+
+                <!-- Data Privacy Step (Prominent Disclosure) -->
+                <LinearLayout
+                    android:id="@+id/data_privacy_step"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone">
+
                     <TextView
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Privacy Notice: All permissions are used solely for app functionality. We do NOT collect, store, or transmit any of your data. This is an open-source project - you can verify our codebase anytime."
-                        android:textSize="12sp"
-                        android:textColor="@color/onboarding_text_secondary"
+                        android:text="Data Privacy"
+                        android:textSize="28sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/onboarding_text"
                         android:gravity="center"
-                        android:alpha="0.8"
-                        android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
                         android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Your privacy is our priority. All data stays on your device."
-                        android:textSize="11sp"
+                        android:text="Your privacy is our priority. Please review our data usage policy:"
+                        android:textSize="16sp"
+                        android:textColor="@color/onboarding_text"
+                        android:gravity="center"
+                        android:layout_marginBottom="24dp"/>
+
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp"
+                        android:layout_marginBottom="24dp"
+                        android:backgroundTint="#22FFFFFF">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Installed Applications Disclosure"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/onboarding_text"
+                                android:layout_marginBottom="8dp"/>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Launch collects and accesses the list of your Installed Applications to enable its core launcher functionality, specifically to display your apps on the home screen, organize them into workspaces, and allow universal search."
+                                android:textSize="13sp"
+                                android:textColor="@color/onboarding_text"
+                                android:alpha="0.9"
+                                android:lineSpacingExtra="4dp"
+                                android:layout_marginBottom="12dp"/>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Data Commitment:"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/onboarding_text"
+                                android:layout_marginBottom="8dp"/>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="• This data is processed locally on your device.\n• We do NOT upload or transmit your app list to any external servers.\n• We do NOT share this information with third parties."
+                                android:textSize="13sp"
+                                android:textColor="@color/onboarding_text"
+                                android:alpha="0.9"
+                                android:lineSpacingExtra="4dp"/>
+
+                        </LinearLayout>
+                    </androidx.cardview.widget.CardView>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="By clicking 'I Agree', you consent to the access of your installed applications list for these purposes."
+                        android:textSize="12sp"
                         android:textColor="@color/onboarding_text_secondary"
                         android:gravity="center"
-                        android:alpha="0.7"
-                        android:fontStyle="italic"/>
+                        android:alpha="0.8"
+                        android:paddingHorizontal="16dp"/>
 
                 </LinearLayout>
 
