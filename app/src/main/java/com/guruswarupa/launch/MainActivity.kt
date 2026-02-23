@@ -41,6 +41,7 @@ import com.guruswarupa.launch.services.*
 import com.guruswarupa.launch.models.*
 import com.guruswarupa.launch.ui.views.*
 import com.guruswarupa.launch.ui.activities.WidgetConfigurationActivity
+import com.guruswarupa.launch.ui.activities.AppDataDisclosureActivity
 
 import com.guruswarupa.launch.widgets.WidgetSetupManager
 import com.guruswarupa.launch.widgets.CalculatorWidget
@@ -686,6 +687,14 @@ class MainActivity : FragmentActivity() {
         
         // Check if onboarding is needed
         if (onboardingHelper.checkAndStartOnboarding()) {
+            return
+        }
+        
+        // Check if user has given consent for app data collection
+        if (!sharedPreferences.getBoolean("app_data_consent_given", false)) {
+            // Show disclosure activity
+            startActivity(Intent(this, AppDataDisclosureActivity::class.java))
+            finish()
             return
         }
         

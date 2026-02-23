@@ -51,6 +51,7 @@ data class PermissionInfo(
 
 enum class OnboardingStep {
     WELCOME,
+    DATA_PRIVACY,
     PERMISSIONS,
     DEFAULT_LAUNCHER,
     BACKUP_IMPORT,
@@ -79,6 +80,7 @@ class OnboardingActivity : ComponentActivity() {
     // UI References
     private lateinit var onboardingScrollView: android.widget.ScrollView
     private lateinit var welcomeStep: LinearLayout
+    private lateinit var dataPrivacyStep: LinearLayout
     private lateinit var permissionsStep: LinearLayout
     private lateinit var defaultLauncherStep: LinearLayout
     private lateinit var backupImportStep: LinearLayout
@@ -200,6 +202,17 @@ class OnboardingActivity : ComponentActivity() {
         
         // Check if onboarding is already complete
         if (!prefs.getBoolean("isFirstTime", true)) {
+            // Even if onboarding is complete, check if they've consented to data policy (for existing users)
+            if (!prefs.getBoolean("app_data_consent_given", false)) {
+                // Show only the privacy step then finish
+                setContentView(R.layout.activity_onboarding)
+                initializeViews()
+                setupClickListeners()
+                showStep(OnboardingStep.DATA_PRIVACY)
+                backButton.visibility = View.GONE
+                return
+            }
+            
             // Onboarding already completed, redirect to MainActivity
             startActivity(Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -220,8 +233,10 @@ class OnboardingActivity : ComponentActivity() {
         initializeViews()
         setupClickListeners()
         
-        // Preload app list immediately in background to avoid delays later
-        preloadAppList()
+        // Preload app list ONLY if consent is already given
+        if (prefs.getBoolean("app_data_consent_given", false)) {
+            preloadAppList()
+        }
         
         // Check if we should continue from default launcher step
         val continueFromDefaultLauncher = intent.getBooleanExtra("continueFromDefaultLauncher", false)
@@ -293,6 +308,7 @@ class OnboardingActivity : ComponentActivity() {
     private fun initializeViews() {
         onboardingScrollView = findViewById(R.id.onboarding_scroll_view)
         welcomeStep = findViewById(R.id.welcome_step)
+        dataPrivacyStep = findViewById(R.id.data_privacy_step)
         permissionsStep = findViewById(R.id.permissions_step)
         defaultLauncherStep = findViewById(R.id.default_launcher_step)
         backupImportStep = findViewById(R.id.backup_import_step)
@@ -361,6 +377,7 @@ class OnboardingActivity : ComponentActivity() {
         
         // Hide all steps first
         welcomeStep.visibility = View.GONE
+        dataPrivacyStep.visibility = View.GONE
         permissionsStep.visibility = View.GONE
         defaultLauncherStep.visibility = View.GONE
         backupImportStep.visibility = View.GONE
@@ -377,6 +394,23 @@ class OnboardingActivity : ComponentActivity() {
                 backButton.visibility = View.GONE
                 nextButton.setText(R.string.onboarding_get_started)
                 updateProgressIndicator(1)
+                nextButton.setOnClickListener { goToNextStep() }
+            }
+            OnboardingStep.DATA_PRIVACY -> {
+                dataPrivacyStep.visibility = View.VISIBLE
+                backButton.visibility = if (prefs.getBoolean("isFirstTime", true)) View.VISIBLE else View.GONE
+                nextButton.setText(R.string.i_agree)
+                updateProgressIndicator(1)
+                nextButton.setOnClickListener { 
+                    prefs.edit { putBoolean("app_data_consent_given", true) }
+                    preloadAppList() // Start preloading now that we have consent
+                    if (prefs.getBoolean("isFirstTime", true)) {
+                        goToNextStep()
+                    } else {
+                        // For existing users just finishing this step
+                        finishSetup()
+                    }
+                }
             }
             OnboardingStep.PERMISSIONS -> {
                 permissionsStep.visibility = View.VISIBLE
@@ -457,6 +491,7 @@ class OnboardingActivity : ComponentActivity() {
                 backButton.visibility = View.GONE
                 nextButton.setText(R.string.onboarding_launch_app)
                 updateProgressIndicator(7)
+                nextButton.setOnClickListener { finishSetup() }
             }
         }
     }
@@ -512,7 +547,8 @@ class OnboardingActivity : ComponentActivity() {
     private fun goToPreviousStep() {
         when (currentStep) {
             OnboardingStep.WELCOME -> {}
-            OnboardingStep.PERMISSIONS -> showStep(OnboardingStep.WELCOME)
+            OnboardingStep.DATA_PRIVACY -> showStep(OnboardingStep.WELCOME)
+            OnboardingStep.PERMISSIONS -> showStep(OnboardingStep.DATA_PRIVACY)
             OnboardingStep.DEFAULT_LAUNCHER -> showStep(OnboardingStep.PERMISSIONS)
             OnboardingStep.BACKUP_IMPORT -> showStep(OnboardingStep.DEFAULT_LAUNCHER)
             OnboardingStep.DISPLAY_STYLE -> showStep(OnboardingStep.BACKUP_IMPORT)
@@ -525,7 +561,8 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun goToNextStep() {
         when (currentStep) {
-            OnboardingStep.WELCOME -> showStep(OnboardingStep.PERMISSIONS)
+            OnboardingStep.WELCOME -> showStep(OnboardingStep.DATA_PRIVACY)
+            OnboardingStep.DATA_PRIVACY -> showStep(OnboardingStep.PERMISSIONS)
             OnboardingStep.PERMISSIONS -> showStep(OnboardingStep.DEFAULT_LAUNCHER)
             OnboardingStep.DEFAULT_LAUNCHER -> {
                 if (isDefaultLauncher()) {
@@ -1023,7 +1060,10 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun finishSetup() {
         saveCreatedWorkspaces()
-        prefs.edit { putBoolean("isFirstTime", false) }
+        prefs.edit { 
+            putBoolean("isFirstTime", false) 
+            putBoolean("app_data_consent_given", true)
+        }
         startActivity(Intent(this, MainActivity::class.java).apply { 
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK 
         })

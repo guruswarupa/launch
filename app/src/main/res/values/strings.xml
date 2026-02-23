@@ -4,7 +4,25 @@
     <string name="search_text"> Search...</string>
     
     <!-- Accessibility Strings -->
-    <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock.</string>
+    <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock. This service does not collect, store, or transmit any personal data. It only performs system-level actions like screen locking and taking screenshots when explicitly triggered by user gestures.</string>
+    
+    <!-- App Data Disclosure Strings -->
+    <string name="app_data_disclosure_title">App Data Collection</string>
+    <string name="app_data_disclosure_message">Launch collects information about installed applications on your device to display them in the app launcher. This data is stored locally on your device and is not transmitted to any external servers or third parties.
+
+We collect:
+• Package names of installed apps
+• App names and icons
+• Launch intent information
+
+This data is used solely to:
+• Display your apps in the launcher
+• Enable app search functionality
+• Provide app organization features
+
+No personal data is collected, stored, or shared with third parties.</string>
+    <string name="i_agree">I Agree</string>
+    <string name="decline">Decline</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
     <string name="accessibility_permission_message">To lock the screen and keep fingerprint unlock working, please enable Launch in Accessibility settings.</string>
 
