@@ -368,6 +368,11 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
+        // Setup Control Center Config Button
+        findViewById<Button>(R.id.config_control_center_button)?.setOnClickListener {
+            startActivity(Intent(this, ControlCenterConfigActivity::class.java))
+        }
+
         // Setup torch toggle switch
         val shakeTorchSwitch = findViewById<SwitchCompat>(R.id.shake_torch_switch)
         val isTorchEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
