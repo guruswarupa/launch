@@ -1222,6 +1222,29 @@
                         android:textColor="@android:color/white"
                         android:padding="16dp"/>
 
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Project Resources:"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/github_links_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textSize="14sp"
+                        android:textColor="@color/white"
+                        android:textColorLink="@color/colorAccent"
+                        android:lineSpacingExtra="4dp"
+                        android:scrollbars="vertical"
+                        android:maxLines="10"
+                        android:ellipsize="none"/>
+
                 </LinearLayout>
 
             </LinearLayout>

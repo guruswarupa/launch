@@ -18,6 +18,8 @@ import android.provider.Settings
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.text.Html
+import android.text.method.LinkMovementMethod
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -429,6 +431,19 @@ class SettingsActivity : ComponentActivity() {
         val supportContent = findViewById<LinearLayout>(R.id.support_content)
         val supportArrow = findViewById<TextView>(R.id.support_arrow)
         setupSectionToggle(supportHeader, supportContent, supportArrow)
+        
+        // Set up movement method for GitHub links
+        val githubLinksText = findViewById<TextView>(R.id.github_links_text)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
+        } else {
+            @Suppress("DEPRECATION")
+            githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links))
+        }
+        githubLinksText.movementMethod = LinkMovementMethod.getInstance()
+        // Ensure links are visible with proper styling
+        githubLinksText.isClickable = true
+        githubLinksText.isFocusable = true
         
         // Launcher Header
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)

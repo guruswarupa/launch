@@ -21,6 +21,12 @@ This data is used solely to:
 • Provide app organization features
 
 No personal data is collected, stored, or shared with third parties.</string>
+    <string name="data_disclosure_links">For more information, please review our:
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing Guidelines&lt;/a&gt;
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
     <string name="i_agree">I Agree</string>
     <string name="decline">Decline</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
