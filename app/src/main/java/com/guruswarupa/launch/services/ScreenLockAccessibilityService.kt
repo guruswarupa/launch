@@ -20,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.ui.activities.ScreenRecordPermissionActivity
 import kotlin.math.abs
 
 class ScreenLockAccessibilityService : AccessibilityService() {
@@ -308,15 +309,25 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             hideMenu()
         }
 
-        // Record Screen (System)
-        view.findViewById<View>(R.id.btn_record)?.setOnClickListener {
-            try {
-                // Try to launch system screen recorder if it exists
-                val intent = Intent("android.intent.action.SCREEN_RECORD")
+        // Record Screen (Custom)
+        val btnRecord = view.findViewById<View>(R.id.btn_record)
+        val txtRecord = view.findViewById<TextView>(R.id.txt_record)
+        val imgRecord = view.findViewById<ImageView>(R.id.img_record)
+        
+        if (ScreenRecordingService.isRunning) {
+            imgRecord?.setColorFilter(0xFFF7768E.toInt())
+            txtRecord?.text = "Stop"
+        }
+
+        btnRecord?.setOnClickListener {
+            if (ScreenRecordingService.isRunning) {
+                ScreenRecordingService.stopService(this)
+                imgRecord?.clearColorFilter()
+                txtRecord?.text = "Record"
+            } else {
+                val intent = Intent(this, ScreenRecordPermissionActivity::class.java)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Use system screen recorder from Quick Settings", Toast.LENGTH_SHORT).show()
             }
             hideMenu()
         }
