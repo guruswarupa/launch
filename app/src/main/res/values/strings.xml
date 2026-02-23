@@ -262,5 +262,5 @@ No personal data is collected, stored, or shared with third parties.</string>
 
     <!-- Accessibility Shortcut -->
     <string name="accessibility_shortcut">Accessibility Shortcut</string>
-    <string name="accessibility_shortcut_description">Show a floating button for quick access to system controls (WiFi, Sound, Brightness, etc.)</string>
+    <string name="accessibility_shortcut_description">Show a floating button for quick access to system controls</string>
 </resources>

@@ -25,6 +25,7 @@ object Constants {
         const val WALLPAPER_BLUR_LEVEL = "wallpaper_blur_level"
         const val SEARCH_ENGINE = "search_engine"
         const val ACCESSIBILITY_SHORTCUT_ENABLED = "accessibility_shortcut_enabled"
+        const val CONTROL_CENTER_SHORTCUTS = "control_center_shortcuts"
     }
     
     // FileProvider
@@ -37,7 +38,7 @@ object Constants {
     const val APK_EXTENSION = ".apk"
     
     // MIME types
-    const val MIME_TYPE_APK = "application/vnd.android.package-archive"
+    const val MIME_TYPE_APK = "application_vnd.android.package-archive"
     const val MIME_TYPE_ALL = "*/*"
     // Regex patterns
     const val APP_NAME_SANITIZE_REGEX = "[^a-zA-Z0-9.-]"

@@ -697,6 +697,18 @@
 
                     </LinearLayout>
 
+                    <Button
+                        android:id="@+id/config_control_center_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Customize Control Center"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
+                        android:padding="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"/>
+
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"

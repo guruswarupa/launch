@@ -187,6 +187,13 @@
             android:excludeFromRecents="true"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.activities.ControlCenterConfigActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:label="Control Center Shortcuts"
+            android:excludeFromRecents="true" />
+
         <receiver
             android:name=".utils.TodoAlarmReceiver"
             android:enabled="true"
