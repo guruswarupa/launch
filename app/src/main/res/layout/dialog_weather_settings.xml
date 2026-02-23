@@ -53,6 +53,41 @@
         android:padding="12dp"
         android:textColor="@color/text"
         android:textColorHint="@color/nord3"
-        android:textSize="14sp" />
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Temperature Unit"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:layout_marginBottom="4dp" />
+
+    <RadioGroup
+        android:id="@+id/temperature_unit_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/unit_celsius"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Celsius (°C)"
+            android:textColor="@color/text"
+            android:textSize="14sp" />
+
+        <RadioButton
+            android:id="@+id/unit_fahrenheit"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Fahrenheit (°F)"
+            android:textColor="@color/text"
+            android:textSize="14sp" />
+
+    </RadioGroup>
 
 </LinearLayout>

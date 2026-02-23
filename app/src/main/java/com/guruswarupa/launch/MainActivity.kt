@@ -3,8 +3,6 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
-import android.appwidget.AppWidgetHostView
-import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -28,6 +26,44 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+
+// Import moved managers
+import com.guruswarupa.launch.core.CacheManager
+import com.guruswarupa.launch.core.PermissionManager
+import com.guruswarupa.launch.core.SystemBarManager
+import com.guruswarupa.launch.core.BroadcastReceiverManager
+import com.guruswarupa.launch.core.LifecycleManager
+import com.guruswarupa.launch.core.ShareManager
+
+import com.guruswarupa.launch.managers.*
+import com.guruswarupa.launch.handlers.*
+import com.guruswarupa.launch.services.*
+import com.guruswarupa.launch.models.*
+import com.guruswarupa.launch.ui.views.*
+import com.guruswarupa.launch.ui.activities.WidgetConfigurationActivity
+import com.guruswarupa.launch.ui.activities.AppDataDisclosureActivity
+
+import com.guruswarupa.launch.widgets.WidgetSetupManager
+import com.guruswarupa.launch.widgets.CalculatorWidget
+import com.guruswarupa.launch.widgets.NotificationsWidget
+import com.guruswarupa.launch.widgets.WorkoutWidget
+import com.guruswarupa.launch.widgets.PhysicalActivityWidget
+import com.guruswarupa.launch.widgets.CompassWidget
+import com.guruswarupa.launch.widgets.PressureWidget
+import com.guruswarupa.launch.widgets.ProximityWidget
+import com.guruswarupa.launch.widgets.TemperatureWidget
+import com.guruswarupa.launch.widgets.NoiseDecibelWidget
+import com.guruswarupa.launch.widgets.CalendarEventsWidget
+import com.guruswarupa.launch.widgets.CountdownWidget
+
+import com.guruswarupa.launch.utils.TimeDateManager
+import com.guruswarupa.launch.utils.WeatherManager
+import com.guruswarupa.launch.utils.TodoManager
+import com.guruswarupa.launch.utils.TodoAlarmManager
+import com.guruswarupa.launch.utils.FinanceWidgetManager
+import com.guruswarupa.launch.utils.OnboardingHelper
+import com.guruswarupa.launch.utils.FeatureTutorialManager
+import com.guruswarupa.launch.utils.VoiceCommandHandler
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.GridLayoutManager
@@ -579,7 +615,7 @@ class MainActivity : FragmentActivity() {
         // Initialize or update AppSearchManager with new app data
         if (!::appSearchManager.isInitialized && !isFinishing && !isDestroyed && ::adapter.isInitialized) {
             updateAppSearchManager()
-        } else if (::appSearchManager.isInitialized && isFinal) {
+        } else if (::appSearchManager.isInitialized) {
             updateAppSearchManager()
         }
     }
@@ -591,12 +627,13 @@ class MainActivity : FragmentActivity() {
         if (isFinishing || isDestroyed) return
         
         if (::appSearchManager.isInitialized) {
-            appSearchManager.updateData(fullAppList, contactManager.getContactsList())
+            appSearchManager.updateData(fullAppList, appList, contactManager.getContactsList())
         } else {
             // Initial initialization
             appSearchManager = AppSearchManager(
                 packageManager = packageManager,
                 fullAppList = fullAppList,
+                homeAppList = appList,
                 adapter = adapter,
                 searchBox = searchBox,
                 contactsList = contactManager.getContactsList(),
@@ -650,6 +687,14 @@ class MainActivity : FragmentActivity() {
         
         // Check if onboarding is needed
         if (onboardingHelper.checkAndStartOnboarding()) {
+            return
+        }
+        
+        // Check if user has given consent for app data collection
+        if (!sharedPreferences.getBoolean("app_data_consent_given", false)) {
+            // Show disclosure activity
+            startActivity(Intent(this, AppDataDisclosureActivity::class.java))
+            finish()
             return
         }
         
@@ -821,14 +866,16 @@ class MainActivity : FragmentActivity() {
         // Initialize activity result handler (voiceCommandHandler will be set later)
         activityResultHandler = ActivityResultHandler(
             this, searchBox, null, shareManager,
-            widgetManager, wallpaperManagerHelper
-        ) { navigationManager.blockBackGesturesTemporarily() }
+            widgetManager, wallpaperManagerHelper,
+            onBlockBackGestures = { navigationManager.blockBackGesturesTemporarily() }
+        )
         
         // Initialize focus mode applier
         focusModeApplier = FocusModeApplier(
             this, backgroundExecutor, appListManager, appDockManager,
-            searchBox, voiceSearchButton, adapter, fullAppList, appList
-        ) { updateAppSearchManager() }
+            searchBox, voiceSearchButton, adapter, fullAppList, appList,
+            onUpdateAppSearchManager = { updateAppSearchManager() }
+        )
 
         // Defer finance widget initialization to avoid blocking
         handler.postDelayed({

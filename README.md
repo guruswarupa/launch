@@ -346,6 +346,6 @@ For more details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📄 License
 
-This project is licensed under the MIT License with additional restrictions. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License with additional attribution requirements. See the [LICENSE](LICENSE) file for details.
 
-**Note**: This software may not be sold, rebranded, or used for commercial purposes without explicit permission.
+**Note**: This software may not be substantially modified, rebranded, or claimed as the work of others without explicit written permission. Derivative works must maintain proper attribution and the same license terms.

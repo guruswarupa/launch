@@ -656,6 +656,66 @@
                     android:visibility="gone"
                     android:layout_marginTop="12dp">
 
+                    <!-- Accessibility Shortcut Toggle -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/accessibility_shortcut"
+                                android:textSize="16sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.9"/>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/accessibility_shortcut_description"
+                                android:textSize="12sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.6"/>
+
+                        </LinearLayout>
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/accessibility_shortcut_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:thumbTint="@color/text"
+                            app:trackTint="@color/text"/>
+
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/config_control_center_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Customize Control Center"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_background"
+                        android:textColor="@android:color/white"
+                        android:padding="16dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/text"
+                        android:alpha="0.2"
+                        android:layout_marginVertical="16dp"/>
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -1161,6 +1221,29 @@
                         android:background="@drawable/button_background"
                         android:textColor="@android:color/white"
                         android:padding="16dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Project Resources:"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/white"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/github_links_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text=""
+                        android:textSize="14sp"
+                        android:textColor="@color/white"
+                        android:textColorLink="@color/colorAccent"
+                        android:lineSpacingExtra="4dp"
+                        android:scrollbars="vertical"
+                        android:maxLines="10"
+                        android:ellipsize="none"/>
 
                 </LinearLayout>
 

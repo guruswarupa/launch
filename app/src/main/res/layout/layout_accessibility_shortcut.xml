@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#A6000000">
+
+    <LinearLayout
+        android:id="@+id/menu_container"
+        android:layout_width="340dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center"
+        android:background="@drawable/rounded_background"
+        android:backgroundTint="#FF1A1B26"
+        android:elevation="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Control Center"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="20dp"
+            android:letterSpacing="0.03"/>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxHeight="450dp"
+            android:scrollbars="none"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Sliders (Always visible at top) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="#1AFFFFFF"
+                        android:padding="10dp"
+                        android:layout_marginBottom="8dp">
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_brightness_stat"
+                            android:tint="#7AA2F7"/>
+                        <SeekBar
+                            android:id="@+id/brightness_seekbar"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:max="255"
+                            android:progressTint="#7AA2F7"
+                            android:thumbTint="#7AA2F7"
+                            android:splitTrack="false"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:background="#1AFFFFFF"
+                        android:padding="10dp"
+                        android:layout_marginBottom="12dp">
+                        <ImageView
+                            android:id="@+id/img_volume_icon"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_volume_up_stat"
+                            android:tint="#BB9AF7"/>
+                        <SeekBar
+                            android:id="@+id/volume_seekbar"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:progressTint="#BB9AF7"
+                            android:thumbTint="#BB9AF7"
+                            android:splitTrack="false"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Dynamic Shortcuts Grid -->
+                <GridLayout
+                    android:id="@+id/shortcuts_grid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="3"
+                    android:alignmentMode="alignMargins">
+                    <!-- Items added dynamically -->
+                </GridLayout>
+            </LinearLayout>
+        </ScrollView>
+
+    </LinearLayout>
+</FrameLayout>

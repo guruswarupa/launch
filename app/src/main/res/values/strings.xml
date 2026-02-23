@@ -4,7 +4,31 @@
     <string name="search_text"> Search...</string>
     
     <!-- Accessibility Strings -->
-    <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock.</string>
+    <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock. This service does not collect, store, or transmit any personal data. It only performs system-level actions like screen locking and taking screenshots when explicitly triggered by user gestures.</string>
+    
+    <!-- App Data Disclosure Strings -->
+    <string name="app_data_disclosure_title">App Data Collection</string>
+    <string name="app_data_disclosure_message">Launch collects information about installed applications on your device to display them in the app launcher. This data is stored locally on your device and is not transmitted to any external servers or third parties.
+
+We collect:
+• Package names of installed apps
+• App names and icons
+• Launch intent information
+
+This data is used solely to:
+• Display your apps in the launcher
+• Enable app search functionality
+• Provide app organization features
+
+No personal data is collected, stored, or shared with third parties.</string>
+    <string name="data_disclosure_links">For more information, please review our:
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing Guidelines&lt;/a&gt;
+• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="i_agree">I Agree</string>
+    <string name="decline">Decline</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
     <string name="accessibility_permission_message">To lock the screen and keep fingerprint unlock working, please enable Launch in Accessibility settings.</string>
 
@@ -14,6 +38,10 @@
     <string name="request_device_admin_title">Enable Screen Off</string>
     <string name="request_device_admin_message">To turn off the screen with a double-tap, Launch needs Device Administrator permission.</string>
     <string name="grant_permission">Grant</string>
+    <string name="notification_policy_permission_title">Notification Policy Access</string>
+    <string name="notification_policy_permission_message">To use Do Not Disturb features and control notification settings, please grant notification policy access in the next screen.</string>
+    <string name="notification_listener_permission_title">Notification Access</string>
+    <string name="notification_listener_permission_message">To read and manage notifications in the notification widget, please enable Launch in Notification Access settings.</string>
 
     <!-- App Search Strings -->
     <string name="search_on_play_store">Search %1$s on Play Store</string>
@@ -216,7 +244,11 @@
     <string name="tap_to_set_api_key">Tap to set weather API key</string>
     <string name="tap_to_enter_location">Tap to enter location</string>
     <string name="weather_unavailable">Weather unavailable</string>
-    <string name="weather_temp_format">%1$d°C %2$s</string>
+    <string name="weather_temp_format_celsius">%1$d°C %2$s</string>
+    <string name="weather_temp_format_fahrenheit">%1$d°F %2$s</string>
+    <string name="temperature_unit">Temperature Unit</string>
+    <string name="celsius">Celsius (°C)</string>
+    <string name="fahrenheit">Fahrenheit (°F)</string>
 
     <!-- Workout Strings -->
     <string name="workout_start">Start</string>
@@ -233,4 +265,8 @@
 
     <!-- Workspace Strings -->
     <string name="workspace_app_count_format">%1$d apps</string>
+
+    <!-- Accessibility Shortcut -->
+    <string name="accessibility_shortcut">Accessibility Shortcut</string>
+    <string name="accessibility_shortcut_description">Show a floating button for quick access to system controls</string>
 </resources>

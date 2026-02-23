@@ -24,7 +24,7 @@
         android:textSize="16sp"
         android:layout_marginBottom="24dp" />
 
-    <com.guruswarupa.launch.DailyUsagePieView
+    <com.guruswarupa.launch.ui.views.DailyUsagePieView
         android:id="@+id/daily_pie_chart"
         android:layout_width="match_parent"
         android:layout_height="250dp"
