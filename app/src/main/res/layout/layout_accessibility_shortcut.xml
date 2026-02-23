@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#80000000">
+
+    <LinearLayout
+        android:id="@+id/menu_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:gravity="center"
+        android:background="@drawable/rounded_background"
+        android:backgroundTint="#EE1A1B26">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="System Controls"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="20dp"/>
+
+        <GridLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:rowCount="3"
+            android:alignmentMode="alignMargins">
+
+            <!-- WiFi -->
+            <LinearLayout
+                android:id="@+id/btn_wifi"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_menu_directions"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="WiFi"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Bluetooth -->
+            <LinearLayout
+                android:id="@+id/btn_bluetooth"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginLeft="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/stat_sys_data_bluetooth"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bluetooth"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Airplane -->
+            <LinearLayout
+                android:id="@+id/btn_airplane"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginLeft="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_menu_mylocation"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Airplane"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Brightness -->
+            <LinearLayout
+                android:id="@+id/btn_brightness"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginTop="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_menu_day"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Brightness"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Sound -->
+            <LinearLayout
+                android:id="@+id/btn_sound"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_lock_silent_mode"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sound"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Screenshot -->
+            <LinearLayout
+                android:id="@+id/btn_screenshot"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_menu_camera"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Screenshot"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Record -->
+            <LinearLayout
+                android:id="@+id/btn_record"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginTop="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_menu_slideshow"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Record"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Sleep -->
+            <LinearLayout
+                android:id="@+id/btn_sleep"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_lock_power_off"
+                    android:tint="#FFFFFF"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Lock"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+            <!-- Power Menu -->
+            <LinearLayout
+                android:id="@+id/btn_power"
+                android:layout_width="85dp"
+                android:layout_height="85dp"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="#22FFFFFF"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="4dp">
+                <ImageView
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_lock_power_off"
+                    android:tint="#FF5555"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Power"
+                    android:textColor="#FF5555"
+                    android:textSize="11sp"
+                    android:layout_marginTop="6dp"/>
+            </LinearLayout>
+
+        </GridLayout>
+
+        <TextView
+            android:id="@+id/btn_close"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Close"
+            android:layout_marginTop="20dp"
+            android:padding="12dp"
+            android:gravity="center"
+            android:background="#44FFFFFF"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"/>
+
+    </LinearLayout>
+</FrameLayout>

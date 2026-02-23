@@ -259,4 +259,8 @@ No personal data is collected, stored, or shared with third parties.</string>
 
     <!-- Workspace Strings -->
     <string name="workspace_app_count_format">%1$d apps</string>
+
+    <!-- Accessibility Shortcut -->
+    <string name="accessibility_shortcut">Accessibility Shortcut</string>
+    <string name="accessibility_shortcut_description">Show a floating button for quick access to system controls (WiFi, Sound, Brightness, etc.)</string>
 </resources>
