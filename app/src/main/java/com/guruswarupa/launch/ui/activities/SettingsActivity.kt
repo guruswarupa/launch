@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.app.WallpaperManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -34,6 +35,7 @@ import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
 import com.guruswarupa.launch.services.ScreenDimmerService
+import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -340,6 +342,32 @@ class SettingsActivity : ComponentActivity() {
         val quickActionsArrow = findViewById<TextView>(R.id.quick_actions_arrow)
         setupSectionToggle(quickActionsHeader, quickActionsContent, quickActionsArrow)
         
+        // Setup accessibility shortcut switch
+        val accessibilityShortcutSwitch = findViewById<SwitchCompat>(R.id.accessibility_shortcut_switch)
+        val isShortcutEnabled = prefs.getBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, false)
+        accessibilityShortcutSwitch.isChecked = isShortcutEnabled
+        
+        accessibilityShortcutSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !hasAccessibilityServicePermission()) {
+                accessibilityShortcutSwitch.isChecked = false
+                AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                    .setTitle("Permission Required")
+                    .setMessage("Accessibility Service is required for the floating shortcut. Please enable 'Launch' in Accessibility settings.")
+                    .setPositiveButton("Go to Settings") { _, _ ->
+                        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, isChecked) }
+                val intent = Intent(this, ScreenLockAccessibilityService::class.java).apply {
+                    action = "TOGGLE_SHORTCUT"
+                    putExtra("enabled", isChecked)
+                }
+                startService(intent)
+            }
+        }
+
         // Setup torch toggle switch
         val shakeTorchSwitch = findViewById<SwitchCompat>(R.id.shake_torch_switch)
         val isTorchEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
@@ -405,6 +433,23 @@ class SettingsActivity : ComponentActivity() {
         
     }
     
+    private fun hasAccessibilityServicePermission(): Boolean {
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            ?: return false
+        
+        val expectedComponentName = ComponentName(this, ScreenLockAccessibilityService::class.java)
+        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServices)
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun setupSearchEngine() {
         val searchEngineSpinner = findViewById<Spinner>(R.id.search_engine_spinner)
         val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
