@@ -136,7 +136,8 @@ class GithubContributionWidget(
 
     private fun setupYearSpinner() {
         val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, availableYears)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        // Use custom translucent dropdown item
+        adapter.setDropDownViewResource(R.layout.custom_spinner_dropdown_item)
         githubYearSpinner.adapter = adapter
         
         // Set current year as selected

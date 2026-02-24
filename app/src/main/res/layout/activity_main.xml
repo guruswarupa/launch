@@ -148,7 +148,7 @@
                         android:padding="12dp"
                         android:scaleType="fitCenter" />
 
-                    <EditText
+                    <AutoCompleteTextView
                         android:id="@+id/search_box"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -160,7 +160,13 @@
                         android:background="@null"
                         android:textSize="16sp"
                         android:singleLine="true"
-                        android:imeOptions="actionSearch"/>
+                        android:imeOptions="actionSearch"
+                        android:dropDownSelector="?android:attr/listChoiceBackgroundIndicator"
+                        android:popupBackground="@drawable/spinner_dropdown_background"
+                        android:dropDownWidth="wrap_content"
+                        android:dropDownHeight="wrap_content"
+                        android:dropDownVerticalOffset="0dp"
+                        android:dropDownHorizontalOffset="0dp"/>
 
                     <ImageButton
                         android:id="@+id/voice_search_button"

@@ -15,7 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Gravity
 import android.widget.ArrayAdapter
-import android.widget.EditText
+import android.widget.AutoCompleteTextView
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.graphics.drawable.Drawable
@@ -40,7 +40,7 @@ import com.guruswarupa.launch.ui.activities.SettingsActivity
 class AppAdapter(
     private val activity: MainActivity,
     var appList: MutableList<ResolveInfo>,
-    private val searchBox: EditText,
+    private val searchBox: AutoCompleteTextView,
     private var isGridMode: Boolean,
     private val context: Context // Added context
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {

@@ -18,7 +18,10 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AutoCompleteTextView
 import android.widget.EditText
+import android.widget.PopupMenu
+import android.view.MenuItem
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -89,7 +92,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var adapter: AppAdapter
     private lateinit var timeTextView: TextView
     private lateinit var dateTextView: TextView
-    private lateinit var searchBox: EditText
+    private lateinit var searchBox: AutoCompleteTextView
     private lateinit var searchContainer: LinearLayout
     private lateinit var searchTypeButton: ImageButton
     private lateinit var appDock: LinearLayout
@@ -326,6 +329,70 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
+     * Creates a PopupMenu with translucent background
+     */
+    private fun createTranslucentPopupMenu(anchor: View): PopupMenu {
+        // Create with custom theme wrapper that ensures translucent style
+        val wrapper = androidx.appcompat.view.ContextThemeWrapper(this, R.style.Theme_Launch)
+        val popup = PopupMenu(wrapper, anchor)
+        
+        // Apply translucent background using multiple approaches
+        try {
+            // Approach 1: Direct field access
+            val popupField = popup.javaClass.getDeclaredField("mPopup")
+            popupField.isAccessible = true
+            val menuPopupHelper = popupField.get(popup)
+            val cls = menuPopupHelper.javaClass
+            
+            // Set the translucent background drawable
+            val backgroundDrawable = ContextCompat.getDrawable(this, R.drawable.menu_background)
+            
+            // Try multiple methods to set the background
+            val methodsToTry = listOf(
+                "setBackgroundDrawable" to arrayOf(android.graphics.drawable.Drawable::class.java),
+                "setDropDownBackgroundDrawable" to arrayOf(android.graphics.drawable.Drawable::class.java)
+            )
+            
+            var backgroundSet = false
+            for ((methodName, paramTypes) in methodsToTry) {
+                try {
+                    val method = cls.getMethod(methodName, *paramTypes)
+                    method.invoke(menuPopupHelper, backgroundDrawable)
+                    backgroundSet = true
+                    break
+                } catch (_: Exception) {
+                    // Continue trying other methods
+                }
+            }
+            
+            // Approach 2: If direct methods fail, try accessing the popup window
+            if (!backgroundSet) {
+                try {
+                    val popupWindowField = cls.getDeclaredField("mPopup")
+                    popupWindowField.isAccessible = true
+                    val popupWindow = popupWindowField.get(menuPopupHelper)
+                    val popupWindowClass = popupWindow?.javaClass
+                    
+                    popupWindowClass?.getMethod("setBackgroundDrawable", android.graphics.drawable.Drawable::class.java)
+                        ?.invoke(popupWindow, backgroundDrawable)
+                } catch (_: Exception) {}
+            }
+            
+            // Approach 3: Set style if available
+            try {
+                cls.getMethod("setPopupStyle", Int::class.java)
+                    .invoke(menuPopupHelper, R.style.PopupMenuStyle)
+            } catch (_: Exception) {}
+            
+        } catch (_: Exception) {
+            // If all reflection approaches fail, at least the theme wrapper should provide some styling
+            // The popup will still use the theme's popupMenuStyle attribute
+        }
+        
+        return popup
+    }
+    
+    /**
      * Initializes all view components.
      */
     private fun initializeViews() {
@@ -365,8 +432,8 @@ class MainActivity : FragmentActivity() {
         searchTypeButton = findViewById(R.id.search_type_button)
         
         searchTypeButton.setOnClickListener { view ->
-            val wrapper = androidx.appcompat.view.ContextThemeWrapper(this, R.style.PopupMenuStyle)
-            val popup = android.widget.PopupMenu(wrapper, view)
+            // Create popup with custom translucent style
+            val popup = createTranslucentPopupMenu(view)
             popup.menu.add(0, 0, 0, getString(R.string.search_mode_all))
             popup.menu.add(0, 1, 1, getString(R.string.search_mode_apps))
             popup.menu.add(0, 2, 2, getString(R.string.search_mode_contacts))

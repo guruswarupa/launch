@@ -126,4 +126,12 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
     </style>
+
+    <!-- Translucent Dropdown Style -->
+    <style name="TranslucentSpinnerStyle" parent="Widget.AppCompat.Spinner">
+        <item name="android:popupBackground">@drawable/spinner_dropdown_background</item>
+        <item name="android:dropDownWidth">wrap_content</item>
+        <item name="android:dropDownVerticalOffset">0dp</item>
+        <item name="android:dropDownHorizontalOffset">0dp</item>
+    </style>
 </resources>

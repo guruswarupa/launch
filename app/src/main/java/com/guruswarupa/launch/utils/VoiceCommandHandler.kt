@@ -6,7 +6,7 @@ import android.content.Intent
 import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.provider.ContactsContract
-import android.widget.EditText
+import android.widget.AutoCompleteTextView
 import android.widget.Toast
 import androidx.core.net.toUri
 import com.guruswarupa.launch.models.Constants
@@ -18,7 +18,7 @@ class VoiceCommandHandler(
     private val activity: androidx.fragment.app.FragmentActivity,
     private val packageManager: android.content.pm.PackageManager,
     private val contentResolver: ContentResolver,
-    private val searchBox: EditText,
+    private val searchBox: AutoCompleteTextView,
     private val appList: List<ResolveInfo>
 ) {
     
