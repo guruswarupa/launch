@@ -37,10 +37,10 @@
 
             <Spinner
                 android:id="@+id/github_year_spinner"
+                style="@style/TranslucentSpinnerStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="4dp" />
 
             <ImageButton

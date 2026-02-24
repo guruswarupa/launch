@@ -6,7 +6,7 @@ import android.content.pm.ResolveInfo
 import android.os.Handler
 import android.os.Looper
 import android.os.Environment
-import android.widget.EditText
+import android.widget.AutoCompleteTextView
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.models.AppMetadata
 import net.objecthunter.exp4j.ExpressionBuilder
@@ -18,7 +18,7 @@ class AppSearchManager(
     private val fullAppList: MutableList<ResolveInfo>,
     private var homeAppList: List<ResolveInfo>,
     private val adapter: AppAdapter,
-    private val searchBox: EditText,
+    private val searchBox: AutoCompleteTextView,
     private var contactsList: List<String>,
     private val context: android.content.Context,
     private val appMetadataCache: Map<String, AppMetadata>? = null,

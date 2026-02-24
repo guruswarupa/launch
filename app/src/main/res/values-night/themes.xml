@@ -34,6 +34,9 @@
         
         <!-- Window background -->
         <item name="android:windowBackground">@color/background</item>
+        <!-- Use custom translucent popup menu style -->
+        <item name="popupMenuStyle">@style/PopupMenuStyle</item>
+        <item name="android:popupMenuStyle">@style/PopupMenuStyle</item>
     </style>
     
     <style name="Theme.Launch.Settings" parent="Theme.Launch">
