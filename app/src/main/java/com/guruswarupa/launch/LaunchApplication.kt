@@ -38,34 +38,6 @@ class LaunchApplication : Application() {
             val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
             NightModeService.startService(this, intensity)
         }
-        
-        // Start Shake Detection if enabled
-        val isShakeEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
-        if (isShakeEnabled) {
-            val intent = Intent(this, ShakeDetectionService::class.java).apply {
-                action = ShakeDetectionService.ACTION_START
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
-        }
-        
-        // Start Back Tap Detection if enabled
-        val isBackTapEnabled = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
-        Log.d("LaunchApplication", "Back tap enabled: $isBackTapEnabled")
-        if (isBackTapEnabled) {
-            val intent = Intent(this, BackTapService::class.java).apply {
-                action = BackTapService.ACTION_START
-            }
-            Log.d("LaunchApplication", "Starting BackTapService")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
-            }
-        }
     }
 
     private fun setupCrashHandler() {
