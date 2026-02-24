@@ -19,4 +19,8 @@
     <dimen name="onboarding_workspaces_apps_max_height">450dp</dimen>
     <!-- Search bar margin dimensions -->
     <dimen name="search_top_margin_when_widget_hidden">48dp</dimen>
+    <!-- GitHub Contribution Graph Dimensions -->
+    <dimen name="contribution_cell_size">12dp</dimen>
+    <dimen name="contribution_cell_spacing">2dp</dimen>
+    <dimen name="contribution_cell_radius">2dp</dimen>
 </resources>
