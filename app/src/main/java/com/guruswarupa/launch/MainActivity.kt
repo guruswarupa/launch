@@ -1295,12 +1295,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    // WhatsApp and SMS methods moved to VoiceCommandHandler
-
-    // Voice command handling moved to VoiceCommandHandler
-
-    // Wallpaper management moved to WallpaperManagerHelper
-
     override fun onDestroy() {
         super.onDestroy()
         
@@ -1588,14 +1582,6 @@ class MainActivity : FragmentActivity() {
             handler.postDelayed({ loadApps(forceRefresh) }, 100)
         }
     }
-    
-    // Cache methods moved to CacheManager
-    
-    
-    // Cache methods moved to CacheManager
-    
-
-    // Permission methods moved to PermissionManager
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
