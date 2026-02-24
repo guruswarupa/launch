@@ -34,7 +34,8 @@ class WidgetConfigurationManager(
             WidgetInfo("weekly_usage_widget", "Weekly Usage", false),
             WidgetInfo("network_stats_widget_container", "Network Stats", false),
             WidgetInfo("device_info_widget_container", "Device Info", false),
-            WidgetInfo("year_progress_widget_container", "Year Progress", false)
+            WidgetInfo("year_progress_widget_container", "Year Progress", false),
+            WidgetInfo("github_contributions_widget_container", "GitHub Contributions", false)
         )
     }
     

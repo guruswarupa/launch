@@ -70,6 +70,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.guruswarupa.launch.widgets.GithubContributionWidget
 import java.util.concurrent.Executors
 
 
@@ -147,6 +148,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var calendarEventsWidget: CalendarEventsWidget
     private lateinit var countdownWidget: CountdownWidget
     private lateinit var yearProgressWidget: YearProgressWidget
+    private lateinit var githubContributionWidget: GithubContributionWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
@@ -572,6 +574,7 @@ class MainActivity : FragmentActivity() {
         val networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget()
         val deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget()
         yearProgressWidget = widgetSetupManager.setupYearProgressWidget(sharedPreferences)
+        githubContributionWidget = widgetSetupManager.setupGithubContributionWidget(sharedPreferences)
         
         lifecycleManager.setNetworkStatsWidget(networkStatsWidget)
         lifecycleManager.setDeviceInfoWidget(deviceInfoWidget)
@@ -1365,6 +1368,11 @@ class MainActivity : FragmentActivity() {
             countdownWidget.cleanup()
         }
         
+        // Cleanup GitHub contribution widget
+        if (::githubContributionWidget.isInitialized) {
+            githubContributionWidget.cleanup()
+        }
+        
         // Stop shake detection service
         stopShakeDetectionService()
 
@@ -1464,6 +1472,11 @@ class MainActivity : FragmentActivity() {
             countdownWidget.onResume()
         }
         
+        // Resume GitHub contribution widget
+        if (::githubContributionWidget.isInitialized) {
+            githubContributionWidget.onResume()
+        }
+        
         // Shake detection service runs in background, no need to start/stop here
         
         // Always refresh app list when resuming to catch any changes (hidden apps, etc.)
@@ -1540,6 +1553,11 @@ class MainActivity : FragmentActivity() {
         // Pause countdown widget
         if (::countdownWidget.isInitialized) {
             countdownWidget.onPause()
+        }
+        
+        // Pause GitHub contribution widget
+        if (::githubContributionWidget.isInitialized) {
+            githubContributionWidget.onPause()
         }
         
         // Shake detection service runs in background, no need to stop here
@@ -1736,9 +1754,17 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
+        findViewById<View>(R.id.github_contributions_widget_container)?.visibility = 
+            if (widgetMap["github_contributions_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
         // Control YearProgressWidget visibility through its dedicated method
         if (::yearProgressWidget.isInitialized) {
             yearProgressWidget.setGlobalVisibility(widgetMap["year_progress_widget_container"]?.enabled == true)
+        }
+        
+        // Control GitHubContributionWidget visibility through its dedicated method
+        if (::githubContributionWidget.isInitialized) {
+            githubContributionWidget.setGlobalVisibility(widgetMap["github_contributions_widget_container"]?.enabled == true)
         }
         
         // Reorder widgets - get the parent LinearLayout that contains all widgets
@@ -1772,6 +1798,7 @@ class MainActivity : FragmentActivity() {
                         "todo_recycler_view" -> findViewById<ViewGroup>(R.id.todo_recycler_view)?.parent as? View
                         "finance_widget" -> findViewById(R.id.finance_widget)
                         "weekly_usage_widget" -> findViewById(R.id.weekly_usage_widget)
+                        "github_contributions_widget_container" -> findViewById(R.id.github_contributions_widget_container)
                         "network_stats_widget_container" -> findViewById(R.id.network_stats_widget_container)
                         "device_info_widget_container" -> findViewById(R.id.device_info_widget_container)
                         "year_progress_widget_container" -> findViewById(R.id.year_progress_widget_container)
