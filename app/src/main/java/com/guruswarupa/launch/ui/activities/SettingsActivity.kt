@@ -695,6 +695,11 @@ class SettingsActivity : ComponentActivity() {
         "last_auth_time",
         "fingerprint_enabled"
     )
+    
+    private val githubWidgetKeys = setOf(
+        "github_token",
+        "github_username"
+    )
 
     private fun exportSettingsToFile(uri: Uri) {
         try {
@@ -773,6 +778,9 @@ class SettingsActivity : ComponentActivity() {
             
             // Export finance tracker data
             exportFinanceData(settingsJson)
+            
+            // Export GitHub widget data
+            exportGithubWidgetData(settingsJson)
 
             contentResolver.openOutputStream(uri)?.use { outputStream ->
                 outputStream.write(settingsJson.toString(2).toByteArray())
@@ -831,6 +839,11 @@ class SettingsActivity : ComponentActivity() {
                     // Import finance data
                     if (settingsJson.has("finance_data")) {
                         importFinanceData(settingsJson.getJSONObject("finance_data"))
+                    }
+                    
+                    // Import GitHub widget data
+                    if (settingsJson.has("github_widget_data")) {
+                        importGithubWidgetData(settingsJson.getJSONObject("github_widget_data"))
                     }
                 } else {
                     prefs.edit {
@@ -1469,5 +1482,44 @@ class SettingsActivity : ComponentActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+    }
+    
+    private fun exportGithubWidgetData(settingsJson: JSONObject) {
+        try {
+            val githubJson = JSONObject()
+            
+            // Export GitHub token and username
+            for (key in githubWidgetKeys) {
+                val value = prefs.getString(key, null)
+                if (value != null) {
+                    githubJson.put(key, value)
+                }
+            }
+            
+            if (githubJson.length() > 0) {
+                settingsJson.put("github_widget_data", githubJson)
+            }
+        } catch (e: Exception) {
+            // Log error but don't fail the entire export
+            android.util.Log.e("SettingsActivity", "Failed to export GitHub widget data", e)
+        }
+    }
+    
+    private fun importGithubWidgetData(githubJson: JSONObject) {
+        try {
+            prefs.edit {
+                val keys = githubJson.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    if (key in githubWidgetKeys) {
+                        val value = githubJson.getString(key)
+                        putString(key, value)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Log error but don't fail the entire import
+            android.util.Log.e("SettingsActivity", "Failed to import GitHub widget data", e)
+        }
     }
 }
