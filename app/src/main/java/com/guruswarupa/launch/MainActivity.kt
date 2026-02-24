@@ -55,6 +55,7 @@ import com.guruswarupa.launch.widgets.TemperatureWidget
 import com.guruswarupa.launch.widgets.NoiseDecibelWidget
 import com.guruswarupa.launch.widgets.CalendarEventsWidget
 import com.guruswarupa.launch.widgets.CountdownWidget
+import com.guruswarupa.launch.widgets.YearProgressWidget
 
 import com.guruswarupa.launch.utils.TimeDateManager
 import com.guruswarupa.launch.utils.WeatherManager
@@ -145,6 +146,7 @@ class MainActivity : FragmentActivity() {
     private lateinit var noiseDecibelWidget: NoiseDecibelWidget
     private lateinit var calendarEventsWidget: CalendarEventsWidget
     private lateinit var countdownWidget: CountdownWidget
+    private lateinit var yearProgressWidget: YearProgressWidget
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
@@ -569,6 +571,7 @@ class MainActivity : FragmentActivity() {
         // Initialize new widgets
         val networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget()
         val deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget()
+        yearProgressWidget = widgetSetupManager.setupYearProgressWidget(sharedPreferences)
         
         lifecycleManager.setNetworkStatsWidget(networkStatsWidget)
         lifecycleManager.setDeviceInfoWidget(deviceInfoWidget)
@@ -1733,6 +1736,11 @@ class MainActivity : FragmentActivity() {
         findViewById<View>(R.id.weekly_usage_widget)?.visibility = 
             if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
         
+        // Control YearProgressWidget visibility through its dedicated method
+        if (::yearProgressWidget.isInitialized) {
+            yearProgressWidget.setGlobalVisibility(widgetMap["year_progress_widget_container"]?.enabled == true)
+        }
+        
         // Reorder widgets - get the parent LinearLayout that contains all widgets
         val contentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
         
@@ -1766,6 +1774,7 @@ class MainActivity : FragmentActivity() {
                         "weekly_usage_widget" -> findViewById(R.id.weekly_usage_widget)
                         "network_stats_widget_container" -> findViewById(R.id.network_stats_widget_container)
                         "device_info_widget_container" -> findViewById(R.id.device_info_widget_container)
+                        "year_progress_widget_container" -> findViewById(R.id.year_progress_widget_container)
                         else -> null
                     }
                 }
