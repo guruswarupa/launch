@@ -15,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
@@ -54,6 +55,17 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             pickIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetHost.allocateAppWidgetId())
             pickIntent.putExtra(AppWidgetManager.EXTRA_CUSTOM_INFO, true)
             activity.startActivityForResult(pickIntent, requestCode)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error opening widget picker: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    fun requestPickWidgetWithLauncher(launcher: ActivityResultLauncher<Intent>) {
+        try {
+            val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK)
+            pickIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetHost.allocateAppWidgetId())
+            pickIntent.putExtra(AppWidgetManager.EXTRA_CUSTOM_INFO, true)
+            launcher.launch(pickIntent)
         } catch (e: Exception) {
             Toast.makeText(context, "Error opening widget picker: ${e.message}", Toast.LENGTH_SHORT).show()
         }

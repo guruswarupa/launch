@@ -30,6 +30,8 @@ import android.app.AppOpsManager
 import android.os.Environment
 import androidx.core.content.edit
 import androidx.core.graphics.drawable.toDrawable
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
@@ -72,6 +74,8 @@ class OnboardingActivity : ComponentActivity() {
     private var hasRequestedDefaultLauncher = false
     private var displayStyleSelected = false
     private var backupImported = false
+    
+    private lateinit var backupFilePickerLauncher: ActivityResultLauncher<Intent>
 
     companion object {
         private const val IMPORT_BACKUP_REQUEST_CODE = 1000
@@ -222,6 +226,15 @@ class OnboardingActivity : ComponentActivity() {
         }
         
         setContentView(R.layout.activity_onboarding)
+        
+        // Register the ActivityResultLauncher for file picking
+        backupFilePickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK && result.data != null) {
+                result.data?.data?.let { uri ->
+                    importBackupFromFile(uri)
+                }
+            }
+        }
         
         val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         
@@ -1086,18 +1099,10 @@ class OnboardingActivity : ComponentActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/json"
         }
-        @Suppress("DEPRECATION")
-        startActivityForResult(intent, IMPORT_BACKUP_REQUEST_CODE)
+        backupFilePickerLauncher.launch(intent)
     }
     
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        @Suppress("DEPRECATION")
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == RESULT_OK && data != null && requestCode == IMPORT_BACKUP_REQUEST_CODE) {
-            data.data?.let { importBackupFromFile(it) }
-        }
-    }
+
     
     private fun importBackupFromFile(uri: Uri) {
         try {

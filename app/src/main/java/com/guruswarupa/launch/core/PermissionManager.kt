@@ -104,6 +104,7 @@ class PermissionManager(
                     .setTitle("Usage Stats Permission")
                     .setMessage("To show app usage time, please grant usage access permission in the next screen.")
                     .setPositiveButton("Grant") { _, _ ->
+                                            // Using deprecated method for backward compatibility
                         @Suppress("DEPRECATION")
                         activity.startActivityForResult(
                             usageStatsManager.requestUsageStatsPermission(),
@@ -142,6 +143,7 @@ class PermissionManager(
                     putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
                     putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, activity.getString(R.string.device_admin_description))
                 }
+                // Using deprecated method for backward compatibility
                 @Suppress("DEPRECATION")
                 activity.startActivityForResult(intent, DEVICE_ADMIN_REQUEST)
             }
