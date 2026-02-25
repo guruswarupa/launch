@@ -167,7 +167,7 @@ class PressureWidget(
     fun cleanup() {
         handler.removeCallbacks(updateRunnable)
         if (isInitialized) {
-            pressureManager.stopTracking()
+            pressureManager.cleanup()
         }
     }
 }

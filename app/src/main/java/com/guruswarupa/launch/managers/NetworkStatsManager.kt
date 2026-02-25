@@ -242,4 +242,11 @@ class NetworkStatsManager {
         val gb = mb / 1024.0
         return String.format(Locale.getDefault(), "%.1f GB", gb)
     }
+    
+    /**
+     * Cleanup method to shutdown executor and prevent memory leaks
+     */
+    fun cleanup() {
+        executor.shutdown()
+    }
 }

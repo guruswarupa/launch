@@ -182,7 +182,7 @@ class CompassWidget(
     fun cleanup() {
         handler.removeCallbacks(updateRunnable)
         if (isInitialized) {
-            compassManager.stopTracking()
+            compassManager.cleanup()
         }
     }
 }

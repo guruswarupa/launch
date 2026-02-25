@@ -1468,6 +1468,23 @@ class MainActivity : FragmentActivity() {
 
         // Stop Flip to DND service
         FlipToDndService.stopService(this)
+        
+        // Cleanup remaining managers to prevent memory leaks
+        if (::appTimerManager.isInitialized) {
+            appTimerManager.cleanup()
+        }
+        
+        if (::usageStatsManager.isInitialized) {
+            usageStatsManager.cleanup()
+        }
+        
+        // Cancel any pending handler callbacks
+        handler.removeCallbacksAndMessages(null)
+        
+        // Cleanup lifecycle manager
+        if (::lifecycleManager.isInitialized) {
+            lifecycleManager.cleanup()
+        }
     }
 
     // Broadcast receivers moved to BroadcastReceiverManager

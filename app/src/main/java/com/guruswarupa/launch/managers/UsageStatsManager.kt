@@ -28,6 +28,13 @@ class AppUsageStatsManager(private val context: Context) {
         weeklyDataCache = null
     }
     
+    /**
+     * Cleanup method to clear all caches and prevent memory leaks
+     */
+    fun cleanup() {
+        invalidateCache()
+    }
+    
     fun hasUsageStatsPermission(): Boolean {
         val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
         val mode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
