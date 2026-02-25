@@ -29,6 +29,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 
 // Import moved managers
 import com.guruswarupa.launch.core.CacheManager
@@ -160,6 +162,9 @@ class MainActivity : FragmentActivity() {
     internal lateinit var hiddenAppManager: HiddenAppManager
     internal var isShowAllAppsMode = false
     private lateinit var widgetManager: WidgetManager
+    private lateinit var widgetPickerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var widgetConfigurationLauncher: ActivityResultLauncher<Intent>
+    private lateinit var voiceSearchLauncher: ActivityResultLauncher<Intent>
     internal lateinit var drawerLayout: DrawerLayout
     private lateinit var featureTutorialManager: FeatureTutorialManager
     private var voiceCommandHandler: VoiceCommandHandler? = null
@@ -737,6 +742,56 @@ class MainActivity : FragmentActivity() {
         // Initialize widget configuration manager
         widgetConfigurationManager = WidgetConfigurationManager(sharedPreferences)
         
+        // Register ActivityResultLauncher for widget picking
+        widgetPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK && result.data != null) {
+                // Handle widget picked
+                if (::widgetManager.isInitialized) {
+                    widgetManager.handleWidgetPicked(this, result.data)
+                }
+            }
+        }
+        
+        // Register ActivityResultLauncher for widget configuration
+        widgetConfigurationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                updateWidgetVisibility()
+                // Refresh system widgets in the drawer
+                refreshSystemWidgets()
+                // Update visibility again after refreshing system widgets
+                updateWidgetVisibility()
+                // Refresh calendar widget when it becomes visible
+                if (::calendarEventsWidget.isInitialized) {
+                    val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
+                    if (isEnabled) {
+                        calendarEventsWidget.refresh()
+                    }
+                }
+                // Refresh countdown widget when it becomes visible
+                if (::countdownWidget.isInitialized) {
+                    val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
+                    if (isEnabled) {
+                        countdownWidget.refresh()
+                    }
+                }
+            }
+        }
+        
+        // Register ActivityResultLauncher for voice search
+        voiceSearchLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                // Initialize voice command handler if needed for voice search result
+                if (voiceCommandHandler == null) {
+                    voiceCommandHandler = VoiceCommandHandler(this, packageManager, contentResolver, searchBox, appList)
+                }
+                activityResultHandler.setVoiceCommandHandler(voiceCommandHandler)
+            }
+            // Always handle the activity result
+            if (::activityResultHandler.isInitialized) {
+                activityResultHandler.handleActivityResult(PermissionManager.VOICE_SEARCH_REQUEST, result.resultCode, result.data)
+            }
+        }
+        
         // Initialize managers
         cacheManager = CacheManager(this, packageManager, backgroundExecutor)
         permissionManager = PermissionManager(this, sharedPreferences)
@@ -929,7 +984,15 @@ class MainActivity : FragmentActivity() {
 
         // Initialize voice search manager
         voiceSearchManager = VoiceSearchManager(this, packageManager)
-        activityInitializer.setupVoiceSearchButton(voiceSearchButton, voiceSearchManager)
+        // Set up voice search button with new launcher API
+        voiceSearchButton.setOnClickListener {
+            voiceSearchManager.startVoiceSearchWithLauncher(voiceSearchLauncher)
+        }
+        
+        voiceSearchButton.setOnLongClickListener {
+            voiceSearchManager.triggerSystemAssistant()
+            true
+        }
         
         // Initialize usage stats refresh manager
         usageStatsRefreshManager = UsageStatsRefreshManager(
@@ -1326,41 +1389,7 @@ class MainActivity : FragmentActivity() {
         voiceCommandHandler?.openSMSChat(contactName)
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION && resultCode == RESULT_OK) {
-            updateWidgetVisibility()
-            // Refresh system widgets in the drawer
-            refreshSystemWidgets()
-            // Update visibility again after refreshing system widgets
-            updateWidgetVisibility()
-            // Refresh calendar widget when it becomes visible
-            if (::calendarEventsWidget.isInitialized) {
-                val isEnabled = widgetConfigurationManager.isWidgetEnabled("calendar_events_widget_container")
-                if (isEnabled) {
-                    calendarEventsWidget.refresh()
-                }
-            }
-            // Refresh countdown widget when it becomes visible
-            if (::countdownWidget.isInitialized) {
-                val isEnabled = widgetConfigurationManager.isWidgetEnabled("countdown_widget_container")
-                if (isEnabled) {
-                    countdownWidget.refresh()
-                }
-            }
-        }
-        
-        if (::activityResultHandler.isInitialized) {
-            // Initialize voice command handler if needed for voice search result
-            if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && resultCode == RESULT_OK) {
-                if (voiceCommandHandler == null) {
-                    voiceCommandHandler = VoiceCommandHandler(this, packageManager, contentResolver, searchBox, appList)
-                }
-                activityResultHandler.setVoiceCommandHandler(voiceCommandHandler)
-            }
-            activityResultHandler.handleActivityResult(requestCode, resultCode, data)
-        }
-    }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -1734,8 +1763,7 @@ class MainActivity : FragmentActivity() {
      */
     private fun showWidgetConfigurationDialog() {
         val intent = Intent(this, WidgetConfigurationActivity::class.java)
-        @Suppress("DEPRECATION")
-        startActivityForResult(intent, ActivityResultHandler.REQUEST_WIDGET_CONFIGURATION)
+        widgetConfigurationLauncher.launch(intent)
     }
     
     /**

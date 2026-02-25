@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.FileProvider
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
@@ -107,6 +108,22 @@ class ShareManager(private val context: Context) {
             } else {
                 showToast(context.getString(R.string.activity_not_available))
             }
+        } catch (_: ActivityNotFoundException) {
+            showToast(context.getString(R.string.no_file_manager_available))
+        } catch (_: Exception) {
+            showToast(context.getString(R.string.no_file_manager_available))
+        }
+    }
+    
+    fun showFileSharingDialogWithLauncher(launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = Constants.MIME_TYPE_ALL
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+        }
+
+        try {
+            launcher.launch(intent)
         } catch (_: ActivityNotFoundException) {
             showToast(context.getString(R.string.no_file_manager_available))
         } catch (_: Exception) {
