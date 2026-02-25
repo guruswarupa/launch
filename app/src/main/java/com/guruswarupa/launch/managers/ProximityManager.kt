@@ -73,6 +73,14 @@ class ProximityManager(context: Context) : SensorEventListener {
         }
     }
     
+    /**
+     * Cleanup method to unregister sensor listeners and prevent memory leaks
+     */
+    fun cleanup() {
+        stopTracking()
+        onProximityChanged = null
+    }
+    
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null || event.sensor.type != Sensor.TYPE_PROXIMITY) return
         

@@ -265,4 +265,11 @@ class LifecycleManager(
         // Execute custom callbacks
         onPauseCallbacks.forEach { it.invoke() }
     }
+    
+    /**
+     * Cleanup method to cancel pending handler callbacks and prevent memory leaks
+     */
+    fun cleanup() {
+        handler.removeCallbacksAndMessages(null)
+    }
 }

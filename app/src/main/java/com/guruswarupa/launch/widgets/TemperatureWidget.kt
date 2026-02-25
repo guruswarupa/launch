@@ -171,7 +171,7 @@ class TemperatureWidget(
     fun cleanup() {
         handler.removeCallbacks(updateRunnable)
         if (isInitialized) {
-            temperatureManager.stopTracking()
+            temperatureManager.cleanup()
         }
     }
 }

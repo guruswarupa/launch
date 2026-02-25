@@ -154,7 +154,7 @@ class ProximityWidget(
     fun cleanup() {
         handler.removeCallbacks(updateRunnable)
         if (isInitialized) {
-            proximityManager.stopTracking()
+            proximityManager.cleanup()
         }
     }
 }
