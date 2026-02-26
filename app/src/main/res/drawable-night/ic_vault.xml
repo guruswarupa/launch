@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Dark background for dark theme -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="16dp" />
+            <solid android:color="#80000000" />
+        </shape>
+    </item>
+    <!-- Icon -->
+    <item
+        android:drawable="@drawable/ic_vault_icon"
+        android:gravity="center"
+        android:left="6dp"
+        android:top="6dp"
+        android:right="6dp"
+        android:bottom="6dp" />
+</layer-list>

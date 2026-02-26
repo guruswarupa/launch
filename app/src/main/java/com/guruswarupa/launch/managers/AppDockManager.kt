@@ -19,6 +19,7 @@ import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.ui.activities.FocusModeConfigActivity
 import com.guruswarupa.launch.ui.activities.SettingsActivity
 import com.guruswarupa.launch.ui.activities.WorkspaceConfigActivity
+import com.guruswarupa.launch.ui.activities.EncryptedVaultActivity
 import java.util.Locale
 
 class AppDockManager(
@@ -37,6 +38,7 @@ class AppDockManager(
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
     private lateinit var apkShareButton: ImageView
+    private lateinit var vaultButton: ImageView
     private lateinit var favoriteToggle: ImageView
     private var isFocusMode: Boolean = false
     private var timerHandler: android.os.Handler? = null
@@ -108,7 +110,41 @@ class AppDockManager(
         }
     }
 
+    private fun ensureVaultButton() {
+        if (appDock.findViewWithTag<ImageView>("vault_button") == null) {
+            vaultButton = ImageView(context).apply {
+                tag = "vault_button"
+                setImageResource(R.drawable.ic_vault)
+                layoutParams = LinearLayout.LayoutParams(
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
+                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                ).apply {
+                    marginStart = 8
+                }
+                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
+                setOnClickListener { openVault() }
+                setOnLongClickListener {
+                    Toast.makeText(context, "Encrypted Vault", Toast.LENGTH_SHORT).show()
+                    true
+                }
+            }
+            
+            // Insert after APK share button
+            var insertIndex = appDock.childCount
+            for (i in 0 until appDock.childCount) {
+                if (appDock.getChildAt(i).tag == "apk_share_button") {
+                    insertIndex = i + 1
+                    break
+                }
+            }
+            appDock.addView(vaultButton, insertIndex)
+        }
+    }
 
+    private fun openVault() {
+        val intent = Intent(context, EncryptedVaultActivity::class.java)
+        context.startActivity(intent)
+    }
 
     private fun refreshDock() {
         appDock.removeAllViews()
@@ -117,6 +153,7 @@ class AppDockManager(
         ensureWorkspaceToggle()      // 3. Workspace toggle
         ensureFocusModeToggle()      // 4. Focus mode
         ensureApkShareButton()       // 5. Share APK icon
+        ensureVaultButton()          // 6. Encrypted Vault
         updateDockVisibility()
     }
     
@@ -134,7 +171,9 @@ class AppDockManager(
         if (::apkShareButton.isInitialized) {
             apkShareButton.setImageResource(R.drawable.ic_share)
         }
-        // Settings button doesn\'t need re-setting since it\'s handled by the drawable resource
+        if (::vaultButton.isInitialized) {
+            vaultButton.setImageResource(R.drawable.ic_vault)
+        }
     }
     
     fun refreshWorkspaceToggle() {
@@ -267,7 +306,7 @@ class AppDockManager(
         // Build workspace names list
         val workspaceNames = workspaces.map { it.name }.toMutableList()
         
-        // Add "Turn Off" option if a workspace is currently active
+        // Add \"Turn Off\" option if a workspace is currently active
         if (isWorkspaceActive) {
             workspaceNames.add("Turn Off")
         }
@@ -277,7 +316,7 @@ class AppDockManager(
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(if (isWorkspaceActive) "Switch Workspace" else "Select Workspace")
             .setItems(itemsArray) { _, which ->
-                // Check if "Turn Off" was selected (last item when workspace is active)
+                // Check if \"Turn Off\" was selected (last item when workspace is active)
                 if (isWorkspaceActive && which == itemsArray.size - 1) {
                     // Turn off workspace mode
                     workspaceManager.setActiveWorkspaceId(null)
@@ -416,7 +455,7 @@ class AppDockManager(
         val newMode = !currentMode
         favoriteAppManager.setShowAllAppsMode(newMode)
         
-        // Update MainActivity\'s isShowAllAppsMode variable
+        // Update MainActivity's isShowAllAppsMode variable
         (context as? MainActivity)?.let { activity ->
             activity.isShowAllAppsMode = newMode
         }
@@ -599,7 +638,7 @@ class AppDockManager(
                 "favorite_toggle" -> {
                     updateFavoriteToggleIcon()
                 }
-                "add_icon", "apk_share_button" -> {
+                "add_icon", "apk_share_button", "vault_button" -> {
                     child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                 }
                 else -> {

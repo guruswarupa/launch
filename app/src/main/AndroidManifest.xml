@@ -40,6 +40,7 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
     <uses-feature android:name="android.hardware.sensor.stepdetector" android:required="false" />
@@ -119,6 +120,13 @@
             android:exported="true"
             android:theme="@style/Theme.Launch.Settings"
             android:label="@string/settings_app_name"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".ui.activities.EncryptedVaultActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:label=""
             android:excludeFromRecents="true" />
 
         <service

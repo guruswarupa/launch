@@ -20,6 +20,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.text.Html
 import android.text.method.LinkMovementMethod
+import android.util.Base64
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
@@ -41,6 +43,11 @@ import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 class SettingsActivity : ComponentActivity() {
 
@@ -473,9 +480,9 @@ class SettingsActivity : ComponentActivity() {
     private fun setupSearchEngine() {
         val searchEngineSpinner = findViewById<Spinner>(R.id.search_engine_spinner)
         val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, engines)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        searchEngineSpinner.adapter = adapter
+        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, engines)
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        searchEngineSpinner.adapter = spinnerAdapter
 
         val currentEngine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
         val index = engines.indexOf(currentEngine)
@@ -671,8 +678,8 @@ class SettingsActivity : ComponentActivity() {
     private fun exportSettings() {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/json"
-            putExtra(Intent.EXTRA_TITLE, "launch_settings_backup.json")
+            type = "application/zip"
+            putExtra(Intent.EXTRA_TITLE, "launch_backup_${System.currentTimeMillis()}.zip")
         }
         exportLauncher.launch(intent)
     }
@@ -680,14 +687,12 @@ class SettingsActivity : ComponentActivity() {
     private fun importSettings() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/json"
+            type = "application/zip"
         }
         importLauncher.launch(intent)
     }
 
-    private val sensitiveMainKeys = setOf(
-        "weather_api_key"
-    )
+    private val sensitiveMainKeys = setOf<String>()
 
     private val sensitiveAppLockKeys = setOf(
         "pin_hash",
@@ -703,165 +708,173 @@ class SettingsActivity : ComponentActivity() {
 
     private fun exportSettingsToFile(uri: Uri) {
         try {
-            val settingsJson = JSONObject()
-            
-            val mainPrefs = prefs.all
-            val mainPrefsJson = JSONObject()
-            for ((key, value) in mainPrefs) {
-                if (key in sensitiveMainKeys) continue
-                when (value) {
-                    is String -> mainPrefsJson.put(key, value)
-                    is Boolean -> mainPrefsJson.put(key, value)
-                    is Int -> mainPrefsJson.put(key, value)
-                    is Long -> mainPrefsJson.put(key, value)
-                    is Float -> mainPrefsJson.put(key, value)
-                    is Set<*> -> {
-                        val jsonArray = JSONArray()
-                        value.forEach { jsonArray.put(it) }
-                        mainPrefsJson.put(key, jsonArray)
-                    }
-                }
-            }
-            settingsJson.put("main_preferences", mainPrefsJson)
-            
-            val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
-            val appTimerAll = appTimerPrefs.all
-            if (appTimerAll.isNotEmpty()) {
-                val appTimerJson = JSONObject()
-                for ((key, value) in appTimerAll) {
-                    when (value) {
-                        is String -> appTimerJson.put(key, value)
-                        is Boolean -> appTimerJson.put(key, value)
-                        is Int -> appTimerJson.put(key, value)
-                        is Long -> appTimerJson.put(key, value)
-                        is Float -> appTimerJson.put(key, value)
-                        is Set<*> -> {
-                            val jsonArray = JSONArray()
-                            value.forEach { jsonArray.put(it) }
-                            appTimerJson.put(key, jsonArray)
-                        }
-                    }
-                }
-                settingsJson.put("app_timer_prefs", appTimerJson)
-            }
-            
-            val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
-            val appLockAll = appLockPrefs.all
-            if (appLockAll.isNotEmpty()) {
-                val appLockJson = JSONObject()
-                for ((key, value) in appLockAll) {
-                    if (key in sensitiveAppLockKeys) continue
-                    when (value) {
-                        is String -> appLockJson.put(key, value)
-                        is Boolean -> appLockJson.put(key, value)
-                        is Int -> appLockJson.put(key, value)
-                        is Long -> appLockJson.put(key, value)
-                        is Float -> appLockJson.put(key, value)
-                        is Set<*> -> {
-                            val jsonArray = JSONArray()
-                            value.forEach { jsonArray.put(it) }
-                            appLockJson.put(key, jsonArray)
-                        }
-                    }
-                }
-                settingsJson.put("app_lock_prefs", appLockJson)
-            }
-            
-            // Export physical activity data
-            exportPhysicalActivityData(settingsJson)
-            
-            // Export workout tracker data
-            exportWorkoutData(settingsJson)
-            
-            // Export todo list data
-            exportTodoData(settingsJson)
-            
-            // Export finance tracker data
-            exportFinanceData(settingsJson)
-            
-            // Export GitHub widget data
-            exportGithubWidgetData(settingsJson)
-
             contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(settingsJson.toString(2).toByteArray())
-            }
+                ZipOutputStream(outputStream).use { zipOut ->
+                    // 1. Export JSON settings
+                    val settingsJson = JSONObject()
+                    
+                    val mainPrefs = prefs.all
+                    val mainPrefsJson = JSONObject()
+                    for ((key, value) in mainPrefs) {
+                        if (key in sensitiveMainKeys) continue
+                        when (value) {
+                            is String -> mainPrefsJson.put(key, value)
+                            is Boolean -> mainPrefsJson.put(key, value)
+                            is Int -> mainPrefsJson.put(key, value)
+                            is Long -> mainPrefsJson.put(key, value)
+                            is Float -> mainPrefsJson.put(key, value)
+                            is Set<*> -> {
+                                val jsonArray = JSONArray()
+                                value.forEach { jsonArray.put(it) }
+                                mainPrefsJson.put(key, jsonArray)
+                            }
+                        }
+                    }
+                    settingsJson.put("main_preferences", mainPrefsJson)
+                    
+                    val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
+                    val appTimerAll = appTimerPrefs.all
+                    if (appTimerAll.isNotEmpty()) {
+                        val appTimerJson = JSONObject()
+                        for ((key, value) in appTimerAll) {
+                            when (value) {
+                                is String -> appTimerJson.put(key, value)
+                                is Boolean -> appTimerJson.put(key, value)
+                                is Int -> appTimerJson.put(key, value)
+                                is Long -> appTimerJson.put(key, value)
+                                is Float -> appTimerJson.put(key, value)
+                                is Set<*> -> {
+                                    val jsonArray = JSONArray()
+                                    value.forEach { jsonArray.put(it) }
+                                    appTimerJson.put(key, jsonArray)
+                                }
+                            }
+                        }
+                        settingsJson.put("app_timer_prefs", appTimerJson)
+                    }
+                    
+                    val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
+                    val appLockAll = appLockPrefs.all
+                    if (appLockAll.isNotEmpty()) {
+                        val appLockJson = JSONObject()
+                        for ((key, value) in appLockAll) {
+                            if (key in sensitiveAppLockKeys) continue
+                            when (value) {
+                                is String -> appLockJson.put(key, value)
+                                is Boolean -> appLockJson.put(key, value)
+                                is Int -> appLockJson.put(key, value)
+                                is Long -> appLockJson.put(key, value)
+                                is Float -> appLockJson.put(key, value)
+                                is Set<*> -> {
+                                    val jsonArray = JSONArray()
+                                    value.forEach { jsonArray.put(it) }
+                                    appLockJson.put(key, jsonArray)
+                                }
+                            }
+                        }
+                        settingsJson.put("app_lock_prefs", appLockJson)
+                    }
+                    
+                    exportPhysicalActivityData(settingsJson)
+                    exportWorkoutData(settingsJson)
+                    exportTodoData(settingsJson)
+                    exportFinanceData(settingsJson)
+                    exportGithubWidgetData(settingsJson)
 
-            Toast.makeText(this, "Settings exported successfully", Toast.LENGTH_SHORT).show()
+                    // Add settings.json to ZIP
+                    zipOut.putNextEntry(ZipEntry("settings.json"))
+                    zipOut.write(settingsJson.toString(2).toByteArray())
+                    zipOut.closeEntry()
+
+                    // 2. Export Vault Files (Streamed to avoid OOM)
+                    val vaultManager = EncryptedFolderManager(this)
+                    val vaultFolder = vaultManager.getEncryptedFolder()
+                    val thumbFolder = vaultManager.getThumbnailFolder()
+
+                    vaultFolder.listFiles()?.forEach { file ->
+                        zipOut.putNextEntry(ZipEntry("vault/${file.name}"))
+                        file.inputStream().use { it.copyTo(zipOut) }
+                        zipOut.closeEntry()
+                    }
+
+                    thumbFolder.listFiles()?.forEach { file ->
+                        zipOut.putNextEntry(ZipEntry("thumbs/${file.name}"))
+                        file.inputStream().use { it.copyTo(zipOut) }
+                        zipOut.closeEntry()
+                    }
+                }
+            }
+            Toast.makeText(this, "Backup created successfully", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to export settings: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Backup failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
     private fun importSettingsFromFile(uri: Uri) {
         try {
             contentResolver.openInputStream(uri)?.use { inputStream ->
-                val jsonString = inputStream.bufferedReader().use { it.readText() }
-                val settingsJson = JSONObject(jsonString)
-                val isNewFormat = settingsJson.has("main_preferences")
-                
-                if (isNewFormat) {
-                    if (settingsJson.has("main_preferences")) {
-                        val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
-                        prefs.edit {
-                            importPreferences(mainPrefsJson, this)
+                ZipInputStream(inputStream).use { zipIn ->
+                    var entry = zipIn.nextEntry
+                    while (entry != null) {
+                        when {
+                            entry.name == "settings.json" -> {
+                                val jsonString = zipIn.bufferedReader().readText()
+                                importJsonSettings(JSONObject(jsonString))
+                            }
+                            entry.name.startsWith("vault/") -> {
+                                val fileName = entry.name.substringAfter("vault/")
+                                if (fileName.isNotEmpty()) {
+                                    val destFile = File(EncryptedFolderManager(this).getEncryptedFolder(), fileName)
+                                    destFile.outputStream().use { zipIn.copyTo(it) }
+                                }
+                            }
+                            entry.name.startsWith("thumbs/") -> {
+                                val fileName = entry.name.substringAfter("thumbs/")
+                                if (fileName.isNotEmpty()) {
+                                    val destFile = File(EncryptedFolderManager(this).getThumbnailFolder(), fileName)
+                                    destFile.outputStream().use { zipIn.copyTo(it) }
+                                }
+                            }
                         }
-                    }
-                    if (settingsJson.has("app_timer_prefs")) {
-                        val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
-                        val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
-                        appTimerPrefs.edit {
-                            importPreferences(appTimerJson, this)
-                        }
-                    }
-                    if (settingsJson.has("app_lock_prefs")) {
-                        val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
-                        val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
-                        appLockPrefs.edit {
-                            importPreferences(appLockJson, this)
-                        }
-                    }
-                    
-                    // Import physical activity data
-                    if (settingsJson.has("physical_activity_data")) {
-                        importPhysicalActivityData(settingsJson.getJSONObject("physical_activity_data"))
-                    }
-                    
-                    // Import workout data
-                    if (settingsJson.has("workout_data")) {
-                        importWorkoutData(settingsJson.getJSONObject("workout_data"))
-                    }
-                    
-                    // Import todo data
-                    if (settingsJson.has("todo_data")) {
-                        importTodoData(settingsJson.getJSONObject("todo_data"))
-                    }
-                    
-                    // Import finance data
-                    if (settingsJson.has("finance_data")) {
-                        importFinanceData(settingsJson.getJSONObject("finance_data"))
-                    }
-                    
-                    // Import GitHub widget data
-                    if (settingsJson.has("github_widget_data")) {
-                        importGithubWidgetData(settingsJson.getJSONObject("github_widget_data"))
-                    }
-                } else {
-                    prefs.edit {
-                        importPreferences(settingsJson, this)
+                        zipIn.closeEntry()
+                        entry = zipIn.nextEntry
                     }
                 }
-
-                val gridOption = findViewById<Button>(R.id.grid_option)
-                val listOption = findViewById<Button>(R.id.list_option)
-                updateDisplayStyleButtons(gridOption, listOption, prefs.getString("view_preference", "list") ?: "list")
-
-                Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
             }
+            Toast.makeText(this, "Backup restored successfully", Toast.LENGTH_SHORT).show()
+            restartLauncher()
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to import settings: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
-    
+
+    private fun importJsonSettings(settingsJson: JSONObject) {
+        val isNewFormat = settingsJson.has("main_preferences")
+        if (isNewFormat) {
+            if (settingsJson.has("main_preferences")) {
+                val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
+                prefs.edit { importPreferences(mainPrefsJson, this) }
+            }
+            if (settingsJson.has("app_timer_prefs")) {
+                val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
+                val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
+                appTimerPrefs.edit { importPreferences(appTimerJson, this) }
+            }
+            if (settingsJson.has("app_lock_prefs")) {
+                val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
+                val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
+                appLockPrefs.edit { importPreferences(appLockJson, this) }
+            }
+            if (settingsJson.has("physical_activity_data")) importPhysicalActivityData(settingsJson.getJSONObject("physical_activity_data"))
+            if (settingsJson.has("workout_data")) importWorkoutData(settingsJson.getJSONObject("workout_data"))
+            if (settingsJson.has("todo_data")) importTodoData(settingsJson.getJSONObject("todo_data"))
+            if (settingsJson.has("finance_data")) importFinanceData(settingsJson.getJSONObject("finance_data"))
+            if (settingsJson.has("github_widget_data")) importGithubWidgetData(settingsJson.getJSONObject("github_widget_data"))
+        } else {
+            prefs.edit { importPreferences(settingsJson, this) }
+        }
+    }
+
     private fun importPreferences(prefsJson: JSONObject, editor: SharedPreferences.Editor) {
         val keys = prefsJson.keys()
         while (keys.hasNext()) {

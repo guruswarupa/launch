@@ -3,6 +3,7 @@ package com.guruswarupa.launch.ui.activities
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -35,14 +36,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.managers.FavoriteAppManager
 import com.guruswarupa.launch.managers.WorkspaceManager
 import com.guruswarupa.launch.ui.adapters.FavoritesOnboardingAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesListAdapter
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.models.Constants
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.util.zip.ZipInputStream
 
 data class PermissionInfo(
     val permission: String,
@@ -76,10 +81,6 @@ class OnboardingActivity : ComponentActivity() {
     private var backupImported = false
     
     private lateinit var backupFilePickerLauncher: ActivityResultLauncher<Intent>
-
-    companion object {
-        private const val IMPORT_BACKUP_REQUEST_CODE = 1000
-    }
 
     // UI References
     private lateinit var onboardingScrollView: android.widget.ScrollView
@@ -1097,39 +1098,77 @@ class OnboardingActivity : ComponentActivity() {
     private fun requestBackupFile() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/json"
+            type = "application/zip"
         }
         backupFilePickerLauncher.launch(intent)
     }
     
-
-    
     private fun importBackupFromFile(uri: Uri) {
         try {
             contentResolver.openInputStream(uri)?.use { inputStream ->
-                val jsonString = inputStream.bufferedReader().use { it.readText() }
-                val settingsJson = JSONObject(jsonString)
-                val isNewFormat = settingsJson.has("main_preferences")
-                if (isNewFormat) {
-                    if (settingsJson.has("main_preferences")) {
-                        prefs.edit {
-                            importPreferences(settingsJson.getJSONObject("main_preferences"), this)
+                ZipInputStream(inputStream).use { zipIn ->
+                    var entry = zipIn.nextEntry
+                    while (entry != null) {
+                        when {
+                            entry.name == "settings.json" -> {
+                                val jsonString = zipIn.bufferedReader().readText()
+                                importJsonSettings(JSONObject(jsonString))
+                            }
+                            entry.name.startsWith("vault/") -> {
+                                val fileName = entry.name.substringAfter("vault/")
+                                if (fileName.isNotEmpty()) {
+                                    val destFile = File(EncryptedFolderManager(this).getEncryptedFolder(), fileName)
+                                    destFile.outputStream().use { zipIn.copyTo(it) }
+                                }
+                            }
+                            entry.name.startsWith("thumbs/") -> {
+                                val fileName = entry.name.substringAfter("thumbs/")
+                                if (fileName.isNotEmpty()) {
+                                    val destFile = File(EncryptedFolderManager(this).getThumbnailFolder(), fileName)
+                                    destFile.outputStream().use { zipIn.copyTo(it) }
+                                }
+                            }
                         }
-                    }
-                } else {
-                    prefs.edit {
-                        importPreferences(settingsJson, this)
+                        zipIn.closeEntry()
+                        entry = zipIn.nextEntry
                     }
                 }
-                backupImported = true
-                Toast.makeText(this, "Backup imported successfully", Toast.LENGTH_SHORT).show()
-                showStep(OnboardingStep.COMPLETE)
             }
+            backupImported = true
+            Toast.makeText(this, "Backup restored successfully", Toast.LENGTH_SHORT).show()
+            showStep(OnboardingStep.COMPLETE)
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to import backup: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
-    
+
+    private fun importJsonSettings(settingsJson: JSONObject) {
+        val isNewFormat = settingsJson.has("main_preferences")
+        if (isNewFormat) {
+            if (settingsJson.has("main_preferences")) {
+                val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
+                prefs.edit { importPreferences(mainPrefsJson, this) }
+            }
+            if (settingsJson.has("app_timer_prefs")) {
+                val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
+                val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
+                appTimerPrefs.edit { importPreferences(appTimerJson, this) }
+            }
+            if (settingsJson.has("app_lock_prefs")) {
+                val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
+                val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
+                appLockPrefs.edit { importPreferences(appLockJson, this) }
+            }
+            if (settingsJson.has("physical_activity_data")) importPhysicalActivityData(settingsJson.getJSONObject("physical_activity_data"))
+            if (settingsJson.has("workout_data")) importWorkoutData(settingsJson.getJSONObject("workout_data"))
+            if (settingsJson.has("todo_data")) importTodoData(settingsJson.getJSONObject("todo_data"))
+            if (settingsJson.has("finance_data")) importFinanceData(settingsJson.getJSONObject("finance_data"))
+            if (settingsJson.has("github_widget_data")) importGithubWidgetData(settingsJson.getJSONObject("github_widget_data"))
+        } else {
+            prefs.edit { importPreferences(settingsJson, this) }
+        }
+    }
+
     private fun importPreferences(prefsJson: JSONObject, editor: SharedPreferences.Editor) {
         val keys = prefsJson.keys()
         while (keys.hasNext()) {
@@ -1143,10 +1182,73 @@ class OnboardingActivity : ComponentActivity() {
                 is Float -> editor.putFloat(key, value)
                 is JSONArray -> {
                     val stringSet = mutableSetOf<String>()
-                    for (i in 0 until value.length()) stringSet.add(value.getString(i))
+                    for (i in 0 until value.length()) {
+                        stringSet.add(value.getString(i))
+                    }
                     editor.putStringSet(key, stringSet)
                 }
             }
         }
+    }
+
+    private fun importPhysicalActivityData(activityJson: JSONObject) {
+        try {
+            getSharedPreferences("physical_activity_prefs", MODE_PRIVATE).edit {
+                importPreferences(activityJson, this)
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun importWorkoutData(workoutJson: JSONObject) {
+        try {
+            prefs.edit {
+                if (workoutJson.has("exercises")) putString("workout_exercises", workoutJson.getString("exercises"))
+                if (workoutJson.has("last_reset_date")) putString("workout_last_reset_date", workoutJson.getString("last_reset_date"))
+                if (workoutJson.has("streak")) putInt("workout_streak", workoutJson.getInt("streak"))
+                if (workoutJson.has("last_streak_date")) putString("workout_last_streak_date", workoutJson.getString("last_streak_date"))
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun importTodoData(todoJson: JSONObject) {
+        try {
+            if (todoJson.has("todo_items")) prefs.edit { putString("todo_items", todoJson.getString("todo_items")) }
+        } catch (_: Exception) {}
+    }
+
+    private fun importFinanceData(financeJson: JSONObject) {
+        try {
+            prefs.edit {
+                if (financeJson.has("balance")) putFloat("finance_balance", financeJson.getDouble("balance").toFloat())
+                if (financeJson.has("currency")) putString("finance_currency", financeJson.getString("currency"))
+                if (financeJson.has("monthly_data")) {
+                    val monthlyData = financeJson.getJSONObject("monthly_data")
+                    val keys = monthlyData.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        putFloat(key, monthlyData.getDouble(key).toFloat())
+                    }
+                }
+                if (financeJson.has("transactions")) {
+                    val transactions = financeJson.getJSONArray("transactions")
+                    for (i in 0 until transactions.length()) {
+                        val timestamp = System.currentTimeMillis() + i
+                        putString("transaction_$timestamp", transactions.getString(i))
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun importGithubWidgetData(githubJson: JSONObject) {
+        try {
+            prefs.edit {
+                val keys = githubJson.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    putString(key, githubJson.getString(key))
+                }
+            }
+        } catch (_: Exception) {}
     }
 }
