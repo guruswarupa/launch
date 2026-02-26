@@ -22,7 +22,8 @@ class AppSearchManager(
     private var contactsList: List<String>,
     private val context: android.content.Context,
     private val appMetadataCache: Map<String, AppMetadata>? = null,
-    private val isAppFiltered: ((String) -> Boolean)? = null
+    private val isAppFiltered: ((String) -> Boolean)? = null,
+    private val isFocusModeActive: (() -> Boolean)? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val searchExecutor = Executors.newSingleThreadExecutor() // Background thread for search operations
@@ -213,9 +214,12 @@ class AppSearchManager(
 
                 // If in ALL mode, add specialized ones at the bottom
                 if (currentSearchMode == SearchMode.ALL) {
-                    newFilteredList.add(createGoogleMapsSearchOption(query))
-                    newFilteredList.add(createPlayStoreSearchOption(query))
-                    newFilteredList.add(createYoutubeSearchOption(query))
+                    // Don't add web, YouTube, or Play Store options when focus mode is active
+                    if (!(isFocusModeActive?.invoke() == true)) {
+                        newFilteredList.add(createGoogleMapsSearchOption(query))
+                        newFilteredList.add(createPlayStoreSearchOption(query))
+                        newFilteredList.add(createYoutubeSearchOption(query))
+                    }
                     newFilteredList.add(createBrowserSearchOption(query))
                 }
             }

@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.managers.AppDockManager
@@ -22,6 +23,7 @@ class FocusModeApplier(
     private val appDockManager: AppDockManager,
     private val searchBox: EditText,
     private val voiceSearchButton: ImageButton,
+    private val searchContainer: LinearLayout,
     private val adapter: AppAdapter,
     private val fullAppList: MutableList<android.content.pm.ResolveInfo>,
     private val appList: MutableList<android.content.pm.ResolveInfo>,
@@ -74,14 +76,10 @@ class FocusModeApplier(
                     appList.clear()
                     appList.addAll(sortedFinalList)
 
-                    val currentFocusMode = appDockManager.getCurrentMode()
-                    if (currentFocusMode) {
-                        searchBox.visibility = View.GONE
-                        voiceSearchButton.visibility = View.GONE
-                    } else {
-                        searchBox.visibility = View.VISIBLE
-                        voiceSearchButton.visibility = View.VISIBLE
-                    }
+                    searchContainer.visibility = View.VISIBLE
+
+                    // Also update the drawer lock state based on focus mode
+                    appDockManager.lockDrawerForFocusMode(isFocusMode)
 
                     adapter.updateAppList(appList)
 

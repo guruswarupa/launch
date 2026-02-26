@@ -34,6 +34,7 @@ class AppDockManager(
     private val focusModeKey = "focus_mode_enabled"
     private val focusModeAllowedAppsKey = "focus_mode_allowed_apps"
     private val focusModeEndTimeKey = "focus_mode_end_time"
+    private val focusModeDndEnabledKey = "focus_mode_dnd_enabled"
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
@@ -73,7 +74,9 @@ class AppDockManager(
             if (endTime > System.currentTimeMillis()) {
                 startTimerDisplay()
                 startFocusModeTimer(endTime)
-                updateDndState(true)
+                if (sharedPreferences.getBoolean(focusModeDndEnabledKey, false)) {
+                    updateDndState(true)
+                }
             } else {
                 // Timer expired, disable focus mode
                 disableFocusMode()
@@ -502,7 +505,7 @@ class AppDockManager(
                 if (durationValues[which] == -1) {
                     showCustomDurationDialog()
                 } else {
-                    enableFocusMode(durationValues[which])
+                    promptForDnd(durationValues[which])
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -522,7 +525,7 @@ class AppDockManager(
             .setPositiveButton("Start") { _, _ ->
                 val minutes = input.text.toString().toIntOrNull()
                 if (minutes != null && minutes in 1..480) {
-                    enableFocusMode(minutes)
+                    promptForDnd(minutes)
                 } else {
                     Toast.makeText(context, "Please enter a valid duration (1-480 minutes)", Toast.LENGTH_LONG).show()
                 }
@@ -531,8 +534,22 @@ class AppDockManager(
             .show()
     }
 
-    private fun enableFocusMode(durationMinutes: Int) {
-        if (!notificationManager.isNotificationPolicyAccessGranted) {
+    private fun promptForDnd(durationMinutes: Int) {
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Enable Do Not Disturb?")
+            .setMessage("Would you like to enable Do Not Disturb mode to mute notifications during this focus session?")
+            .setPositiveButton("Yes") { _, _ ->
+                enableFocusMode(durationMinutes, true)
+            }
+            .setNegativeButton("No") { _, _ ->
+                enableFocusMode(durationMinutes, false)
+            }
+            .setNeutralButton("Cancel", null)
+            .show()
+    }
+
+    private fun enableFocusMode(durationMinutes: Int, enableDnd: Boolean) {
+        if (enableDnd && !notificationManager.isNotificationPolicyAccessGranted) {
             showDndPermissionDialog()
             return
         }
@@ -541,13 +558,27 @@ class AppDockManager(
         val endTime = System.currentTimeMillis() + (durationMinutes * 60 * 1000)
 
         saveFocusMode()
-        sharedPreferences.edit { putLong(focusModeEndTimeKey, endTime) }
+        sharedPreferences.edit { 
+            putLong(focusModeEndTimeKey, endTime)
+            putBoolean(focusModeDndEnabledKey, enableDnd)
+        }
+
+        // Use FocusModeManager to set focus mode and notify accessibility service
+        val focusModeManager = FocusModeManager(context, sharedPreferences)
+        focusModeManager.setFocusModeEnabled(true)
 
         updateFocusModeIcon()
         updateDockVisibility()
+        
+        // Lock drawer immediately when focus mode is enabled
+        lockDrawerForFocusMode(true)
+        
         refreshAppsForFocusMode()
         startTimerDisplay()
-        updateDndState(true)
+        
+        if (enableDnd) {
+            updateDndState(true)
+        }
 
         Toast.makeText(context, "Focus mode enabled for $durationMinutes minutes", Toast.LENGTH_LONG).show()
 
@@ -558,7 +589,7 @@ class AppDockManager(
     private fun showDndPermissionDialog() {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("DND Access Required")
-            .setMessage("Focus Mode requires Do Not Disturb access to block notifications. Please grant it in the settings.")
+            .setMessage("Muting notifications requires Do Not Disturb access. Please grant it in the settings or start Focus Mode without DND.")
             .setPositiveButton("Grant Access") { _, _ ->
                 context.startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
             }
@@ -585,13 +616,29 @@ class AppDockManager(
     private fun disableFocusMode() {
         isFocusMode = false
         saveFocusMode()
-        sharedPreferences.edit { remove(focusModeEndTimeKey) }
+        
+        val dndWasEnabled = sharedPreferences.getBoolean(focusModeDndEnabledKey, false)
+        sharedPreferences.edit { 
+            remove(focusModeEndTimeKey)
+            remove(focusModeDndEnabledKey)
+        }
+
+        // Use FocusModeManager to disable focus mode and notify accessibility service
+        val focusModeManager = FocusModeManager(context, sharedPreferences)
+        focusModeManager.setFocusModeEnabled(false)
 
         updateFocusModeIcon()
         updateDockVisibility()
+        
+        // Unlock drawer when focus mode is disabled
+        lockDrawerForFocusMode(false)
+        
         refreshAppsForFocusMode()
         stopTimerDisplay()
-        updateDndState(false)
+        
+        if (dndWasEnabled) {
+            updateDndState(false)
+        }
 
         Toast.makeText(context, "Focus mode disabled", Toast.LENGTH_SHORT).show()
     }
@@ -603,8 +650,9 @@ class AppDockManager(
                 if (isFocusMode && System.currentTimeMillis() >= endTime) {
                     disableFocusMode()
                 } else if (isFocusMode) {
-                    // Force DND if user disabled it
-                    if (notificationManager.isNotificationPolicyAccessGranted && 
+                    // Force DND if user enabled it and then disabled it manually
+                    val shouldHaveDnd = sharedPreferences.getBoolean(focusModeDndEnabledKey, false)
+                    if (shouldHaveDnd && notificationManager.isNotificationPolicyAccessGranted && 
                         notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
                         updateDndState(true)
                         Toast.makeText(context, "DND re-enabled (Focus Mode active)", Toast.LENGTH_SHORT).show()
@@ -626,6 +674,30 @@ class AppDockManager(
     private fun refreshAppsForFocusMode() {
         (context as? MainActivity)?.refreshAppsForFocusMode()
     }
+    
+    /**
+     * Lock/unlock the left drawer for focus mode
+     */
+    fun lockDrawerForFocusMode(lock: Boolean) {
+        val drawerLayout = (context as? MainActivity)?.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
+        val leftCueView = (context as? MainActivity)?.findViewById<android.view.View>(R.id.left_drawer_cue)
+        
+        if (lock) {
+            // Lock the left drawer (widgets drawer) when focus mode is on
+            drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED, androidx.core.view.GravityCompat.START)
+            // Close the drawer if it's open
+            if (drawerLayout?.isDrawerOpen(androidx.core.view.GravityCompat.START) == true) {
+                drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
+            }
+            // Hide the left drawer visual cue
+            leftCueView?.visibility = android.view.View.GONE
+        } else {
+            // Unlock the left drawer when focus mode is off
+            drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.START)
+            // Show the left drawer visual cue
+            leftCueView?.visibility = android.view.View.VISIBLE
+        }
+    }
 
     private fun updateDockVisibility() {
         // Hide/show all dock items except the focus mode container, workspace toggle and restart button
@@ -642,13 +714,8 @@ class AppDockManager(
                     child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                 }
                 else -> {
-                    // Hide other dock items when in focus mode
-                    // But keep settings button visible
-                    if (child.tag == "settings_button") {
-                        child.visibility = View.VISIBLE
-                    } else {
-                        child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
-                    }
+                    // Hide other dock items when in focus mode including settings button
+                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                 }
             }
         }

@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.content.Intent
 import android.graphics.PixelFormat
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
@@ -23,7 +22,13 @@ import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import android.app.ActivityManager
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.Context.RECEIVER_EXPORTED
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.FocusModeManager
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.ui.activities.ScreenRecordPermissionActivity
 import kotlin.math.abs
@@ -42,6 +47,14 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     private val cameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     
     private var isTorchOn = false
+    private lateinit var focusModeManager: FocusModeManager
+    private val focusModeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "com.guruswarupa.launch.FOCUS_MODE_CHANGED") {
+                // Focus mode state changed, no action needed
+            }
+        }
+    }
     private val torchCallback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         object : CameraManager.TorchCallback() {
             override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
@@ -65,11 +78,19 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 cameraManager.registerTorchCallback(torchCallback, null)
             } catch (_: Exception) {}
         }
+
+        // Register receiver for focus mode changes
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(focusModeReceiver, IntentFilter("com.guruswarupa.launch.FOCUS_MODE_CHANGED"), RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(focusModeReceiver, IntentFilter("com.guruswarupa.launch.FOCUS_MODE_CHANGED"))
+        }
     }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        focusModeManager = FocusModeManager(this, getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
@@ -622,6 +643,9 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && torchCallback != null) {
             cameraManager.unregisterTorchCallback(torchCallback)
         }
+        try {
+            unregisterReceiver(focusModeReceiver)
+        } catch (_: Exception) {}
         super.onDestroy()
     }
 
@@ -631,7 +655,47 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null) return
+        
+        // Only block system settings when focus mode is active
+        if (!focusModeManager.isFocusModeEnabled()) return
+        
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val packageName = event.packageName?.toString()
+            
+            // System settings package names to block (excluding notification panel)
+            val blockedSettingsPackages = setOf(
+                "com.android.settings",
+                "com.android.settings.panel",
+                "com.android.settings.accessibility",
+                "com.android.packageinstaller",
+                "com.google.android.packageinstaller",
+                "com.android.permissioncontroller",
+                "com.android.devicelockcontroller",
+                "com.android.managedprovisioning"
+            )
+            
+            if (packageName in blockedSettingsPackages) {
+                // Close the settings immediately
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                Toast.makeText(this, "Settings blocked - Focus mode is active", Toast.LENGTH_SHORT).show()
+            }
+            
+            // Also block specific settings activities in systemui (but not notification panel)
+            if (packageName == "com.android.systemui") {
+                val className = event.className?.toString()
+                if (className != null && 
+                    (className.contains("Settings") || 
+                     className.contains("settings") ||
+                     className.contains("Preference"))) {
+                    // Close the settings immediately
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    Toast.makeText(this, "Settings blocked - Focus mode is active", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
 
     override fun onInterrupt() {}
 
