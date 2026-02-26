@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight">
+    <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Make status bar and navigation bar transparent -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

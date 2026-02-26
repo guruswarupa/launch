@@ -26,6 +26,10 @@ object Constants {
         const val SEARCH_ENGINE = "search_engine"
         const val ACCESSIBILITY_SHORTCUT_ENABLED = "accessibility_shortcut_enabled"
         const val CONTROL_CENTER_SHORTCUTS = "control_center_shortcuts"
+        
+        // Vault Prefs
+        const val VAULT_2FA_ENABLED = "vault_2fa_enabled"
+        const val VAULT_PASSWORD_HASH = "vault_password_hash"
     }
     
     // FileProvider
