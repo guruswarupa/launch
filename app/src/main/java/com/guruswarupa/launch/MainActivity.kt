@@ -442,26 +442,52 @@ class MainActivity : FragmentActivity() {
             popup.menu.add(0, 2, 2, getString(R.string.search_mode_contacts))
             popup.menu.add(0, 3, 3, getString(R.string.search_mode_files))
             popup.menu.add(0, 4, 4, getString(R.string.search_mode_maps))
-            popup.menu.add(0, 5, 5, getString(R.string.search_mode_web))
-            popup.menu.add(0, 6, 6, getString(R.string.search_mode_playstore))
-            popup.menu.add(0, 7, 7, getString(R.string.search_mode_youtube))
+            
+            // Only show web, Play Store, and YouTube options if not in focus mode
+            if (!appDockManager.getCurrentMode()) {  // Focus mode is OFF
+                popup.menu.add(0, 5, 5, getString(R.string.search_mode_web))
+                popup.menu.add(0, 6, 6, getString(R.string.search_mode_playstore))
+                popup.menu.add(0, 7, 7, getString(R.string.search_mode_youtube))
+            }
             
             popup.setOnMenuItemClickListener { item ->
                 val mode = when (item.itemId) {
+                    0 -> AppSearchManager.SearchMode.ALL
                     1 -> AppSearchManager.SearchMode.APPS
                     2 -> AppSearchManager.SearchMode.CONTACTS
                     3 -> AppSearchManager.SearchMode.FILES
                     4 -> AppSearchManager.SearchMode.MAPS
-                    5 -> AppSearchManager.SearchMode.WEB
-                    6 -> AppSearchManager.SearchMode.PLAYSTORE
-                    7 -> AppSearchManager.SearchMode.YOUTUBE
+                    5 -> {
+                        // Only reachable if not in focus mode
+                        if (appDockManager.getCurrentMode()) {
+                            AppSearchManager.SearchMode.ALL  // fallback if somehow accessed in focus mode
+                        } else {
+                            AppSearchManager.SearchMode.WEB
+                        }
+                    }
+                    6 -> {
+                        // Only reachable if not in focus mode
+                        if (appDockManager.getCurrentMode()) {
+                            AppSearchManager.SearchMode.ALL  // fallback if somehow accessed in focus mode
+                        } else {
+                            AppSearchManager.SearchMode.PLAYSTORE
+                        }
+                    }
+                    7 -> {
+                        // Only reachable if not in focus mode
+                        if (appDockManager.getCurrentMode()) {
+                            AppSearchManager.SearchMode.ALL  // fallback if somehow accessed in focus mode
+                        } else {
+                            AppSearchManager.SearchMode.YOUTUBE
+                        }
+                    }
                     else -> AppSearchManager.SearchMode.ALL
                 }
-                
+                            
                 if (::appSearchManager.isInitialized) {
                     appSearchManager.setSearchMode(mode)
                 }
-                
+                            
                 // Update button icon/text if needed
                 val iconRes = when (mode) {
                     AppSearchManager.SearchMode.APPS -> R.drawable.ic_apps_grid_icon
@@ -474,7 +500,7 @@ class MainActivity : FragmentActivity() {
                     else -> R.drawable.ic_search
                 }
                 searchTypeButton.setImageResource(iconRes)
-                
+                            
                 true
             }
             popup.show()
@@ -717,7 +743,8 @@ class MainActivity : FragmentActivity() {
                 appMetadataCache = if (::cacheManager.isInitialized) cacheManager.getMetadataCache() else null,
                 isAppFiltered = { packageName -> 
                     ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
-                }
+                },
+                isFocusModeActive = { appDockManager.getCurrentMode() }
             )
         }
     }
@@ -1007,7 +1034,7 @@ class MainActivity : FragmentActivity() {
         // Initialize focus mode applier
         focusModeApplier = FocusModeApplier(
             this, backgroundExecutor, appListManager, appDockManager,
-            searchBox, voiceSearchButton, adapter, fullAppList, appList,
+            searchBox, voiceSearchButton, searchContainer, adapter, fullAppList, appList,
             onUpdateAppSearchManager = { updateAppSearchManager() }
         )
 

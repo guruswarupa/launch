@@ -344,17 +344,10 @@ class AppListLoader(
     }
     
     private fun updateSearchVisibility() {
-        // Set visibility of search bar and voice search button based on focus mode
         if (!activity.isFinishing && !activity.isDestroyed) {
-            val currentFocusMode = appDockManager.getCurrentMode()
             handler.post {
-                if (currentFocusMode) {
-                    searchBox.visibility = View.GONE
-                    voiceSearchButton.visibility = View.GONE
-                } else {
-                    searchBox.visibility = View.VISIBLE
-                    voiceSearchButton.visibility = View.VISIBLE
-                }
+                searchBox.visibility = View.VISIBLE
+                voiceSearchButton.visibility = View.VISIBLE
             }
         }
     }

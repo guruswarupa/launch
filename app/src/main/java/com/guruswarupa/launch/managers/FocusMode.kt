@@ -2,6 +2,7 @@ package com.guruswarupa.launch.managers
 
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import androidx.core.content.edit
 
@@ -21,6 +22,13 @@ class FocusModeManager(private val context: Context, private val sharedPreferenc
     fun setFocusModeEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(FOCUS_MODE_ENABLED, enabled) }
         updateDndState(enabled)
+        
+        // Notify accessibility service about focus mode change
+        val intent = Intent("com.guruswarupa.launch.FOCUS_MODE_CHANGED").apply {
+            `package` = context.packageName
+            putExtra("focus_mode_enabled", enabled)
+        }
+        context.sendBroadcast(intent)
     }
 
     fun updateDndState(enabled: Boolean) {

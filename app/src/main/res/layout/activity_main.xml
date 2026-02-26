@@ -216,6 +216,7 @@
 
         <!-- Visual Cues for Gesture Areas (Top Half) -->
         <LinearLayout
+            android:id="@+id/left_drawer_cue"
             android:layout_width="4dp"
             android:layout_height="match_parent"
             android:layout_gravity="start"
