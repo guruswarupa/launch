@@ -6,6 +6,10 @@
         android:enabled="false" />
 
     <item
+        android:id="@+id/toggle_session_timer"
+        android:title="Enable Session Timer" />
+
+    <item
         android:id="@+id/app_info"
         android:title="App Info"
         android:icon="@drawable/ic_settings" />

@@ -692,7 +692,9 @@ class SettingsActivity : ComponentActivity() {
         importLauncher.launch(intent)
     }
 
-    private val sensitiveMainKeys = setOf<String>()
+    private val sensitiveMainKeys = setOf(
+        "weather_api_key"
+    )
 
     private val sensitiveAppLockKeys = setOf(
         "pin_hash",
@@ -700,7 +702,7 @@ class SettingsActivity : ComponentActivity() {
         "last_auth_time",
         "fingerprint_enabled"
     )
-    
+
     private val githubWidgetKeys = setOf(
         "github_token",
         "github_username"
@@ -712,10 +714,15 @@ class SettingsActivity : ComponentActivity() {
                 ZipOutputStream(outputStream).use { zipOut ->
                     // 1. Export JSON settings
                     val settingsJson = JSONObject()
-                    
+
                     val mainPrefs = prefs.all
                     val mainPrefsJson = JSONObject()
                     for ((key, value) in mainPrefs) {
+                        // Include weather_api_key and weather_stored_city_name even though they might be in sensitiveMainKeys
+                        if (key == "weather_api_key" || key == "weather_stored_city_name") {
+                            mainPrefsJson.put(key, value)
+                            continue
+                        }
                         if (key in sensitiveMainKeys) continue
                         when (value) {
                             is String -> mainPrefsJson.put(key, value)
