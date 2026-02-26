@@ -39,6 +39,7 @@ class AppTimerManager(private val context: Context) {
         const val NO_TIMER = 0L
         
         const val PREF_DAILY_LIMIT_PREFIX = "daily_limit_"
+        const val PREF_SESSION_TIMER_ENABLED_PREFIX = "session_timer_enabled_"
     }
 
     fun isAppOverDailyLimit(packageName: String): Boolean {
@@ -56,6 +57,14 @@ class AppTimerManager(private val context: Context) {
     fun setDailyLimit(packageName: String, limit: Long) {
         prefs.edit { putLong(PREF_DAILY_LIMIT_PREFIX + packageName, limit) }
         usageStatsManager.invalidateCache() // Invalidate cache so UI reflects change immediately
+    }
+
+    fun isSessionTimerEnabled(packageName: String): Boolean {
+        return prefs.getBoolean(PREF_SESSION_TIMER_ENABLED_PREFIX + packageName, false)
+    }
+
+    fun setSessionTimerEnabled(packageName: String, enabled: Boolean) {
+        prefs.edit { putBoolean(PREF_SESSION_TIMER_ENABLED_PREFIX + packageName, enabled) }
     }
 
     fun applyGrayscaleIfOverLimit(packageName: String, imageView: ImageView) {
@@ -417,7 +426,7 @@ class AppTimerManager(private val context: Context) {
                 }
 
             } catch (_: SecurityException) {
-                // If we don't have permission, at least the app is in background
+                // If we have no permission, at least the app is in background
                 // Android will manage it
                 try {
                     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager

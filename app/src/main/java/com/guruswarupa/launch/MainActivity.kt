@@ -157,7 +157,6 @@ class MainActivity : FragmentActivity() {
     private lateinit var shareManager: ShareManager
     internal lateinit var appLockManager: AppLockManager
     lateinit var appTimerManager: AppTimerManager
-    lateinit var appCategoryManager: AppCategoryManager
     lateinit var favoriteAppManager: FavoriteAppManager
     internal lateinit var hiddenAppManager: HiddenAppManager
     internal var isShowAllAppsMode = false
@@ -185,7 +184,6 @@ class MainActivity : FragmentActivity() {
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
         appTimerManager = AppTimerManager(this)
-        appCategoryManager = AppCategoryManager()
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
         isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
@@ -1545,7 +1543,7 @@ class MainActivity : FragmentActivity() {
         
         // Resume compass tracking
         if (::compassWidget.isInitialized) {
-            compassWidget.onResume()
+            compassWidget.onPause()
         }
         
         // Resume pressure tracking
