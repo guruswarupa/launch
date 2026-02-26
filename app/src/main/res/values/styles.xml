@@ -5,6 +5,8 @@
         <item name="colorSurface">@android:color/transparent</item> <!-- Transparent surface -->
         <item name="colorOnSurface">@color/text</item> <!-- Text color -->
         <item name="colorPrimary">@color/nord7</item> <!-- Button color -->
+        <item name="colorAccent">@color/nord7</item> <!-- Cursor and selection highlight -->
+        <item name="colorControlActivated">@color/nord7</item> <!-- Focused highlight color -->
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item> <!-- Rounded corners -->
         
