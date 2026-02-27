@@ -9,6 +9,7 @@ import android.os.Environment
 import android.widget.AutoCompleteTextView
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.models.AppMetadata
+import com.guruswarupa.launch.utils.AndroidSettingsHelper
 import net.objecthunter.exp4j.ExpressionBuilder
 import java.io.File
 import java.util.concurrent.Executors
@@ -245,20 +246,25 @@ class AppSearchManager(
     }
 
     private fun getSettingsMatches(query: String): List<String> {
-        val settings = listOf(
-            "Display Style", "Wallpaper", "App Lock", "Hidden Apps", "Permissions",
-            "Privacy Dashboard", "Tutorial", "Shake to Torch", "Screen Dimmer",
-            "Night Mode", "Flip to DND", "Back Tap"
-        )
-        return settings.filter { it.contains(query, ignoreCase = true) }.take(3)
+        // Search only Android system settings, excluding the app's own settings
+        val matchedSystemSettings = AndroidSettingsHelper.searchSettings(query).take(8).map { it.title }
+        
+        return matchedSystemSettings
     }
 
     private fun createSettingsOption(setting: String): ResolveInfo {
+        // Find the system setting
+        val systemSetting = AndroidSettingsHelper.getAllSystemSettings().find { it.title == setting }
+        
         return cachedResolveInfos.getOrPut("settings_result_$setting") {
             ResolveInfo().apply {
                 activityInfo = ActivityInfo().apply {
-                    packageName = "settings_result"
+                    packageName = "system_settings_result"  // Always use system settings result since we removed app settings
                     name = setting
+                    // Store the action in nonLocalizedLabel for system settings
+                    if (systemSetting != null) {
+                        nonLocalizedLabel = systemSetting.action
+                    }
                 }
             }
         }

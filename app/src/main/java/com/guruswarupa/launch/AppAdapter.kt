@@ -61,7 +61,7 @@ class AppAdapter(
         private const val VIEW_TYPE_GRID = 1
         private val SPECIAL_PACKAGE_NAMES = setOf(
             "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result",
-            "file_result", "settings_result"
+            "file_result", "settings_result", "system_settings_result"
         )
         
         // Priority levels for progressive loading
@@ -444,8 +444,32 @@ class AppAdapter(
                 holder.appIcon.setImageResource(R.drawable.ic_settings)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
-                    val intent = Intent(activity, SettingsActivity::class.java)
-                    activity.startActivity(intent)
+                    val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
+                    if (intent != null) {
+                        activity.startActivity(intent)
+                    } else {
+                        // Fallback to general settings
+                        val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                        activity.startActivity(fallbackIntent)
+                    }
+                    searchBox.text.clear()
+                }
+            }
+            
+            "system_settings_result" -> {
+                holder.appIcon.setImageResource(R.drawable.ic_settings)
+                holder.appName?.text = appInfo.activityInfo.name
+                holder.itemView.setOnClickListener {
+                    val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
+                    if (intent != null) {
+                        activity.startActivity(intent)
+                    } else {
+                        // Fallback to general settings
+                        val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                        activity.startActivity(fallbackIntent)
+                    }
                     searchBox.text.clear()
                 }
             }
