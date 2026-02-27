@@ -14,6 +14,14 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.Settings
+import android.net.wifi.WifiConfiguration
+import android.net.wifi.WifiManager.LocalOnlyHotspotCallback
+import android.net.wifi.WifiManager.LocalOnlyHotspotReservation
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import android.net.Network
+import android.annotation.TargetApi
 import android.util.DisplayMetrics
 import android.view.*
 import android.view.accessibility.AccessibilityEvent
@@ -68,7 +76,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         var instance: ScreenLockAccessibilityService? = null
             private set
             
-        const val DEFAULT_SHORTCUTS = "wifi,bluetooth,airplane,torch,data,rotation,sound,dnd,location,qr_scan,camera,screenshot,record,lock,power"
+        const val DEFAULT_SHORTCUTS = "wifi,bluetooth,airplane,torch,data,rotation,sound,dnd,location,qr_scan,camera,screenshot,record,lock,power,hotspot,screen_timeout"
     }
 
     override fun onCreate() {
@@ -312,23 +320,73 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Volume Control
-        val volumeSeekBar = view.findViewById<SeekBar>(R.id.volume_seekbar)
-        val imgVolume = view.findViewById<ImageView>(R.id.img_volume_icon)
+        // Volume Controls - Media
+        val volumeMediaSeekBar = view.findViewById<SeekBar>(R.id.volume_media_seekbar)
+        val imgVolumeMedia = view.findViewById<ImageView>(R.id.img_volume_media_icon)
         try {
             val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            volumeSeekBar?.max = maxVolume
-            volumeSeekBar?.progress = currentVolume
+            volumeMediaSeekBar?.max = maxVolume
+            volumeMediaSeekBar?.progress = currentVolume
             
-            volumeSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            volumeMediaSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
                         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
                         if (progress == 0) {
-                            imgVolume?.setImageResource(R.drawable.ic_muted_stat)
+                            imgVolumeMedia?.setImageResource(R.drawable.ic_muted_stat)
                         } else {
-                            imgVolume?.setImageResource(R.drawable.ic_volume_up_stat)
+                            imgVolumeMedia?.setImageResource(R.drawable.ic_volume_up_stat)
+                        }
+                    }
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        } catch (_: Exception) {}
+
+        // Volume Controls - Ring
+        val volumeRingSeekBar = view.findViewById<SeekBar>(R.id.volume_ring_seekbar)
+        val imgVolumeRing = view.findViewById<ImageView>(R.id.img_volume_ring_icon)
+        try {
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
+            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+            volumeRingSeekBar?.max = maxVolume
+            volumeRingSeekBar?.progress = currentVolume
+            
+            volumeRingSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        audioManager.setStreamVolume(AudioManager.STREAM_RING, progress, 0)
+                        if (progress == 0) {
+                            imgVolumeRing?.setImageResource(R.drawable.ic_muted_stat)
+                        } else {
+                            imgVolumeRing?.setImageResource(R.drawable.ic_vibrate_stat)
+                        }
+                    }
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        } catch (_: Exception) {}
+
+        // Volume Controls - Alarm
+        val volumeAlarmSeekBar = view.findViewById<SeekBar>(R.id.volume_alarm_seekbar)
+        val imgVolumeAlarm = view.findViewById<ImageView>(R.id.img_volume_alarm_icon)
+        try {
+            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            volumeAlarmSeekBar?.max = maxVolume
+            volumeAlarmSeekBar?.progress = currentVolume
+            
+            volumeAlarmSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, progress, 0)
+                        if (progress == 0) {
+                            imgVolumeAlarm?.setImageResource(R.drawable.ic_muted_stat)
+                        } else {
+                            imgVolumeAlarm?.setImageResource(android.R.drawable.ic_lock_silent_mode)
                         }
                     }
                 }
@@ -399,7 +457,9 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                         }
                         audioManager.ringerMode = nextMode
                         updateSoundIcon(icon, label)
-                        volumeSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                        volumeMediaSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                        volumeRingSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+                        volumeAlarmSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
                     }
                 }
                 "dnd" -> {
@@ -457,6 +517,17 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     label.text = "Power"
                     label.setTextColor(0xFFF7768E.toInt())
                     shortcutView.setOnClickListener { performGlobalAction(GLOBAL_ACTION_POWER_DIALOG); hideMenu() }
+                }
+                "hotspot" -> {
+                    icon.setImageResource(R.drawable.ic_wifi_stat)
+                    label.text = "Hotspot"
+                    updateHotspotIcon(icon)
+                    shortcutView.setOnClickListener { toggleHotspot(); hideMenu() }
+                }
+                "screen_timeout" -> {
+                    icon.setImageResource(R.drawable.ic_settings_icon)
+                    updateScreenTimeoutIcon(icon, label)
+                    shortcutView.setOnClickListener { cycleScreenTimeout(); updateScreenTimeoutIcon(icon, label); hideMenu() }
                 }
                 else -> continue
             }
@@ -628,6 +699,89 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             imageView?.setImageResource(R.drawable.ic_focus_mode_icon)
             imageView?.alpha = if (enabled) 1.0f else 0.4f
             textView?.text = if (enabled) "DND On" else "DND Off"
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.O)
+    private fun toggleHotspot() {
+        try {
+            val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // For Android 8.0+, use LocalOnlyHotspot
+                wifiManager.startLocalOnlyHotspot(object : LocalOnlyHotspotCallback() {
+                    override fun onStarted(reservation: LocalOnlyHotspotReservation?) {
+                        super.onStarted(reservation)
+                        Toast.makeText(this@ScreenLockAccessibilityService, "Hotspot started", Toast.LENGTH_SHORT).show()
+                    }
+                    
+                    override fun onFailed(errorCode: Int) {
+                        super.onFailed(errorCode)
+                        Toast.makeText(this@ScreenLockAccessibilityService, "Failed to start hotspot", Toast.LENGTH_SHORT).show()
+                    }
+                }, null)
+            } else {
+                // For older versions, use reflection or settings
+                startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        } catch (e: Exception) {
+            startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
+    private fun updateHotspotIcon(imageView: ImageView?) {
+        // For simplicity, just show as enabled for now
+        imageView?.alpha = 1.0f
+    }
+
+    private fun cycleScreenTimeout() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.System.canWrite(this)) {
+                requestWriteSettingsPermission()
+                return
+            }
+        }
+        
+        try {
+            val currentTimeout = Settings.System.getInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT)
+            val timeouts = arrayOf(15000, 30000, 60000, 120000, 300000, 600000, 2147483647) // 15s, 30s, 1min, 2min, 5min, 10min, Never
+            val timeoutLabels = arrayOf("15s", "30s", "1min", "2min", "5min", "10min", "Never")
+            
+            var nextIndex = 0
+            for (i in timeouts.indices) {
+                if (currentTimeout == timeouts[i]) {
+                    nextIndex = (i + 1) % timeouts.size
+                    break
+                }
+            }
+            
+            val newTimeout = timeouts[nextIndex]
+            val success = Settings.System.putInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT, newTimeout)
+            if (success) {
+                Toast.makeText(this, "Screen timeout: ${timeoutLabels[nextIndex]}", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to change screen timeout", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateScreenTimeoutIcon(imageView: ImageView?, textView: TextView?) {
+        try {
+            val currentTimeout = Settings.System.getInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT)
+            val labels = mapOf(
+                15000 to "15s",
+                30000 to "30s",
+                60000 to "1min", 
+                120000 to "2min",
+                300000 to "5min",
+                600000 to "10min",
+                2147483647 to "Never"
+            )
+            val label = labels[currentTimeout] ?: "Timeout"
+            textView?.text = label
+            imageView?.alpha = 1.0f
+        } catch (_: Exception) {
+            textView?.text = "Timeout"
+            imageView?.alpha = 0.4f
         }
     }
 
