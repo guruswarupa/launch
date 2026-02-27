@@ -162,4 +162,8 @@ class WidgetSetupManager(
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }
+    
+    fun getActivity(): MainActivity {
+        return activity
+    }
 }
