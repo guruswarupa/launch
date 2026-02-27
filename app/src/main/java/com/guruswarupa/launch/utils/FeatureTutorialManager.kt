@@ -120,7 +120,7 @@ class FeatureTutorialManager(
         ),
         DRAWER_GESTURE(
             "Widgets Drawer",
-            "Swipe from the left edge of the screen to open the widgets drawer. Tap 'Widget Settings' to add and configure widgets.",
+            "Swipe from the left side of the screen to open the widgets drawer. Swipe from the right side to open the right drawer. Works anywhere on the screen, even over widgets and app lists.",
             R.id.widgets_drawer,
             HighlightPosition.CENTER
         )
