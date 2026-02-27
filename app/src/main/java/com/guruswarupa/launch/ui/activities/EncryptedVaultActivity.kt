@@ -16,7 +16,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.webkit.MimeTypeMap
 import android.widget.EditText
 import android.widget.ImageView
@@ -24,7 +23,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -413,34 +411,9 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     private fun showVaultSettings() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_vault_settings, null)
         val timeoutSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.timeout_switch)
-        val timeoutSlider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.timeout_slider)
-        val timeoutLabel = dialogView.findViewById<TextView>(R.id.timeout_label)
-        val timeoutValueDisplay = dialogView.findViewById<TextView>(R.id.timeout_value_display)
         
         // Load current settings
         timeoutSwitch.isChecked = prefs.getBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, false)
-        val currentTimeout = prefs.getInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 5)
-        timeoutSlider.value = currentTimeout.toFloat()
-        timeoutValueDisplay.text = "${currentTimeout} minute${if(currentTimeout != 1) "s" else ""}"
-        
-        // Update slider visibility based on switch state
-        timeoutSlider.visibility = if (timeoutSwitch.isChecked) android.view.View.VISIBLE else android.view.View.GONE
-        timeoutLabel.visibility = if (timeoutSwitch.isChecked) android.view.View.VISIBLE else android.view.View.GONE
-        timeoutValueDisplay.visibility = if (timeoutSwitch.isChecked) android.view.View.VISIBLE else android.view.View.GONE
-        
-        // Set up switch listener
-        timeoutSwitch.setOnCheckedChangeListener { _, isChecked ->
-            timeoutSlider.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
-            timeoutLabel.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
-            timeoutValueDisplay.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
-        }
-        
-        // Set up slider listener to update the display
-        timeoutSlider.addOnChangeListener { slider, value, fromUser ->
-            if (fromUser) {
-                timeoutValueDisplay.text = "${value.toInt()} minute${if(value.toInt() != 1) "s" else ""}"
-            }
-        }
         
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Vault Settings")
@@ -448,7 +421,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             .setPositiveButton("Save") { _, _ ->
                 prefs.edit()
                     .putBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, timeoutSwitch.isChecked)
-                    .putInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, timeoutSlider.value.toInt())
+                    .putInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 1)
                     .apply()
                 
                 Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()

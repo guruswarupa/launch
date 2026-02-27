@@ -58,7 +58,7 @@ abstract class VaultBaseActivity : AppCompatActivity() {
     }
     
     private fun getTimeoutDurationMinutes(): Int {
-        return prefs.getInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 5) // Default to 5 minutes
+        return prefs.getInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 1) // Default to 1 minute
     }
     
     override fun onResume() {
