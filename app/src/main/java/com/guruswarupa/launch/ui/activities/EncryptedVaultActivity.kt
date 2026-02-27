@@ -41,7 +41,7 @@ import java.security.MessageDigest
 import java.text.DecimalFormat
 import java.util.concurrent.Executor
 
-class EncryptedVaultActivity : AppCompatActivity() {
+class EncryptedVaultActivity : VaultBaseActivity() {
     private lateinit var vaultManager: EncryptedFolderManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
@@ -55,6 +55,12 @@ class EncryptedVaultActivity : AppCompatActivity() {
 
     private val pickFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { encryptAndMoveFile(it) }
+    }
+    
+    private val createNoteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            loadFiles() // Refresh the file list after note is created
+        }
     }
 
     private val decryptResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -105,8 +111,12 @@ class EncryptedVaultActivity : AppCompatActivity() {
             finish()
         }
 
+        findViewById<ImageView>(R.id.settings_button).setOnClickListener {
+            showVaultSettings()
+        }
+
         findViewById<FloatingActionButton>(R.id.add_file_fab).setOnClickListener {
-            pickFile.launch(arrayOf("*/*"))
+            showAddFileOptions()
         }
 
         setupBiometric()
@@ -324,14 +334,26 @@ class EncryptedVaultActivity : AppCompatActivity() {
 
     private fun openFile(file: File) {
         try {
-            val tempFile = vaultManager.decryptToCache(file.name)
-            val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", tempFile)
-            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension) ?: "*/*"
-            val intent = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, mimeType)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            val extension = file.extension.lowercase()
+            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: ""
+            
+            // Handle text files (notes) specially by opening the note editor
+            if (mimeType.startsWith("text/") || file.name.endsWith(".txt")) {
+                // Launch note editor in edit mode
+                val intent = Intent(this, NoteEditorActivity::class.java).apply {
+                    putExtra("FILE_NAME", file.name)
+                }
+                createNoteLauncher.launch(intent)
+            } else {
+                val tempFile = vaultManager.decryptToCache(file.name)
+                val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", tempFile)
+                val actualMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension) ?: "*/*"
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, actualMimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(Intent.createChooser(intent, "Open with..."))
             }
-            startActivity(Intent.createChooser(intent, "Open with..."))
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to open file: ${e.message}", Toast.LENGTH_SHORT).show()
         }
@@ -371,6 +393,69 @@ class EncryptedVaultActivity : AppCompatActivity() {
                 }
             }.setNegativeButton("Cancel", null).show()
     }
+    
+    private fun showAddFileOptions() {
+        val options = arrayOf("Add File", "Create Note")
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Add to Vault")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> pickFile.launch(arrayOf("*/*"))
+                    1 -> {
+                        // Launch note editor for creating a new note
+                        val intent = Intent(this, NoteEditorActivity::class.java)
+                        createNoteLauncher.launch(intent)
+                    }
+                }
+            }.show()
+    }
+    
+    private fun showVaultSettings() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_vault_settings, null)
+        val timeoutSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.timeout_switch)
+        val timeoutSlider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.timeout_slider)
+        val timeoutLabel = dialogView.findViewById<TextView>(R.id.timeout_label)
+        val timeoutValueDisplay = dialogView.findViewById<TextView>(R.id.timeout_value_display)
+        
+        // Load current settings
+        timeoutSwitch.isChecked = prefs.getBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, false)
+        val currentTimeout = prefs.getInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 5)
+        timeoutSlider.value = currentTimeout.toFloat()
+        timeoutValueDisplay.text = "${currentTimeout} minute${if(currentTimeout != 1) "s" else ""}"
+        
+        // Update slider visibility based on switch state
+        timeoutSlider.visibility = if (timeoutSwitch.isChecked) android.view.View.VISIBLE else android.view.View.GONE
+        timeoutLabel.visibility = if (timeoutSwitch.isChecked) android.view.View.VISIBLE else android.view.View.GONE
+        timeoutValueDisplay.visibility = if (timeoutSwitch.isChecked) android.view.View.VISIBLE else android.view.View.GONE
+        
+        // Set up switch listener
+        timeoutSwitch.setOnCheckedChangeListener { _, isChecked ->
+            timeoutSlider.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
+            timeoutLabel.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
+            timeoutValueDisplay.visibility = if (isChecked) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        
+        // Set up slider listener to update the display
+        timeoutSlider.addOnChangeListener { slider, value, fromUser ->
+            if (fromUser) {
+                timeoutValueDisplay.text = "${value.toInt()} minute${if(value.toInt() != 1) "s" else ""}"
+            }
+        }
+        
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Vault Settings")
+            .setView(dialogView)
+            .setPositiveButton("Save") { _, _ ->
+                prefs.edit()
+                    .putBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, timeoutSwitch.isChecked)
+                    .putInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, timeoutSlider.value.toInt())
+                    .apply()
+                
+                Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 
     override fun onDestroy() {
         super.onDestroy()
@@ -406,9 +491,42 @@ class EncryptedVaultActivity : AppCompatActivity() {
                 holder.thumbnail.imageTintList = null
                 holder.thumbnail.alpha = 1.0f
             } else {
-                holder.thumbnail.setImageResource(R.drawable.ic_file)
-                holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
-                holder.thumbnail.alpha = 0.3f
+                // Set a default icon based on file type
+                val extension = file.extension.lowercase()
+                val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: ""
+                
+                when {
+                    mimeType.startsWith("text/") || file.name.endsWith(".txt") -> {
+                        holder.thumbnail.setImageResource(R.drawable.ic_note)
+                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
+                        holder.thumbnail.alpha = 1.0f
+                    }
+                    mimeType.contains("pdf") || file.name.endsWith(".pdf") -> {
+                        holder.thumbnail.setImageResource(R.drawable.ic_pdf)
+                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
+                        holder.thumbnail.alpha = 1.0f
+                    }
+                    mimeType.startsWith("audio/") || listOf("mp3", "wav", "aac", "flac", "ogg").any { file.name.endsWith(".$it") } -> {
+                        holder.thumbnail.setImageResource(R.drawable.ic_audio)
+                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
+                        holder.thumbnail.alpha = 1.0f
+                    }
+                    mimeType.startsWith("image/") -> {
+                        holder.thumbnail.setImageResource(R.drawable.ic_image)
+                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
+                        holder.thumbnail.alpha = 0.3f
+                    }
+                    mimeType.startsWith("video/") -> {
+                        holder.thumbnail.setImageResource(R.drawable.ic_video)
+                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
+                        holder.thumbnail.alpha = 0.3f
+                    }
+                    else -> {
+                        holder.thumbnail.setImageResource(R.drawable.ic_file)
+                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
+                        holder.thumbnail.alpha = 0.3f
+                    }
+                }
             }
             val extension = file.extension.lowercase()
             val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: ""
@@ -420,6 +538,14 @@ class EncryptedVaultActivity : AppCompatActivity() {
                 mimeType.startsWith("audio/") -> {
                     holder.typeOverlay.visibility = View.VISIBLE
                     holder.typeOverlay.setImageResource(R.drawable.ic_mic)
+                }
+                mimeType.startsWith("text/") || file.name.endsWith(".txt") -> {
+                    holder.typeOverlay.visibility = View.VISIBLE
+                    holder.typeOverlay.setImageResource(R.drawable.ic_note)
+                }
+                mimeType.contains("pdf") || file.name.endsWith(".pdf") -> {
+                    holder.typeOverlay.visibility = View.VISIBLE
+                    holder.typeOverlay.setImageResource(R.drawable.ic_pdf)
                 }
                 else -> holder.typeOverlay.visibility = View.GONE
             }

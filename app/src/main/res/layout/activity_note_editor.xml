@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/card_background"
+        android:paddingHorizontal="16dp">
+
+        <ImageView
+            android:id="@+id/back_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="12dp"
+            android:src="@drawable/ic_back"
+            android:contentDescription="Back"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            app:tint="@color/text"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+        <TextView
+            android:id="@+id/title_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="New Note"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="@color/text"
+            android:layout_centerInParent="true"
+            android:layout_toStartOf="@id/save_button"
+            android:layout_toEndOf="@id/back_button"
+            android:ellipsize="marquee"
+            android:gravity="center"/>
+
+        <ImageView
+            android:id="@+id/save_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="12dp"
+            android:src="@drawable/ic_save"
+            android:contentDescription="Save"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            app:tint="@color/text"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+    </RelativeLayout>
+
+    <EditText
+        android:id="@+id/note_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Note Title"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:padding="12dp"
+        android:background="@drawable/edit_text_background"
+        android:textColor="@color/text"
+        android:textColorHint="@color/text_hint"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:inputType="textCapSentences"/>
+
+    <EditText
+        android:id="@+id/note_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:hint="Start typing your note here..."
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="12dp"
+        android:padding="12dp"
+        android:background="@drawable/edit_text_background"
+        android:textColor="@color/text"
+        android:textColorHint="@color/text_hint"
+        android:textSize="14sp"
+        android:gravity="top"
+        android:inputType="textMultiLine|textCapSentences"
+        android:scrollbars="vertical"/>
+
+</LinearLayout>

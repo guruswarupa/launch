@@ -129,6 +129,13 @@
             android:label=""
             android:excludeFromRecents="true" />
 
+        <activity
+            android:name=".ui.activities.NoteEditorActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:label=""
+            android:excludeFromRecents="true" />
+
         <service
             android:name=".managers.AppUsageMonitor"
             android:enabled="true"

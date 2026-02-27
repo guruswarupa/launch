@@ -65,42 +65,46 @@ class EncryptedFolderManager(private val context: Context) {
             mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
         }
         
-        // Even if mimeType is null, we can try to decode it as an image
-        
+        // Generate appropriate thumbnail based on file type
         var bitmap: Bitmap? = null
         try {
-            // Priority 1: Modern loadThumbnail API
+            // Priority 1: Modern loadThumbnail API for media files
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                try {
-                    bitmap = context.contentResolver.loadThumbnail(uri, Size(512, 512), null)
-                } catch (e: Exception) {
-                    // Fallback to legacy
+                if (mimeType?.startsWith("image/") == true || mimeType?.startsWith("video/") == true) {
+                    try {
+                        bitmap = context.contentResolver.loadThumbnail(uri, Size(512, 512), null)
+                    } catch (e: Exception) {
+                        // Fallback to manual processing
+                    }
                 }
             }
 
             // Priority 2: Manual Image Decoding
-            if (bitmap == null) {
-                if (mimeType == null || mimeType.startsWith("image/")) {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        val options = BitmapFactory.Options().apply {
-                            inJustDecodeBounds = true
-                        }
-                        BitmapFactory.decodeStream(input, null, options)
-                        
-                        if (options.outWidth > 0 && options.outHeight > 0) {
-                            context.contentResolver.openInputStream(uri)?.use { input2 ->
-                                options.inJustDecodeBounds = false
-                                options.inSampleSize = calculateInSampleSize(options, 512, 512)
-                                bitmap = BitmapFactory.decodeStream(input2, null, options)
-                            }
+            if (bitmap == null && (mimeType?.startsWith("image/") == true || mimeType == null)) {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val options = BitmapFactory.Options().apply {
+                        inJustDecodeBounds = true
+                    }
+                    BitmapFactory.decodeStream(input, null, options)
+                    
+                    if (options.outWidth > 0 && options.outHeight > 0) {
+                        context.contentResolver.openInputStream(uri)?.use { input2 ->
+                            options.inJustDecodeBounds = false
+                            options.inSampleSize = calculateInSampleSize(options, 512, 512)
+                            bitmap = BitmapFactory.decodeStream(input2, null, options)
                         }
                     }
                 }
             }
             
             // Priority 3: Video Fallback
-            if (bitmap == null && (mimeType != null && mimeType.startsWith("video/"))) {
+            if (bitmap == null && mimeType?.startsWith("video/") == true) {
                 bitmap = getVideoThumbnailFallback(uri)
+            }
+            
+            // Priority 4: Document and Audio Thumbnails
+            if (bitmap == null) {
+                bitmap = getDefaultThumbnailForFileType(mimeType)
             }
 
             bitmap?.let {
@@ -110,6 +114,48 @@ class EncryptedFolderManager(private val context: Context) {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+    
+    private fun getDefaultThumbnailForFileType(mimeType: String?): Bitmap? {
+        // Create a placeholder bitmap based on file type
+        val config = Bitmap.Config.ARGB_8888
+        val bitmap = Bitmap.createBitmap(512, 512, config)
+        val canvas = android.graphics.Canvas(bitmap)
+        
+        // Draw a colored background based on file type
+        val backgroundColor = when {
+            mimeType?.startsWith("audio/") == true -> android.graphics.Color.parseColor("#FF6200EE") // Purple
+            mimeType?.contains("pdf") == true -> android.graphics.Color.parseColor("#FFF44336") // Red
+            mimeType?.startsWith("text/") == true -> android.graphics.Color.parseColor("#FF2196F3") // Blue
+            mimeType?.contains("document") == true || mimeType?.contains("word") == true -> android.graphics.Color.parseColor("#FF4CAF50") // Green
+            mimeType?.contains("sheet") == true || mimeType?.contains("excel") == true -> android.graphics.Color.parseColor("#FF4CAF50") // Green
+            mimeType?.contains("presentation") == true || mimeType?.contains("powerpoint") == true -> android.graphics.Color.parseColor("#FFFF9800") // Orange
+            else -> android.graphics.Color.parseColor("#FF9E9E9E") // Gray
+        }
+        
+        canvas.drawColor(backgroundColor)
+        
+        // Draw an icon based on file type
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 100f
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        
+        val iconText = when {
+            mimeType?.startsWith("audio/") == true -> "🎵"
+            mimeType?.contains("pdf") == true -> "📄"
+            mimeType?.startsWith("text/") == true -> "📝"
+            mimeType?.contains("document") == true || mimeType?.contains("word") == true -> " WORD"
+            mimeType?.contains("sheet") == true || mimeType?.contains("excel") == true -> " EXCEL"
+            mimeType?.contains("presentation") == true || mimeType?.contains("powerpoint") == true -> " PPT"
+            else -> "📁"
+        }
+        
+        val y = canvas.height / 2f - (paint.descent() + paint.ascent()) / 2f
+        canvas.drawText(iconText, canvas.width / 2f, y, paint)
+        
+        return bitmap
     }
 
     private fun getVideoThumbnailFallback(uri: Uri): Bitmap? {
