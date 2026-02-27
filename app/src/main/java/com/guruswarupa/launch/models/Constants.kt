@@ -30,6 +30,8 @@ object Constants {
         // Vault Prefs
         const val VAULT_2FA_ENABLED = "vault_2fa_enabled"
         const val VAULT_PASSWORD_HASH = "vault_password_hash"
+        const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"
+        const val VAULT_TIMEOUT_DURATION = "vault_timeout_duration"  // in minutes
     }
     
     // FileProvider

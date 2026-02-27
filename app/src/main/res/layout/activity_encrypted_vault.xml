@@ -54,6 +54,18 @@
                 android:textStyle="bold"
                 android:textColor="@color/text"
                 android:layout_centerInParent="true"/>
+
+            <ImageView
+                android:id="@+id/settings_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:padding="12dp"
+                android:src="@drawable/ic_settings"
+                android:contentDescription="Settings"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                app:tint="@color/text"
+                android:background="?attr/selectableItemBackgroundBorderless"/>
         </RelativeLayout>
 
         <androidx.recyclerview.widget.RecyclerView

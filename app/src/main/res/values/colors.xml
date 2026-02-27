@@ -82,4 +82,8 @@
     <color name="onboarding_input_background">#F0F0F0</color>
     <color name="onboarding_input_text">#000000</color>
     <color name="onboarding_input_hint">#666666</color>
+    
+    <!-- Colors for note editor and vault -->
+    <color name="divider">#E0E0E0</color>
+    <color name="text_hint">#888888</color>
 </resources>
