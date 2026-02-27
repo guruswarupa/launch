@@ -14,8 +14,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
-import android.view.GestureDetector
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AutoCompleteTextView
@@ -115,7 +113,6 @@ class MainActivity : FragmentActivity() {
     private lateinit var rightDrawerWallpaper: ImageView
     private lateinit var rightDrawerTime: TextView
     private lateinit var rightDrawerDate: TextView
-    private lateinit var wallpaperDrawer: FrameLayout
 
     // Core managers
     internal lateinit var cacheManager: CacheManager
@@ -417,7 +414,6 @@ class MainActivity : FragmentActivity() {
         topWidgetContainer = findViewById(R.id.top_widget_container)
         
         // Right Drawer Views
-        wallpaperDrawer = findViewById(R.id.wallpaper_drawer)
         rightDrawerWallpaper = findViewById(R.id.right_drawer_wallpaper)
         rightDrawerTime = findViewById(R.id.right_drawer_time)
         rightDrawerDate = findViewById(R.id.right_drawer_date)
@@ -508,28 +504,9 @@ class MainActivity : FragmentActivity() {
 
         // Setup search box listener to show/hide top widget
         setupSearchBoxListener()
-        
-        // Setup double tap for right drawer
-        setupRightDrawerDoubleTap()
     }
     
-    /**
-     * Sets up double tap listener for the right drawer to turn screen off.
-     */
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setupRightDrawerDoubleTap() {
-        val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDoubleTap(e: MotionEvent): Boolean {
-                lockScreen()
-                return true
-            }
-        })
-        
-        wallpaperDrawer.setOnTouchListener { _, event ->
-            gestureDetector.onTouchEvent(event)
-            true
-        }
-    }
+
     
     /**
      * Attempts to turn off the screen. 
@@ -958,9 +935,11 @@ class MainActivity : FragmentActivity() {
             override fun onDrawerOpened(drawerView: View) {
                 // Check for theme changes when drawer opens
                 checkAndUpdateThemeIfNeeded()
-                // Refresh usage data when right drawer opens
+                // Refresh usage data when right drawer opens (asynchronously)
                 if (drawerView.id == R.id.wallpaper_drawer) {
-                    usageStatsDisplayManager.loadWeeklyUsageData()
+                    handler.post {
+                        usageStatsDisplayManager.loadWeeklyUsageData()
+                    }
                 }
             }
             override fun onDrawerClosed(drawerView: View) {}
@@ -993,19 +972,17 @@ class MainActivity : FragmentActivity() {
         wallpaperManagerHelper = WallpaperManagerHelper(this, wallpaperBackground, drawerWallpaper, backgroundExecutor)
         wallpaperManagerHelper.setWallpaperBackground()
         
-        // Set wallpaper for the new right drawer
-        handler.postDelayed({
-            if (::rightDrawerWallpaper.isInitialized && ::wallpaperManagerHelper.isInitialized) {
-                // Since WallpaperManagerHelper currently supports two ImageViews (main and left drawer),
-                // we\'ll manually set the bitmap for the right drawer.
-                // In a production app, we should update WallpaperManagerHelper to handle multiple ImageViews.
-                try {
-                    val wallpaperManager = android.app.WallpaperManager.getInstance(this)
-                    val drawable = wallpaperManager.drawable
-                    rightDrawerWallpaper.setImageDrawable(drawable)
-                } catch (_: Exception) {}
-            }
-        }, 500)
+        // Set wallpaper for the new right drawer immediately
+        if (::rightDrawerWallpaper.isInitialized && ::wallpaperManagerHelper.isInitialized) {
+            // Since WallpaperManagerHelper currently supports two ImageViews (main and left drawer),
+            // we'll manually set the bitmap for the right drawer.
+            // In a production app, we should update WallpaperManagerHelper to handle multiple ImageViews.
+            try {
+                val wallpaperManager = android.app.WallpaperManager.getInstance(this)
+                val drawable = wallpaperManager.drawable
+                rightDrawerWallpaper.setImageDrawable(drawable)
+            } catch (_: Exception) {}
+        }
 
         // Initialize voice search manager
         voiceSearchManager = VoiceSearchManager(this, packageManager)

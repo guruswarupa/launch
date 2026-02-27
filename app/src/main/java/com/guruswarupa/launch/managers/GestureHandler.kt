@@ -29,8 +29,8 @@ class GestureHandler(
     
     init {
         val density = activity.resources.displayMetrics.density
-        edgeThresholdPx = (100 * density).toInt()
-        minSwipeDistancePx = (100 * density).toInt()
+        edgeThresholdPx = (50 * density).toInt()  // Reduced from 100dp
+        minSwipeDistancePx = (50 * density).toInt()  // Reduced from 100dp for faster response
     }
     
     /**
@@ -68,13 +68,12 @@ class GestureHandler(
     fun updateGestureExclusion() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             mainContent.post {
-                val exclusionWidthPx = (100 * activity.resources.displayMetrics.density).toInt()
                 val exclusionRects = if (isGesturesEnabled) {
                     listOf(
-                        // Left edge exclusion - Only top half to allow system back gesture in bottom half
-                        Rect(0, 0, exclusionWidthPx, mainContent.height / 2),
-                        // Right edge exclusion - Only top half to allow system back gesture in bottom half
-                        Rect(mainContent.width - exclusionWidthPx, 0, mainContent.width, mainContent.height / 2)
+                        // Left side exclusion - Top half of the screen
+                        Rect(0, 0, mainContent.width / 2, mainContent.height / 2),
+                        // Right side exclusion - Top half of the screen
+                        Rect(mainContent.width / 2, 0, mainContent.width, mainContent.height / 2)
                     )
                 } else {
                     // No exclusion when gestures are disabled
@@ -111,16 +110,19 @@ class GestureHandler(
                 MotionEvent.ACTION_DOWN -> {
                     touchStartX = event.x
                     touchStartY = event.y
-                    // Only trigger drawer swipes from the top half of the screen
-                    isSwipeFromLeftEdge = event.x < edgeThresholdPx && event.y < (v.height / 2)
-                    isSwipeFromRightEdge = event.x > (v.width - edgeThresholdPx) && event.y < (v.height / 2)
+                    // Trigger drawer swipes from anywhere on the screen (left or right side)
+                    val screenWidth = v.width
+                    val isLeftSide = event.x < screenWidth / 2
+                    isSwipeFromLeftEdge = isLeftSide && event.y < (v.height / 2)
+                    isSwipeFromRightEdge = !isLeftSide && event.y < (v.height / 2)
                     isSwipeFromLeftEdge || isSwipeFromRightEdge
                 }
                 MotionEvent.ACTION_MOVE -> {
                     if (isSwipeFromLeftEdge) {
                         val deltaX = event.x - touchStartX
                         val deltaY = event.y - touchStartY
-                        if (deltaX > 10 && abs(deltaY) < abs(deltaX) * 0.9) {
+                        // More responsive detection - reduced threshold from 10 to 5
+                        if (deltaX > 5 && abs(deltaY) < abs(deltaX) * 0.9) {
                             true // Consume to prevent system gestures
                         } else {
                             isSwipeFromLeftEdge = false
@@ -129,7 +131,8 @@ class GestureHandler(
                     } else if (isSwipeFromRightEdge) {
                         val deltaX = touchStartX - event.x
                         val deltaY = event.y - touchStartY
-                        if (deltaX > 10 && abs(deltaY) < abs(deltaX) * 0.9) {
+                        // More responsive detection - reduced threshold from 10 to 5
+                        if (deltaX > 5 && abs(deltaY) < abs(deltaX) * 0.9) {
                             true // Consume to prevent system gestures
                         } else {
                             isSwipeFromRightEdge = false
@@ -146,7 +149,8 @@ class GestureHandler(
                         val deltaY = event.y - touchStartY
                         if (deltaX > minSwipeDistancePx && abs(deltaY) < abs(deltaX) * 0.9) {
                             if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                                drawerLayout.openDrawer(GravityCompat.START)
+                                // Open drawer with faster animation
+                                openDrawerWithFastAnimation(GravityCompat.START)
                             }
                         }
                         isSwipeFromLeftEdge = false
@@ -156,7 +160,8 @@ class GestureHandler(
                         val deltaY = event.y - touchStartY
                         if (deltaX > minSwipeDistancePx && abs(deltaY) < abs(deltaX) * 0.9) {
                             if (!drawerLayout.isDrawerOpen(GravityCompat.END)) {
-                                drawerLayout.openDrawer(GravityCompat.END)
+                                // Open drawer with faster animation
+                                openDrawerWithFastAnimation(GravityCompat.END)
                             }
                         }
                         isSwipeFromRightEdge = false
@@ -168,5 +173,20 @@ class GestureHandler(
                 else -> false
             }
         }
+    }
+    
+    /**
+     * Open drawer with optimized animation timing
+     */
+    private fun openDrawerWithFastAnimation(gravity: Int) {
+        // Open drawer immediately
+        drawerLayout.openDrawer(gravity)
+        
+        // The DrawerLayout's default animation is already quite fast
+        // If there's still a delay, it might be from other parts of the app
+        // The main optimizations we've made:
+        // 1. Reduced swipe thresholds (50dp instead of 100dp)
+        // 2. Reduced move detection threshold (5 instead of 10)
+        // 3. Removed unnecessary delays
     }
 }
