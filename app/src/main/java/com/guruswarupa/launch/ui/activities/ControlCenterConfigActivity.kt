@@ -90,6 +90,8 @@ class ControlCenterConfigActivity : ComponentActivity() {
         "record" -> "Screen Record"
         "lock" -> "Lock Screen"
         "power" -> "Power Menu"
+        "hotspot" -> "Hotspot"
+        "screen_timeout" -> "Screen Timeout"
         else -> id.replaceFirstChar { it.uppercase() }
     }
 
@@ -109,6 +111,8 @@ class ControlCenterConfigActivity : ComponentActivity() {
         "record" -> android.R.drawable.ic_menu_slideshow
         "lock" -> android.R.drawable.ic_lock_idle_lock
         "power" -> android.R.drawable.ic_lock_power_off
+        "hotspot" -> R.drawable.ic_wifi_stat
+        "screen_timeout" -> R.drawable.ic_settings_icon
         else -> android.R.drawable.ic_menu_help
     }
 
