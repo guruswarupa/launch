@@ -18,7 +18,7 @@ class AppSearchManager(
     private val packageManager: PackageManager,
     private val fullAppList: MutableList<ResolveInfo>,
     private var homeAppList: List<ResolveInfo>,
-    private val adapter: AppAdapter,
+    private var adapter: AppAdapter?,
     private val searchBox: AutoCompleteTextView,
     private var contactsList: List<String>,
     private val context: android.content.Context,
@@ -54,6 +54,12 @@ class AppSearchManager(
 
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+    }
+
+    fun setAdapter(adapter: AppAdapter) {
+        synchronized(dataLock) {
+            this.adapter = adapter
+        }
     }
 
     fun updateContactsList() {
@@ -104,8 +110,11 @@ class AppSearchManager(
     fun updateData(newFullAppList: List<ResolveInfo>, newHomeAppList: List<ResolveInfo>, newContactsList: List<String>) {
         synchronized(dataLock) {
             // Update data without resetting currentSearchMode
-            fullAppList.clear()
-            fullAppList.addAll(newFullAppList)
+            // CRITICAL FIX: Only clear and addAll if it's not the same list reference to avoid nuke-on-refresh bug
+            if (newFullAppList !== fullAppList) {
+                fullAppList.clear()
+                fullAppList.addAll(newFullAppList)
+            }
             homeAppList = ArrayList(newHomeAppList)
             contactsList = newContactsList
             searchCache.clear()
@@ -225,12 +234,12 @@ class AppSearchManager(
                 }
             }
         } else {
-            // EMPTY QUERY: Show exactly what\'s on the home screen (filtered for focus mode, favorites, etc.)
+            // EMPTY QUERY: Show exactly what's on the home screen (filtered for focus mode, favorites, etc.)
             newFilteredList.addAll(homeAppListSnapshot)
         }
 
         handler.post {
-            adapter.updateAppList(newFilteredList)
+            adapter?.updateAppList(newFilteredList)
         }
     }
 

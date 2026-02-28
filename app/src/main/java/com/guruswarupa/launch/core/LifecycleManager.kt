@@ -20,6 +20,7 @@ import com.guruswarupa.launch.utils.TimeDateManager
 import com.guruswarupa.launch.managers.UsageStatsDisplayManager
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 import com.guruswarupa.launch.utils.TodoManager
+import com.guruswarupa.launch.utils.TodoAlarmManager
 import com.guruswarupa.launch.utils.FeatureTutorialManager
 
 /**
@@ -48,6 +49,7 @@ class LifecycleManager(
     private var weeklyUsageGraph: WeeklyUsageGraphView? = null
     private var usageStatsDisplayManager: UsageStatsDisplayManager? = null
     private var todoManager: TodoManager? = null
+    private var todoAlarmManager: TodoAlarmManager? = null
     private var featureTutorialManager: FeatureTutorialManager? = null
     private var backgroundExecutor: java.util.concurrent.Executor? = null
     
@@ -123,6 +125,10 @@ class LifecycleManager(
         this.todoManager = manager
     }
     
+    fun setTodoAlarmManager(manager: TodoAlarmManager) {
+        this.todoAlarmManager = manager
+    }
+    
     fun setFeatureTutorialManager(manager: FeatureTutorialManager) {
         this.featureTutorialManager = manager
     }
@@ -154,7 +160,7 @@ class LifecycleManager(
             it.setWallpaperBackground(forceReload = true)
         }
         
-        // Update gesture exclusion when activity resumes (unless we're temporarily blocking back gestures)
+        // Update gesture exclusion when activity resumes (unless we\'re temporarily blocking back gestures)
         if (!isBlockingBackGesture) {
             gestureHandler?.updateGestureExclusion()
         }
@@ -189,7 +195,7 @@ class LifecycleManager(
             }
         }, 300)
         
-        // Ensure app list is loaded - reload if empty (fixes issue where apps don't load)
+        // Ensure app list is loaded - reload if empty (fixes issue where apps don\'t load)
         if (adapter != null && (appList?.isEmpty() == true || appDockManager == null)) {
             handler.postDelayed({
                 if (!activity.isFinishing && !activity.isDestroyed && appDockManager != null) {

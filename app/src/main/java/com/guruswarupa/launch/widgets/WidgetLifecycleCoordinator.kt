@@ -1,13 +1,14 @@
 package com.guruswarupa.launch.widgets
 
 /**
- * Coordinates the lifecycle of multiple widgets by delegating onResume and onPause calls
+ * Coordinates the lifecycle of multiple widgets by delegating onResume, onPause and onDestroy calls
  */
 class WidgetLifecycleCoordinator {
     private data class WidgetWrapper(
         val isInitialized: () -> Boolean,
         val onResume: () -> Unit,
-        val onPause: () -> Unit
+        val onPause: () -> Unit,
+        val onDestroy: () -> Unit
     )
 
     private val widgets = mutableListOf<WidgetWrapper>()
@@ -18,7 +19,8 @@ class WidgetLifecycleCoordinator {
     fun register(
         isInitializedCheck: () -> Boolean,
         onResumeAction: () -> Unit,
-        onPauseAction: () -> Unit
+        onPauseAction: () -> Unit,
+        onDestroyAction: () -> Unit = {}
     ) {
         val wrapper = WidgetWrapper(
             isInitialized = isInitializedCheck,
@@ -30,6 +32,11 @@ class WidgetLifecycleCoordinator {
             onPause = {
                 if (isInitializedCheck()) {
                     onPauseAction()
+                }
+            },
+            onDestroy = {
+                if (isInitializedCheck()) {
+                    onDestroyAction()
                 }
             }
         )
@@ -51,6 +58,15 @@ class WidgetLifecycleCoordinator {
     fun onPause() {
         widgets.forEach { widget ->
             widget.onPause()
+        }
+    }
+
+    /**
+     * Call onDestroy on all registered widgets that are initialized
+     */
+    fun onDestroy() {
+        widgets.forEach { widget ->
+            widget.onDestroy()
         }
     }
 }

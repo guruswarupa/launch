@@ -8,8 +8,6 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.AppAdapter
-import com.guruswarupa.launch.managers.AppDockManager
-import com.guruswarupa.launch.managers.AppListManager
 import java.util.concurrent.Executor
 
 /**
@@ -24,7 +22,7 @@ class FocusModeApplier(
     private val searchBox: EditText,
     private val voiceSearchButton: ImageButton,
     private val searchContainer: LinearLayout,
-    private val adapter: AppAdapter,
+    private var adapter: AppAdapter?,
     private val fullAppList: MutableList<android.content.pm.ResolveInfo>,
     private val appList: MutableList<android.content.pm.ResolveInfo>,
     private val onUpdateAppSearchManager: () -> Unit
@@ -43,6 +41,10 @@ class FocusModeApplier(
             Log.w("FocusModeApplier", "Task rejected by executor", e)
             return false
         }
+    }
+
+    fun setAdapter(adapter: AppAdapter) {
+        this.adapter = adapter
     }
 
     /**
@@ -73,6 +75,7 @@ class FocusModeApplier(
                 activity.runOnUiThread {
                     if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
 
+                    // Update shared appList instance contents
                     appList.clear()
                     appList.addAll(sortedFinalList)
 
@@ -81,18 +84,20 @@ class FocusModeApplier(
                     // Also update the drawer lock state based on focus mode
                     appDockManager.lockDrawerForFocusMode(isFocusMode)
 
-                    adapter.updateAppList(appList)
+                    // Update adapter with new list
+                    adapter?.updateAppList(sortedFinalList)
 
                     // Update search manager with new app list
                     if (!activity.isFinishing) {
                         onUpdateAppSearchManager()
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("FocusModeApplier", "Error applying focus mode", e)
                 activity.runOnUiThread {
                     if (!activity.isFinishing && !activity.isDestroyed) {
                         @SuppressLint("NotifyDataSetChanged")
-                        adapter.notifyDataSetChanged()
+                        adapter?.notifyDataSetChanged()
                     }
                 }
             }
