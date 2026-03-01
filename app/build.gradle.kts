@@ -11,9 +11,9 @@ android {
     defaultConfig {
         applicationId = "com.guruswarupa.launch"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 16
-        versionName = "6.0"
+        targetSdk = 35  
+        versionCode = 17
+        versionName = "6.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -52,6 +52,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -75,6 +76,7 @@ dependencies {
     implementation(libs.cardview)
     implementation(libs.material)
     implementation(libs.exp4j)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

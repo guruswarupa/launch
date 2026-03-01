@@ -55,17 +55,7 @@
                 android:textColor="@android:color/white"
                 android:layout_marginStart="8dp"/>
 
-            <Button
-                android:id="@+id/add_system_widget_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Add System Widget"
-                android:textAllCaps="false"
-                android:background="@drawable/button_background"
-                android:textColor="@android:color/white"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:minWidth="0dp"/>
+            <!-- Removed Add System Widget Button as per user request -->
 
         </LinearLayout>
 
@@ -96,12 +86,12 @@
             android:inputType="text"
             android:imeOptions="actionSearch"/>
 
-        <!-- In-App Widgets Header -->
+        <!-- Header for sections will be managed in code if needed, but keeping one for consistency -->
         <TextView
-            android:id="@+id/in_app_widgets_header"
+            android:id="@+id/widgets_header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="In-App Widgets"
+            android:text="Available Widgets"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold"

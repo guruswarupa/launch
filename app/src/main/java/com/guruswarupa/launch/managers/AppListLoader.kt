@@ -28,7 +28,6 @@ class AppListLoader(
     private val packageManager: PackageManager,
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
-    @Suppress("unused")
     private val favoriteAppManager: FavoriteAppManager,
     private val cacheManager: CacheManager?,
     private val backgroundExecutor: Executor,
@@ -64,6 +63,20 @@ class AppListLoader(
             Log.w("AppListLoader", "Task rejected by executor", e)
             return false
         }
+    }
+
+    /**
+     * Loads apps using the state from MainActivity.
+     * This is the preferred method to call from outside.
+     */
+    fun loadApps(forceRefresh: Boolean = false) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        // Sync isShowAllAppsMode with the manager to ensure consistency
+        activity.isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
+        
+        val adapter = if (activity.isAdapterInitialized()) activity.adapter else null
+        loadApps(forceRefresh, activity.fullAppList, activity.appList, adapter)
     }
     
     fun loadApps(forceRefresh: Boolean = false, fullAppList: MutableList<ResolveInfo>, appList: MutableList<ResolveInfo>, adapter: AppAdapter?) {
@@ -169,31 +182,10 @@ class AppListLoader(
                     (currentTime - lastCacheTime) < cacheDuration) {
                     cachedUnsortedList!!
                 } else {
-                    // Optimization #1: Use getInstalledApplications instead of queryIntentActivities
-                    // This is significantly faster on most Android versions
-                    val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                    val list = mutableListOf<ResolveInfo>()
-                    
-                    for (app in installedApps) {
-                        try {
-                            // Only include enabled apps with launch intents
-                            if (!app.enabled) continue
-                            
-                            val launchIntent = packageManager.getLaunchIntentForPackage(app.packageName)
-                            if (launchIntent != null) {
-                                val resolveInfo = ResolveInfo()
-                                // Create a dummy ActivityInfo since we only need package and class name
-                                val activityInfo = android.content.pm.ActivityInfo()
-                                activityInfo.packageName = app.packageName
-                                activityInfo.name = launchIntent.component?.className ?: ""
-                                activityInfo.applicationInfo = app
-                                resolveInfo.activityInfo = activityInfo
-                                list.add(resolveInfo)
-                            }
-                        } catch (_: Exception) {
-                            // Skip apps that fail to resolve launch intent
-                        }
+                    val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                        addCategory(Intent.CATEGORY_LAUNCHER)
                     }
+                    val list = packageManager.queryIntentActivities(mainIntent, 0)
                     
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
@@ -344,17 +336,10 @@ class AppListLoader(
     }
     
     private fun updateSearchVisibility() {
-        // Set visibility of search bar and voice search button based on focus mode
         if (!activity.isFinishing && !activity.isDestroyed) {
-            val currentFocusMode = appDockManager.getCurrentMode()
             handler.post {
-                if (currentFocusMode) {
-                    searchBox.visibility = View.GONE
-                    voiceSearchButton.visibility = View.GONE
-                } else {
-                    searchBox.visibility = View.VISIBLE
-                    voiceSearchButton.visibility = View.VISIBLE
-                }
+                searchBox.visibility = View.VISIBLE
+                voiceSearchButton.visibility = View.VISIBLE
             }
         }
     }

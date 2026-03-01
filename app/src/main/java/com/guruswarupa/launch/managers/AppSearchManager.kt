@@ -6,9 +6,10 @@ import android.content.pm.ResolveInfo
 import android.os.Handler
 import android.os.Looper
 import android.os.Environment
-import android.widget.EditText
+import android.widget.AutoCompleteTextView
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.models.AppMetadata
+import com.guruswarupa.launch.utils.AndroidSettingsHelper
 import net.objecthunter.exp4j.ExpressionBuilder
 import java.io.File
 import java.util.concurrent.Executors
@@ -17,12 +18,13 @@ class AppSearchManager(
     private val packageManager: PackageManager,
     private val fullAppList: MutableList<ResolveInfo>,
     private var homeAppList: List<ResolveInfo>,
-    private val adapter: AppAdapter,
-    private val searchBox: EditText,
+    private var adapter: AppAdapter?,
+    private val searchBox: AutoCompleteTextView,
     private var contactsList: List<String>,
     private val context: android.content.Context,
     private val appMetadataCache: Map<String, AppMetadata>? = null,
-    private val isAppFiltered: ((String) -> Boolean)? = null
+    private val isAppFiltered: ((String) -> Boolean)? = null,
+    private val isFocusModeActive: (() -> Boolean)? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val searchExecutor = Executors.newSingleThreadExecutor() // Background thread for search operations
@@ -52,6 +54,12 @@ class AppSearchManager(
 
             override fun afterTextChanged(s: android.text.Editable?) {}
         })
+    }
+
+    fun setAdapter(adapter: AppAdapter) {
+        synchronized(dataLock) {
+            this.adapter = adapter
+        }
     }
 
     fun updateContactsList() {
@@ -102,8 +110,11 @@ class AppSearchManager(
     fun updateData(newFullAppList: List<ResolveInfo>, newHomeAppList: List<ResolveInfo>, newContactsList: List<String>) {
         synchronized(dataLock) {
             // Update data without resetting currentSearchMode
-            fullAppList.clear()
-            fullAppList.addAll(newFullAppList)
+            // CRITICAL FIX: Only clear and addAll if it's not the same list reference to avoid nuke-on-refresh bug
+            if (newFullAppList !== fullAppList) {
+                fullAppList.clear()
+                fullAppList.addAll(newFullAppList)
+            }
             homeAppList = ArrayList(newHomeAppList)
             contactsList = newContactsList
             searchCache.clear()
@@ -213,19 +224,22 @@ class AppSearchManager(
 
                 // If in ALL mode, add specialized ones at the bottom
                 if (currentSearchMode == SearchMode.ALL) {
-                    newFilteredList.add(createGoogleMapsSearchOption(query))
-                    newFilteredList.add(createPlayStoreSearchOption(query))
-                    newFilteredList.add(createYoutubeSearchOption(query))
+                    // Don't add web, YouTube, or Play Store options when focus mode is active
+                    if (!(isFocusModeActive?.invoke() == true)) {
+                        newFilteredList.add(createGoogleMapsSearchOption(query))
+                        newFilteredList.add(createPlayStoreSearchOption(query))
+                        newFilteredList.add(createYoutubeSearchOption(query))
+                    }
                     newFilteredList.add(createBrowserSearchOption(query))
                 }
             }
         } else {
-            // EMPTY QUERY: Show exactly what\'s on the home screen (filtered for focus mode, favorites, etc.)
+            // EMPTY QUERY: Show exactly what's on the home screen (filtered for focus mode, favorites, etc.)
             newFilteredList.addAll(homeAppListSnapshot)
         }
 
         handler.post {
-            adapter.updateAppList(newFilteredList)
+            adapter?.updateAppList(newFilteredList)
         }
     }
 
@@ -241,20 +255,25 @@ class AppSearchManager(
     }
 
     private fun getSettingsMatches(query: String): List<String> {
-        val settings = listOf(
-            "Display Style", "Wallpaper", "App Lock", "Hidden Apps", "Permissions",
-            "Privacy Dashboard", "Tutorial", "Shake to Torch", "Screen Dimmer",
-            "Night Mode", "Flip to DND", "Back Tap"
-        )
-        return settings.filter { it.contains(query, ignoreCase = true) }.take(3)
+        // Search only Android system settings, excluding the app's own settings
+        val matchedSystemSettings = AndroidSettingsHelper.searchSettings(query).take(8).map { it.title }
+        
+        return matchedSystemSettings
     }
 
     private fun createSettingsOption(setting: String): ResolveInfo {
+        // Find the system setting
+        val systemSetting = AndroidSettingsHelper.getAllSystemSettings().find { it.title == setting }
+        
         return cachedResolveInfos.getOrPut("settings_result_$setting") {
             ResolveInfo().apply {
                 activityInfo = ActivityInfo().apply {
-                    packageName = "settings_result"
+                    packageName = "system_settings_result"  // Always use system settings result since we removed app settings
                     name = setting
+                    // Store the action in nonLocalizedLabel for system settings
+                    if (systemSetting != null) {
+                        nonLocalizedLabel = systemSetting.action
+                    }
                 }
             }
         }

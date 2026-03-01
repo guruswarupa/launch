@@ -76,6 +76,14 @@ class TemperatureManager(context: Context) : SensorEventListener {
         }
     }
     
+    /**
+     * Cleanup method to unregister sensor listeners and prevent memory leaks
+     */
+    fun cleanup() {
+        stopTracking()
+        onTemperatureChanged = null
+    }
+    
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null) return
         

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext traffic for specific speed test domains -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">speedtest.belwue.net</domain>
+        <domain includeSubdomains="true">speedtest.tele2.net</domain>
+    </domain-config>
+    
+    <!-- Default policy blocks cleartext traffic -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+</network-security-config>

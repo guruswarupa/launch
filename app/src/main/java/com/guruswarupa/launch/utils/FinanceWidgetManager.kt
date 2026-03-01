@@ -57,7 +57,8 @@ class FinanceWidgetManager(
         }.toTypedArray()
         
         val adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_item, currencies)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        // Use custom translucent dropdown item
+        adapter.setDropDownViewResource(R.layout.custom_spinner_dropdown_item)
         spinner.adapter = adapter
 
         // Set current selection

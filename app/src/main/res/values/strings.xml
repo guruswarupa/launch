@@ -269,4 +269,10 @@ No personal data is collected, stored, or shared with third parties.</string>
     <!-- Accessibility Shortcut -->
     <string name="accessibility_shortcut">Accessibility Shortcut</string>
     <string name="accessibility_shortcut_description">Show a floating button for quick access to system controls</string>
+    
+    <!-- Year Progress Widget Strings -->
+    <string name="year_progress_enable">Enable</string>
+    <string name="year_progress_disable">Disable</string>
+    <string name="year_progress_stats_format">%1$d days of %2$d completed (%3$d%%)</string>
+    <string name="year_progress_days_remaining_format">%1$d days remaining</string>
 </resources>

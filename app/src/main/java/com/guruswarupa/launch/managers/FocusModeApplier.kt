@@ -5,10 +5,9 @@ import android.util.Log
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.AppAdapter
-import com.guruswarupa.launch.managers.AppDockManager
-import com.guruswarupa.launch.managers.AppListManager
 import java.util.concurrent.Executor
 
 /**
@@ -22,7 +21,8 @@ class FocusModeApplier(
     private val appDockManager: AppDockManager,
     private val searchBox: EditText,
     private val voiceSearchButton: ImageButton,
-    private val adapter: AppAdapter,
+    private val searchContainer: LinearLayout,
+    private var adapter: AppAdapter?,
     private val fullAppList: MutableList<android.content.pm.ResolveInfo>,
     private val appList: MutableList<android.content.pm.ResolveInfo>,
     private val onUpdateAppSearchManager: () -> Unit
@@ -41,6 +41,10 @@ class FocusModeApplier(
             Log.w("FocusModeApplier", "Task rejected by executor", e)
             return false
         }
+    }
+
+    fun setAdapter(adapter: AppAdapter) {
+        this.adapter = adapter
     }
 
     /**
@@ -71,30 +75,29 @@ class FocusModeApplier(
                 activity.runOnUiThread {
                     if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
 
+                    // Update shared appList instance contents
                     appList.clear()
                     appList.addAll(sortedFinalList)
 
-                    val currentFocusMode = appDockManager.getCurrentMode()
-                    if (currentFocusMode) {
-                        searchBox.visibility = View.GONE
-                        voiceSearchButton.visibility = View.GONE
-                    } else {
-                        searchBox.visibility = View.VISIBLE
-                        voiceSearchButton.visibility = View.VISIBLE
-                    }
+                    searchContainer.visibility = View.VISIBLE
 
-                    adapter.updateAppList(appList)
+                    // Also update the drawer lock state based on focus mode
+                    appDockManager.lockDrawerForFocusMode(isFocusMode)
+
+                    // Update adapter with new list
+                    adapter?.updateAppList(sortedFinalList)
 
                     // Update search manager with new app list
                     if (!activity.isFinishing) {
                         onUpdateAppSearchManager()
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("FocusModeApplier", "Error applying focus mode", e)
                 activity.runOnUiThread {
                     if (!activity.isFinishing && !activity.isDestroyed) {
                         @SuppressLint("NotifyDataSetChanged")
-                        adapter.notifyDataSetChanged()
+                        adapter?.notifyDataSetChanged()
                     }
                 }
             }

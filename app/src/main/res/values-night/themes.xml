@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight">
+    <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary colors -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
@@ -34,6 +34,9 @@
         
         <!-- Window background -->
         <item name="android:windowBackground">@color/background</item>
+        <!-- Use custom translucent popup menu style -->
+        <item name="popupMenuStyle">@style/PopupMenuStyle</item>
+        <item name="android:popupMenuStyle">@style/PopupMenuStyle</item>
     </style>
     
     <style name="Theme.Launch.Settings" parent="Theme.Launch">

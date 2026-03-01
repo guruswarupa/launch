@@ -140,12 +140,30 @@ class WidgetSetupManager(
         return widget
     }
     
+    fun setupYearProgressWidget(sharedPreferences: android.content.SharedPreferences): YearProgressWidget {
+        val container = activity.findViewById<android.widget.LinearLayout>(R.id.year_progress_widget_container)
+        val yearProgressWidget = YearProgressWidget(activity, container, sharedPreferences)
+        yearProgressWidget.initialize()
+        return yearProgressWidget
+    }
+    
     fun setupWeeklyUsageWidget() {
         // The weekly usage graph is managed by UsageStatsDisplayManager
         // This method exists for consistency with other widget setup methods
     }
     
+    fun setupGithubContributionWidget(sharedPreferences: android.content.SharedPreferences): GithubContributionWidget {
+        val githubContainer = activity.findViewById<android.widget.LinearLayout>(R.id.github_contributions_widget_container)
+        val githubWidget = GithubContributionWidget(activity, githubContainer, sharedPreferences)
+        githubWidget.initialize()
+        return githubWidget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
+    }
+    
+    fun getActivity(): MainActivity {
+        return activity
     }
 }

@@ -3,7 +3,7 @@ package com.guruswarupa.launch.handlers
 import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
-import android.widget.EditText
+import android.widget.AutoCompleteTextView
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.core.PermissionManager
 import com.guruswarupa.launch.core.ShareManager
@@ -17,7 +17,7 @@ import com.guruswarupa.launch.utils.VoiceCommandHandler
  */
 class ActivityResultHandler(
     private val activity: FragmentActivity,
-    private val searchBox: EditText,
+    private val searchBox: AutoCompleteTextView,
     private var voiceCommandHandler: VoiceCommandHandler?,
     private val shareManager: ShareManager,
     private val widgetManager: WidgetManager,
@@ -32,6 +32,7 @@ class ActivityResultHandler(
         const val REQUEST_PICK_WIDGET = 800
         const val REQUEST_CONFIGURE_WIDGET = 801
         const val REQUEST_WIDGET_CONFIGURATION = 802
+        const val REQUEST_BIND_WIDGET = 805
     }
 
     fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

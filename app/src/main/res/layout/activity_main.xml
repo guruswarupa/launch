@@ -148,7 +148,7 @@
                         android:padding="12dp"
                         android:scaleType="fitCenter" />
 
-                    <EditText
+                    <AutoCompleteTextView
                         android:id="@+id/search_box"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -160,7 +160,13 @@
                         android:background="@null"
                         android:textSize="16sp"
                         android:singleLine="true"
-                        android:imeOptions="actionSearch"/>
+                        android:imeOptions="actionSearch"
+                        android:dropDownSelector="?android:attr/listChoiceBackgroundIndicator"
+                        android:popupBackground="@drawable/spinner_dropdown_background"
+                        android:dropDownWidth="wrap_content"
+                        android:dropDownHeight="wrap_content"
+                        android:dropDownVerticalOffset="0dp"
+                        android:dropDownHorizontalOffset="0dp"/>
 
                     <ImageButton
                         android:id="@+id/voice_search_button"
@@ -210,6 +216,7 @@
 
         <!-- Visual Cues for Gesture Areas (Top Half) -->
         <LinearLayout
+            android:id="@+id/left_drawer_cue"
             android:layout_width="4dp"
             android:layout_height="match_parent"
             android:layout_gravity="start"
@@ -283,7 +290,7 @@
                 android:id="@+id/widget_settings_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Widget Settings"
+                android:text="Widgets"
                 android:textColor="@color/widget_text"
                 android:textSize="16sp"
                 android:textStyle="bold"/>
@@ -332,7 +339,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tap 'Widget Settings' above to add and configure widgets"
+                    android:text="Tap Gear icon above to add and configure widgets"
                     android:textColor="@color/widget_text_secondary"
                     android:textSize="14sp"
                     android:gravity="center" />
@@ -438,6 +445,26 @@
             <!-- Device Info Widget -->
             <LinearLayout
                 android:id="@+id/device_info_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:layout_marginVertical="16dp" />
+
+            <!-- Year Progress Widget -->
+            <LinearLayout
+                android:id="@+id/year_progress_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/widget_background"
+                android:padding="20dp"
+                android:layout_marginVertical="16dp" />
+
+            <!-- GitHub Contributions Widget -->
+            <LinearLayout
+                android:id="@+id/github_contributions_widget_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"

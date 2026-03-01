@@ -14,8 +14,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Gravity
+import android.view.MenuItem
 import android.widget.ArrayAdapter
-import android.widget.EditText
+import android.widget.AutoCompleteTextView
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.graphics.drawable.Drawable
@@ -23,13 +24,12 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.content.FileProvider
 import androidx.core.net.toUri
-import androidx.core.view.get
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.DiffUtil
 import java.io.File
 import java.util.concurrent.*
+import androidx.core.content.FileProvider
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.core.ShareManager
@@ -40,7 +40,7 @@ import com.guruswarupa.launch.ui.activities.SettingsActivity
 class AppAdapter(
     private val activity: MainActivity,
     var appList: MutableList<ResolveInfo>,
-    private val searchBox: EditText,
+    private val searchBox: AutoCompleteTextView,
     private var isGridMode: Boolean,
     private val context: Context // Added context
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
@@ -61,7 +61,7 @@ class AppAdapter(
         private const val VIEW_TYPE_GRID = 1
         private val SPECIAL_PACKAGE_NAMES = setOf(
             "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result",
-            "file_result", "settings_result"
+            "file_result", "settings_result", "system_settings_result"
         )
         
         // Priority levels for progressive loading
@@ -444,8 +444,32 @@ class AppAdapter(
                 holder.appIcon.setImageResource(R.drawable.ic_settings)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
-                    val intent = Intent(activity, SettingsActivity::class.java)
-                    activity.startActivity(intent)
+                    val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
+                    if (intent != null) {
+                        activity.startActivity(intent)
+                    } else {
+                        // Fallback to general settings
+                        val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                        activity.startActivity(fallbackIntent)
+                    }
+                    searchBox.text.clear()
+                }
+            }
+            
+            "system_settings_result" -> {
+                holder.appIcon.setImageResource(R.drawable.ic_settings)
+                holder.appName?.text = appInfo.activityInfo.name
+                holder.itemView.setOnClickListener {
+                    val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
+                    if (intent != null) {
+                        activity.startActivity(intent)
+                    } else {
+                        // Fallback to general settings
+                        val fallbackIntent = Intent(Settings.ACTION_SETTINGS)
+                        activity.startActivity(fallbackIntent)
+                    }
                     searchBox.text.clear()
                 }
             }
@@ -533,9 +557,9 @@ class AppAdapter(
                         prefs.edit { putInt("usage_$packageName", currentCount + 1) }
 
                         val appName = labelCache[packageName] ?: appInfo.activityInfo.packageName
-                        val shouldShowTimer = activity.appCategoryManager.shouldShowTimer(packageName, appName)
+                        val isSessionTimerEnabled = activity.appTimerManager.isSessionTimerEnabled(packageName)
                         
-                        if (shouldShowTimer) {
+                        if (isSessionTimerEnabled) {
                             activity.appTimerManager.showTimerDialog(appName) { timerDuration ->
                                 if (activity.appLockManager.isAppLocked(packageName)) {
                                     activity.appLockManager.verifyPin { isAuthenticated ->
@@ -635,6 +659,15 @@ class AppAdapter(
             }
         }
 
+        val toggleSessionTimerItem = popupMenu.menu.findItem(R.id.toggle_session_timer)
+        if (toggleSessionTimerItem != null) {
+            val isEnabled = activity.appTimerManager.isSessionTimerEnabled(packageName)
+            toggleSessionTimerItem.title = if (isEnabled) "Disable Session Timer" else "Enable Session Timer"
+            val spannable = android.text.SpannableString(toggleSessionTimerItem.title)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            toggleSessionTimerItem.title = spannable
+        }
+
         val favoriteMenuItem = popupMenu.menu.findItem(R.id.toggle_favorite)
         if (favoriteMenuItem != null) {
             val isFavorite = activity.favoriteAppManager.isFavoriteApp(packageName)
@@ -658,9 +691,9 @@ class AppAdapter(
         }
         
         for (i in 0 until popupMenu.menu.size()) {
-            val item = popupMenu.menu[i]
-            val title = item.title?.toString() ?: continue
-            val spannable = android.text.SpannableString(title)
+            val item = popupMenu.menu.getItem(i)
+            val itemTitle = item.title?.toString() ?: continue
+            val spannable = android.text.SpannableString(itemTitle)
             spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             item.title = spannable
         }
@@ -669,6 +702,13 @@ class AppAdapter(
             when (menuItem.itemId) {
                 100 -> {
                     activity.appTimerManager.showDailyLimitDialog(appName, packageName) { notifyDataSetChanged() }
+                    true
+                }
+                R.id.toggle_session_timer -> {
+                    val isEnabled = activity.appTimerManager.isSessionTimerEnabled(packageName)
+                    activity.appTimerManager.setSessionTimerEnabled(packageName, !isEnabled)
+                    val status = if (!isEnabled) "enabled" else "disabled"
+                    Toast.makeText(activity, "Session timer $status for $appName", Toast.LENGTH_SHORT).show()
                     true
                 }
                 R.id.app_info -> { showAppInfo(packageName); true }
@@ -713,6 +753,7 @@ class AppAdapter(
                 lv.postDelayed({ try { for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i)) } catch (_: Exception) {} }, 50)
                 lv.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
                     override fun onGlobalLayout() {
+                        try { if (lv.childCount > 0) fixTextColors(lv.getChildAt(lv.childCount - 1)) } catch (_: Exception) {}
                         try { for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i)) } catch (_: Exception) {}
                         lv.viewTreeObserver.removeOnGlobalLayoutListener(this)
                     }
@@ -820,8 +861,8 @@ class AppAdapter(
             .setAdapter(adapter) { _, which ->
                 when (which) {
                     0 -> showCallConfirmationDialog(contactName)
-                    1 -> activity.openWhatsAppChat(contactName)
-                    2 -> activity.openSMSChat(contactName)
+                    1 -> activity.contactActionHandler.openWhatsAppChat(contactName)
+                    2 -> activity.contactActionHandler.openSMSChat(contactName)
                 }
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)
