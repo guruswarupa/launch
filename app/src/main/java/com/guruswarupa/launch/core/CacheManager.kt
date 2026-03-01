@@ -44,11 +44,13 @@ class CacheManager(
         return try {
             val packages = packageManager.getInstalledPackages(0)
             // Use sum of update times and package count as a version identifier
-            var timestampSum = 0L
+            var maxUpdateTime = 0L
             for (pkg in packages) {
-                timestampSum += pkg.lastUpdateTime
+                if (pkg.lastUpdateTime > maxUpdateTime) {
+                    maxUpdateTime = pkg.lastUpdateTime
+                }
             }
-            "${packages.size}_$timestampSum"
+            "${packages.size}_$maxUpdateTime"
         } catch (_: Exception) {
             System.currentTimeMillis().toString()
         }
@@ -107,30 +109,27 @@ class CacheManager(
         return try {
             if (!appListCacheFile.exists()) return emptyList()
 
-            val cacheData = appListCacheFile.readText().lines()
+            val cacheData = appListCacheFile.readText().lines().filter { it.isNotBlank() }
+            if (cacheData.isEmpty()) return emptyList()
+
+            // Optimization: Query all launcher activities once instead of resolveActivity in a loop
+            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            val allApps = packageManager.queryIntentActivities(mainIntent, 0)
+            
+            // Create a map for quick lookup
+            val appMap = allApps.associateBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+
             val apps = mutableListOf<ResolveInfo>()
-
             for (line in cacheData) {
-                if (line.isBlank()) continue
-                val parts = line.split("|")
-                if (parts.size == 2) {
-                    val packageName = parts[0]
-                    val activityName = parts[1]
+                appMap[line]?.let { apps.add(it) }
+            }
 
-                    try {
-                        val intent = Intent(Intent.ACTION_MAIN).apply {
-                            addCategory(Intent.CATEGORY_LAUNCHER)
-                            setPackage(packageName)
-                            setClassName(packageName, activityName)
-                        }
-                        val resolveInfo = packageManager.resolveActivity(intent, 0)
-                        if (resolveInfo != null) {
-                            apps.add(resolveInfo)
-                        }
-                    } catch (_: Exception) {
-                        // App may have been uninstalled, skip
-                    }
-                }
+            // Fallback: if cache-based filtering resulted in empty list but we have apps,
+            // return all apps so the UI isn't empty.
+            if (apps.isEmpty() && allApps.isNotEmpty()) {
+                return allApps
             }
 
             apps
