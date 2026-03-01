@@ -90,7 +90,7 @@ class ServiceManager(
     fun updateScreenDimmerService() {
         val isDimmerEnabled = sharedPreferences.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
         if (isDimmerEnabled && Settings.canDrawOverlays(context)) {
-            val dimLevel = sharedPreferences.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
+            val dimLevel = sharedPreferences.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 10)
             ScreenDimmerService.startService(context, dimLevel)
         } else {
             ScreenDimmerService.stopService(context)
@@ -103,7 +103,7 @@ class ServiceManager(
     fun updateNightModeService() {
         val isNightModeEnabled = sharedPreferences.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
         if (isNightModeEnabled && Settings.canDrawOverlays(context)) {
-            val intensity = sharedPreferences.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 50)
+            val intensity = sharedPreferences.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
             NightModeService.startService(context, intensity)
         } else {
             NightModeService.stopService(context)
