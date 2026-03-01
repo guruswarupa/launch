@@ -861,8 +861,8 @@ class AppAdapter(
             .setAdapter(adapter) { _, which ->
                 when (which) {
                     0 -> showCallConfirmationDialog(contactName)
-                    1 -> activity.openWhatsAppChat(contactName)
-                    2 -> activity.openSMSChat(contactName)
+                    1 -> activity.contactActionHandler.openWhatsAppChat(contactName)
+                    2 -> activity.contactActionHandler.openSMSChat(contactName)
                 }
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)

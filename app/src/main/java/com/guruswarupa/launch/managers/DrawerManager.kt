@@ -32,7 +32,7 @@ class DrawerManager(
         gestureHandler.setupTouchListener()
         gestureHandler.setupGestureExclusion()
 
-        activityInitializer.setupDrawerLayout(drawerLayout)
+        activityInitializer.setupDrawerLayout()
         navigationManager = NavigationManager(drawerLayout, gestureHandler, handler)
 
         // Add drawer listener to check for theme changes when drawer opens

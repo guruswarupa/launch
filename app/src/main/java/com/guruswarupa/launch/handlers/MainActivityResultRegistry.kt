@@ -11,10 +11,7 @@ import com.guruswarupa.launch.widgets.WidgetVisibilityManager
 import com.guruswarupa.launch.ui.activities.WidgetConfigurationActivity
 import com.guruswarupa.launch.utils.VoiceCommandHandler
 import com.guruswarupa.launch.core.PermissionManager
-import com.guruswarupa.launch.widgets.CalendarEventsWidget
-import com.guruswarupa.launch.widgets.CountdownWidget
-import com.guruswarupa.launch.widgets.YearProgressWidget
-import com.guruswarupa.launch.widgets.GithubContributionWidget
+import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 
 class MainActivityResultRegistry(private val activity: FragmentActivity) {
 
@@ -23,52 +20,62 @@ class MainActivityResultRegistry(private val activity: FragmentActivity) {
     val widgetConfigurationLauncher: ActivityResultLauncher<Intent>
     val voiceSearchLauncher: ActivityResultLauncher<Intent>
 
-    // Dependencies that need to be passed in or accessed
-    private var widgetManager: WidgetManager? = null
-    private var widgetVisibilityManager: WidgetVisibilityManager? = null
-    private var widgetConfigurationManager: WidgetConfigurationManager? = null
-    private var voiceCommandHandler: VoiceCommandHandler? = null
-    private var activityResultHandler: ActivityResultHandler? = null
-    private var packageManager: android.content.pm.PackageManager? = null
-    private var contentResolver: android.content.ContentResolver? = null
-    private var searchBox: android.widget.AutoCompleteTextView? = null
-    private var appList: MutableList<android.content.pm.ResolveInfo>? = null
-    private var yearProgressWidget: YearProgressWidget? = null
-    private var githubContributionWidget: GithubContributionWidget? = null
-    private var calendarEventsWidget: CalendarEventsWidget? = null
-    private var countdownWidget: CountdownWidget? = null
+    /**
+     * Container for all dependencies required by the result registry
+     */
+    data class DependencyContainer(
+        var widgetManager: WidgetManager? = null,
+        var widgetVisibilityManager: WidgetVisibilityManager? = null,
+        var widgetConfigurationManager: WidgetConfigurationManager? = null,
+        var voiceCommandHandler: VoiceCommandHandler? = null,
+        var activityResultHandler: ActivityResultHandler? = null,
+        var packageManager: android.content.pm.PackageManager? = null,
+        var contentResolver: android.content.ContentResolver? = null,
+        var searchBox: android.widget.AutoCompleteTextView? = null,
+        var appList: MutableList<android.content.pm.ResolveInfo>? = null,
+        var widgetLifecycleCoordinator: WidgetLifecycleCoordinator? = null
+    )
+
+    private var deps = DependencyContainer()
 
     init {
         // Register ActivityResultLauncher for widget picking
         widgetPickerLauncher = activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK && result.data != null) {
                 // Handle widget picked
-                widgetManager?.handleWidgetPicked(activity, result.data)
+                deps.widgetManager?.handleWidgetPicked(activity, result.data)
             }
         }
 
         // Register ActivityResultLauncher for widget configuration
         widgetConfigurationLauncher = activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
-                widgetVisibilityManager?.update(yearProgressWidget, githubContributionWidget)
+                val yearProgress = deps.widgetLifecycleCoordinator?.let { if (it.isYearProgressWidgetInitialized()) it.yearProgressWidget else null }
+                val githubContribution = deps.widgetLifecycleCoordinator?.let { if (it.isGithubContributionWidgetInitialized()) it.githubContributionWidget else null }
+                
+                deps.widgetVisibilityManager?.update(yearProgress, githubContribution)
                 // Refresh system widgets in the drawer
                 refreshSystemWidgets()
                 // Update visibility again after refreshing system widgets
-                widgetVisibilityManager?.update(yearProgressWidget, githubContributionWidget)
+                deps.widgetVisibilityManager?.update(yearProgress, githubContribution)
                 
                 // Refresh calendar widget when it becomes visible
-                calendarEventsWidget?.let { widget ->
-                    val isEnabled = widgetConfigurationManager?.isWidgetEnabled("calendar_events_widget_container") ?: false
-                    if (isEnabled) {
-                        widget.refresh()
+                deps.widgetLifecycleCoordinator?.let { coordinator ->
+                    if (coordinator.isCalendarEventsWidgetInitialized()) {
+                        val isEnabled = deps.widgetConfigurationManager?.isWidgetEnabled("calendar_events_widget_container") ?: false
+                        if (isEnabled) {
+                            coordinator.calendarEventsWidget.refresh()
+                        }
                     }
                 }
                 
                 // Refresh countdown widget when it becomes visible
-                countdownWidget?.let { widget ->
-                    val isEnabled = widgetConfigurationManager?.isWidgetEnabled("countdown_widget_container") ?: false
-                    if (isEnabled) {
-                        widget.refresh()
+                deps.widgetLifecycleCoordinator?.let { coordinator ->
+                    if (coordinator.isCountdownWidgetInitialized()) {
+                        val isEnabled = deps.widgetConfigurationManager?.isWidgetEnabled("countdown_widget_container") ?: false
+                        if (isEnabled) {
+                            coordinator.countdownWidget.refresh()
+                        }
                     }
                 }
             }
@@ -78,54 +85,28 @@ class MainActivityResultRegistry(private val activity: FragmentActivity) {
         voiceSearchLauncher = activity.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 // Initialize voice command handler if needed for voice search result
-                if (voiceCommandHandler == null && packageManager != null && contentResolver != null && 
-                    searchBox != null && appList != null) {
-                    voiceCommandHandler = VoiceCommandHandler(
+                if (deps.voiceCommandHandler == null && deps.packageManager != null && deps.contentResolver != null && 
+                    deps.searchBox != null && deps.appList != null) {
+                    deps.voiceCommandHandler = VoiceCommandHandler(
                         activity,
-                        packageManager!!,
-                        contentResolver!!,
-                        searchBox!!,
-                        appList!!
+                        deps.packageManager!!,
+                        deps.contentResolver!!,
+                        deps.searchBox!!,
+                        deps.appList!!
                     )
-                    // Update the dependencies to reflect the new voice command handler
-                    setDependencies(voiceCommandHandler = voiceCommandHandler)
                 }
-                activityResultHandler?.setVoiceCommandHandler(voiceCommandHandler)
+                deps.activityResultHandler?.setVoiceCommandHandler(deps.voiceCommandHandler)
             }
             // Always handle the activity result
-            activityResultHandler?.handleActivityResult(PermissionManager.VOICE_SEARCH_REQUEST, result.resultCode, result.data)
+            deps.activityResultHandler?.handleActivityResult(PermissionManager.VOICE_SEARCH_REQUEST, result.resultCode, result.data)
         }
     }
 
-    // Method to set the required dependencies
-    fun setDependencies(
-        widgetManager: WidgetManager? = null,
-        widgetVisibilityManager: WidgetVisibilityManager? = null,
-        widgetConfigurationManager: WidgetConfigurationManager? = null,
-        voiceCommandHandler: VoiceCommandHandler? = null,
-        activityResultHandler: ActivityResultHandler? = null,
-        packageManager: android.content.pm.PackageManager? = null,
-        contentResolver: android.content.ContentResolver? = null,
-        searchBox: android.widget.AutoCompleteTextView? = null,
-        appList: MutableList<android.content.pm.ResolveInfo>? = null,
-        yearProgressWidget: YearProgressWidget? = null,
-        githubContributionWidget: GithubContributionWidget? = null,
-        calendarEventsWidget: CalendarEventsWidget? = null,
-        countdownWidget: CountdownWidget? = null
-    ) {
-        this.widgetManager = widgetManager ?: this.widgetManager
-        this.widgetVisibilityManager = widgetVisibilityManager ?: this.widgetVisibilityManager
-        this.widgetConfigurationManager = widgetConfigurationManager ?: this.widgetConfigurationManager
-        this.voiceCommandHandler = voiceCommandHandler ?: this.voiceCommandHandler
-        this.activityResultHandler = activityResultHandler ?: this.activityResultHandler
-        this.packageManager = packageManager ?: this.packageManager
-        this.contentResolver = contentResolver ?: this.contentResolver
-        this.searchBox = searchBox ?: this.searchBox
-        this.appList = appList ?: this.appList
-        this.yearProgressWidget = yearProgressWidget ?: this.yearProgressWidget
-        this.githubContributionWidget = githubContributionWidget ?: this.githubContributionWidget
-        this.calendarEventsWidget = calendarEventsWidget ?: this.calendarEventsWidget
-        this.countdownWidget = countdownWidget ?: this.countdownWidget
+    /**
+     * Sets all dependencies at once
+     */
+    fun setDependencies(dependencies: DependencyContainer) {
+        this.deps = dependencies
     }
 
     /**
@@ -133,7 +114,7 @@ class MainActivityResultRegistry(private val activity: FragmentActivity) {
      */
     private fun refreshSystemWidgets() {
         // Reload widgets from WidgetManager
-        widgetManager?.reloadWidgets()
+        deps.widgetManager?.reloadWidgets()
     }
 
     /**

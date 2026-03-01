@@ -4,24 +4,20 @@ import android.os.Handler
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 
-import com.guruswarupa.launch.core.SystemBarManager
-import com.guruswarupa.launch.managers.AppLockManager
+import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.widgets.NotificationsWidget
-import com.guruswarupa.launch.managers.WallpaperManagerHelper
-import com.guruswarupa.launch.managers.GestureHandler
-import com.guruswarupa.launch.managers.AppDockManager
+import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.MainActivity
-import com.guruswarupa.launch.managers.WidgetManager
 import com.guruswarupa.launch.widgets.DeviceInfoWidget
 import com.guruswarupa.launch.widgets.NetworkStatsWidget
-import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.utils.TimeDateManager
-import com.guruswarupa.launch.managers.UsageStatsDisplayManager
-import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.utils.TodoAlarmManager
 import com.guruswarupa.launch.utils.FeatureTutorialManager
+import com.guruswarupa.launch.models.MainActivityViews
+import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
+import com.guruswarupa.launch.widgets.WidgetThemeManager
 
 /**
  * Manages activity lifecycle operations.
@@ -41,6 +37,7 @@ class LifecycleManager(
     private var appDockManager: AppDockManager? = null
     private var adapter: AppAdapter? = null
     private var appList: MutableList<android.content.pm.ResolveInfo>? = null
+    private var appListLoader: AppListLoader? = null
     private var widgetManager: WidgetManager? = null
     private var deviceInfoWidget: DeviceInfoWidget? = null
     private var networkStatsWidget: NetworkStatsWidget? = null
@@ -51,7 +48,15 @@ class LifecycleManager(
     private var todoManager: TodoManager? = null
     private var todoAlarmManager: TodoAlarmManager? = null
     private var featureTutorialManager: FeatureTutorialManager? = null
-    private var backgroundExecutor: java.util.concurrent.Executor? = null
+    private var backgroundExecutor: java.util.concurrent.ExecutorService? = null
+    private var widgetLifecycleCoordinator: WidgetLifecycleCoordinator? = null
+    private var widgetThemeManager: WidgetThemeManager? = null
+    private var views: MainActivityViews? = null
+    private var broadcastReceiverManager: BroadcastReceiverManager? = null
+    private var shareManager: ShareManager? = null
+    private var serviceManager: ServiceManager? = null
+    private var appTimerManager: AppTimerManager? = null
+    private var hiddenAppManager: HiddenAppManager? = null
     
     // Callbacks
     var onResumeCallbacks: MutableList<() -> Unit> = mutableListOf()
@@ -61,88 +66,37 @@ class LifecycleManager(
     var onFocusModeApply: ((Boolean) -> Unit)? = null
     var onLoadApps: ((Boolean) -> Unit)? = null
     
-    fun setSystemBarManager(manager: SystemBarManager) {
-        this.systemBarManager = manager
-    }
-    
-    fun setAppLockManager(manager: AppLockManager) {
-        this.appLockManager = manager
-    }
-    
-    fun setNotificationsWidget(widget: NotificationsWidget) {
-        this.notificationsWidget = widget
-    }
-    
-    fun setWallpaperManagerHelper(helper: WallpaperManagerHelper) {
-        this.wallpaperManagerHelper = helper
-    }
-    
-    fun setGestureHandler(handler: GestureHandler) {
-        this.gestureHandler = handler
-    }
-    
-    fun setAppDockManager(manager: AppDockManager) {
-        this.appDockManager = manager
-    }
-    
-    fun setAdapter(adapter: AppAdapter) {
-        this.adapter = adapter
-    }
-    
-    fun setAppList(list: MutableList<android.content.pm.ResolveInfo>) {
-        this.appList = list
-    }
-    
-    fun setWidgetManager(manager: WidgetManager) {
-        this.widgetManager = manager
-    }
-    
-    fun setDeviceInfoWidget(widget: DeviceInfoWidget) {
-        this.deviceInfoWidget = widget
-    }
-    
-    fun setNetworkStatsWidget(widget: NetworkStatsWidget) {
-        this.networkStatsWidget = widget
-    }
-    
-    fun setUsageStatsManager(manager: AppUsageStatsManager) {
-        this.usageStatsManager = manager
-    }
-    
-    fun setTimeDateManager(manager: TimeDateManager) {
-        this.timeDateManager = manager
-    }
-    
-    fun setWeeklyUsageGraph(graph: WeeklyUsageGraphView) {
-        this.weeklyUsageGraph = graph
-    }
-    
-    fun setUsageStatsDisplayManager(manager: UsageStatsDisplayManager) {
-        this.usageStatsDisplayManager = manager
-    }
-    
-    fun setTodoManager(manager: TodoManager) {
-        this.todoManager = manager
-    }
-    
-    fun setTodoAlarmManager(manager: TodoAlarmManager) {
-        this.todoAlarmManager = manager
-    }
-    
-    fun setFeatureTutorialManager(manager: FeatureTutorialManager) {
-        this.featureTutorialManager = manager
-    }
-    
-    fun setBackgroundExecutor(executor: java.util.concurrent.Executor) {
-        this.backgroundExecutor = executor
-    }
-    
-    @Suppress("unused")
-    fun setBlockingBackGesture(isBlocking: Boolean) {
-        this.isBlockingBackGesture = isBlocking
-    }
+    fun setSystemBarManager(manager: SystemBarManager) { this.systemBarManager = manager }
+    fun setAppLockManager(manager: AppLockManager) { this.appLockManager = manager }
+    fun setNotificationsWidget(widget: NotificationsWidget) { this.notificationsWidget = widget }
+    fun setWallpaperManagerHelper(helper: WallpaperManagerHelper) { this.wallpaperManagerHelper = helper }
+    fun setGestureHandler(handler: GestureHandler) { this.gestureHandler = handler }
+    fun setAppDockManager(manager: AppDockManager) { this.appDockManager = manager }
+    fun setAdapter(adapter: AppAdapter) { this.adapter = adapter }
+    fun setAppList(list: MutableList<android.content.pm.ResolveInfo>) { this.appList = list }
+    fun setAppListLoader(loader: AppListLoader) { this.appListLoader = loader }
+    fun setWidgetManager(manager: WidgetManager) { this.widgetManager = manager }
+    fun setDeviceInfoWidget(widget: DeviceInfoWidget) { this.deviceInfoWidget = widget }
+    fun setNetworkStatsWidget(widget: NetworkStatsWidget) { this.networkStatsWidget = networkStatsWidget }
+    fun setUsageStatsManager(manager: AppUsageStatsManager) { this.usageStatsManager = manager }
+    fun setTimeDateManager(manager: TimeDateManager) { this.timeDateManager = manager }
+    fun setWeeklyUsageGraph(graph: WeeklyUsageGraphView) { this.weeklyUsageGraph = graph }
+    fun setUsageStatsDisplayManager(manager: UsageStatsDisplayManager) { this.usageStatsDisplayManager = manager }
+    fun setTodoManager(manager: TodoManager) { this.todoManager = manager }
+    fun setTodoAlarmManager(manager: TodoAlarmManager) { this.todoAlarmManager = manager }
+    fun setFeatureTutorialManager(manager: FeatureTutorialManager) { this.featureTutorialManager = manager }
+    fun setBackgroundExecutor(executor: java.util.concurrent.ExecutorService) { this.backgroundExecutor = executor }
+    fun setWidgetLifecycleCoordinator(coordinator: WidgetLifecycleCoordinator) { this.widgetLifecycleCoordinator = coordinator }
+    fun setWidgetThemeManager(manager: WidgetThemeManager) { this.widgetThemeManager = manager }
+    fun setViews(views: MainActivityViews) { this.views = views }
+    fun setBroadcastReceiverManager(manager: BroadcastReceiverManager) { this.broadcastReceiverManager = manager }
+    fun setShareManager(manager: ShareManager) { this.shareManager = manager }
+    fun setServiceManager(manager: ServiceManager) { this.serviceManager = manager }
+    fun setAppTimerManager(manager: AppTimerManager) { this.appTimerManager = manager }
+    fun setHiddenAppManager(manager: HiddenAppManager) { this.hiddenAppManager = manager }
     
     private var isBlockingBackGesture = false
+    fun setBlockingBackGesture(isBlocking: Boolean) { this.isBlockingBackGesture = isBlocking }
     
     fun onResume(intent: android.content.Intent) {
         // Ensure system bars stay transparent
@@ -160,93 +114,85 @@ class LifecycleManager(
             it.setWallpaperBackground(forceReload = true)
         }
         
-        // Update gesture exclusion when activity resumes (unless we\'re temporarily blocking back gestures)
+        // Update gesture exclusion when activity resumes
         if (!isBlockingBackGesture) {
             gestureHandler?.updateGestureExclusion()
         }
         
-        // PRIORITY 1: Show UI immediately - receivers are already registered in onCreate
-        
-        // Reapply focus mode state when returning from apps (fast operation)
+        // Reapply focus mode state
         appDockManager?.let {
             onFocusModeApply?.invoke(it.getCurrentMode())
             it.refreshWorkspaceToggle()
         }
-        
-        // Refresh app list when returning to MainActivity (in case hidden apps changed)
-        // This ensures unhidden apps appear immediately
-        handler.postDelayed({
-            if (!activity.isFinishing && !activity.isDestroyed && appDockManager != null) {
-                try {
-                    val mainActivity = activity as? MainActivity
-                    if (mainActivity != null) {
-                        // Force reload from package manager to ensure all apps are included
-                        // This is necessary because fullAppList might not have unhidden apps
-                        // Use try-catch to handle initialization safely
-                        try {
-                            mainActivity.loadApps(forceRefresh = false)
-                        } catch (_: UninitializedPropertyAccessException) {
-                            // Managers not initialized yet, skip refresh
-                        }
-                    }
-                } catch (_: Exception) {
-                    // Not MainActivity or error, ignore
-                }
+
+        // Theme check
+        widgetThemeManager?.let { themeManager ->
+            themeManager.checkAndUpdateThemeIfNeeded(
+                todoManager = todoManager,
+                appDockManager = appDockManager,
+                searchBox = views?.let { if (it.isSearchBoxInitialized()) it.searchBox else null },
+                searchContainer = views?.let { if (it.isSearchContainerInitialized()) it.searchContainer else null },
+                voiceSearchButton = views?.let { if (it.isVoiceSearchButtonInitialized()) it.voiceSearchButton else null },
+                searchTypeButton = views?.let { if (it.isSearchTypeButtonInitialized()) it.searchTypeButton else null }
+            )
+        }
+
+        // Clear search box focus
+        views?.let { 
+            if (it.isSearchBoxInitialized()) {
+                it.searchBox.clearFocus()
             }
-        }, 300)
+        }
+
+        // Resume widgets
+        widgetLifecycleCoordinator?.onResume()
         
-        // Ensure app list is loaded - reload if empty (fixes issue where apps don\'t load)
-        if (adapter != null && (appList?.isEmpty() == true || appDockManager == null)) {
-            handler.postDelayed({
-                if (!activity.isFinishing && !activity.isDestroyed && appDockManager != null) {
+        // Refresh app list with consolidated delay
+        handler.postDelayed({
+            if (!activity.isFinishing && !activity.isDestroyed) {
+                hiddenAppManager?.forceRefresh()
+                
+                appListLoader?.let {
+                    it.loadApps(forceRefresh = false)
+                } ?: run {
                     onLoadApps?.invoke(false)
                 }
-            }, 150)
-        }
+            }
+        }, 500)
         
-        // Start widget managers (fast operations)
+        // Start widget managers
         widgetManager?.onStart()
         deviceInfoWidget?.onResume()
         networkStatsWidget?.onResume()
         
-        // PRIORITY 2: Load lightweight data in background (non-blocking)
-        usageStatsManager?.invalidateCache()
-        
-        // Start update runnable immediately for time/date
+        // Update time/date
         val isPowerSaverMode = sharedPreferences.getBoolean("power_saver_mode", false)
         timeDateManager?.startUpdates(isPowerSaverMode)
         
-        // PRIORITY 3: Defer expensive operations until after UI is shown
+        // Lightweight background tasks
+        usageStatsManager?.invalidateCache()
+        
         handler.postDelayed({
-            // Load wallpaper asynchronously (non-blocking)
             wallpaperManagerHelper?.setWallpaperBackground()
-            
-            // Update battery and usage (lightweight operations)
             onBatteryUpdate?.invoke()
             onUsageUpdate?.invoke()
             
-            // Refresh usage data but defer expensive weekly graph loading
-            // This would be handled by UsageStatsDisplayManager
-            
-            // Check date change in background
             backgroundExecutor?.execute {
                 usageStatsDisplayManager?.checkDateChangeAndRefreshUsage()
             }
             
-            // Load expensive weekly usage graph data after a delay (only if visible)
             handler.postDelayed({
                 weeklyUsageGraph?.let {
                     if (it.isVisible) {
                         usageStatsDisplayManager?.loadWeeklyUsageData()
                     }
                 }
-            }, 500) // Load after 500ms delay
+            }, 500)
             
-            // Reschedule todo alarms (non-critical, can wait)
             todoManager?.rescheduleTodoAlarms()
-        }, 50) // Small delay to let UI render first
+        }, 50)
         
-        // Check and show feature tutorial if needed (after UI is fully loaded)
+        // Feature tutorial
         val shouldStartTutorial = intent.getBooleanExtra("start_tutorial", false)
         handler.postDelayed({
             featureTutorialManager?.let {
@@ -254,22 +200,40 @@ class LifecycleManager(
                     it.startTutorial()
                 }
             }
-        }, 1000) // Wait 1 second for all views to be ready
+        }, 1000)
         
-        // Execute custom callbacks
         onResumeCallbacks.forEach { it.invoke() }
     }
     
     fun onPause() {
         timeDateManager?.stopUpdates()
         
+        // Save todo items
+        todoManager?.saveTodoItems()
+        
         // Stop widget manager listening
         widgetManager?.onStop()
         deviceInfoWidget?.onPause()
         networkStatsWidget?.onPause()
+
+        // Pause widgets
+        widgetLifecycleCoordinator?.onPause()
         
-        // Execute custom callbacks
         onPauseCallbacks.forEach { it.invoke() }
+    }
+
+    fun onDestroy() {
+        wallpaperManagerHelper?.cleanup()
+        broadcastReceiverManager?.unregisterReceivers()
+        backgroundExecutor?.shutdown()
+        shareManager?.cleanup()
+        widgetManager?.onDestroy()
+        widgetLifecycleCoordinator?.onDestroy()
+        serviceManager?.stopAllServices()
+        appTimerManager?.cleanup()
+        usageStatsManager?.cleanup()
+        
+        cleanup()
     }
     
     /**

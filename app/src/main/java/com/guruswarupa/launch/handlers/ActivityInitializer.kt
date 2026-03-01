@@ -2,10 +2,13 @@ package com.guruswarupa.launch.handlers
 
 import android.content.Context
 import android.content.Intent
-import android.widget.Button
+import android.view.View
+import android.widget.AutoCompleteTextView
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.net.toUri
 import androidx.drawerlayout.widget.DrawerLayout
@@ -16,6 +19,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.AppLauncher
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.models.MainActivityViews
+import com.guruswarupa.launch.ui.views.FastScroller
+import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 
 /**
  * Handles MainActivity initialization logic.
@@ -26,18 +32,46 @@ class ActivityInitializer(
     private val sharedPreferences: android.content.SharedPreferences,
     private val appLauncher: AppLauncher
 ) {
-    fun initializeViews(
-        searchBox: EditText,
-        recyclerView: RecyclerView,
-        timeTextView: TextView,
-        dateTextView: TextView
-    ) {
-        val viewPreference = sharedPreferences.getString("view_preference", "list")
-        val isGridMode = viewPreference == "grid"
+    val views = MainActivityViews()
 
-        // Setup search box - removed click listener to prevent unwanted focus
-        // Search box will naturally gain focus when tapped by user
+    fun initializeViews() {
+        with(views) {
+            searchBox = activity.findViewById(R.id.search_box)
+            searchContainer = activity.findViewById(R.id.search_container)
+            recyclerView = activity.findViewById(R.id.app_list)
+            fastScroller = activity.findViewById(R.id.fast_scroller)
+            fastScroller.setRecyclerView(recyclerView)
+            
+            // Disable animations to prevent "Tmp detached view" crash during rapid updates
+            recyclerView.itemAnimator = null
+            voiceSearchButton = activity.findViewById(R.id.voice_search_button)
+            appDock = activity.findViewById(R.id.app_dock)
+            wallpaperBackground = activity.findViewById(R.id.wallpaper_background)
+            weatherIcon = activity.findViewById(R.id.weather_icon)
+            weatherText = activity.findViewById(R.id.weather_text)
+            timeTextView = activity.findViewById(R.id.time_widget)
+            dateTextView = activity.findViewById(R.id.date_widget)
+            topWidgetContainer = activity.findViewById(R.id.top_widget_container)
+            
+            // Todo components
+            todoRecyclerView = activity.findViewById(R.id.todo_recycler_view)
+            addTodoButton = activity.findViewById(R.id.add_todo_button)
+            
+            // Right Drawer Views
+            rightDrawerWallpaper = activity.findViewById(R.id.right_drawer_wallpaper)
+            rightDrawerTime = activity.findViewById(R.id.right_drawer_time)
+            rightDrawerDate = activity.findViewById(R.id.right_drawer_date)
+            weeklyUsageGraph = activity.findViewById(R.id.weekly_usage_graph)
+            searchTypeButton = activity.findViewById(R.id.search_type_button)
+            drawerLayout = activity.findViewById(R.id.drawer_layout)
 
+            setupSearchBox(searchBox)
+            setupLayoutManager(recyclerView)
+            setupTimeDateListeners(timeTextView, dateTextView)
+        }
+    }
+
+    private fun setupSearchBox(searchBox: AutoCompleteTextView) {
         searchBox.setOnLongClickListener {
             val prefs = searchBox.context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
             val engine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
@@ -60,26 +94,31 @@ class ActivityInitializer(
             }
             true
         }
+    }
 
-        // Setup layout manager
+    private fun setupLayoutManager(recyclerView: RecyclerView) {
+        val viewPreference = sharedPreferences.getString("view_preference", "list")
+        val isGridMode = viewPreference == "grid"
+
         if (isGridMode) {
             recyclerView.layoutManager = GridLayoutManager(activity, 4)
         } else {
             recyclerView.layoutManager = LinearLayoutManager(activity)
         }
+    }
 
-        // Setup time/date click listeners
+    private fun setupTimeDateListeners(timeTextView: TextView, dateTextView: TextView) {
         timeTextView.setOnClickListener {
             appLauncher.launchAppWithLockCheck("com.google.android.deskclock", "Google Clock")
         }
 
-        // Setup date widget click listener to open calendar
         dateTextView.setOnClickListener {
             appLauncher.launchAppWithLockCheck("com.google.android.calendar", "Google Calendar")
         }
     }
 
-    fun setupDrawerLayout(drawerLayout: DrawerLayout) {
+    fun setupDrawerLayout() {
+        val drawerLayout = views.drawerLayout
         // Set drawer to full width - use post to ensure view is laid out
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
@@ -107,12 +146,12 @@ class ActivityInitializer(
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.END)
     }
 
-    fun setupVoiceSearchButton(voiceSearchButton: ImageButton, voiceSearchManager: VoiceSearchManager) {
-        voiceSearchButton.setOnClickListener {
+    fun setupVoiceSearchButton(voiceSearchManager: VoiceSearchManager) {
+        views.voiceSearchButton.setOnClickListener {
             voiceSearchManager.startVoiceSearch()
         }
 
-        voiceSearchButton.setOnLongClickListener {
+        views.voiceSearchButton.setOnLongClickListener {
             voiceSearchManager.triggerSystemAssistant()
             true
         }
