@@ -290,7 +290,7 @@
                 android:id="@+id/widget_settings_text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Widget Settings"
+                android:text="Widgets"
                 android:textColor="@color/widget_text"
                 android:textSize="16sp"
                 android:textStyle="bold"/>
@@ -339,7 +339,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tap 'Widget Settings' above to add and configure widgets"
+                    android:text="Tap Gear icon above to add and configure widgets"
                     android:textColor="@color/widget_text_secondary"
                     android:textSize="14sp"
                     android:gravity="center" />

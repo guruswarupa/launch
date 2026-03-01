@@ -67,10 +67,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
 
         val sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
-        widgetConfigManager = WidgetConfigurationManager(sharedPreferences)
+        widgetConfigManager = WidgetConfigurationManager(this, sharedPreferences)
         previewManager = WidgetPreviewManager(this)
         
-        // Initialize WidgetManager (but we don\'t have a container here, we just need it for picking)
+        // Initialize WidgetManager
         widgetManager = WidgetManager(this, android.widget.LinearLayout(this))
 
         val wallpaperBackground = findViewById<ImageView>(R.id.wallpaper_background)
@@ -82,13 +82,11 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val cancelButton = findViewById<Button>(R.id.cancel_button)
         val saveButton = findViewById<Button>(R.id.save_button)
         val searchInput = findViewById<EditText>(R.id.search_widget_input)
-        val addSystemWidgetButton = findViewById<Button>(R.id.add_system_widget_button)
         
         // Ensure buttons are dark tinted to match theme
         val tintColor = "#33000000".toColorInt()
         cancelButton.backgroundTintList = ColorStateList.valueOf(tintColor)
         saveButton.backgroundTintList = ColorStateList.valueOf(tintColor)
-        addSystemWidgetButton.backgroundTintList = ColorStateList.valueOf(tintColor)
 
         // Load current widget configuration
         loadWidgets()
@@ -159,10 +157,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             finish()
         }
         
-        addSystemWidgetButton.setOnClickListener {
-            widgetManager.requestPickWidget(this, ActivityResultHandler.REQUEST_PICK_WIDGET)
-        }
-        
         // Setup search functionality
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -175,8 +169,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         })
     }
     
-    private fun loadWidgets() {
-        allWidgets = widgetConfigManager.getWidgetOrder().toMutableList()
+    fun loadWidgets() {
+        allWidgets = widgetConfigManager.getWidgetConfiguration().toMutableList()
         filteredWidgets = allWidgets.toMutableList()
         
         if (adapter == null) {
@@ -196,23 +190,37 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
         
         // Update header visibility
-        val inAppHeader = findViewById<TextView>(R.id.in_app_widgets_header)
-        inAppHeader.visibility = if (filteredWidgets.any { !it.isSystemWidget }) View.VISIBLE else View.GONE
+        val header = findViewById<TextView>(R.id.widgets_header)
+        header.visibility = if (filteredWidgets.isNotEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == ActivityResultHandler.REQUEST_PICK_WIDGET && resultCode == RESULT_OK) {
-            // After picking a widget, it gets saved to prefs by WidgetManager.
-            // We need to reload our list to show it.
-            // But WidgetManager needs to handle the binding first.
-            // For simplicity in this flow, we\'ll tell WidgetManager to handle it,
-            // and it will update the shared prefs.
-            widgetManager.handleWidgetPicked(this, data)
-            // Delay slightly to allow prefs to save
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                loadWidgets()
-            }, 500)
+        if (resultCode == RESULT_OK) {
+            when (requestCode) {
+                ActivityResultHandler.REQUEST_PICK_WIDGET -> {
+                    widgetManager.handleWidgetPicked(this, data)
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        loadWidgets()
+                    }, 500)
+                }
+                ActivityResultHandler.REQUEST_CONFIGURE_WIDGET -> {
+                    val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
+                    if (appWidgetId != -1) {
+                        widgetManager.handleWidgetConfigured(appWidgetId)
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            loadWidgets()
+                        }, 500)
+                    }
+                }
+                ActivityResultHandler.REQUEST_BIND_WIDGET -> {
+                    // This is usually handled by WidgetManager if we pass it, 
+                    // but here we just need to reload to see the newly bound widget instance
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        loadWidgets()
+                    }, 500)
+                }
+            }
         }
     }
 
@@ -251,6 +259,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             android.widget.Toast.makeText(this, "${widget.name} $action!", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
+
+    fun addSystemWidgetProvider(widget: WidgetConfigurationManager.WidgetInfo) {
+        val pkg = widget.providerPackage ?: return
+        val cls = widget.providerClass ?: return
+        widgetManager.bindProvider(this, pkg, cls, ActivityResultHandler.REQUEST_BIND_WIDGET)
+    }
     
     private fun filterWidgets(query: String) {
         filteredWidgets = if (query.isEmpty()) {
@@ -258,15 +272,15 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         } else {
             allWidgets.filter { 
                 it.name.contains(query, ignoreCase = true) ||
-                getWidgetDescription(it.id).contains(query, ignoreCase = true)
+                getWidgetDescription(it).contains(query, ignoreCase = true)
             }.toMutableList()
         }
         
         adapter?.updateWidgets(filteredWidgets)
         adapter?.notifyDataSetChanged()
         
-        findViewById<TextView>(R.id.in_app_widgets_header).visibility = 
-            if (filteredWidgets.any { !it.isSystemWidget }) View.VISIBLE else View.GONE
+        findViewById<TextView>(R.id.widgets_header).visibility = 
+            if (filteredWidgets.isNotEmpty()) View.VISIBLE else View.GONE
     }
     
     private fun updateOriginalListOrder() {
@@ -279,8 +293,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
     }
     
-    private fun getWidgetDescription(widgetId: String): String {
-        return when (widgetId) {
+    private fun getWidgetDescription(widget: WidgetConfigurationManager.WidgetInfo): String {
+        if (widget.isSystemWidget) return "System provided widget"
+        
+        return when (widget.id) {
             "calculator_widget_container" -> "Perform calculations and unit conversions"
             "compass_widget_container" -> "Digital compass with direction tracking"
             "notifications_widget_container" -> "Quick access to recent notifications"
@@ -292,7 +308,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             "temperature_widget_container" -> "Temperature monitoring and alerts"
             "noise_decibel_widget_container" -> "Sound level measurement in decibels"
             "workout_widget_container" -> "Workout tracking and fitness metrics"
-            "todo_recycler_view" -> "Task management and to-do lists"
+            "todo_recycler_view" -> "Task manager"
             "finance_widget" -> "Financial tracking and budget monitoring"
             "weekly_usage_widget" -> "Weekly app usage statistics"
             "network_stats_widget_container" -> "Network connection and data usage"

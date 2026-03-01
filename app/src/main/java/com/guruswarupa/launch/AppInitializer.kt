@@ -39,7 +39,7 @@ class AppInitializer(private val activity: MainActivity) {
             }
 
             // Initialize widget configuration manager
-            widgetConfigurationManager = WidgetConfigurationManager(sharedPreferences)
+            widgetConfigurationManager = WidgetConfigurationManager(activity, sharedPreferences)
             
             // Initialize widget visibility manager
             widgetVisibilityManager = WidgetVisibilityManager(activity, widgetConfigurationManager)
