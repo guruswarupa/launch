@@ -19,6 +19,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.ui.activities.WidgetConfigurationActivity
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -68,6 +69,43 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             launcher.launch(pickIntent)
         } catch (e: Exception) {
             Toast.makeText(context, "Error opening widget picker: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Binds a specific widget provider directly
+     */
+    fun bindProvider(activity: Activity, providerPackage: String, providerClass: String, requestCode: Int) {
+        val appWidgetId = appWidgetHost.allocateAppWidgetId()
+        val providers = appWidgetManager.installedProviders
+        val providerInfo = providers.find { 
+            it.provider.packageName == providerPackage && it.provider.className == providerClass 
+        } ?: return
+        
+        val success = try {
+            appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, providerInfo.provider)
+        } catch (_: Exception) {
+            false
+        }
+        
+        if (success) {
+            bindWidget(appWidgetId, providerInfo)
+            // No need to configure if it doesn't have a configure activity
+            if (providerInfo.configure != null) {
+                val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
+                configIntent.component = providerInfo.configure
+                configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                activity.startActivityForResult(configIntent, 801) // REQUEST_CONFIGURE_WIDGET
+            } else {
+                // Refresh activity list
+                (activity as? WidgetConfigurationActivity)?.loadWidgets()
+            }
+        } else {
+            // Request permission to bind
+            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
+            activity.startActivityForResult(intent, requestCode)
         }
     }
     
@@ -174,12 +212,14 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 minWidth = appWidgetInfo.minWidth,
                 minHeight = appWidgetInfo.minHeight
             )
+            // Avoid duplicates
+            widgets.removeAll { it.appWidgetId == appWidgetId }
             widgets.add(widgetInfo)
             
             // Create container for widget with controls
             val widgetContainerView = createWidgetContainer(widgetView, appWidgetId, appWidgetInfo)
             
-            // Add to layout
+            // Add to layout if container exists
             widgetContainer.addView(widgetContainerView)
             
             saveWidgets()

@@ -39,15 +39,24 @@ class WidgetConfigAdapter(
     override fun onBindViewHolder(holder: WidgetViewHolder, position: Int) {
         val widget = widgets[position]
         holder.widgetName.text = widget.name
-        holder.widgetDescription.text = getWidgetDescription(widget.id)
+        holder.widgetDescription.text = getWidgetDescription(widget)
         
         // Update UI based on enabled state
-        updateWidgetState(holder, widget.enabled)
+        // If it's a provider (not yet added), it's "disabled" but maybe with different text
+        if (widget.isProvider) {
+            holder.disabledOverlay.visibility = View.VISIBLE
+            holder.disabledText.visibility = View.VISIBLE
+            holder.disabledText.text = "TAP TO ADD"
+            holder.widgetName.alpha = 0.6f
+            holder.widgetDescription.alpha = 0.6f
+            holder.previewImage.alpha = 0.4f
+        } else {
+            updateWidgetState(holder, widget.enabled)
+            holder.disabledText.text = "DISABLED"
+        }
         
         // Load preview image
         loadPreviewImage(holder, widget)
-        
-        // No toggle functionality - widgets are enabled via preview dialog
         
         // Make the entire item clickable to show preview
         holder.itemView.setOnClickListener {
@@ -59,9 +68,6 @@ class WidgetConfigAdapter(
     }
 
     override fun getItemCount(): Int = widgets.size
-
-    // Remove this method as ordering is now handled in the activity
-    // The moveItem functionality is moved to the Activity level
 
     fun getWidgets(): List<WidgetConfigurationManager.WidgetInfo> = widgets.toList()
     
@@ -93,8 +99,11 @@ class WidgetConfigAdapter(
         }
     }
     
-    private fun getWidgetDescription(widgetId: String): String {
-        return when (widgetId) {
+    private fun getWidgetDescription(widget: WidgetConfigurationManager.WidgetInfo): String {
+        if (widget.isSystemWidget) {
+            return "System widget from ${widget.providerPackage ?: "unknown"}"
+        }
+        return when (widget.id) {
             "calculator_widget_container" -> "Calculator & converter"
             "compass_widget_container" -> "Digital compass"
             "notifications_widget_container" -> "Recent notifications"
@@ -117,25 +126,22 @@ class WidgetConfigAdapter(
     
     private fun showWidgetPreview(widget: WidgetConfigurationManager.WidgetInfo) {
         // Show preview dialog when item is clicked
-        val previewManager = (context as? androidx.appcompat.app.AppCompatActivity)?.let {
-            WidgetPreviewManager(it)
-        }
-        previewManager?.let {
-            WidgetPreviewDialog.show(context, widget, it) { shouldEnable ->
+        val activity = context as? WidgetConfigurationActivity ?: return
+        
+        WidgetPreviewDialog.show(context, widget, previewManager) { shouldEnable ->
+            if (widget.isProvider) {
+                if (shouldEnable) {
+                    activity.addSystemWidgetProvider(widget)
+                }
+            } else {
                 // Toggle the widget state
                 val position = widgets.indexOfFirst { w -> w.id == widget.id }
                 if (position >= 0) {
                     widgets[position] = widgets[position].copy(enabled = shouldEnable)
                     notifyItemChanged(position)
-                    val action = if (shouldEnable) "enabled" else "disabled"
-                    android.widget.Toast.makeText(context, "${widget.name} $action!", android.widget.Toast.LENGTH_SHORT).show()
                     
                     // Also update the main lists in the activity
-                    if (context is androidx.appcompat.app.AppCompatActivity) {
-                        val activity = context as androidx.appcompat.app.AppCompatActivity
-                        // This will trigger the activity's update mechanism
-                        (activity as? WidgetConfigurationActivity)?.updateWidgetState(widget.id, shouldEnable)
-                    }
+                    activity.updateWidgetState(widget.id, shouldEnable)
                 }
             }
         }

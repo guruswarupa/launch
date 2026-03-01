@@ -32,6 +32,7 @@ class ActivityResultHandler(
         const val REQUEST_PICK_WIDGET = 800
         const val REQUEST_CONFIGURE_WIDGET = 801
         const val REQUEST_WIDGET_CONFIGURATION = 802
+        const val REQUEST_BIND_WIDGET = 805
     }
 
     fun handleActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
