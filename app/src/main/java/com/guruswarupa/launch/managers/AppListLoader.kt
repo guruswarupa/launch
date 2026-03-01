@@ -28,7 +28,6 @@ class AppListLoader(
     private val packageManager: PackageManager,
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
-    @Suppress("unused")
     private val favoriteAppManager: FavoriteAppManager,
     private val cacheManager: CacheManager?,
     private val backgroundExecutor: Executor,
@@ -64,6 +63,20 @@ class AppListLoader(
             Log.w("AppListLoader", "Task rejected by executor", e)
             return false
         }
+    }
+
+    /**
+     * Loads apps using the state from MainActivity.
+     * This is the preferred method to call from outside.
+     */
+    fun loadApps(forceRefresh: Boolean = false) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        
+        // Sync isShowAllAppsMode with the manager to ensure consistency
+        activity.isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
+        
+        val adapter = if (activity.isAdapterInitialized()) activity.adapter else null
+        loadApps(forceRefresh, activity.fullAppList, activity.appList, adapter)
     }
     
     fun loadApps(forceRefresh: Boolean = false, fullAppList: MutableList<ResolveInfo>, appList: MutableList<ResolveInfo>, adapter: AppAdapter?) {
