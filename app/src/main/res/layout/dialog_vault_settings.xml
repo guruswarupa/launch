@@ -14,4 +14,12 @@
         android:paddingVertical="12dp"
         android:checked="false" />
 
+    <Button
+        android:id="@+id/view_recovery_phrase_button"
+        style="@style/Widget.AppCompat.Button.Borderless.Colored"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="View Recovery Phrase" />
+
 </LinearLayout>
