@@ -275,4 +275,16 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="year_progress_disable">Disable</string>
     <string name="year_progress_stats_format">%1$d days of %2$d completed (%3$d%%)</string>
     <string name="year_progress_days_remaining_format">%1$d days remaining</string>
+
+    <!-- Developer Info Strings -->
+    <string name="support_project_title">Support the Project</string>
+    <string name="sponsor_github_link">&lt;a href="https://github.com/sponsors/guruswarupa"&gt;Sponsor on GitHub&lt;/a&gt;</string>
+    <string name="buy_me_a_coffee_link">&lt;a href="https://buymeacoffee.com/guruswarupa"&gt;Buy Me a Coffee&lt;/a&gt;</string>
+    
+    <!-- Settings Category Headers -->
+    <string name="category_appearance">Appearance</string>
+    <string name="category_features">Features</string>
+    <string name="category_security_privacy">Security &amp; Privacy</string>
+    <string name="category_system">System</string>
+    <string name="category_about">About</string>
 </resources>

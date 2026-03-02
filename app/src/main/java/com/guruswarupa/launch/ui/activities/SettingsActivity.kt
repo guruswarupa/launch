@@ -452,6 +452,24 @@ class SettingsActivity : ComponentActivity() {
         githubLinksText.isClickable = true
         githubLinksText.isFocusable = true
         
+        // Support links
+        val sponsorGithubLink = findViewById<TextView>(R.id.sponsor_github_link)
+        val buyMeACoffeeLink = findViewById<TextView>(R.id.buy_me_a_coffee_link)
+        
+        listOf(sponsorGithubLink, buyMeACoffeeLink).forEach { textView ->
+            if (textView != null) {
+                textView.movementMethod = LinkMovementMethod.getInstance()
+                textView.isClickable = true
+                textView.isFocusable = true
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    textView.text = Html.fromHtml(textView.text.toString(), Html.FROM_HTML_MODE_COMPACT)
+                } else {
+                    @Suppress("DEPRECATION")
+                    textView.text = Html.fromHtml(textView.text.toString())
+                }
+            }
+        }
+        
         // Launcher Header
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
         val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
