@@ -15,7 +15,7 @@ import com.guruswarupa.launch.R
 class SearchTypeMenuManager(
     private val context: Context,
     private val searchTypeButton: ImageButton,
-    private val appSearchManager: AppSearchManager?,
+    private val appSearchManagerProvider: () -> AppSearchManager?,
     private val isFocusModeActive: () -> Boolean
 ) {
     
@@ -81,6 +81,7 @@ class SearchTypeMenuManager(
                 else -> AppSearchManager.SearchMode.ALL
             }
             
+            val appSearchManager = appSearchManagerProvider()
             if (appSearchManager != null) {
                 appSearchManager.setSearchMode(mode)
             }

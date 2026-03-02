@@ -234,8 +234,38 @@ class AppSearchManager(
                 }
             }
         } else {
-            // EMPTY QUERY: Show exactly what's on the home screen (filtered for focus mode, favorites, etc.)
-            newFilteredList.addAll(homeAppListSnapshot)
+            // EMPTY QUERY: Apply search mode filtering
+            when (currentSearchMode) {
+                SearchMode.ALL -> newFilteredList.addAll(homeAppListSnapshot)
+                SearchMode.APPS -> newFilteredList.addAll(homeAppListSnapshot)
+                SearchMode.CONTACTS -> {
+                    // Show contacts placeholder or message when in contacts mode with empty query
+                    // For now, show all contacts if we have them
+                    contactsListSnapshot.forEach { contact ->
+                        newFilteredList.add(createUnifiedContactOption(contact))
+                    }
+                }
+                SearchMode.FILES -> {
+                    // Show files placeholder or message when in files mode with empty query
+                    // For now, don't show anything until user types
+                }
+                SearchMode.MAPS -> {
+                    // Show maps search option even with empty query
+                    newFilteredList.add(createGoogleMapsSearchOption(""))
+                }
+                SearchMode.WEB -> {
+                    // Show web search option even with empty query
+                    newFilteredList.add(createBrowserSearchOption(""))
+                }
+                SearchMode.PLAYSTORE -> {
+                    // Show play store search option even with empty query
+                    newFilteredList.add(createPlayStoreSearchOption(""))
+                }
+                SearchMode.YOUTUBE -> {
+                    // Show youtube search option even with empty query
+                    newFilteredList.add(createYoutubeSearchOption(""))
+                }
+            }
         }
 
         handler.post {
