@@ -314,6 +314,16 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        // Widgets Header
+        val widgetsHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
+        val widgetsContent = findViewById<LinearLayout>(R.id.widgets_settings_content)
+        val widgetsArrow = findViewById<TextView>(R.id.widgets_settings_arrow)
+        setupSectionToggle(widgetsHeader, widgetsContent, widgetsArrow)
+        
+        findViewById<Button>(R.id.configure_widgets_button)?.setOnClickListener {
+            startActivity(Intent(this, WidgetConfigurationActivity::class.java))
+        }
+
         // Search Engine Header
         val searchEngineHeader = findViewById<LinearLayout>(R.id.search_engine_header)
         val searchEngineContent = findViewById<LinearLayout>(R.id.search_engine_content)
