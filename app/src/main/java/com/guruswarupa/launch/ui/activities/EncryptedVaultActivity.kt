@@ -3,6 +3,9 @@ package com.guruswarupa.launch.ui.activities
 import android.Manifest
 import android.app.Activity
 import android.app.WallpaperManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -21,6 +24,8 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.Button
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.biometric.BiometricPrompt
@@ -30,9 +35,12 @@ import androidx.core.graphics.toColorInt
 import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
+import com.guruswarupa.launch.managers.RecoveryKeyManager
 import com.guruswarupa.launch.models.Constants
 import java.io.File
 import java.security.MessageDigest
@@ -41,6 +49,7 @@ import java.util.concurrent.Executor
 
 class EncryptedVaultActivity : VaultBaseActivity() {
     private lateinit var vaultManager: EncryptedFolderManager
+    private lateinit var recoveryKeyManager: RecoveryKeyManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
     private lateinit var adapter: VaultAdapter
@@ -50,6 +59,20 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     private var fileToDecrypt: File? = null
     
     private val prefs by lazy { getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE) }
+    
+    private val securePrefs by lazy {
+        val masterKey = MasterKey.Builder(this)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        
+        EncryptedSharedPreferences.create(
+            this,
+            "vault_secure_prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 
     private val pickFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { encryptAndMoveFile(it) }
@@ -94,6 +117,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         setupWallpaper()
 
         vaultManager = EncryptedFolderManager(this)
+        recoveryKeyManager = RecoveryKeyManager(this)
         recyclerView = findViewById(R.id.vault_recycler_view)
         emptyStateText = findViewById(R.id.empty_state_text)
         
@@ -207,7 +231,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
 
     private fun handleSecondFactor() {
         if (!prefs.contains(Constants.Prefs.VAULT_2FA_ENABLED)) {
-            show2FASetupDialog()
+            showVaultSetupDialog()
         } else if (prefs.getBoolean(Constants.Prefs.VAULT_2FA_ENABLED, false)) {
             show2FAPasswordDialog()
         } else {
@@ -215,13 +239,16 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         }
     }
 
-    private fun show2FASetupDialog() {
+    private fun showVaultSetupDialog() {
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Enable 2-Factor Auth?")
-            .setMessage("Would you like to add a password as a second layer of security for your vault?")
-            .setPositiveButton("Enable") { _, _ -> showSetPasswordDialog() }
-            .setNegativeButton("No, thanks") { _, _ ->
-                prefs.edit().putBoolean(Constants.Prefs.VAULT_2FA_ENABLED, false).apply()
+            .setTitle("Vault Setup")
+            .setMessage("Would you like to add a password and recovery phrase for your vault?")
+            .setPositiveButton("Setup") { _, _ -> showSetPasswordDialog() }
+            .setNegativeButton("Skip") { _, _ ->
+                prefs.edit()
+                    .putBoolean(Constants.Prefs.VAULT_2FA_ENABLED, false)
+                    .putBoolean(Constants.Prefs.VAULT_SETUP_COMPLETE, true)
+                    .apply()
                 loadFiles()
             }
             .setCancelable(false)
@@ -243,7 +270,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
                         .putBoolean(Constants.Prefs.VAULT_2FA_ENABLED, true)
                         .putString(Constants.Prefs.VAULT_PASSWORD_HASH, hashPassword(password))
                         .apply()
-                    loadFiles()
+                    generateAndShowRecoveryPhrase()
                 } else {
                     Toast.makeText(this, "Password too short", Toast.LENGTH_SHORT).show()
                     showSetPasswordDialog()
@@ -253,26 +280,108 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             .show()
     }
 
+    private fun generateAndShowRecoveryPhrase() {
+        val phrase = recoveryKeyManager.generateRecoveryPhrase()
+        val phraseString = phrase.joinToString(" ")
+        
+        // Store hash in normal prefs for verification
+        prefs.edit()
+            .putString(Constants.Prefs.VAULT_RECOVERY_PHRASE_HASH, recoveryKeyManager.hashPhrase(phrase))
+            .putBoolean(Constants.Prefs.VAULT_SETUP_COMPLETE, true)
+            .apply()
+            
+        // Store actual phrase in secure prefs for viewing later
+        securePrefs.edit()
+            .putString("vault_recovery_phrase", phraseString)
+            .apply()
+
+        showRecoveryPhraseDisplayDialog(phraseString)
+    }
+    
+    private fun showRecoveryPhraseDisplayDialog(phrase: String) {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Your Recovery Phrase")
+            .setMessage("SAVE THIS CAREFULLY! If you forget your password, this is the ONLY way to recover your data:\n\n$phrase")
+            .setNeutralButton("Copy to Clipboard") { _, _ ->
+                copyToClipboard(phrase)
+                showRecoveryPhraseDisplayDialog(phrase) // Re-show after copy
+            }
+            .setPositiveButton("I have saved it") { _, _ ->
+                loadFiles()
+            }
+            .setCancelable(false)
+            .show()
+    }
+    
+    private fun copyToClipboard(text: String) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Vault Recovery Phrase", text)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    }
+
     private fun show2FAPasswordDialog() {
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 20, 40, 0)
+        }
+        
         val input = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             hint = "Enter Vault Password"
         }
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Second Factor Required")
-            .setView(input)
-            .setPositiveButton("Unlock") { _, _ ->
-                val enteredHash = hashPassword(input.text.toString())
-                val storedHash = prefs.getString(Constants.Prefs.VAULT_PASSWORD_HASH, "")
-                if (enteredHash == storedHash) {
-                    loadFiles()
-                } else {
-                    Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
+        layout.addView(input)
+        
+        val recoveryButton = Button(this, null, androidx.appcompat.R.attr.borderlessButtonStyle).apply {
+            text = "Forgot Password? Use Recovery Key"
+            setTextColor(ContextCompat.getColor(this@EncryptedVaultActivity, R.color.nord7))
+            setOnClickListener {
+                showRecoveryKeyDialog()
             }
+        }
+        layout.addView(recoveryButton)
+
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Second Factor Required")
+            .setView(layout)
+            .setPositiveButton("Unlock", null) // Set null to override behavior
             .setNegativeButton("Cancel") { _, _ -> finish() }
             .setCancelable(false)
+            .create()
+
+        dialog.show()
+        
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val enteredHash = hashPassword(input.text.toString())
+            val storedHash = prefs.getString(Constants.Prefs.VAULT_PASSWORD_HASH, "")
+            if (enteredHash == storedHash) {
+                dialog.dismiss()
+                loadFiles()
+            } else {
+                Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun showRecoveryKeyDialog() {
+        val input = EditText(this).apply {
+            hint = "Enter 20-word recovery phrase"
+        }
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Recover Vault")
+            .setMessage("Enter your 20-word recovery phrase to reset your password.")
+            .setView(input)
+            .setPositiveButton("Verify") { _, _ ->
+                val enteredPhrase = input.text.toString()
+                val storedHash = prefs.getString(Constants.Prefs.VAULT_RECOVERY_PHRASE_HASH, "")
+                if (storedHash != null && recoveryKeyManager.verifyPhrase(enteredPhrase, storedHash)) {
+                    Toast.makeText(this, "Phrase verified! Please set a new password.", Toast.LENGTH_LONG).show()
+                    showSetPasswordDialog()
+                } else {
+                    Toast.makeText(this, "Invalid Recovery Phrase", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -411,10 +520,39 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     private fun showVaultSettings() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_vault_settings, null)
         val timeoutSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.timeout_switch)
+        val recoveryBtn = dialogView.findViewById<Button>(R.id.view_recovery_phrase_button)
         
         // Load current settings
         timeoutSwitch.isChecked = prefs.getBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, false)
         
+        recoveryBtn.setOnClickListener {
+            // Confirm password before showing recovery phrase
+            val input = EditText(this).apply {
+                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                hint = "Enter Vault Password"
+            }
+            AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                .setTitle("Security Check")
+                .setMessage("Please enter your vault password to view recovery phrase.")
+                .setView(input)
+                .setPositiveButton("Verify") { _, _ ->
+                    val enteredHash = hashPassword(input.text.toString())
+                    val storedHash = prefs.getString(Constants.Prefs.VAULT_PASSWORD_HASH, "")
+                    if (enteredHash == storedHash) {
+                        val phrase = securePrefs.getString("vault_recovery_phrase", null)
+                        if (phrase != null) {
+                            showRecoveryPhraseDisplayDialog(phrase)
+                        } else {
+                            Toast.makeText(this, "Recovery phrase not found. It might not have been stored during setup.", Toast.LENGTH_LONG).show()
+                        }
+                    } else {
+                        Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Vault Settings")
             .setView(dialogView)

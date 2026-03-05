@@ -241,8 +241,8 @@ class MainActivity : FragmentActivity() {
         searchTypeMenuManager = SearchTypeMenuManager(
             context = this,
             searchTypeButton = views.searchTypeButton,
-            appSearchManager = if (::appSearchManager.isInitialized) appSearchManager else null,
-            isFocusModeActive = { appDockManager.getCurrentMode() }
+            appSearchManagerProvider = { if (::appSearchManager.isInitialized) appSearchManager else null },
+            isFocusModeActive = { if (::appDockManager.isInitialized) appDockManager.getCurrentMode() else false }
         )
         searchTypeMenuManager.setup()
 
@@ -401,8 +401,7 @@ class MainActivity : FragmentActivity() {
         // Update widget visibility based on configuration
         widgetVisibilityManager.update(
             if (widgetLifecycleCoordinator.isYearProgressWidgetInitialized()) widgetLifecycleCoordinator.yearProgressWidget else null,
-            if (widgetLifecycleCoordinator.isGithubContributionWidgetInitialized()) widgetLifecycleCoordinator.githubContributionWidget else null
-        )
+            if (widgetLifecycleCoordinator.isGithubContributionWidgetInitialized()) widgetLifecycleCoordinator.githubContributionWidget else null)
     }
     
     /**
@@ -433,7 +432,7 @@ class MainActivity : FragmentActivity() {
                 isAppFiltered = { packageName -> 
                     ::appDockManager.isInitialized && appDockManager.isAppHiddenInFocusMode(packageName)
                 },
-                isFocusModeActive = { appDockManager.getCurrentMode() }
+                isFocusModeActive = { if (::appDockManager.isInitialized) appDockManager.getCurrentMode() else false }
             )
         }
     }

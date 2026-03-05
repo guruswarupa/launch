@@ -125,7 +125,12 @@ class WidgetConfigurationManager(
             }
         }
         
-        return result
+        // Arrange the widgets: keep all enabled widgets on top based on fifo (original saved order),
+        // remaining (disabled) widgets in ascending order of the name.
+        val enabledWidgets = result.filter { it.enabled }
+        val disabledWidgets = result.filter { !it.enabled }.sortedBy { it.name }
+        
+        return enabledWidgets + disabledWidgets
     }
     
     /**

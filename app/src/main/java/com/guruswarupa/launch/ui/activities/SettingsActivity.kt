@@ -314,6 +314,16 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+        // Widgets Header
+        val widgetsHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
+        val widgetsContent = findViewById<LinearLayout>(R.id.widgets_settings_content)
+        val widgetsArrow = findViewById<TextView>(R.id.widgets_settings_arrow)
+        setupSectionToggle(widgetsHeader, widgetsContent, widgetsArrow)
+        
+        findViewById<Button>(R.id.configure_widgets_button)?.setOnClickListener {
+            startActivity(Intent(this, WidgetConfigurationActivity::class.java))
+        }
+
         // Search Engine Header
         val searchEngineHeader = findViewById<LinearLayout>(R.id.search_engine_header)
         val searchEngineContent = findViewById<LinearLayout>(R.id.search_engine_content)
@@ -451,6 +461,24 @@ class SettingsActivity : ComponentActivity() {
         // Ensure links are visible with proper styling
         githubLinksText.isClickable = true
         githubLinksText.isFocusable = true
+        
+        // Support links
+        val sponsorGithubLink = findViewById<TextView>(R.id.sponsor_github_link)
+        val buyMeACoffeeLink = findViewById<TextView>(R.id.buy_me_a_coffee_link)
+        
+        listOf(sponsorGithubLink, buyMeACoffeeLink).forEach { textView ->
+            if (textView != null) {
+                textView.movementMethod = LinkMovementMethod.getInstance()
+                textView.isClickable = true
+                textView.isFocusable = true
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    textView.text = Html.fromHtml(textView.text.toString(), Html.FROM_HTML_MODE_COMPACT)
+                } else {
+                    @Suppress("DEPRECATION")
+                    textView.text = Html.fromHtml(textView.text.toString())
+                }
+            }
+        }
         
         // Launcher Header
         val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
