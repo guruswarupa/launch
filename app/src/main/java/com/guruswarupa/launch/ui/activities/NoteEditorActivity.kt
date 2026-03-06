@@ -54,8 +54,16 @@ class NoteEditorActivity : VaultBaseActivity() {
     }
     
     private fun loadExistingNote() {
+        val fileNameToLoad = fileName
+        if (fileNameToLoad.isNullOrBlank()) {
+            Toast.makeText(this, "Invalid note file", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        var tempFile: File? = null
         try {
-            val tempFile = vaultManager.decryptToCache(fileName!!)
+            tempFile = vaultManager.decryptToCache(fileNameToLoad)
             val contentStr = tempFile.readText(Charsets.UTF_8)
             
             val parts = contentStr.split("\n\n", limit = 2)
@@ -66,9 +74,10 @@ class NoteEditorActivity : VaultBaseActivity() {
                 noteTitle.setText("")
                 noteContent.setText(contentStr)
             }
-            tempFile.delete() // Clean up cache
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to load note: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            tempFile?.delete()
         }
     }
     
@@ -83,13 +92,24 @@ class NoteEditorActivity : VaultBaseActivity() {
         
         try {
             val noteData = if (title.isNotEmpty()) "$title\n\n$content" else "Untitled Note\n\n$content"
-            val fileNameToUse = if (isEditing) fileName!! else "note_${System.currentTimeMillis()}.txt"
+            val fileNameToUse = if (isEditing) {
+                val existingFileName = fileName
+                if (existingFileName.isNullOrBlank()) {
+                    Toast.makeText(this, "Invalid note file", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                existingFileName
+            } else {
+                "note_${System.currentTimeMillis()}.txt"
+            }
             
-            val tempFile = File(cacheDir, "temp_note.txt")
-            tempFile.writeText(noteData, Charsets.UTF_8)
-            
-            vaultManager.encryptFile(Uri.fromFile(tempFile), fileNameToUse)
-            tempFile.delete()
+            val tempFile = File.createTempFile("note_", ".txt", cacheDir)
+            try {
+                tempFile.writeText(noteData, Charsets.UTF_8)
+                vaultManager.encryptFile(Uri.fromFile(tempFile), fileNameToUse)
+            } finally {
+                tempFile.delete()
+            }
             
             Toast.makeText(this, "Note saved", Toast.LENGTH_SHORT).show()
             setResult(RESULT_OK)

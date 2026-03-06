@@ -846,8 +846,9 @@ class AppAdapter(
         val photoImageView = titleView.findViewById<ImageView>(R.id.contact_photo)
         if (photoUri != null) {
             try {
-                val inputStream = activity.contentResolver.openInputStream(photoUri.toUri())
-                val drawable = Drawable.createFromStream(inputStream, photoUri)
+                val drawable = activity.contentResolver.openInputStream(photoUri.toUri())?.use { inputStream ->
+                    Drawable.createFromStream(inputStream, photoUri)
+                }
                 if (drawable != null) photoImageView.setImageDrawable(drawable)
                 else photoImageView.setImageResource(R.drawable.ic_person)
             } catch (_: Exception) {
