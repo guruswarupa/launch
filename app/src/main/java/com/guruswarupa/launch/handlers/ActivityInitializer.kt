@@ -10,6 +10,8 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.net.toUri
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
@@ -130,6 +132,31 @@ class ActivityInitializer(
                 val params = it.layoutParams as DrawerLayout.LayoutParams
                 params.width = drawerWidth
                 it.layoutParams = params
+
+                val header = activity.findViewById<LinearLayout>(R.id.widget_settings_header)
+                val drawerScroll = activity.findViewById<androidx.core.widget.NestedScrollView>(R.id.widgets_drawer_scroll)
+                if (header != null && drawerScroll != null) {
+                    val headerParams = header.layoutParams as FrameLayout.LayoutParams
+                    val initialHeaderTopMargin = headerParams.topMargin
+                    val initialScrollTopPadding = drawerScroll.paddingTop
+
+                    ViewCompat.setOnApplyWindowInsetsListener(it) { _, insets ->
+                        val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+
+                        val updatedHeaderParams = header.layoutParams as FrameLayout.LayoutParams
+                        updatedHeaderParams.topMargin = initialHeaderTopMargin + topInset
+                        header.layoutParams = updatedHeaderParams
+
+                        drawerScroll.setPadding(
+                            drawerScroll.paddingLeft,
+                            initialScrollTopPadding + topInset,
+                            drawerScroll.paddingRight,
+                            drawerScroll.paddingBottom
+                        )
+                        insets
+                    }
+                    ViewCompat.requestApplyInsets(it)
+                }
             }
 
             // Right drawer
