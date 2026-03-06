@@ -11,6 +11,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.net.toUri
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
@@ -30,6 +32,12 @@ class LaunchApplication : Application() {
                         statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
                         navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
                     )
+                    WindowCompat.getInsetsController(activity.window, activity.window.decorView)?.let { controller ->
+                        controller.isAppearanceLightStatusBars = false
+                        controller.isAppearanceLightNavigationBars = false
+                        controller.systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
                 }
             }
 

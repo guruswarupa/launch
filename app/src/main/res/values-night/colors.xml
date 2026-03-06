@@ -45,6 +45,17 @@
     <color name="menu_background_color">#80000000</color> <!-- Original semi-transparent black for dark mode -->
     <color name="dialog_text">#FFFFFF</color> <!-- Restore pure white for dialog text in dark mode -->
     <color name="dialog_text_secondary">#B0B0B0</color>
+    <color name="dialog_preview_surface_start">#C61D1D26</color>
+    <color name="dialog_preview_surface_end">#B3121218</color>
+    <color name="dialog_preview_surface_stroke">#52FFFFFF</color>
+    <color name="dialog_preview_chip_bg">#29000000</color>
+    <color name="dialog_preview_chip_stroke">#66FFFFFF</color>
+    <color name="dialog_preview_chip_text">#E6FFFFFF</color>
+    <color name="dialog_preview_frame_start">#26000000</color>
+    <color name="dialog_preview_frame_end">#33000000</color>
+    <color name="dialog_preview_frame_stroke">#4DFFFFFF</color>
+    <color name="dialog_preview_secondary_fill">#2EFFFFFF</color>
+    <color name="dialog_preview_secondary_stroke">#66FFFFFF</color>
     
     <!-- Icon colors for dark mode -->
     <color name="icon_color">#FFFFFF</color> <!-- White icons for dark mode -->

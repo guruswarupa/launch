@@ -2,7 +2,8 @@ package com.guruswarupa.launch.utils
 
 import android.app.Dialog
 import android.content.Context
-import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ImageView
@@ -30,6 +31,7 @@ class WidgetPreviewDialog(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.dialog_widget_preview)
+        window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         
         // Initialize views
         previewImage = findViewById(R.id.dialog_preview_image)
@@ -44,7 +46,12 @@ class WidgetPreviewDialog(
         widgetDescription.text = getWidgetDescription(widgetInfo.id)
         
         // Update enable button text based on current state
-        enableButton.text = if (widgetInfo.enabled) "Disable" else "Enable"
+        val isEnabled = widgetInfo.enabled
+        enableButton.text = if (isEnabled) "Disable" else "Enable"
+        enableButton.setBackgroundResource(
+            if (isEnabled) R.drawable.dialog_preview_danger_button
+            else R.drawable.dialog_preview_primary_button
+        )
         
         // Load preview
         loadPreview()
@@ -58,6 +65,12 @@ class WidgetPreviewDialog(
             onEnableClicked()
             dismiss()
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val dialogWidth = (context.resources.displayMetrics.widthPixels * 0.8f).toInt()
+        window?.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
     }
     
     private fun loadPreview() {

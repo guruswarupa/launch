@@ -1,18 +1,17 @@
 package com.guruswarupa.launch.ui.activities
 
-import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.toColorInt
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
@@ -47,6 +46,13 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val systemBarManager = SystemBarManager(this)
         window.decorView.post {
             systemBarManager.makeSystemBarsTransparent()
+            // Keep white status bar icons in both light and dark app themes.
+            WindowCompat.getInsetsController(window, window.decorView)?.let { controller ->
+                controller.isAppearanceLightStatusBars = false
+                controller.isAppearanceLightNavigationBars = false
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
         }
         
         supportRequestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
@@ -78,15 +84,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         wallpaperManagerHelper.setWallpaperBackground()
 
         val recyclerView = findViewById<RecyclerView>(R.id.widgets_recycler_view)
-        val backButton = findViewById<ImageButton>(R.id.back_button)
         val cancelButton = findViewById<Button>(R.id.cancel_button)
         val saveButton = findViewById<Button>(R.id.save_button)
         val searchInput = findViewById<EditText>(R.id.search_widget_input)
-        
-        // Ensure buttons are dark tinted to match theme
-        val tintColor = "#33000000".toColorInt()
-        cancelButton.backgroundTintList = ColorStateList.valueOf(tintColor)
-        saveButton.backgroundTintList = ColorStateList.valueOf(tintColor)
 
         // Load current widget configuration
         loadWidgets()
@@ -143,10 +143,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         itemTouchHelper.attachToRecyclerView(recyclerView)
 
         // Setup button listeners
-        backButton.setOnClickListener {
-            finish()
-        }
-
         cancelButton.setOnClickListener {
             finish()
         }
