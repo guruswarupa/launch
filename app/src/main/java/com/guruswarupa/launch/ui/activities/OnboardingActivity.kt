@@ -48,7 +48,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipInputStream
-import androidx.security.crypto.MasterKey
+
 import android.os.Handler
 import android.os.Looper
 
@@ -1070,63 +1070,47 @@ class OnboardingActivity : ComponentActivity() {
                                 val jsonString = zipIn.bufferedReader().readText()
                                 importJsonSettings(JSONObject(jsonString))
                             }
-                            entry.name == "portable_keyset.dat" -> {
-                                val portableKeysetData = zipIn.bufferedReader().readText()
-                                Handler(Looper.getMainLooper()).post {
-                                    showImportPhraseDialog(portableKeysetData, vaultManager)
-                                }
-                            }
-                            entry.name.startsWith("vault/") || entry.name.startsWith("thumbs/") -> {
+                            entry.name.startsWith("data/") || entry.name.startsWith("thumbs/") -> {
                                 handleVaultEntry(entry.name, zipIn, vaultManager)
                             }
+                        }
                         zipIn.closeEntry()
                         entry = zipIn.nextEntry
                     }
                 }
             }
             backupImported = true
-            Toast.makeText(this, "Settings restored. Vault keys will be active after recovery phrase verification.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Backup restored successfully.", Toast.LENGTH_LONG).show()
             showStep(OnboardingStep.COMPLETE)
         } catch (e: Exception) {
+            e.printStackTrace()
             Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
     private fun handleVaultEntry(entryName: String, zipIn: ZipInputStream, vaultManager: EncryptedFolderManager) {
-        if (entryName.startsWith("vault/")) {
-            val fileName = entryName.substringAfter("vault/")
-            if (fileName.isNotEmpty()) {
-                val destFile = File(vaultManager.getEncryptedFolder(), fileName)
-                destFile.outputStream().use { zipIn.copyTo(it) }
-            }
-        } else if (entryName.startsWith("thumbs/")) {
-            val fileName = entryName.substringAfter("thumbs/")
-            if (fileName.isNotEmpty()) {
-                val destFile = File(vaultManager.getThumbnailFolder(), fileName)
-                destFile.outputStream().use { zipIn.copyTo(it) }
+        val parentDir: File? = when {
+            entryName.startsWith("data/") -> vaultManager.getEncryptedFolder()
+            entryName.startsWith("thumbs/") -> vaultManager.getThumbnailFolder()
+            else -> null
+        }
+        
+        val childPath = when {
+            entryName.startsWith("data/") -> entryName.substringAfter("data/")
+            entryName.startsWith("thumbs/") -> entryName.substringAfter("thumbs/")
+            else -> null
+        }
+
+        if (parentDir != null && childPath != null) {
+            val destFile = File(parentDir, childPath)
+            destFile.parentFile?.mkdirs()
+            destFile.outputStream().use { fos ->
+                zipIn.copyTo(fos)
             }
         }
     }
 
-    private fun showImportPhraseDialog(encryptedKeyset: String, vaultManager: EncryptedFolderManager) {
-        val input = EditText(this).apply {
-            hint = "Enter 20-word recovery phrase"
-        }
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Vault Recovery Required")
-            .setMessage("This backup contains encrypted vault files. Please enter your 20-word recovery phrase to unlock them on this device.")
-            .setView(input)
-            .setPositiveButton("Restore Keys") { _, _ ->
-                val phrase = input.text.toString()
-                if (vaultManager.importKeysetWithPhrase(encryptedKeyset, phrase)) {
-                    Toast.makeText(this, "Vault keys restored successfully!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Failed to restore vault keys. Incorrect phrase or corrupted data.", Toast.LENGTH_LONG).show()
-                }
-            }
-            .setNegativeButton("Skip", null)
-            .show()
-    }
+
 
     private fun importJsonSettings(settingsJson: JSONObject) {
         val isNewFormat = settingsJson.has("main_preferences")
