@@ -18,11 +18,9 @@
         <item name="android:textColor">@color/text</item>
         
         <!-- Status bar - transparent for blur effect -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
         
         <!-- Navigation bar - transparent for blur effect -->
-        <item name="android:navigationBarColor">@android:color/transparent</item>
         
         <!-- Enable edge-to-edge display -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
@@ -43,8 +41,6 @@
         <!-- Use dark background to match settings screen overlay -->
         <item name="android:windowBackground">@android:color/black</item>
         <!-- Make status bar and navigation bar transparent from the start -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
         <!-- Enable edge-to-edge display -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowTranslucentStatus">false</item>

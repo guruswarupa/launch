@@ -29,7 +29,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -114,9 +113,6 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         super.onCreate(savedInstanceState)
         
         supportActionBar?.hide()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_encrypted_vault)
         
@@ -212,18 +208,6 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     }
 
     private fun makeSystemBarsTransparent() {
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val insetsController = window.decorView.windowInsetsController
-            if (insetsController != null) {
-                val appearance = if (!isDarkMode) {
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                } else {
-                    0
-                }
-                insetsController.setSystemBarsAppearance(appearance, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
-            }
-        }
     }
 
     private fun setupWallpaper() {

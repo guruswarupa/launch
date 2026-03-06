@@ -22,11 +22,13 @@
 
     <!-- Content Container -->
     <ScrollView
+        android:id="@+id/settings_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">
 
         <LinearLayout
+            android:id="@+id/settings_content_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -42,7 +44,7 @@
                 android:textStyle="bold"
                 android:textColor="@color/text"
                 android:gravity="center"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginBottom="32dp"/>
 
             <!-- Appearance Category -->

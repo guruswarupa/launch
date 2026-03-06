@@ -31,7 +31,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
-import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
@@ -109,12 +110,9 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         // Make status bar and navigation bar transparent before setContentView
-        @Suppress("DEPRECATION")
-        window.statusBarColor = Color.TRANSPARENT
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_settings)
+        applyContentInsets()
         
         // Ensure system bars are fully configured after view is created
         window.decorView.post {
@@ -475,7 +473,6 @@ class SettingsActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
         } else {
-            @Suppress("DEPRECATION")
             githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links))
         }
         githubLinksText.movementMethod = LinkMovementMethod.getInstance()
@@ -495,7 +492,6 @@ class SettingsActivity : ComponentActivity() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     textView.text = Html.fromHtml(textView.text.toString(), Html.FROM_HTML_MODE_COMPACT)
                 } else {
-                    @Suppress("DEPRECATION")
                     textView.text = Html.fromHtml(textView.text.toString())
                 }
             }
@@ -1169,79 +1165,31 @@ class SettingsActivity : ComponentActivity() {
         val intent = Intent(Intent.ACTION_SET_WALLPAPER)
         wallpaperLauncher.launch(intent)
     }
+
+    private fun applyContentInsets() {
+        val contentRoot = findViewById<View>(android.R.id.content)
+        val scrollView = findViewById<ScrollView>(R.id.settings_scroll_view)
+        val initialLeft = scrollView.paddingLeft
+        val initialTop = scrollView.paddingTop
+        val initialRight = scrollView.paddingRight
+        val initialBottom = scrollView.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(contentRoot) { _, insets ->
+            val topInset = insets.getInsets(
+                WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout()
+            ).top
+            scrollView.setPadding(
+                initialLeft,
+                initialTop + topInset,
+                initialRight,
+                initialBottom
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(contentRoot)
+    }
     
     private fun makeSystemBarsTransparent() {
-        try {
-            val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                
-                WindowCompat.setDecorFitsSystemWindows(window, false)
-                
-                val insetsController = window.decorView.windowInsetsController
-                if (insetsController != null) {
-                    val appearance = if (!isDarkMode) {
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    } else {
-                        0
-                    }
-                    insetsController.setSystemBarsAppearance(
-                        appearance,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    )
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                @Suppress("DEPRECATION")
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-                @Suppress("DEPRECATION")
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                
-                @Suppress("DEPRECATION")
-                val decorView = window.decorView
-                @Suppress("DEPRECATION")
-                var flags = decorView.systemUiVisibility
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                
-                if (!isDarkMode) {
-                    @Suppress("DEPRECATION")
-                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        @Suppress("DEPRECATION")
-                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    }
-                }
-                
-                @Suppress("DEPRECATION")
-                decorView.systemUiVisibility = flags
-            }
-            
-            // Apply blur effect to status bar
-            BlurUtils.applyBlurToStatusBar(this)
-        } catch (_: Exception) {
-            try {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                // Apply blur effect as fallback
-                BlurUtils.applyBlurToStatusBar(this)
-            } catch (_: Exception) {
-            }
-        }
     }
     
     /**

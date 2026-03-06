@@ -780,7 +780,6 @@ class AppAdapter(
     }
 
     private fun uninstallApp(packageName: String) {
-        @Suppress("DEPRECATION")
         val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply { data = "package:$packageName".toUri() }
         activity.startActivity(intent)
     }

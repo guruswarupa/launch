@@ -443,6 +443,9 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppInitializer(this).initialize(savedInstanceState)
+        if (::systemBarManager.isInitialized) {
+            systemBarManager.makeSystemBarsTransparent()
+        }
     }
     
 

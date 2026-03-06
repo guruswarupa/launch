@@ -2,8 +2,6 @@
 <resources>
     <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Make status bar and navigation bar transparent -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
         <!-- Enable edge-to-edge display -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowTranslucentStatus">false</item>
@@ -23,8 +21,6 @@
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowShowWallpaper">true</item>
         <!-- Make status bar and navigation bar transparent from the start -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
         <!-- Enable edge-to-edge display -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowTranslucentStatus">false</item>

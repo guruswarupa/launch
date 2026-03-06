@@ -4,10 +4,14 @@ import android.annotation.SuppressLint
 import android.graphics.Rect
 import android.os.Build
 import android.view.MotionEvent
+import android.view.View
 import android.widget.FrameLayout
+import androidx.core.widget.NestedScrollView
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import com.guruswarupa.launch.R
 import kotlin.math.abs
 
 /**
@@ -18,6 +22,12 @@ class GestureHandler(
     private val drawerLayout: DrawerLayout,
     private val mainContent: FrameLayout
 ) {
+    private val mainScrollView: View? = mainContent.findViewById<NestedScrollView>(R.id.main_scroll_view)
+    private val initialPaddingLeft = mainScrollView?.paddingLeft ?: 0
+    private val initialPaddingTop = mainScrollView?.paddingTop ?: 0
+    private val initialPaddingRight = mainScrollView?.paddingRight ?: 0
+    private val initialPaddingBottom = mainScrollView?.paddingBottom ?: 0
+
     private var touchStartX = 0f
     private var touchStartY = 0f
     private var isSwipeFromLeftEdge = false
@@ -50,14 +60,24 @@ class GestureHandler(
      * Setup gesture exclusion to allow drawer to open with system navigation gestures enabled
      */
     fun setupGestureExclusion() {
+        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            (mainScrollView ?: view).setPadding(
+                initialPaddingLeft,
+                initialPaddingTop + systemBars.top,
+                initialPaddingRight,
+                initialPaddingBottom
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                updateGestureExclusion()
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(mainContent)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             mainContent.post {
                 updateGestureExclusion()
-            }
-            
-            ViewCompat.setOnApplyWindowInsetsListener(mainContent) { _, _ ->
-                updateGestureExclusion()
-                androidx.core.view.WindowInsetsCompat.CONSUMED
             }
         }
     }
