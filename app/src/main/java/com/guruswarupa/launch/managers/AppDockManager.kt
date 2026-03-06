@@ -41,7 +41,9 @@ class AppDockManager(
     private lateinit var apkShareButton: ImageView
     private lateinit var vaultButton: ImageView
     private lateinit var favoriteToggle: ImageView
+    private lateinit var pomodoroManager: PomodoroManager
     private var isFocusMode: Boolean = false
+    private val res = context.resources
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
     private val workspaceManager: WorkspaceManager
@@ -50,6 +52,36 @@ class AppDockManager(
     init {
         isFocusMode = sharedPreferences.getBoolean(focusModeKey, false)
         workspaceManager = WorkspaceManager(sharedPreferences)
+        
+        val focusModeManager = FocusModeManager(context, sharedPreferences)
+        pomodoroManager = PomodoroManager(context, sharedPreferences, focusModeManager)
+        pomodoroManager.onTimerTick = { remainingMillis, state ->
+            updatePomodoroTimerDisplay(remainingMillis, state)
+        }
+        pomodoroManager.onStateChanged = { state, isWorkFocus ->
+            isFocusMode = isWorkFocus
+            updateFocusModeIcon()
+            updateDockVisibility()
+            lockDrawerForFocusMode(isWorkFocus)
+            refreshAppsForFocusMode()
+            
+            if (isWorkFocus && sharedPreferences.getBoolean(focusModeDndEnabledKey, false)) {
+                updateDndState(true)
+            } else if (!isWorkFocus) {
+                updateDndState(false)
+            }
+        }
+        pomodoroManager.onSessionEnded = {
+            isFocusMode = false
+            updateFocusModeIcon()
+            stopTimerDisplay()
+            updateDockVisibility()
+            lockDrawerForFocusMode(false)
+            refreshAppsForFocusMode()
+            updateDndState(false)
+        }
+        
+        pomodoroManager.resumeIfNeeded()
 
         // Handle focus mode expiry
         val focusEndTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
@@ -485,10 +517,22 @@ class AppDockManager(
             if (currentTime < endTime) {
                 val remainingMinutes = (endTime - currentTime) / (1000 * 60)
                 Toast.makeText(context, "Focus mode active for $remainingMinutes more minutes", Toast.LENGTH_LONG).show()
+            } else if (pomodoroManager.isPomodoroActive()) {
+                val state = pomodoroManager.getCurrentState()
+                Toast.makeText(context, "Pomodoro $state session active", Toast.LENGTH_SHORT).show()
             } else {
                 // Timer expired, allow switching to normal mode
                 disableFocusMode()
             }
+        } else if (pomodoroManager.isPomodoroActive()) {
+            AlertDialog.Builder(context, R.style.CustomDialogTheme)
+                .setTitle(res.getString(R.string.pomodoro_stop_title))
+                .setMessage(res.getString(R.string.pomodoro_stop_message))
+                .setPositiveButton("Stop") { _, _ ->
+                    pomodoroManager.stopPomodoro()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         } else {
             // Show duration picker dialog
             showFocusModeDurationPicker()
@@ -496,16 +540,16 @@ class AppDockManager(
     }
 
     private fun showFocusModeDurationPicker() {
-        val durations = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Custom")
-        val durationValues = arrayOf(15, 30, 60, 120, 240, -1) // -1 for custom
+        val durations = arrayOf(res.getString(R.string.pomodoro_mode), "15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Custom")
+        val durationValues = arrayOf(-2, 15, 30, 60, 120, 240, -1) // -2 for Pomodoro, -1 for custom
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select Focus Mode Duration")
             .setItems(durations) { _, which ->
-                if (durationValues[which] == -1) {
-                    showCustomDurationDialog()
-                } else {
-                    promptForDnd(durationValues[which])
+                when (durationValues[which]) {
+                    -2 -> pomodoroManager.startPomodoro()
+                    -1 -> showCustomDurationDialog()
+                    else -> promptForDnd(durationValues[which])
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -584,6 +628,21 @@ class AppDockManager(
 
         // Start timer to automatically disable focus mode
         startFocusModeTimer(endTime)
+    }
+
+    private fun updatePomodoroTimerDisplay(remainingMillis: Long, state: String) {
+        if (!::focusTimerText.isInitialized) return
+        
+        focusTimerText.visibility = View.VISIBLE
+        val minutes = (remainingMillis / (1000 * 60)).toInt()
+        val seconds = ((remainingMillis % (1000 * 60)) / 1000).toInt()
+        
+        val stateLabel = if (state == PomodoroManager.STATE_WORK) res.getString(R.string.pomodoro_work) else res.getString(R.string.pomodoro_break)
+        focusTimerText.text = String.format(Locale.getDefault(), "%s %02d:%02d", stateLabel, minutes, seconds)
+        
+        // Update focus mode icon based on state
+        val isWork = state == PomodoroManager.STATE_WORK
+        focusModeToggle.setImageResource(if (isWork) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
     }
 
     private fun showDndPermissionDialog() {
@@ -754,7 +813,9 @@ class AppDockManager(
         timerHandler?.removeCallbacks(timerRunnable ?: return)
         timerHandler = null
         timerRunnable = null
-        focusTimerText.visibility = View.GONE
+        if (!pomodoroManager.isPomodoroActive()) {
+            focusTimerText.visibility = View.GONE
+        }
     }
 
     private fun showFocusModeSettings() {
