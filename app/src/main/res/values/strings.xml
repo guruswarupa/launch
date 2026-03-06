@@ -287,4 +287,11 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="category_security_privacy">Security &amp; Privacy</string>
     <string name="category_system">System</string>
     <string name="category_about">About</string>
+    
+    <!-- Pomodoro Mode Strings -->
+    <string name="pomodoro_work">Work</string>
+    <string name="pomodoro_break">Break</string>
+    <string name="pomodoro_mode">Pomodoro (25/5)</string>
+    <string name="pomodoro_stop_title">Stop Pomodoro?</string>
+    <string name="pomodoro_stop_message">A Pomodoro session is currently active. Do you want to stop it?</string>
 </resources>
