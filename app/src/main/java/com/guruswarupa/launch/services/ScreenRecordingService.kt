@@ -147,6 +147,8 @@ class ScreenRecordingService : Service() {
         }
     }
 
+    private var recordingUri: android.net.Uri? = null
+
     private fun initRecorder() {
         mediaRecorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(this)
@@ -155,24 +157,57 @@ class ScreenRecordingService : Service() {
             MediaRecorder()
         }
 
-        val videoDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "LaunchRecordings")
-        if (!videoDir.exists()) videoDir.mkdirs()
-        
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val fileName = "ScreenRecord_$timeStamp.mp4"
-        val videoFile = File(videoDir, fileName)
 
-        mediaRecorder?.apply {
-            setAudioSource(MediaRecorder.AudioSource.MIC)
-            setVideoSource(MediaRecorder.VideoSource.SURFACE)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setOutputFile(videoFile.absolutePath)
-            setVideoEncoder(MediaRecorder.VideoEncoder.H264)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setVideoSize(screenWidth, screenHeight)
-            setVideoEncodingBitRate(5 * 1024 * 1024)
-            setVideoFrameRate(30)
-            prepare()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Use MediaStore API (no MANAGE_EXTERNAL_STORAGE needed)
+            val contentValues = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, fileName)
+                put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/LaunchRecordings")
+                put(android.provider.MediaStore.Video.Media.IS_PENDING, 1)
+            }
+
+            recordingUri = contentResolver.insert(
+                android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                contentValues
+            )
+
+            val fd = recordingUri?.let { uri ->
+                contentResolver.openFileDescriptor(uri, "w")
+            } ?: throw IllegalStateException("Failed to create MediaStore entry")
+
+            mediaRecorder?.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setVideoSource(MediaRecorder.VideoSource.SURFACE)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setOutputFile(fd.fileDescriptor)
+                setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setVideoSize(screenWidth, screenHeight)
+                setVideoEncodingBitRate(5 * 1024 * 1024)
+                setVideoFrameRate(30)
+                prepare()
+            }
+        } else {
+            // Legacy fallback for pre-Q devices
+            val videoDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "LaunchRecordings")
+            if (!videoDir.exists()) videoDir.mkdirs()
+            val videoFile = File(videoDir, fileName)
+
+            mediaRecorder?.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setVideoSource(MediaRecorder.VideoSource.SURFACE)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setOutputFile(videoFile.absolutePath)
+                setVideoEncoder(MediaRecorder.VideoEncoder.H264)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setVideoSize(screenWidth, screenHeight)
+                setVideoEncodingBitRate(5 * 1024 * 1024)
+                setVideoFrameRate(30)
+                prepare()
+            }
         }
     }
 
@@ -194,6 +229,19 @@ class ScreenRecordingService : Service() {
         
         mediaProjection?.stop()
         mediaProjection = null
+
+        // Finalize MediaStore entry so the video is visible
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            recordingUri?.let { uri ->
+                try {
+                    val contentValues = android.content.ContentValues().apply {
+                        put(android.provider.MediaStore.Video.Media.IS_PENDING, 0)
+                    }
+                    contentResolver.update(uri, contentValues, null, null)
+                } catch (_: Exception) {}
+            }
+            recordingUri = null
+        }
         
         isRecording = false
         isRunning = false
