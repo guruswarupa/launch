@@ -27,13 +27,11 @@ object Constants {
         const val ACCESSIBILITY_SHORTCUT_ENABLED = "accessibility_shortcut_enabled"
         const val CONTROL_CENTER_SHORTCUTS = "control_center_shortcuts"
         
-        // Vault Prefs
-        const val VAULT_2FA_ENABLED = "vault_2fa_enabled"
-        const val VAULT_PASSWORD_HASH = "vault_password_hash"
+        // Vault Prefs (Simplified)
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"
         const val VAULT_TIMEOUT_DURATION = "vault_timeout_duration"  // in minutes
-        const val VAULT_RECOVERY_PHRASE_HASH = "vault_recovery_phrase_hash"
         const val VAULT_SETUP_COMPLETE = "vault_setup_complete"
+
     }
     
     // FileProvider

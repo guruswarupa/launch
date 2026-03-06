@@ -22,6 +22,8 @@ import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.util.Base64
 import android.widget.*
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SwitchCompat
@@ -48,8 +50,7 @@ import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+
 import android.os.Handler
 import android.os.Looper
 
@@ -836,60 +837,25 @@ class SettingsActivity : ComponentActivity() {
                     exportFinanceData(settingsJson)
                     exportGithubWidgetData(settingsJson)
 
-                    // 1b. Export portable keyset (protected by recovery phrase)
-                    val recoveryPhrase = securePrefs.getString("vault_recovery_phrase", null)
-                    if (recoveryPhrase != null) {
-                        val portableKeyset = vaultManager.exportKeysetWithPhrase(recoveryPhrase)
-                        if (portableKeyset != null) {
-                            zipOut.putNextEntry(ZipEntry("portable_keyset.dat"))
-                            zipOut.write(portableKeyset.toByteArray(Charsets.UTF_8))
-                            zipOut.closeEntry()
-                        }
-                    }
-
                     // 1. Export JSON settings
                     zipOut.putNextEntry(ZipEntry("settings.json"))
                     zipOut.write(settingsJson.toString(2).toByteArray(Charsets.UTF_8))
                     zipOut.closeEntry()
 
-                    // 2. Export Vault Files DECRYPTED so they can be re-encrypted on import
-                    // (Encrypted files are tied to device-specific Android Keystore keys)
+                    // 2. Export Vault Files (Encrypted)
                     val vaultFolder = vaultManager.getEncryptedFolder()
                     val thumbFolder = vaultManager.getThumbnailFolder()
 
                     vaultFolder.listFiles()?.forEach { file ->
-                        try {
-                            // Decrypt the file and write decrypted content to ZIP
-                            vaultManager.getDecryptedInputStream(file.name).use { decryptedStream ->
-                                zipOut.putNextEntry(ZipEntry("vault/${file.name}"))
-                                decryptedStream.copyTo(zipOut)
-                                zipOut.closeEntry()
-                            }
-                        } catch (_: Exception) {
-                            // Skip files that can't be decrypted (already broken keys)
-                        }
+                        zipOut.putNextEntry(ZipEntry("data/${file.name}"))
+                        file.inputStream().use { it.copyTo(zipOut) }
+                        zipOut.closeEntry()
                     }
 
                     thumbFolder.listFiles()?.forEach { file ->
-                        try {
-                            // Decrypt thumbnails too
-                            val thumbName = file.name.removeSuffix(".thumb")
-                            val encThumb = androidx.security.crypto.EncryptedFile.Builder(
-                                this,
-                                file,
-                                androidx.security.crypto.MasterKey.Builder(this)
-                                    .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
-                                    .build(),
-                                androidx.security.crypto.EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-                            ).build()
-                            encThumb.openFileInput().use { decryptedStream ->
-                                zipOut.putNextEntry(ZipEntry("thumbs/${file.name}"))
-                                decryptedStream.copyTo(zipOut)
-                                zipOut.closeEntry()
-                            }
-                        } catch (_: Exception) {
-                            // Skip thumbnails that can't be decrypted
-                        }
+                        zipOut.putNextEntry(ZipEntry("thumbs/${file.name}"))
+                        file.inputStream().use { it.copyTo(zipOut) }
+                        zipOut.closeEntry()
                     }
                 }
             }
@@ -904,78 +870,49 @@ class SettingsActivity : ComponentActivity() {
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 ZipInputStream(inputStream).use { zipIn ->
                     var entry = zipIn.nextEntry
-                    var portableKeysetData: String? = null
-                    val vaultEntries = mutableListOf<String>() // Delay vault import until keyset is ready
-
                     while (entry != null) {
                         when {
                             entry.name == "settings.json" -> {
                                 val jsonString = zipIn.bufferedReader().readText()
                                 importJsonSettings(JSONObject(jsonString))
                             }
-                            entry.name == "portable_keyset.dat" -> {
-                                portableKeysetData = zipIn.bufferedReader().readText()
-                            }
-                            entry.name.startsWith("vault/") || entry.name.startsWith("thumbs/") -> {
-                                // Since we can't seek in ZipInputStream, we must extract these to temp files
-                                // or handle them after we know if we have a keyset phrase.
-                                // For simplicity, we'll continue our existing logic but we need the phrase first.
+                            entry.name.startsWith("data/") || entry.name.startsWith("thumbs/") -> {
                                 handleVaultEntry(entry.name, zipIn, vaultManager)
                             }
                         }
                         zipIn.closeEntry()
                         entry = zipIn.nextEntry
                     }
-                    
-                    // If we found a portable keyset, we need the phrase to active it
-                    if (portableKeysetData != null) {
-                        handler.post {
-                            showImportPhraseDialog(portableKeysetData, vaultManager)
-                        }
-                    }
                 }
             }
-            Toast.makeText(this, "Settings restored. Vault keys will be active after recovery phrase verification.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Settings and vault data restored.", Toast.LENGTH_LONG).show()
             restartLauncher()
         } catch (e: Exception) {
+            e.printStackTrace()
             Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
     private fun handleVaultEntry(entryName: String, zipIn: ZipInputStream, vaultManager: EncryptedFolderManager) {
-        if (entryName.startsWith("vault/")) {
-            val fileName = entryName.substringAfter("vault/")
-            if (fileName.isNotEmpty()) {
-                val destFile = File(vaultManager.getEncryptedFolder(), fileName)
-                destFile.outputStream().use { zipIn.copyTo(it) }
-            }
-        } else if (entryName.startsWith("thumbs/")) {
-            val fileName = entryName.substringAfter("thumbs/")
-            if (fileName.isNotEmpty()) {
-                val destFile = File(vaultManager.getThumbnailFolder(), fileName)
-                destFile.outputStream().use { zipIn.copyTo(it) }
-            }
+        val parentDir: File? = when {
+            entryName.startsWith("data/") -> vaultManager.getEncryptedFolder()
+            entryName.startsWith("thumbs/") -> vaultManager.getThumbnailFolder()
+            else -> null
         }
-    }
+        
+        val childPath = when {
+            entryName.startsWith("data/") -> entryName.substringAfter("data/")
+            entryName.startsWith("thumbs/") -> entryName.substringAfter("thumbs/")
+            else -> null
+        }
 
-    private fun showImportPhraseDialog(encryptedKeyset: String, vaultManager: EncryptedFolderManager) {
-        val input = EditText(this).apply {
-            hint = "Enter 20-word recovery phrase"
-        }
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Vault Recovery Required")
-            .setMessage("This backup contains encrypted vault files. Please enter your 20-word recovery phrase to unlock them on this device.")
-            .setView(input)
-            .setPositiveButton("Restore Keys") { _, _ ->
-                val phrase = input.text.toString()
-                if (vaultManager.importKeysetWithPhrase(encryptedKeyset, phrase)) {
-                    Toast.makeText(this, "Vault keys restored successfully!", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this, "Failed to restore vault keys. Incorrect phrase or corrupted data.", Toast.LENGTH_LONG).show()
-                }
+        if (parentDir != null && childPath != null) {
+            val destFile = File(parentDir, childPath)
+            destFile.parentFile?.mkdirs()
+            destFile.outputStream().use { fos ->
+                zipIn.copyTo(fos)
             }
-            .setNegativeButton("Skip", null)
-            .show()
+        }
     }
 
     private fun importJsonSettings(settingsJson: JSONObject) {
