@@ -14,6 +14,8 @@ import com.guruswarupa.launch.ui.adapters.AppUsageAdapter
 import com.guruswarupa.launch.ui.adapters.AppUsageItem
 import com.guruswarupa.launch.ui.views.DailyUsagePieView
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.thread
 
 /**
  * Manages usage stats display: weekly graph, daily dialogs, and refresh logic
@@ -27,6 +29,7 @@ class UsageStatsDisplayManager(
     private val handler: Handler
 ) {
     private var lastUpdateDate: String = ""
+    private val weeklyLoadInProgress = AtomicBoolean(false)
     
     init {
         // Setup weekly usage graph callback
@@ -49,13 +52,20 @@ class UsageStatsDisplayManager(
     }
     
     fun loadWeeklyUsageData() {
-        if (usageStatsManager.hasUsageStatsPermission()) {
-            val weeklyData = usageStatsManager.getWeeklyUsageData()
-            val appUsageData = usageStatsManager.getWeeklyAppUsageData()
-            
-            activity.runOnUiThread {
-                weeklyUsageGraph.setUsageData(weeklyData)
-                weeklyUsageGraph.setAppUsageData(appUsageData)
+        if (!usageStatsManager.hasUsageStatsPermission()) return
+        if (!weeklyLoadInProgress.compareAndSet(false, true)) return
+
+        thread(name = "weekly-usage-loader") {
+            try {
+                val weeklyData = usageStatsManager.getWeeklyUsageData()
+                val appUsageData = usageStatsManager.getWeeklyAppUsageData()
+
+                activity.runOnUiThread {
+                    weeklyUsageGraph.setUsageData(weeklyData)
+                    weeklyUsageGraph.setAppUsageData(appUsageData)
+                }
+            } finally {
+                weeklyLoadInProgress.set(false)
             }
         }
     }

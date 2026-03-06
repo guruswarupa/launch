@@ -41,8 +41,8 @@ class DrawerManager(
             override fun onDrawerOpened(drawerView: View) {
                 // Check for theme changes when drawer opens
                 themeCheckCallback()
-                // Refresh usage data when right drawer opens (asynchronously)
-                if (drawerView.id == R.id.wallpaper_drawer) {
+                // Refresh usage data when widgets drawer opens
+                if (drawerView.id == R.id.widgets_drawer) {
                     handler.post {
                         usageStatsDisplayManager.loadWeeklyUsageData()
                     }
