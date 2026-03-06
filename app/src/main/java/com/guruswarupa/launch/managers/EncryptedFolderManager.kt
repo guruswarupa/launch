@@ -18,6 +18,14 @@ class EncryptedFolderManager(private val context: Context) {
     private val mainKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
+
+    private val KEYSET_PREF_NAME = "__androidx_security_crypto_encrypted_file_pref__"
+    
+    // Key derivation constants
+    private val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
+    private val SALT_SIZE = 16
+    private val ITERATIONS = 10000
+    private val KEY_LENGTH = 256
     
     private val encryptedFolder = File(context.filesDir, "encrypted_vault")
     private val thumbnailFolder = File(context.filesDir, "vault_thumbs")
@@ -33,7 +41,11 @@ class EncryptedFolderManager(private val context: Context) {
 
     fun encryptFile(sourceUri: Uri, fileName: String) {
         val destinationFile = File(encryptedFolder, fileName)
-        if (destinationFile.exists()) destinationFile.delete()
+        if (destinationFile.exists()) {
+            destinationFile.delete()
+            // Clear stale keyset entry to prevent key mismatch on re-encryption
+            clearKeysetEntry(destinationFile)
+        }
 
         // Generate and save thumbnail IF it's a media file
         generateThumbnail(sourceUri, fileName)
@@ -55,6 +67,24 @@ class EncryptedFolderManager(private val context: Context) {
             e.printStackTrace()
             throw e
         }
+    }
+
+    /**
+     * Clears the keyset entry for a file from EncryptedFile's SharedPreferences.
+     * This prevents "no matching key found for the ciphertext" errors when
+     * re-encrypting files or after backup restore.
+     */
+    fun clearKeysetEntry(file: File) {
+        try {
+            val keysetPrefs = context.getSharedPreferences(
+                "__androidx_security_crypto_encrypted_file_pref__",
+                Context.MODE_PRIVATE
+            )
+            val canonicalPath = file.canonicalPath
+            if (keysetPrefs.contains(canonicalPath)) {
+                keysetPrefs.edit().remove(canonicalPath).apply()
+            }
+        } catch (_: Exception) {}
     }
 
     private fun generateThumbnail(uri: Uri, fileName: String) {
@@ -227,12 +257,105 @@ class EncryptedFolderManager(private val context: Context) {
     }
 
     fun getEncryptedFiles(): List<File> {
-        return encryptedFolder.listFiles()?.toList() ?: emptyList()
+        return encryptedFolder.listFiles()?.filter { !it.name.startsWith(".") } ?: emptyList()
+    }
+
+    /**
+     * Exports the entire Keyset SharedPreferences as an encrypted JSON string
+     * using the Recovery Phrase.
+     */
+    fun exportKeysetWithPhrase(phrase: String): String? {
+        try {
+            val keysetPrefs = context.getSharedPreferences(KEYSET_PREF_NAME, Context.MODE_PRIVATE)
+            val allKeys = keysetPrefs.all
+            if (allKeys.isEmpty()) return null
+
+            val json = org.json.JSONObject()
+            for ((key, value) in allKeys) {
+                if (value is String) json.put(key, value)
+            }
+
+            return encryptStringWithPhrase(json.toString(), phrase)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    /**
+     * Imports a Keyset from an encrypted JSON string using the Recovery Phrase,
+     * re-encrypting each key with the current device's MasterKey.
+     */
+    fun importKeysetWithPhrase(encryptedJson: String, phrase: String): Boolean {
+        try {
+            val decryptedJson = decryptStringWithPhrase(encryptedJson, phrase) ?: return false
+            val json = org.json.JSONObject(decryptedJson)
+            val keysetPrefs = context.getSharedPreferences(KEYSET_PREF_NAME, Context.MODE_PRIVATE)
+            val editor = keysetPrefs.edit()
+
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                editor.putString(key, json.getString(key))
+            }
+            return editor.commit()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    private fun encryptStringWithPhrase(data: String, phrase: String): String {
+        val salt = ByteArray(SALT_SIZE).apply { java.security.SecureRandom().nextBytes(this) }
+        val secretKey = deriveKey(phrase, salt)
+        val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, secretKey)
+        
+        val iv = cipher.iv
+        val ciphertext = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
+        
+        val result = ByteArray(SALT_SIZE + iv.size + ciphertext.size)
+        System.arraycopy(salt, 0, result, 0, SALT_SIZE)
+        System.arraycopy(iv, 0, result, SALT_SIZE, iv.size)
+        System.arraycopy(ciphertext, 0, result, SALT_SIZE + iv.size, ciphertext.size)
+        
+        return android.util.Base64.encodeToString(result, android.util.Base64.NO_WRAP)
+    }
+
+    private fun decryptStringWithPhrase(encodedData: String, phrase: String): String? {
+        try {
+            val combined = android.util.Base64.decode(encodedData, android.util.Base64.DEFAULT)
+            if (combined.size < SALT_SIZE + 12) return null
+            
+            val salt = combined.copyOfRange(0, SALT_SIZE)
+            val iv = combined.copyOfRange(SALT_SIZE, SALT_SIZE + 12)
+            val ciphertext = combined.copyOfRange(SALT_SIZE + 12, combined.size)
+            
+            val secretKey = deriveKey(phrase, salt)
+            val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey, javax.crypto.spec.GCMParameterSpec(128, iv))
+            
+            return String(cipher.doFinal(ciphertext), Charsets.UTF_8)
+        } catch (e: Exception) {
+            return null
+        }
+    }
+
+    private fun deriveKey(phrase: String, salt: ByteArray): javax.crypto.spec.SecretKeySpec {
+        val normalized = phrase.trim().lowercase().split("\\s+".toRegex()).joinToString(" ")
+        val factory = javax.crypto.SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+        val spec = javax.crypto.spec.PBEKeySpec(normalized.toCharArray(), salt, ITERATIONS, KEY_LENGTH)
+        val intermediate = factory.generateSecret(spec).encoded
+        return javax.crypto.spec.SecretKeySpec(intermediate, "AES")
     }
 
     fun deleteFile(fileName: String): Boolean {
         File(thumbnailFolder, "$fileName.thumb").delete()
-        return File(encryptedFolder, fileName).delete()
+        // Also clear thumbnail keyset
+        clearKeysetEntry(File(thumbnailFolder, "$fileName.thumb"))
+        val encFile = File(encryptedFolder, fileName)
+        clearKeysetEntry(encFile)
+        return encFile.delete()
     }
     
     fun getDecryptedInputStream(fileName: String): InputStream {

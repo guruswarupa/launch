@@ -462,8 +462,39 @@ class EncryptedVaultActivity : VaultBaseActivity() {
                 startActivity(Intent.createChooser(intent, "Open with..."))
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Failed to open file: ${e.message}", Toast.LENGTH_SHORT).show()
+            // Check for decryption errors in the entire exception chain
+            var isDecryptionError = false
+            var currentThrowable: Throwable? = e
+            while (currentThrowable != null) {
+                val msg = currentThrowable.message?.lowercase() ?: ""
+                if (msg.contains("cipher") || msg.contains("cypher") || 
+                    msg.contains("key") || msg.contains("ciphertext") || 
+                    msg.contains("stream") || msg.contains("decrypt")) {
+                    isDecryptionError = true
+                    break
+                }
+                currentThrowable = currentThrowable.cause
+            }
+
+            if (isDecryptionError) {
+                showKeyMismatchDialog(file)
+            } else {
+                Toast.makeText(this, "Failed to open file: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
+    }
+
+    private fun showKeyMismatchDialog(file: File) {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Cannot Decrypt File")
+            .setMessage("'${file.name}' was encrypted with a different key and cannot be opened.\n\nThis typically happens after restoring from backup or reinstalling the app, since encryption keys are device-specific.\n\nThe file cannot be recovered. Would you like to remove it?")
+            .setPositiveButton("Remove") { _, _ ->
+                vaultManager.deleteFile(file.name)
+                loadFiles()
+                Toast.makeText(this, "File removed", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Keep", null)
+            .show()
     }
 
     private fun showFileOptions(file: File) {

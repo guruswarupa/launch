@@ -48,6 +48,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipInputStream
+import androidx.security.crypto.MasterKey
+import android.os.Handler
+import android.os.Looper
 
 data class PermissionInfo(
     val permission: String,
@@ -74,7 +77,7 @@ class OnboardingActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
     private var currentStep = OnboardingStep.WELCOME
-    private var hasRequestedStoragePermission = false
+
     private var currentPermissionIndex = 0
     private var hasRequestedDefaultLauncher = false
     private var displayStyleSelected = false
@@ -620,15 +623,6 @@ class OnboardingActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (hasRequestedStoragePermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            hasRequestedStoragePermission = false
-            if (hasStoragePermission()) {
-                requestUsageStatsPermission()
-            } else {
-                showPermissionDeniedDialog("Storage", "Without storage access, you won't be able to set custom wallpapers. You can grant this permission later in Settings.")
-                requestUsageStatsPermission()
-            }
-        }
         if (currentStep == OnboardingStep.PERMISSIONS && hasUsageStatsPermission()) {
             showStep(OnboardingStep.DEFAULT_LAUNCHER)
         }
@@ -694,7 +688,7 @@ class OnboardingActivity : ComponentActivity() {
             }
             currentPermissionIndex++
         }
-        requestStoragePermission()
+        requestUsageStatsPermission()
     }
 
     private fun showPermissionExplanation(permissionInfo: PermissionInfo) {
@@ -768,46 +762,7 @@ class OnboardingActivity : ComponentActivity() {
         dialog.show()
     }
 
-    private fun requestStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!hasStoragePermission()) {
-                showStoragePermissionExplanation()
-            } else {
-                requestUsageStatsPermission()
-            }
-        } else {
-            requestUsageStatsPermission()
-        }
-    }
 
-    @SuppressLint("InlinedApi")
-    private fun showStoragePermissionExplanation() {
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Storage Access Permission")
-            .setMessage("We need access to your files to load custom wallpapers for your home screen.\n\nYou'll be taken to Settings to enable this permission.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                try {
-                    hasRequestedStoragePermission = true
-                    startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-                } catch (_: Exception) {
-                    Toast.makeText(this, "Enable file access in Settings.", Toast.LENGTH_LONG).show()
-                    requestUsageStatsPermission()
-                }
-            }
-            .setNegativeButton("Skip") { _, _ -> requestUsageStatsPermission() }
-            .setCancelable(false)
-            .create()
-        dialog.setOnShowListener { fixDialogTextColors(dialog) }
-        dialog.show()
-    }
-
-    private fun hasStoragePermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try { Environment.isExternalStorageManager() } catch (_: Exception) { false }
-        } else {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-    }
 
     private fun requestUsageStatsPermission() {
         if (!hasUsageStatsPermission()) {
@@ -1105,6 +1060,7 @@ class OnboardingActivity : ComponentActivity() {
     
     private fun importBackupFromFile(uri: Uri) {
         try {
+            val vaultManager = EncryptedFolderManager(this)
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 ZipInputStream(inputStream).use { zipIn ->
                     var entry = zipIn.nextEntry
@@ -1114,32 +1070,62 @@ class OnboardingActivity : ComponentActivity() {
                                 val jsonString = zipIn.bufferedReader().readText()
                                 importJsonSettings(JSONObject(jsonString))
                             }
-                            entry.name.startsWith("vault/") -> {
-                                val fileName = entry.name.substringAfter("vault/")
-                                if (fileName.isNotEmpty()) {
-                                    val destFile = File(EncryptedFolderManager(this).getEncryptedFolder(), fileName)
-                                    destFile.outputStream().use { zipIn.copyTo(it) }
+                            entry.name == "portable_keyset.dat" -> {
+                                val portableKeysetData = zipIn.bufferedReader().readText()
+                                Handler(Looper.getMainLooper()).post {
+                                    showImportPhraseDialog(portableKeysetData, vaultManager)
                                 }
                             }
-                            entry.name.startsWith("thumbs/") -> {
-                                val fileName = entry.name.substringAfter("thumbs/")
-                                if (fileName.isNotEmpty()) {
-                                    val destFile = File(EncryptedFolderManager(this).getThumbnailFolder(), fileName)
-                                    destFile.outputStream().use { zipIn.copyTo(it) }
-                                }
+                            entry.name.startsWith("vault/") || entry.name.startsWith("thumbs/") -> {
+                                handleVaultEntry(entry.name, zipIn, vaultManager)
                             }
-                        }
                         zipIn.closeEntry()
                         entry = zipIn.nextEntry
                     }
                 }
             }
             backupImported = true
-            Toast.makeText(this, "Backup restored successfully", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Settings restored. Vault keys will be active after recovery phrase verification.", Toast.LENGTH_LONG).show()
             showStep(OnboardingStep.COMPLETE)
         } catch (e: Exception) {
             Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun handleVaultEntry(entryName: String, zipIn: ZipInputStream, vaultManager: EncryptedFolderManager) {
+        if (entryName.startsWith("vault/")) {
+            val fileName = entryName.substringAfter("vault/")
+            if (fileName.isNotEmpty()) {
+                val destFile = File(vaultManager.getEncryptedFolder(), fileName)
+                destFile.outputStream().use { zipIn.copyTo(it) }
+            }
+        } else if (entryName.startsWith("thumbs/")) {
+            val fileName = entryName.substringAfter("thumbs/")
+            if (fileName.isNotEmpty()) {
+                val destFile = File(vaultManager.getThumbnailFolder(), fileName)
+                destFile.outputStream().use { zipIn.copyTo(it) }
+            }
+        }
+    }
+
+    private fun showImportPhraseDialog(encryptedKeyset: String, vaultManager: EncryptedFolderManager) {
+        val input = EditText(this).apply {
+            hint = "Enter 20-word recovery phrase"
+        }
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Vault Recovery Required")
+            .setMessage("This backup contains encrypted vault files. Please enter your 20-word recovery phrase to unlock them on this device.")
+            .setView(input)
+            .setPositiveButton("Restore Keys") { _, _ ->
+                val phrase = input.text.toString()
+                if (vaultManager.importKeysetWithPhrase(encryptedKeyset, phrase)) {
+                    Toast.makeText(this, "Vault keys restored successfully!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Failed to restore vault keys. Incorrect phrase or corrupted data.", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Skip", null)
+            .show()
     }
 
     private fun importJsonSettings(settingsJson: JSONObject) {
