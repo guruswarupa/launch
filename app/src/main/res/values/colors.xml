@@ -45,10 +45,26 @@
     <color name="menu_background_color">#E6FFFFFF</color>
     <color name="dialog_text">@color/text</color>
     <color name="dialog_text_secondary">@color/text_secondary</color>
+    <color name="dialog_preview_surface_start">#F7FFFFFF</color>
+    <color name="dialog_preview_surface_end">#EDEFF4</color>
+    <color name="dialog_preview_surface_stroke">#33000000</color>
+    <color name="dialog_preview_chip_bg">#14000000</color>
+    <color name="dialog_preview_chip_stroke">#26000000</color>
+    <color name="dialog_preview_chip_text">#CC111111</color>
+    <color name="dialog_preview_frame_start">#FFFFFFFF</color>
+    <color name="dialog_preview_frame_end">#F3F4F7</color>
+    <color name="dialog_preview_frame_stroke">#2E000000</color>
+    <color name="dialog_preview_secondary_fill">#14000000</color>
+    <color name="dialog_preview_secondary_stroke">#33000000</color>
+    <color name="widget_config_text_primary">@color/widget_text</color>
+    <color name="widget_config_text_secondary">@color/widget_text_secondary</color>
+    <color name="widget_config_text_hint">@color/widget_text_secondary</color>
+    <color name="widget_config_chip_text">@color/widget_text</color>
+    <color name="widget_config_secondary_button_text">@color/widget_text</color>
     
     <!-- Dynamic Text Colors -->
     <color name="widget_text">@color/black</color>
-    <color name="widget_text_secondary">@color/text_secondary</color>
+    <color name="widget_text_secondary">@color/black</color>
     <color name="widget_divider">#33000000</color>
     <color name="widget_item_background">#1A000000</color>
     <color name="widget_item_stroke">#33000000</color>
@@ -56,7 +72,7 @@
     <color name="widget_border">@color/outlineColor</color>
     
     <!-- Settings Specific Colors -->
-    <color name="settings_overlay">#66FFFFFF</color> <!-- Lighter overlay for light mode -->
+    <color name="settings_overlay">@android:color/transparent</color>
     <color name="settings_header_text">@color/text</color>
 
     <!-- Grid Item Background Colors -->

@@ -3,8 +3,6 @@ package com.guruswarupa.launch.ui.activities
 import android.Manifest
 import android.app.Activity
 import android.app.WallpaperManager
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -28,59 +26,34 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
-import com.guruswarupa.launch.managers.RecoveryKeyManager
 import com.guruswarupa.launch.models.Constants
 import java.io.File
-import java.security.MessageDigest
 import java.text.DecimalFormat
-import java.util.concurrent.Executor
 
 class EncryptedVaultActivity : VaultBaseActivity() {
     private lateinit var vaultManager: EncryptedFolderManager
-    private lateinit var recoveryKeyManager: RecoveryKeyManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyStateText: TextView
     private lateinit var adapter: VaultAdapter
-    private lateinit var executor: Executor
-    private lateinit var biometricPrompt: BiometricPrompt
-    private lateinit var promptInfo: BiometricPrompt.PromptInfo
     private var fileToDecrypt: File? = null
     
     private val prefs by lazy { getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE) }
     
-    private val securePrefs by lazy {
-        val masterKey = MasterKey.Builder(this)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        
-        EncryptedSharedPreferences.create(
-            this,
-            "vault_secure_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    }
-
     private val pickFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { encryptAndMoveFile(it) }
     }
     
     private val createNoteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            loadFiles() // Refresh the file list after note is created
+            loadFiles()
         }
     }
 
@@ -103,13 +76,43 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         }
     }
 
+    private val exportVaultLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri: Uri? ->
+        uri?.let {
+            try {
+                contentResolver.openOutputStream(it)?.use { outputStream ->
+                    if (vaultManager.exportVault(outputStream)) {
+                        Toast.makeText(this, "Vault exported successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private val importVaultLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let {
+            try {
+                contentResolver.openInputStream(it)?.use { inputStream ->
+                    if (vaultManager.importVault(inputStream)) {
+                        Toast.makeText(this, "Vault imported successfully. Please unlock to see files.", Toast.LENGTH_SHORT).show()
+                        loadFiles()
+                    } else {
+                        Toast.makeText(this, "Import failed", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         supportActionBar?.hide()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_encrypted_vault)
         
@@ -117,7 +120,6 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         setupWallpaper()
 
         vaultManager = EncryptedFolderManager(this)
-        recoveryKeyManager = RecoveryKeyManager(this)
         recyclerView = findViewById(R.id.vault_recycler_view)
         emptyStateText = findViewById(R.id.empty_state_text)
         
@@ -141,43 +143,85 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             showAddFileOptions()
         }
 
-        setupBiometric()
-        authenticateUser()
+        checkVaultState()
+    }
+
+    private fun checkVaultState() {
+        if (!vaultManager.isVaultSetup()) {
+            showSetupDialog()
+        } else if (!vaultManager.isUnlocked()) {
+            showUnlockDialog()
+        } else {
+            loadFiles()
+        }
+    }
+
+    private fun showSetupDialog() {
+        val input = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = "Enter New Vault Password"
+        }
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Setup Vault")
+            .setMessage("Set a password to encrypt your vault. Remember it carefully, it cannot be recovered.")
+            .setView(input)
+            .setPositiveButton("Set Password") { _, _ ->
+                val password = input.text.toString()
+                if (password.length >= 4) {
+                    if (vaultManager.setupVault(password)) {
+                        loadFiles()
+                    } else {
+                        Toast.makeText(this, "Setup failed", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
+                } else {
+                    Toast.makeText(this, "Password must be at least 4 characters", Toast.LENGTH_SHORT).show()
+                    showSetupDialog()
+                }
+            }
+            .setNegativeButton("Cancel") { _, _ -> finish() }
+            .setNeutralButton("Import Existng") { _, _ -> importVaultLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showUnlockDialog() {
+        val input = EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = "Enter Vault Password"
+        }
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Vault Locked")
+            .setView(input)
+            .setPositiveButton("Unlock") { _, _ ->
+                val password = input.text.toString()
+                if (vaultManager.unlock(password)) {
+                    loadFiles()
+                } else {
+                    Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
+                    showUnlockDialog()
+                }
+            }
+            .setNegativeButton("Cancel") { _, _ -> finish() }
+            .setCancelable(false)
+            .show()
     }
 
     private fun makeSystemBarsTransparent() {
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val insetsController = window.decorView.windowInsetsController
-            if (insetsController != null) {
-                val appearance = if (!isDarkMode) {
-                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                } else {
-                    0
-                }
-                insetsController.setSystemBarsAppearance(appearance, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS)
-            }
-        }
     }
 
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         val overlay = findViewById<View>(R.id.settings_overlay)
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        overlay.setBackgroundColor(if (isDarkMode) "#CC000000".toColorInt() else "#66FFFFFF".toColorInt())
+        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
-            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
-            try {
-                val wallpaperManager = WallpaperManager.getInstance(this)
-                val wallpaperDrawable = wallpaperManager.drawable
-                if (wallpaperDrawable != null) {
-                    wallpaperImageView.setImageDrawable(wallpaperDrawable)
-                }
-            } catch (_: Exception) {
-                wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
+        try {
+            val wallpaperManager = WallpaperManager.getInstance(this)
+            val wallpaperDrawable = wallpaperManager.drawable
+            if (wallpaperDrawable != null) {
+                wallpaperImageView.setImageDrawable(wallpaperDrawable)
             }
-        } else {
+        } catch (_: Exception) {
             wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
         }
         applyWallpaperBlur(wallpaperImageView)
@@ -185,7 +229,8 @@ class EncryptedVaultActivity : VaultBaseActivity() {
 
     private fun applyWallpaperBlur(imageView: ImageView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 imageView.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP))
@@ -195,202 +240,11 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         }
     }
 
-    private fun setupBiometric() {
-        executor = ContextCompat.getMainExecutor(this)
-        biometricPrompt = BiometricPrompt(this, executor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-                    handleSecondFactor()
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    super.onAuthenticationError(errorCode, errString)
-                    if (errorCode != BiometricPrompt.ERROR_USER_CANCELED) {
-                        Toast.makeText(applicationContext, "Authentication error: $errString", Toast.LENGTH_SHORT).show()
-                    }
-                    finish()
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    Toast.makeText(applicationContext, "Authentication failed", Toast.LENGTH_SHORT).show()
-                }
-            })
-
-        promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Vault Authentication")
-            .setSubtitle("Authenticate to access your encrypted files")
-            .setAllowedAuthenticators(androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG or androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-            .build()
-    }
-
-    private fun authenticateUser() {
-        biometricPrompt.authenticate(promptInfo)
-    }
-
-    private fun handleSecondFactor() {
-        if (!prefs.contains(Constants.Prefs.VAULT_2FA_ENABLED)) {
-            showVaultSetupDialog()
-        } else if (prefs.getBoolean(Constants.Prefs.VAULT_2FA_ENABLED, false)) {
-            show2FAPasswordDialog()
-        } else {
-            loadFiles()
-        }
-    }
-
-    private fun showVaultSetupDialog() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Vault Setup")
-            .setMessage("Would you like to add a password and recovery phrase for your vault?")
-            .setPositiveButton("Setup") { _, _ -> showSetPasswordDialog() }
-            .setNegativeButton("Skip") { _, _ ->
-                prefs.edit()
-                    .putBoolean(Constants.Prefs.VAULT_2FA_ENABLED, false)
-                    .putBoolean(Constants.Prefs.VAULT_SETUP_COMPLETE, true)
-                    .apply()
-                loadFiles()
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun showSetPasswordDialog() {
-        val input = EditText(this).apply {
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-            hint = "Enter Vault Password"
-        }
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Set Vault Password")
-            .setView(input)
-            .setPositiveButton("Set") { _, _ ->
-                val password = input.text.toString()
-                if (password.length >= 4) {
-                    prefs.edit()
-                        .putBoolean(Constants.Prefs.VAULT_2FA_ENABLED, true)
-                        .putString(Constants.Prefs.VAULT_PASSWORD_HASH, hashPassword(password))
-                        .apply()
-                    generateAndShowRecoveryPhrase()
-                } else {
-                    Toast.makeText(this, "Password too short", Toast.LENGTH_SHORT).show()
-                    showSetPasswordDialog()
-                }
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun generateAndShowRecoveryPhrase() {
-        val phrase = recoveryKeyManager.generateRecoveryPhrase()
-        val phraseString = phrase.joinToString(" ")
-        
-        // Store hash in normal prefs for verification
-        prefs.edit()
-            .putString(Constants.Prefs.VAULT_RECOVERY_PHRASE_HASH, recoveryKeyManager.hashPhrase(phrase))
-            .putBoolean(Constants.Prefs.VAULT_SETUP_COMPLETE, true)
-            .apply()
-            
-        // Store actual phrase in secure prefs for viewing later
-        securePrefs.edit()
-            .putString("vault_recovery_phrase", phraseString)
-            .apply()
-
-        showRecoveryPhraseDisplayDialog(phraseString)
-    }
-    
-    private fun showRecoveryPhraseDisplayDialog(phrase: String) {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Your Recovery Phrase")
-            .setMessage("SAVE THIS CAREFULLY! If you forget your password, this is the ONLY way to recover your data:\n\n$phrase")
-            .setNeutralButton("Copy to Clipboard") { _, _ ->
-                copyToClipboard(phrase)
-                showRecoveryPhraseDisplayDialog(phrase) // Re-show after copy
-            }
-            .setPositiveButton("I have saved it") { _, _ ->
-                loadFiles()
-            }
-            .setCancelable(false)
-            .show()
-    }
-    
-    private fun copyToClipboard(text: String) {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Vault Recovery Phrase", text)
-        clipboard.setPrimaryClip(clip)
-        Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun show2FAPasswordDialog() {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 20, 40, 0)
-        }
-        
-        val input = EditText(this).apply {
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-            hint = "Enter Vault Password"
-        }
-        layout.addView(input)
-        
-        val recoveryButton = Button(this, null, androidx.appcompat.R.attr.borderlessButtonStyle).apply {
-            text = "Forgot Password? Use Recovery Key"
-            setTextColor(ContextCompat.getColor(this@EncryptedVaultActivity, R.color.nord7))
-            setOnClickListener {
-                showRecoveryKeyDialog()
-            }
-        }
-        layout.addView(recoveryButton)
-
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Second Factor Required")
-            .setView(layout)
-            .setPositiveButton("Unlock", null) // Set null to override behavior
-            .setNegativeButton("Cancel") { _, _ -> finish() }
-            .setCancelable(false)
-            .create()
-
-        dialog.show()
-        
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val enteredHash = hashPassword(input.text.toString())
-            val storedHash = prefs.getString(Constants.Prefs.VAULT_PASSWORD_HASH, "")
-            if (enteredHash == storedHash) {
-                dialog.dismiss()
-                loadFiles()
-            } else {
-                Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun showRecoveryKeyDialog() {
-        val input = EditText(this).apply {
-            hint = "Enter 20-word recovery phrase"
-        }
-        AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Recover Vault")
-            .setMessage("Enter your 20-word recovery phrase to reset your password.")
-            .setView(input)
-            .setPositiveButton("Verify") { _, _ ->
-                val enteredPhrase = input.text.toString()
-                val storedHash = prefs.getString(Constants.Prefs.VAULT_RECOVERY_PHRASE_HASH, "")
-                if (storedHash != null && recoveryKeyManager.verifyPhrase(enteredPhrase, storedHash)) {
-                    Toast.makeText(this, "Phrase verified! Please set a new password.", Toast.LENGTH_LONG).show()
-                    showSetPasswordDialog()
-                } else {
-                    Toast.makeText(this, "Invalid Recovery Phrase", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun hashPassword(password: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(password.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
-
     private fun loadFiles() {
+        if (!vaultManager.isUnlocked()) {
+            showUnlockDialog()
+            return
+        }
         val files = vaultManager.getEncryptedFiles()
         adapter.updateFiles(files)
         updateEmptyState(files.isEmpty())
@@ -444,9 +298,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             val extension = file.extension.lowercase()
             val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: ""
             
-            // Handle text files (notes) specially by opening the note editor
             if (mimeType.startsWith("text/") || file.name.endsWith(".txt")) {
-                // Launch note editor in edit mode
                 val intent = Intent(this, NoteEditorActivity::class.java).apply {
                     putExtra("FILE_NAME", file.name)
                 }
@@ -509,7 +361,6 @@ class EncryptedVaultActivity : VaultBaseActivity() {
                 when (which) {
                     0 -> pickFile.launch(arrayOf("*/*"))
                     1 -> {
-                        // Launch note editor for creating a new note
                         val intent = Intent(this, NoteEditorActivity::class.java)
                         createNoteLauncher.launch(intent)
                     }
@@ -518,51 +369,36 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     }
     
     private fun showVaultSettings() {
+        val options = arrayOf("Export Vault", "Import Vault", "Change Password", "Auto-Lock Settings")
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Vault Settings")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> exportVaultLauncher.launch("vault_backup_${System.currentTimeMillis()}.zip")
+                    1 -> importVaultLauncher.launch(arrayOf("application/zip", "*/*"))
+                    2 -> showSetupDialog()
+                    3 -> showAutoLockDialog()
+                }
+            }.show()
+    }
+
+    private fun showAutoLockDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_vault_settings, null)
         val timeoutSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.timeout_switch)
         val recoveryBtn = dialogView.findViewById<Button>(R.id.view_recovery_phrase_button)
         
-        // Load current settings
+        recoveryBtn.visibility = View.GONE // Removed recovery phrase
+        
         timeoutSwitch.isChecked = prefs.getBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, false)
         
-        recoveryBtn.setOnClickListener {
-            // Confirm password before showing recovery phrase
-            val input = EditText(this).apply {
-                inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-                hint = "Enter Vault Password"
-            }
-            AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                .setTitle("Security Check")
-                .setMessage("Please enter your vault password to view recovery phrase.")
-                .setView(input)
-                .setPositiveButton("Verify") { _, _ ->
-                    val enteredHash = hashPassword(input.text.toString())
-                    val storedHash = prefs.getString(Constants.Prefs.VAULT_PASSWORD_HASH, "")
-                    if (enteredHash == storedHash) {
-                        val phrase = securePrefs.getString("vault_recovery_phrase", null)
-                        if (phrase != null) {
-                            showRecoveryPhraseDisplayDialog(phrase)
-                        } else {
-                            Toast.makeText(this, "Recovery phrase not found. It might not have been stored during setup.", Toast.LENGTH_LONG).show()
-                        }
-                    } else {
-                        Toast.makeText(this, "Incorrect Password", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
-
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Vault Settings")
+            .setTitle("Auto-Lock Settings")
             .setView(dialogView)
             .setPositiveButton("Save") { _, _ ->
                 prefs.edit()
                     .putBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, timeoutSwitch.isChecked)
                     .putInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 1)
                     .apply()
-                
-                Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -602,35 +438,13 @@ class EncryptedVaultActivity : VaultBaseActivity() {
                 holder.thumbnail.imageTintList = null
                 holder.thumbnail.alpha = 1.0f
             } else {
-                // Set a default icon based on file type
                 val extension = file.extension.lowercase()
                 val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: ""
-                
                 when {
                     mimeType.startsWith("text/") || file.name.endsWith(".txt") -> {
                         holder.thumbnail.setImageResource(R.drawable.ic_note)
                         holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
                         holder.thumbnail.alpha = 1.0f
-                    }
-                    mimeType.contains("pdf") || file.name.endsWith(".pdf") -> {
-                        holder.thumbnail.setImageResource(R.drawable.ic_pdf)
-                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
-                        holder.thumbnail.alpha = 1.0f
-                    }
-                    mimeType.startsWith("audio/") || listOf("mp3", "wav", "aac", "flac", "ogg").any { file.name.endsWith(".$it") } -> {
-                        holder.thumbnail.setImageResource(R.drawable.ic_audio)
-                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
-                        holder.thumbnail.alpha = 1.0f
-                    }
-                    mimeType.startsWith("image/") -> {
-                        holder.thumbnail.setImageResource(R.drawable.ic_image)
-                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
-                        holder.thumbnail.alpha = 0.3f
-                    }
-                    mimeType.startsWith("video/") -> {
-                        holder.thumbnail.setImageResource(R.drawable.ic_video)
-                        holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
-                        holder.thumbnail.alpha = 0.3f
                     }
                     else -> {
                         holder.thumbnail.setImageResource(R.drawable.ic_file)
@@ -638,27 +452,6 @@ class EncryptedVaultActivity : VaultBaseActivity() {
                         holder.thumbnail.alpha = 0.3f
                     }
                 }
-            }
-            val extension = file.extension.lowercase()
-            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: ""
-            when {
-                mimeType.startsWith("video/") -> {
-                    holder.typeOverlay.visibility = View.VISIBLE
-                    holder.typeOverlay.setImageResource(R.drawable.ic_play)
-                }
-                mimeType.startsWith("audio/") -> {
-                    holder.typeOverlay.visibility = View.VISIBLE
-                    holder.typeOverlay.setImageResource(R.drawable.ic_mic)
-                }
-                mimeType.startsWith("text/") || file.name.endsWith(".txt") -> {
-                    holder.typeOverlay.visibility = View.VISIBLE
-                    holder.typeOverlay.setImageResource(R.drawable.ic_note)
-                }
-                mimeType.contains("pdf") || file.name.endsWith(".pdf") -> {
-                    holder.typeOverlay.visibility = View.VISIBLE
-                    holder.typeOverlay.setImageResource(R.drawable.ic_pdf)
-                }
-                else -> holder.typeOverlay.visibility = View.GONE
             }
             holder.itemView.setOnClickListener { onFileClick(file) }
             holder.itemView.setOnLongClickListener { onFileLongClick(file); true }

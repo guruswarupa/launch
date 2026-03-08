@@ -1,13 +1,13 @@
 package com.guruswarupa.launch.ui.activities
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import com.guruswarupa.launch.services.ScreenRecordingService
 
-class ScreenRecordPermissionActivity : Activity() {
+class ScreenRecordPermissionActivity : ComponentActivity() {
 
     private val REQUEST_CODE_SCREEN_CAPTURE = 1002
 

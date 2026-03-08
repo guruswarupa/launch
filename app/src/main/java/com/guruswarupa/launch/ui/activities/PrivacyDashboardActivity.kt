@@ -21,7 +21,6 @@ import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.toColorInt
-import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
@@ -65,7 +64,6 @@ class PrivacyDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = 
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
 
@@ -104,14 +102,9 @@ class PrivacyDashboardActivity : ComponentActivity() {
     }
     
     private fun setupTheme() {
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val overlay = findViewById<View>(R.id.settings_overlay)
-        
-        if (isDarkMode) {
-            overlay.setBackgroundColor("#CC000000".toColorInt())
-        } else {
-            overlay.setBackgroundColor("#66FFFFFF".toColorInt())
-        }
+        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
         
         setupWallpaper()
         
@@ -140,80 +133,11 @@ class PrivacyDashboardActivity : ComponentActivity() {
     }
     
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                
-                WindowCompat.setDecorFitsSystemWindows(window, false)
-                
-                val insetsController = window.decorView.windowInsetsController
-                if (insetsController != null) {
-                    val appearance = if (!isDarkMode) {
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    } else {
-                        0
-                    }
-                    insetsController.setSystemBarsAppearance(
-                        appearance,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    )
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                @Suppress("DEPRECATION")
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-                @Suppress("DEPRECATION")
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                
-                @Suppress("DEPRECATION")
-                val decorView = window.decorView
-                @Suppress("DEPRECATION")
-                var flags = decorView.systemUiVisibility
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                
-                if (!isDarkMode) {
-                    @Suppress("DEPRECATION")
-                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        @Suppress("DEPRECATION")
-                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    }
-                }
-                @Suppress("DEPRECATION")
-                decorView.systemUiVisibility = flags
-            }
-            
-            // Apply blur effect to status bar
-            BlurUtils.applyBlurToStatusBar(this)
-        } catch (_: Exception) {
-            try {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                // Apply blur effect as fallback
-                BlurUtils.applyBlurToStatusBar(this)
-            } catch (_: Exception) {
-            }
-        }
     }
 
     private fun loadApps() {
         executor.execute {
             val pm = packageManager
-            @Suppress("DEPRECATION")
             val packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
             
             val appPrivacyList = packages.mapNotNull { packageInfo ->
@@ -253,7 +177,6 @@ class PrivacyDashboardActivity : ComponentActivity() {
                             pm.getInstallSourceInfo(packageInfo.packageName).installingPackageName
                         } catch (_: Exception) { null }
                     } else {
-                        @Suppress("DEPRECATION")
                         pm.getInstallerPackageName(packageInfo.packageName)
                     }
                     

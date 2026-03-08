@@ -49,6 +49,9 @@ import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipInputStream
 
+import android.os.Handler
+import android.os.Looper
+
 data class PermissionInfo(
     val permission: String,
     val title: String,
@@ -74,7 +77,7 @@ class OnboardingActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
     private var currentStep = OnboardingStep.WELCOME
-    private var hasRequestedStoragePermission = false
+
     private var currentPermissionIndex = 0
     private var hasRequestedDefaultLauncher = false
     private var displayStyleSelected = false
@@ -261,62 +264,7 @@ class OnboardingActivity : ComponentActivity() {
         }
     }
     
-    @Suppress("DEPRECATION")
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11+ (API 30+)
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                window.setDecorFitsSystemWindows(false)
-                
-                val decorView = window.decorView
-                val insetsController = decorView.windowInsetsController
-                if (insetsController != null) {
-                    val appearance = if (!isDarkMode) {
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    } else {
-                        0
-                    }
-                    insetsController.setSystemBarsAppearance(
-                        appearance,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    )
-                }
-            } else {
-                // Android 5.0+ (API 21+)
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                
-                val decorView = window.decorView
-                var flags = decorView.systemUiVisibility
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                
-                if (!isDarkMode) {
-                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    }
-                }
-                
-                decorView.systemUiVisibility = flags
-            }
-            
-            // Apply blur effect to status bar
-            BlurUtils.applyBlurToStatusBar(this)
-        } catch (_: Exception) {
-            try {
-                window.statusBarColor = android.graphics.Color.TRANSPARENT
-                window.navigationBarColor = android.graphics.Color.TRANSPARENT
-                // Apply blur effect as fallback
-                BlurUtils.applyBlurToStatusBar(this)
-            } catch (_: Exception) {}
-        }
     }
 
     private fun initializeViews() {
@@ -620,15 +568,6 @@ class OnboardingActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (hasRequestedStoragePermission && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            hasRequestedStoragePermission = false
-            if (hasStoragePermission()) {
-                requestUsageStatsPermission()
-            } else {
-                showPermissionDeniedDialog("Storage", "Without storage access, you won't be able to set custom wallpapers. You can grant this permission later in Settings.")
-                requestUsageStatsPermission()
-            }
-        }
         if (currentStep == OnboardingStep.PERMISSIONS && hasUsageStatsPermission()) {
             showStep(OnboardingStep.DEFAULT_LAUNCHER)
         }
@@ -694,7 +633,7 @@ class OnboardingActivity : ComponentActivity() {
             }
             currentPermissionIndex++
         }
-        requestStoragePermission()
+        requestUsageStatsPermission()
     }
 
     private fun showPermissionExplanation(permissionInfo: PermissionInfo) {
@@ -734,7 +673,6 @@ class OnboardingActivity : ComponentActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        @Suppress("DEPRECATION")
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             requestNextPermission()
@@ -768,46 +706,7 @@ class OnboardingActivity : ComponentActivity() {
         dialog.show()
     }
 
-    private fun requestStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!hasStoragePermission()) {
-                showStoragePermissionExplanation()
-            } else {
-                requestUsageStatsPermission()
-            }
-        } else {
-            requestUsageStatsPermission()
-        }
-    }
 
-    @SuppressLint("InlinedApi")
-    private fun showStoragePermissionExplanation() {
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Storage Access Permission")
-            .setMessage("We need access to your files to load custom wallpapers for your home screen.\n\nYou'll be taken to Settings to enable this permission.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                try {
-                    hasRequestedStoragePermission = true
-                    startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-                } catch (_: Exception) {
-                    Toast.makeText(this, "Enable file access in Settings.", Toast.LENGTH_LONG).show()
-                    requestUsageStatsPermission()
-                }
-            }
-            .setNegativeButton("Skip") { _, _ -> requestUsageStatsPermission() }
-            .setCancelable(false)
-            .create()
-        dialog.setOnShowListener { fixDialogTextColors(dialog) }
-        dialog.show()
-    }
-
-    private fun hasStoragePermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try { Environment.isExternalStorageManager() } catch (_: Exception) { false }
-        } else {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-    }
 
     private fun requestUsageStatsPermission() {
         if (!hasUsageStatsPermission()) {
@@ -839,14 +738,12 @@ class OnboardingActivity : ComponentActivity() {
         dialog.show()
     }
 
-    @Suppress("DEPRECATION")
     private fun hasUsageStatsPermission(): Boolean {
         val appOpsManager = getSystemService(APP_OPS_SERVICE) as AppOpsManager
         val mode = appOpsManager.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-    @Suppress("DEPRECATION")
     private fun hasNotificationPolicyPermission(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -1105,6 +1002,7 @@ class OnboardingActivity : ComponentActivity() {
     
     private fun importBackupFromFile(uri: Uri) {
         try {
+            val vaultManager = EncryptedFolderManager(this)
             contentResolver.openInputStream(uri)?.use { inputStream ->
                 ZipInputStream(inputStream).use { zipIn ->
                     var entry = zipIn.nextEntry
@@ -1114,19 +1012,8 @@ class OnboardingActivity : ComponentActivity() {
                                 val jsonString = zipIn.bufferedReader().readText()
                                 importJsonSettings(JSONObject(jsonString))
                             }
-                            entry.name.startsWith("vault/") -> {
-                                val fileName = entry.name.substringAfter("vault/")
-                                if (fileName.isNotEmpty()) {
-                                    val destFile = File(EncryptedFolderManager(this).getEncryptedFolder(), fileName)
-                                    destFile.outputStream().use { zipIn.copyTo(it) }
-                                }
-                            }
-                            entry.name.startsWith("thumbs/") -> {
-                                val fileName = entry.name.substringAfter("thumbs/")
-                                if (fileName.isNotEmpty()) {
-                                    val destFile = File(EncryptedFolderManager(this).getThumbnailFolder(), fileName)
-                                    destFile.outputStream().use { zipIn.copyTo(it) }
-                                }
+                            entry.name.startsWith("data/") || entry.name.startsWith("thumbs/") -> {
+                                handleVaultEntry(entry.name, zipIn, vaultManager)
                             }
                         }
                         zipIn.closeEntry()
@@ -1135,12 +1022,37 @@ class OnboardingActivity : ComponentActivity() {
                 }
             }
             backupImported = true
-            Toast.makeText(this, "Backup restored successfully", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Backup restored successfully.", Toast.LENGTH_LONG).show()
             showStep(OnboardingStep.COMPLETE)
         } catch (e: Exception) {
+            e.printStackTrace()
             Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
+
+    private fun handleVaultEntry(entryName: String, zipIn: ZipInputStream, vaultManager: EncryptedFolderManager) {
+        val parentDir: File? = when {
+            entryName.startsWith("data/") -> vaultManager.getEncryptedFolder()
+            entryName.startsWith("thumbs/") -> vaultManager.getThumbnailFolder()
+            else -> null
+        }
+        
+        val childPath = when {
+            entryName.startsWith("data/") -> entryName.substringAfter("data/")
+            entryName.startsWith("thumbs/") -> entryName.substringAfter("thumbs/")
+            else -> null
+        }
+
+        if (parentDir != null && childPath != null) {
+            val destFile = File(parentDir, childPath)
+            destFile.parentFile?.mkdirs()
+            destFile.outputStream().use { fos ->
+                zipIn.copyTo(fos)
+            }
+        }
+    }
+
+
 
     private fun importJsonSettings(settingsJson: JSONObject) {
         val isNewFormat = settingsJson.has("main_preferences")

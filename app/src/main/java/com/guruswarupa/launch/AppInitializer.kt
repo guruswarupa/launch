@@ -181,9 +181,10 @@ class AppInitializer(private val activity: MainActivity) {
             // Initialize DrawerLayout and navigation
             val mainContent = findViewById<FrameLayout>(R.id.main_content)
             gestureHandler = GestureHandler(activity, views.drawerLayout, mainContent)
+            screenPagerManager = ScreenPagerManager(activity, views.drawerLayout)
             
             drawerManager = DrawerManager(
-                activity, views.drawerLayout, gestureHandler, usageStatsDisplayManager, activityInitializer,
+                activity, screenPagerManager, gestureHandler, usageStatsDisplayManager, activityInitializer,
                 themeCheckCallback = { checkAndUpdateThemeIfNeeded() }
             )
             drawerManager.setup()

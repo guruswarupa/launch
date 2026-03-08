@@ -30,10 +30,6 @@ class TorchManager(private val context: Context) {
                         break
                     }
                 }
-                // Fallback to first camera if no flash-capable camera found
-                if (cameraId == null && manager.cameraIdList.isNotEmpty()) {
-                    cameraId = manager.cameraIdList[0]
-                }
             } catch (_: Exception) {
                 // Camera not available
             }
@@ -46,7 +42,7 @@ class TorchManager(private val context: Context) {
      */
     fun toggleTorch(): Boolean {
         if (cameraManager == null || cameraId == null) {
-            Toast.makeText(context, "Camera not available", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Flashlight not available on this device", Toast.LENGTH_SHORT).show()
             return false
         }
         

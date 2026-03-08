@@ -9,9 +9,15 @@ import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
+import android.view.GestureDetector
+import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -29,6 +35,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     private val appWidgetHost: AppWidgetHost = AppWidgetHost(context, APPWIDGET_HOST_ID)
     private val prefs: SharedPreferences = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
     private val widgets = mutableListOf<WidgetInfo>()
+    private val widgetOptionsCache = mutableMapOf<Int, String>()
     
     companion object {
         private const val APPWIDGET_HOST_ID = 1024
@@ -41,7 +48,8 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         val providerPackage: String,
         val providerClass: String,
         val minWidth: Int,
-        val minHeight: Int
+        val minHeight: Int,
+        val customHeightDp: Int? = null
     )
     
     init {
@@ -205,19 +213,21 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             widgetView.setAppWidget(appWidgetId, appWidgetInfo)
             
             // Save widget info first (needed for button visibility calculation)
+            val existingCustomHeightDp = widgets.firstOrNull { it.appWidgetId == appWidgetId }?.customHeightDp
             val widgetInfo = WidgetInfo(
                 appWidgetId = appWidgetId,
                 providerPackage = appWidgetInfo.provider.packageName,
                 providerClass = appWidgetInfo.provider.className,
                 minWidth = appWidgetInfo.minWidth,
-                minHeight = appWidgetInfo.minHeight
+                minHeight = appWidgetInfo.minHeight,
+                customHeightDp = existingCustomHeightDp
             )
             // Avoid duplicates
             widgets.removeAll { it.appWidgetId == appWidgetId }
             widgets.add(widgetInfo)
             
             // Create container for widget with controls
-            val widgetContainerView = createWidgetContainer(widgetView, appWidgetId, appWidgetInfo)
+            val widgetContainerView = createWidgetContainer(widgetView, widgetInfo, appWidgetInfo)
             
             // Add to layout if container exists
             widgetContainer.addView(widgetContainerView)
@@ -233,10 +243,15 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     
     private fun createWidgetContainer(
         widgetView: AppWidgetHostView,
-        appWidgetId: Int,
+        widgetInfo: WidgetInfo,
         appWidgetInfo: AppWidgetProviderInfo
     ): View {
-        // Simple container with no background - just the widget view
+        val appWidgetId = widgetInfo.appWidgetId
+        val resizeHandleSizePx = dpToPx(34)
+        val resizeHandleInsetPx = dpToPx(6)
+        val minHeightPx = dpToPx(120)
+        val maxHeightPx = (context.resources.displayMetrics.heightPixels * 0.85f).toInt()
+
         val containerLayout = FrameLayout(context).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -244,25 +259,191 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             ).apply {
                 setMargins(0, 12, 0, 12)
             }
-            // No background - transparent
             background = null
             tag = appWidgetId
-            
-            // Long press to show options menu
-            setOnLongClickListener {
-                showWidgetOptionsMenu(appWidgetId, appWidgetInfo)
-                true
-            }
         }
-        
-        // Add widget view to container - full size
+
         widgetView.layoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
+            widgetInfo.customHeightDp?.let { dpToPx(it) } ?: FrameLayout.LayoutParams.WRAP_CONTENT
         )
         containerLayout.addView(widgetView)
-        
+
+        val resizeHandle = ImageView(context).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                resizeHandleSizePx,
+                resizeHandleSizePx,
+                Gravity.END or Gravity.BOTTOM
+            ).apply {
+                marginEnd = resizeHandleInsetPx
+                bottomMargin = resizeHandleInsetPx
+            }
+            setImageResource(android.R.drawable.ic_menu_crop)
+            setBackgroundResource(R.drawable.drawer_widgets_action_bg)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(context, android.R.color.white)
+            )
+            contentDescription = "Resize widget"
+            setPadding(dpToPx(7), dpToPx(7), dpToPx(7), dpToPx(7))
+            visibility = View.GONE
+        }
+        containerLayout.addView(resizeHandle)
+        val hideResizeHandleRunnable = Runnable { resizeHandle.visibility = View.GONE }
+
+        val showResizeHandle = {
+            resizeHandle.visibility = View.VISIBLE
+            resizeHandle.bringToFront()
+            resizeHandle.removeCallbacks(hideResizeHandleRunnable)
+            resizeHandle.postDelayed(hideResizeHandleRunnable, 4000L)
+        }
+
+        // Show resize control on long press or double tap.
+        containerLayout.setOnLongClickListener {
+            showResizeHandle()
+            true
+        }
+        widgetView.setOnLongClickListener {
+            showResizeHandle()
+            true
+        }
+        val resizeGestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean = true
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                showResizeHandle()
+                return true
+            }
+        })
+        containerLayout.setOnTouchListener { _, event ->
+            resizeGestureDetector.onTouchEvent(event)
+            false
+        }
+        widgetView.setOnTouchListener { _, event ->
+            resizeGestureDetector.onTouchEvent(event)
+            false
+        }
+
+        resizeHandle.setOnTouchListener(object : View.OnTouchListener {
+            private var startRawY = 0f
+            private var startHeightPx = 0
+
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        resizeHandle.removeCallbacks(hideResizeHandleRunnable)
+                        startRawY = event.rawY
+                        startHeightPx = widgetView.height
+                            .takeIf { it > 0 }
+                            ?: widgetView.measuredHeight.takeIf { it > 0 }
+                            ?: dpToPx(widgetInfo.customHeightDp ?: widgetInfo.minHeight.coerceAtLeast(120))
+                        containerLayout.parent?.requestDisallowInterceptTouchEvent(true)
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val deltaY = (event.rawY - startRawY).toInt()
+                        val targetHeightPx = (startHeightPx + deltaY).coerceIn(minHeightPx, maxHeightPx)
+                        val lp = widgetView.layoutParams as FrameLayout.LayoutParams
+                        if (lp.height != targetHeightPx) {
+                            lp.height = targetHeightPx
+                            widgetView.layoutParams = lp
+                            val targetHeightDp = pxToDp(targetHeightPx).coerceAtLeast(1)
+                            applyWidgetSizeOptions(
+                                widgetView,
+                                appWidgetId,
+                                containerLayout,
+                                appWidgetInfo.minHeight,
+                                forcedHeightDp = targetHeightDp
+                            )
+                        }
+                        return true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        val finalHeightDp = pxToDp(widgetView.height).coerceAtLeast(1)
+                        updateWidgetCustomHeight(appWidgetId, finalHeightDp)
+                        containerLayout.parent?.requestDisallowInterceptTouchEvent(false)
+                        resizeHandle.postDelayed(hideResizeHandleRunnable, 2500L)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+
+        containerLayout.post {
+            applyWidgetSizeOptions(
+                widgetView,
+                appWidgetId,
+                containerLayout,
+                appWidgetInfo.minHeight,
+                forcedHeightDp = widgetInfo.customHeightDp
+            )
+        }
+        containerLayout.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            applyWidgetSizeOptions(
+                widgetView,
+                appWidgetId,
+                containerLayout,
+                appWidgetInfo.minHeight,
+                forcedHeightDp = widgetInfo.customHeightDp
+            )
+        }
+
         return containerLayout
+    }
+
+    private fun applyWidgetSizeOptions(
+        widgetView: AppWidgetHostView,
+        appWidgetId: Int,
+        containerView: View,
+        providerMinHeightDp: Int,
+        forcedHeightDp: Int? = null
+    ) {
+        val widthPx = containerView.width
+        if (widthPx <= 0) return
+
+        val widthDp = pxToDp(widthPx).coerceAtLeast(1)
+        val measuredHeightDp = pxToDp(containerView.height)
+        val heightDp = forcedHeightDp?.coerceAtLeast(1)
+            ?: if (measuredHeightDp > 0) measuredHeightDp else providerMinHeightDp.coerceAtLeast(1)
+        val optionsKey = "$widthDp:$heightDp"
+        if (widgetOptionsCache[appWidgetId] == optionsKey) return
+        widgetOptionsCache[appWidgetId] = optionsKey
+
+        try {
+            widgetView.updateAppWidgetSize(
+                null,
+                widthDp,
+                heightDp,
+                widthDp,
+                heightDp
+            )
+        } catch (_: Exception) {
+            val options = Bundle().apply {
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, widthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, widthDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, heightDp)
+                putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, heightDp)
+            }
+            runCatching { appWidgetManager.updateAppWidgetOptions(appWidgetId, options) }
+        }
+    }
+
+    private fun pxToDp(px: Int): Int {
+        return (px / context.resources.displayMetrics.density).toInt()
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            dp.toFloat(),
+            context.resources.displayMetrics
+        ).toInt()
+    }
+
+    private fun updateWidgetCustomHeight(appWidgetId: Int, customHeightDp: Int) {
+        val index = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
+        if (index < 0) return
+        widgets[index] = widgets[index].copy(customHeightDp = customHeightDp)
+        saveWidgets()
     }
     
     private fun showWidgetOptionsMenu(appWidgetId: Int, appWidgetInfo: AppWidgetProviderInfo) {
@@ -378,6 +559,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             
             // Remove from list
             widgets.removeAll { it.appWidgetId == appWidgetId }
+            widgetOptionsCache.remove(appWidgetId)
             
             // Delete widget ID
             appWidgetHost.deleteAppWidgetId(appWidgetId)
@@ -401,6 +583,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                     put("providerClass", widget.providerClass)
                     put("minWidth", widget.minWidth)
                     put("minHeight", widget.minHeight)
+                    widget.customHeightDp?.let { put("customHeightDp", it) }
                 }
                 jsonArray.put(json)
             }
@@ -426,7 +609,8 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                         providerPackage = json.getString("providerPackage"),
                         providerClass = json.getString("providerClass"),
                         minWidth = json.getInt("minWidth"),
-                        minHeight = json.getInt("minHeight")
+                        minHeight = json.getInt("minHeight"),
+                        customHeightDp = if (json.has("customHeightDp")) json.optInt("customHeightDp") else null
                     )
                     widgets.add(widgetInfo)
                     
@@ -449,7 +633,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     private fun recreateWidgetView(widgetInfo: WidgetInfo, appWidgetInfo: AppWidgetProviderInfo) {
         try {
             val widgetView = appWidgetHost.createView(context, widgetInfo.appWidgetId, appWidgetInfo)
-            val widgetContainerView = createWidgetContainer(widgetView, widgetInfo.appWidgetId, appWidgetInfo)
+            val widgetContainerView = createWidgetContainer(widgetView, widgetInfo, appWidgetInfo)
             widgetContainer.addView(widgetContainerView)
         } catch (_: Exception) {
             // Remove invalid widget
@@ -488,6 +672,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         }
         viewsToRemove.forEach { widgetContainer.removeView(it) }
         widgets.clear()
+        widgetOptionsCache.clear()
 
         loadWidgets()
     }

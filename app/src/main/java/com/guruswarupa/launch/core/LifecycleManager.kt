@@ -99,6 +99,13 @@ class LifecycleManager(
     fun setBlockingBackGesture(isBlocking: Boolean) { this.isBlockingBackGesture = isBlocking }
     
     fun onResume(intent: android.content.Intent) {
+        val mainActivity = activity as? MainActivity
+        val shouldStartTutorial = intent.getBooleanExtra("start_tutorial", false)
+
+        if (shouldStartTutorial) {
+            mainActivity?.openHomePage(animated = false)
+        }
+
         // Ensure system bars stay transparent
         systemBarManager?.makeSystemBarsTransparent()
         
@@ -193,12 +200,14 @@ class LifecycleManager(
         }, 50)
         
         // Feature tutorial
-        val shouldStartTutorial = intent.getBooleanExtra("start_tutorial", false)
         handler.postDelayed({
             featureTutorialManager?.let {
                 if (shouldStartTutorial || it.shouldShowTutorial()) {
                     it.startTutorial()
                 }
+            }
+            if (shouldStartTutorial) {
+                intent.removeExtra("start_tutorial")
             }
         }, 1000)
         

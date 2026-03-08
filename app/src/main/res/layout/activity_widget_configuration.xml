@@ -1,151 +1,145 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="Background"
         android:scaleType="centerCrop"
-        android:src="@drawable/wallpaper_background"
-        android:contentDescription="Background"/>
+        android:src="@drawable/wallpaper_background" />
 
-    <!-- Semi-transparent overlay -->
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#95000000"/>
+        android:background="@drawable/widget_config_screen_overlay" />
 
     <LinearLayout
         android:id="@+id/main_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingStart="18dp"
+        android:paddingTop="16dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="16dp">
 
-        <!-- Toolbar area -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
             android:gravity="center_vertical"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp">
+            android:orientation="horizontal">
 
-            <ImageButton
-                android:id="@+id/back_button"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_revert"
-                android:tint="@android:color/white"
-                android:contentDescription="Back"
-                android:rotation="180"/>
-
-            <TextView
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Configure Widgets"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:layout_marginStart="8dp"/>
+                android:orientation="vertical">
 
-            <!-- Removed Add System Widget Button as per user request -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Configure Widgets"
+                    android:textColor="@color/widget_config_text_primary"
+                    android:textSize="25sp"
+                    android:textStyle="bold" />
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Organize your drawer layout"
+                    android:textColor="@color/widget_config_text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Drag items to reorder them or toggle to show/hide widgets in the drawer."
-            android:textColor="@android:color/white"
-            android:alpha="0.7"
-            android:textSize="14sp"
-            android:layout_marginBottom="16dp"
-            android:layout_marginStart="8dp"/>
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="12dp"
+            android:text="Drag to reorder. Tap a card to preview and enable or disable it."
+            android:textColor="@color/widget_config_text_secondary"
+            android:textSize="14sp" />
 
-        <!-- Search Bar -->
         <EditText
             android:id="@+id/search_widget_input"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Search widgets..."
-            android:textColor="@android:color/white"
-            android:textColorHint="@android:color/white"
-            android:alpha="0.7"
-            android:background="@drawable/search_background"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp"
+            android:layout_height="48dp"
+            android:background="@drawable/widget_config_search_background"
             android:drawableStart="@android:drawable/ic_menu_search"
-            android:drawablePadding="8dp"
+            android:drawablePadding="10dp"
+            android:hint="Search widgets"
+            android:imeOptions="actionSearch"
             android:inputType="text"
-            android:imeOptions="actionSearch"/>
+            android:paddingStart="14dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="12dp"
+            android:textColor="@color/widget_config_text_primary"
+            android:textColorHint="@color/widget_config_text_hint"
+            android:drawableTint="@color/widget_config_text_secondary"
+            android:textCursorDrawable="@null" />
 
-        <!-- Header for sections will be managed in code if needed, but keeping one for consistency -->
         <TextView
             android:id="@+id/widgets_header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="8dp"
             android:text="Available Widgets"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginStart="8dp"
-            android:layout_marginBottom="8dp"/>
+            android:textColor="@color/widget_config_text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold" />
 
-        <!-- Widgets List -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/widgets_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:clipToPadding="false"
-            android:paddingBottom="16dp"
-            android:scrollbars="vertical"
-            android:overScrollMode="always"/>
+            android:overScrollMode="always"
+            android:paddingBottom="10dp"
+            android:scrollbars="vertical" />
 
-        <!-- Footer Footer -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:layout_marginTop="14dp"
             android:gravity="end"
-            android:layout_marginTop="16dp"
-            android:paddingTop="8dp">
+            android:orientation="horizontal">
 
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/cancel_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_config_secondary_button"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
                 android:text="Cancel"
                 android:textAllCaps="false"
-                android:background="@drawable/button_background"
-                android:textColor="@android:color/white"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="12dp"
-                android:layout_marginEnd="8dp"
-                android:minWidth="80dp"/>
+                android:textColor="@color/widget_config_secondary_button_text"
+                android:textSize="15sp" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/save_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/widget_config_secondary_button"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
                 android:text="Save"
                 android:textAllCaps="false"
-                android:background="@drawable/button_background"
-                android:textColor="@android:color/white"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
-                android:paddingTop="12dp"
-                android:paddingBottom="12dp"
-                android:minWidth="80dp"/>
+                android:textColor="@color/widget_config_secondary_button_text"
+                android:textSize="15sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
 

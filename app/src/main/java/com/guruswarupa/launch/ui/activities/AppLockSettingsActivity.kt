@@ -37,13 +37,10 @@ class AppLockSettingsActivity : ComponentActivity() {
     private lateinit var resetAppLockButton: Button
     private var isPinVerifiedForThisSession = false
 
-    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         // Make status bar and navigation bar transparent BEFORE setContentView
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_app_lock_settings)
         
@@ -157,14 +154,9 @@ class AppLockSettingsActivity : ComponentActivity() {
     }
     
     private fun setupTheme() {
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val overlay = findViewById<View>(R.id.settings_overlay)
-        
-        if (isDarkMode) {
-            overlay.setBackgroundColor("#CC000000".toColorInt())
-        } else {
-            overlay.setBackgroundColor("#66FFFFFF".toColorInt())
-        }
+        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
         
         setupWallpaper()
         
@@ -192,59 +184,7 @@ class AppLockSettingsActivity : ComponentActivity() {
         }
     }
     
-    @Suppress("DEPRECATION")
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window.statusBarColor = Color.TRANSPARENT
-                window.navigationBarColor = Color.TRANSPARENT
-                window.setDecorFitsSystemWindows(false)
-                
-                val insetsController = window.decorView.windowInsetsController
-                insetsController?.let {
-                    val appearance = if (!isDarkMode) {
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    } else {
-                        0
-                    }
-                    it.setSystemBarsAppearance(
-                        appearance,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    )
-                }
-            } else {
-                window.statusBarColor = Color.TRANSPARENT
-                window.navigationBarColor = Color.TRANSPARENT
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                
-                val decorView = window.decorView
-                var flags = decorView.systemUiVisibility
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                
-                if (!isDarkMode) {
-                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    }
-                }
-                decorView.systemUiVisibility = flags
-            }
-            
-            // Apply blur effect to status bar
-            BlurUtils.applyBlurToStatusBar(this)
-        } catch (_: Exception) {
-            try {
-                window.statusBarColor = Color.TRANSPARENT
-                window.navigationBarColor = Color.TRANSPARENT
-                // Apply blur effect as fallback
-                BlurUtils.applyBlurToStatusBar(this)
-            } catch (_: Exception) {
-            }
-        }
     }
 
     private fun setupExpandableSections() {
@@ -306,7 +246,6 @@ class AppLockSettingsActivity : ComponentActivity() {
         val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
         } else {
-            @Suppress("DEPRECATION")
             pm.getInstalledApplications(PackageManager.GET_META_DATA)
         }
         

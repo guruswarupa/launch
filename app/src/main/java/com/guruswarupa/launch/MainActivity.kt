@@ -6,6 +6,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -27,6 +28,7 @@ import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.services.*
 import com.guruswarupa.launch.models.MainActivityViews
+import com.guruswarupa.launch.models.Constants
 
 import com.guruswarupa.launch.widgets.WidgetSetupManager
 import com.guruswarupa.launch.widgets.WidgetThemeManager
@@ -114,6 +116,7 @@ class MainActivity : FragmentActivity() {
     internal lateinit var serviceManager: ServiceManager
     internal lateinit var appListUIUpdater: AppListUIUpdater
     internal lateinit var drawerManager: DrawerManager
+    internal lateinit var screenPagerManager: ScreenPagerManager
     internal lateinit var contactActionHandler: ContactActionHandler
     internal lateinit var settingsChangeCoordinator: SettingsChangeCoordinator
 
@@ -132,6 +135,7 @@ class MainActivity : FragmentActivity() {
     fun isHiddenAppManagerInitialized() = ::hiddenAppManager.isInitialized
     fun isAppListLoaderInitialized() = ::appListLoader.isInitialized
     fun isFinanceWidgetManagerInitialized() = ::financeWidgetManager.isInitialized
+    fun isTimeDateManagerInitialized() = ::timeDateManager.isInitialized
 
     /**
      * Initializes core managers that are needed early in the lifecycle.
@@ -365,7 +369,14 @@ class MainActivity : FragmentActivity() {
      * Initializes time/date and weather widgets.
      */
     internal fun initializeTimeDateAndWeather() {
-        timeDateManager = TimeDateManager(views.timeTextView, views.dateTextView, views.rightDrawerTime, views.rightDrawerDate)
+        val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
+        timeDateManager = TimeDateManager(
+            views.timeTextView,
+            views.dateTextView,
+            views.rightDrawerTime,
+            views.rightDrawerDate,
+            use24HourClock
+        )
         timeDateManager.startUpdates()
         
         widgetSetupManager = WidgetSetupManager(this, usageStatsManager, weatherManager, permissionManager)
@@ -443,6 +454,14 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppInitializer(this).initialize(savedInstanceState)
+        if (::systemBarManager.isInitialized) {
+            systemBarManager.makeSystemBarsTransparent()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
     
 
@@ -522,6 +541,40 @@ class MainActivity : FragmentActivity() {
     fun refreshAppsForFocusMode() {
         if (::appListUIUpdater.isInitialized) {
             appListUIUpdater.refreshAppsForFocusMode()
+        }
+    }
+
+    fun openWidgetsPage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openLeftPage(animated)
+        }
+    }
+
+    fun openHomePage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openCenterPage(animated)
+        }
+    }
+
+    fun openWallpaperPage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openRightPage(animated)
+        }
+    }
+
+    fun isWidgetsPageOpen(): Boolean {
+        return ::screenPagerManager.isInitialized &&
+            screenPagerManager.isPageOpen(ScreenPagerManager.Page.LEFT)
+    }
+
+    fun isWallpaperPageOpen(): Boolean {
+        return ::screenPagerManager.isInitialized &&
+            screenPagerManager.isPageOpen(ScreenPagerManager.Page.RIGHT)
+    }
+
+    fun setWidgetsPageLocked(locked: Boolean) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.setLeftPageLocked(locked)
         }
     }
     

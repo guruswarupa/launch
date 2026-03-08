@@ -90,7 +90,6 @@ class ScreenDimmerService : Service() {
         overlayView = View(this)
         overlayView?.setBackgroundColor(Color.BLACK)
         
-        @Suppress("DEPRECATION")
         overlayView?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -98,7 +97,6 @@ class ScreenDimmerService : Service() {
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
-            @Suppress("DEPRECATION")
             WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY
         }
 
@@ -118,7 +116,7 @@ class ScreenDimmerService : Service() {
             y = 0
             alpha = (dimLevel / 100f).coerceIn(0f, 0.9f)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
             }
         }
 

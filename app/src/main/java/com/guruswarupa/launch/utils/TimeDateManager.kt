@@ -14,14 +14,15 @@ class TimeDateManager(
     private val timeTextView: TextView,
     private val dateTextView: TextView,
     private val rightDrawerTime: TextView? = null,
-    private val rightDrawerDate: TextView? = null
+    private val rightDrawerDate: TextView? = null,
+    private var use24HourFormat: Boolean = false
 ) {
     private val handler = Handler(Looper.getMainLooper())
-    private val timeFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
+    private var timeFormat = createMainTimeFormat(use24HourFormat)
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
     
     // Artistic formats for right drawer
-    private val artisticTimeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private var artisticTimeFormat = createDrawerTimeFormat(use24HourFormat)
     private val artisticDateFormat = SimpleDateFormat("EEEE, dd MMM", Locale.getDefault())
     
     private val updateRunnable = object : Runnable {
@@ -53,6 +54,14 @@ class TimeDateManager(
         handler.removeCallbacks(updateRunnable)
         handler.removeCallbacks(powerSaverUpdateRunnable)
     }
+
+    fun setUse24HourFormat(enabled: Boolean) {
+        if (use24HourFormat == enabled) return
+        use24HourFormat = enabled
+        timeFormat = createMainTimeFormat(enabled)
+        artisticTimeFormat = createDrawerTimeFormat(enabled)
+        updateTime()
+    }
     
     fun updateTime() {
         val now = Date()
@@ -68,5 +77,15 @@ class TimeDateManager(
         dateTextView.text = currentTime
         
         rightDrawerDate?.text = artisticDateFormat.format(now).uppercase(Locale.getDefault())
+    }
+
+    private fun createMainTimeFormat(use24Hour: Boolean): SimpleDateFormat {
+        val pattern = if (use24Hour) "HH:mm:ss" else "hh:mm:ss a"
+        return SimpleDateFormat(pattern, Locale.getDefault())
+    }
+
+    private fun createDrawerTimeFormat(use24Hour: Boolean): SimpleDateFormat {
+        val pattern = if (use24Hour) "HH:mm" else "hh:mm a"
+        return SimpleDateFormat(pattern, Locale.getDefault())
     }
 }

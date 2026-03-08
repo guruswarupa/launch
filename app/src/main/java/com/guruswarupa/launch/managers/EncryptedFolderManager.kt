@@ -8,242 +8,163 @@ import android.net.Uri
 import android.os.Build
 import android.util.Size
 import android.webkit.MimeTypeMap
-import androidx.security.crypto.EncryptedFile
-import androidx.security.crypto.MasterKey
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.InputStream
+import java.io.*
+import java.security.SecureRandom
+import javax.crypto.Cipher
+import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 
 class EncryptedFolderManager(private val context: Context) {
-    private val mainKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
     
-    private val encryptedFolder = File(context.filesDir, "encrypted_vault")
-    private val thumbnailFolder = File(context.filesDir, "vault_thumbs")
+    companion object {
+        private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
+        private const val SALT_SIZE = 16
+        private const val IV_SIZE = 12
+        private const val ITERATIONS = 10000
+        private const val KEY_LENGTH = 256
+        private const val VAULT_DIR = "encrypted_vault"
+        private const val THUMBS_DIR = "vault_thumbs"
+        private const val CONFIG_FILE = ".vault_config"
+        
+        // Memory-cached master key (cleared when app is closed or vault locked)
+        private var masterKey: SecretKey? = null
+    }
+
+    private val encryptedFolder = File(context.filesDir, VAULT_DIR)
+    private val thumbnailFolder = File(context.filesDir, THUMBS_DIR)
+    private val configFile = File(encryptedFolder, CONFIG_FILE)
 
     init {
         if (!encryptedFolder.exists()) encryptedFolder.mkdirs()
         if (!thumbnailFolder.exists()) thumbnailFolder.mkdirs()
     }
 
-    fun getEncryptedFolder(): File = encryptedFolder
+    fun isVaultSetup(): Boolean = configFile.exists()
 
+    fun getEncryptedFolder(): File = encryptedFolder
     fun getThumbnailFolder(): File = thumbnailFolder
 
-    fun encryptFile(sourceUri: Uri, fileName: String) {
-        val destinationFile = File(encryptedFolder, fileName)
-        if (destinationFile.exists()) destinationFile.delete()
-
-        // Generate and save thumbnail IF it's a media file
-        generateThumbnail(sourceUri, fileName)
-
-        val encryptedFile = EncryptedFile.Builder(
-            context,
-            destinationFile,
-            mainKey,
-            EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-        ).build()
-
+    fun setupVault(password: String): Boolean {
         try {
-            context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
-                encryptedFile.openFileOutput().use { outputStream ->
-                    inputStream.copyTo(outputStream)
+            val salt = ByteArray(SALT_SIZE).apply { SecureRandom().nextBytes(this) }
+            val key = deriveKey(password, salt)
+            
+            // Create a verification file to ensure password matches later
+            val verificationData = "VAULT_OPEN".toByteArray()
+            val iv = ByteArray(IV_SIZE).apply { SecureRandom().nextBytes(this) }
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
+            val encryptedVerification = cipher.doFinal(verificationData)
+
+            FileOutputStream(configFile).use { fos ->
+                fos.write(salt)
+                fos.write(iv)
+                fos.write(encryptedVerification)
+            }
+            
+            masterKey = key
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    fun unlock(password: String): Boolean {
+        if (!configFile.exists()) return false
+        
+        try {
+            FileInputStream(configFile).use { fis ->
+                val salt = ByteArray(SALT_SIZE)
+                val iv = ByteArray(IV_SIZE)
+                fis.read(salt)
+                fis.read(iv)
+                val encryptedVerification = fis.readBytes()
+
+                val key = deriveKey(password, salt)
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+                
+                val decrypted = cipher.doFinal(encryptedVerification)
+                if (String(decrypted) == "VAULT_OPEN") {
+                    masterKey = key
+                    return true
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+        return false
+    }
+
+    fun lock() {
+        masterKey = null
+    }
+
+    fun isUnlocked(): Boolean = masterKey != null
+
+    private fun deriveKey(password: String, salt: ByteArray): SecretKey {
+        val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+        val spec = PBEKeySpec(password.toCharArray(), salt, ITERATIONS, KEY_LENGTH)
+        val intermediate = factory.generateSecret(spec).encoded
+        return SecretKeySpec(intermediate, "AES")
+    }
+
+    fun encryptFile(sourceUri: Uri, fileName: String) {
+        val key = masterKey ?: throw IllegalStateException("Vault is locked")
+        val destinationFile = File(encryptedFolder, fileName)
+
+        // Generate thumbnail BEFORE encryption if it's media
+        generateThumbnail(sourceUri, fileName)
+
+        try {
+            context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+                val iv = ByteArray(IV_SIZE).apply { SecureRandom().nextBytes(this) }
+                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
+
+                FileOutputStream(destinationFile).use { fos ->
+                    fos.write(iv) // Store IV at the beginning
+                    val cipherOutputStream = javax.crypto.CipherOutputStream(fos, cipher)
+                    inputStream.copyTo(cipherOutputStream)
+                    cipherOutputStream.close()
+                }
+            }
+        } catch (e: Exception) {
+            if (destinationFile.exists()) destinationFile.delete()
             throw e
         }
     }
 
-    private fun generateThumbnail(uri: Uri, fileName: String) {
-        var mimeType = context.contentResolver.getType(uri)
+    fun getDecryptedInputStream(fileName: String): InputStream {
+        val key = masterKey ?: throw IllegalStateException("Vault is locked")
+        val sourceFile = File(encryptedFolder, fileName)
         
-        if (mimeType == null) {
-            val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
-            mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
-        }
-        
-        // Generate appropriate thumbnail based on file type
-        var bitmap: Bitmap? = null
-        try {
-            // Priority 1: Modern loadThumbnail API for media files
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                if (mimeType?.startsWith("image/") == true || mimeType?.startsWith("video/") == true) {
-                    try {
-                        bitmap = context.contentResolver.loadThumbnail(uri, Size(512, 512), null)
-                    } catch (e: Exception) {
-                        // Fallback to manual processing
-                    }
-                }
-            }
-
-            // Priority 2: Manual Image Decoding
-            if (bitmap == null && (mimeType?.startsWith("image/") == true || mimeType == null)) {
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    val options = BitmapFactory.Options().apply {
-                        inJustDecodeBounds = true
-                    }
-                    BitmapFactory.decodeStream(input, null, options)
-                    
-                    if (options.outWidth > 0 && options.outHeight > 0) {
-                        context.contentResolver.openInputStream(uri)?.use { input2 ->
-                            options.inJustDecodeBounds = false
-                            options.inSampleSize = calculateInSampleSize(options, 512, 512)
-                            bitmap = BitmapFactory.decodeStream(input2, null, options)
-                        }
-                    }
-                }
-            }
-            
-            // Priority 3: Video Fallback
-            if (bitmap == null && mimeType?.startsWith("video/") == true) {
-                bitmap = getVideoThumbnailFallback(uri)
-            }
-            
-            // Priority 4: Document and Audio Thumbnails
-            if (bitmap == null) {
-                bitmap = getDefaultThumbnailForFileType(mimeType)
-            }
-
-            bitmap?.let {
-                saveThumbnail(it, fileName)
-                it.recycle()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-    
-    private fun getDefaultThumbnailForFileType(mimeType: String?): Bitmap? {
-        // Create a placeholder bitmap based on file type
-        val config = Bitmap.Config.ARGB_8888
-        val bitmap = Bitmap.createBitmap(512, 512, config)
-        val canvas = android.graphics.Canvas(bitmap)
-        
-        // Draw a colored background based on file type
-        val backgroundColor = when {
-            mimeType?.startsWith("audio/") == true -> android.graphics.Color.parseColor("#FF6200EE") // Purple
-            mimeType?.contains("pdf") == true -> android.graphics.Color.parseColor("#FFF44336") // Red
-            mimeType?.startsWith("text/") == true -> android.graphics.Color.parseColor("#FF2196F3") // Blue
-            mimeType?.contains("document") == true || mimeType?.contains("word") == true -> android.graphics.Color.parseColor("#FF4CAF50") // Green
-            mimeType?.contains("sheet") == true || mimeType?.contains("excel") == true -> android.graphics.Color.parseColor("#FF4CAF50") // Green
-            mimeType?.contains("presentation") == true || mimeType?.contains("powerpoint") == true -> android.graphics.Color.parseColor("#FFFF9800") // Orange
-            else -> android.graphics.Color.parseColor("#FF9E9E9E") // Gray
-        }
-        
-        canvas.drawColor(backgroundColor)
-        
-        // Draw an icon based on file type
-        val paint = android.graphics.Paint().apply {
-            color = android.graphics.Color.WHITE
-            textSize = 100f
-            textAlign = android.graphics.Paint.Align.CENTER
-        }
-        
-        val iconText = when {
-            mimeType?.startsWith("audio/") == true -> "🎵"
-            mimeType?.contains("pdf") == true -> "📄"
-            mimeType?.startsWith("text/") == true -> "📝"
-            mimeType?.contains("document") == true || mimeType?.contains("word") == true -> " WORD"
-            mimeType?.contains("sheet") == true || mimeType?.contains("excel") == true -> " EXCEL"
-            mimeType?.contains("presentation") == true || mimeType?.contains("powerpoint") == true -> " PPT"
-            else -> "📁"
-        }
-        
-        val y = canvas.height / 2f - (paint.descent() + paint.ascent()) / 2f
-        canvas.drawText(iconText, canvas.width / 2f, y, paint)
-        
-        return bitmap
-    }
-
-    private fun getVideoThumbnailFallback(uri: Uri): Bitmap? {
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(context, uri)
-            retriever.getFrameAtTime(1000000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-        } catch (e: Exception) {
-            null
-        } finally {
-            try { retriever.release() } catch (e: Exception) {}
-        }
-    }
-
-    private fun saveThumbnail(bitmap: Bitmap, fileName: String) {
-        val thumbFile = File(thumbnailFolder, "$fileName.thumb")
-        val encryptedThumb = EncryptedFile.Builder(
-            context,
-            thumbFile,
-            mainKey,
-            EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-        ).build()
-
-        val stream = ByteArrayOutputStream()
-        
-        // Crop to square for uniform gallery look
-        val width = bitmap.width
-        val height = bitmap.height
-        val size = if (width > height) height else width
-        val x = (width - size) / 2
-        val y = (height - size) / 2
-        
-        val cropped = Bitmap.createBitmap(bitmap, x, y, size, size)
-        cropped.compress(Bitmap.CompressFormat.JPEG, 85, stream)
-        val byteArray = stream.toByteArray()
-
-        try {
-            encryptedThumb.openFileOutput().use { outputStream ->
-                outputStream.write(byteArray)
-            }
-        } finally {
-            if (cropped != bitmap) cropped.recycle()
-        }
-    }
-
-    fun getThumbnail(fileName: String): Bitmap? {
-        val thumbFile = File(thumbnailFolder, "$fileName.thumb")
-        
-        // If thumb doesn't exist, we might try to generate it from the encrypted file
-        // but that should be done in background. For now, just return null if missing.
-        if (!thumbFile.exists()) {
-            return null
+        val fis = FileInputStream(sourceFile)
+        val iv = ByteArray(IV_SIZE)
+        if (fis.read(iv) != IV_SIZE) {
+            fis.close()
+            throw IOException("Invalid file format")
         }
 
-        return try {
-            val encryptedThumb = EncryptedFile.Builder(
-                context,
-                thumbFile,
-                mainKey,
-                EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-            ).build()
-
-            encryptedThumb.openFileInput().use { inputStream ->
-                BitmapFactory.decodeStream(inputStream)
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    fun getEncryptedFiles(): List<File> {
-        return encryptedFolder.listFiles()?.toList() ?: emptyList()
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+        
+        return javax.crypto.CipherInputStream(fis, cipher)
     }
 
     fun deleteFile(fileName: String): Boolean {
         File(thumbnailFolder, "$fileName.thumb").delete()
         return File(encryptedFolder, fileName).delete()
     }
-    
-    fun getDecryptedInputStream(fileName: String): InputStream {
-        val sourceFile = File(encryptedFolder, fileName)
-        val encryptedFile = EncryptedFile.Builder(
-            context,
-            sourceFile,
-            mainKey,
-            EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
-        ).build()
-        return encryptedFile.openFileInput()
+
+    fun getEncryptedFiles(): List<File> {
+        return encryptedFolder.listFiles()?.filter { 
+            !it.name.startsWith(".") && it.name != CONFIG_FILE 
+        } ?: emptyList()
     }
 
     fun decryptToCache(fileName: String): File {
@@ -268,6 +189,123 @@ class EncryptedFolderManager(private val context: Context) {
         }
     }
 
+    // Thumbnail Management
+    private fun generateThumbnail(uri: Uri, fileName: String) {
+        val key = masterKey ?: return
+        var mimeType = context.contentResolver.getType(uri)
+        
+        if (mimeType == null) {
+            val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
+            mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+        }
+        
+        var bitmap: Bitmap? = null
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (mimeType?.startsWith("image/") == true || mimeType?.startsWith("video/") == true) {
+                    try {
+                        bitmap = context.contentResolver.loadThumbnail(uri, Size(512, 512), null)
+                    } catch (e: Exception) {}
+                }
+            }
+
+            if (bitmap == null && (mimeType?.startsWith("image/") == true || mimeType == null)) {
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeStream(input, null, options)
+                    if (options.outWidth > 0 && options.outHeight > 0) {
+                        context.contentResolver.openInputStream(uri)?.use { input2 ->
+                            options.inJustDecodeBounds = false
+                            options.inSampleSize = calculateInSampleSize(options, 512, 512)
+                            bitmap = BitmapFactory.decodeStream(input2, null, options)
+                        }
+                    }
+                }
+            }
+            
+            if (bitmap == null) bitmap = getDefaultThumbnailForFileType(mimeType)
+
+            bitmap?.let {
+                saveThumbnail(it, fileName, key)
+                it.recycle()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun saveThumbnail(bitmap: Bitmap, fileName: String, key: SecretKey) {
+        val thumbFile = File(thumbnailFolder, "$fileName.thumb")
+        val iv = ByteArray(IV_SIZE).apply { SecureRandom().nextBytes(this) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
+
+        val stream = ByteArrayOutputStream()
+        val width = bitmap.width
+        val height = bitmap.height
+        val size = if (width > height) height else width
+        val x = (width - size) / 2
+        val y = (height - size) / 2
+        
+        val cropped = Bitmap.createBitmap(bitmap, x, y, size, size)
+        cropped.compress(Bitmap.CompressFormat.JPEG, 70, stream)
+        val byteArray = stream.toByteArray()
+
+        FileOutputStream(thumbFile).use { fos ->
+            fos.write(iv)
+            val cos = javax.crypto.CipherOutputStream(fos, cipher)
+            cos.write(byteArray)
+            cos.close()
+        }
+        if (cropped != bitmap) cropped.recycle()
+    }
+
+    fun getThumbnail(fileName: String): Bitmap? {
+        val key = masterKey ?: return null
+        val thumbFile = File(thumbnailFolder, "$fileName.thumb")
+        if (!thumbFile.exists()) return null
+
+        return try {
+            val fis = FileInputStream(thumbFile)
+            val iv = ByteArray(IV_SIZE)
+            fis.read(iv)
+            
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+            
+            val cis = javax.crypto.CipherInputStream(fis, cipher)
+            BitmapFactory.decodeStream(cis)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getDefaultThumbnailForFileType(mimeType: String?): Bitmap? {
+        val bitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        val backgroundColor = when {
+            mimeType?.startsWith("audio/") == true -> android.graphics.Color.parseColor("#FF6200EE")
+            mimeType?.contains("pdf") == true -> android.graphics.Color.parseColor("#FFF44336")
+            mimeType?.startsWith("text/") == true -> android.graphics.Color.parseColor("#FF2196F3")
+            else -> android.graphics.Color.parseColor("#FF9E9E9E")
+        }
+        canvas.drawColor(backgroundColor)
+        val paint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 100f
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        val iconText = when {
+            mimeType?.startsWith("audio/") == true -> "🎵"
+            mimeType?.contains("pdf") == true -> "📄"
+            mimeType?.startsWith("text/") == true -> "📝"
+            else -> "📁"
+        }
+        val y = canvas.height / 2f - (paint.descent() + paint.ascent()) / 2f
+        canvas.drawText(iconText, canvas.width / 2f, y, paint)
+        return bitmap
+    }
+
     private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
         val (height: Int, width: Int) = options.outHeight to options.outWidth
         var inSampleSize = 1
@@ -279,5 +317,64 @@ class EncryptedFolderManager(private val context: Context) {
             }
         }
         return inSampleSize
+    }
+
+    // Export/Import
+    fun exportVault(outputStream: OutputStream): Boolean {
+        return try {
+            val zipOut = java.util.zip.ZipOutputStream(outputStream)
+            
+            // Add all files from encrypted vault
+            encryptedFolder.listFiles()?.forEach { file ->
+                val entry = java.util.zip.ZipEntry("data/${file.name}")
+                zipOut.putNextEntry(entry)
+                file.inputStream().use { it.copyTo(zipOut) }
+                zipOut.closeEntry()
+            }
+            
+            // Add all thumbnails
+            thumbnailFolder.listFiles()?.forEach { file ->
+                val entry = java.util.zip.ZipEntry("thumbs/${file.name}")
+                zipOut.putNextEntry(entry)
+                file.inputStream().use { it.copyTo(zipOut) }
+                zipOut.closeEntry()
+            }
+            
+            zipOut.close()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    fun importVault(inputStream: InputStream): Boolean {
+        return try {
+            val zipIn = java.util.zip.ZipInputStream(inputStream)
+            var entry = zipIn.nextEntry
+            while (entry != null) {
+                val destFile = if (entry.name.startsWith("data/")) {
+                    File(encryptedFolder, entry.name.substring(5))
+                } else if (entry.name.startsWith("thumbs/")) {
+                    File(thumbnailFolder, entry.name.substring(7))
+                } else {
+                    null
+                }
+                
+                destFile?.let {
+                    it.parentFile?.mkdirs()
+                    FileOutputStream(it).use { fos ->
+                        zipIn.copyTo(fos)
+                    }
+                }
+                zipIn.closeEntry()
+                entry = zipIn.nextEntry
+            }
+            zipIn.close()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 }

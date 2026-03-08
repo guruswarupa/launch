@@ -18,15 +18,17 @@
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#80000000"/>
+        android:background="@color/settings_overlay"/>
 
     <!-- Content Container -->
     <ScrollView
+        android:id="@+id/settings_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">
 
         <LinearLayout
+            android:id="@+id/settings_content_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -42,7 +44,7 @@
                 android:textStyle="bold"
                 android:textColor="@color/text"
                 android:gravity="center"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginBottom="32dp"/>
 
             <!-- Appearance Category -->
@@ -133,6 +135,36 @@
                             android:background="@drawable/button_background"
                             android:textColor="@android:color/white"
                             android:padding="16dp"/>
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="12dp"
+                        android:alpha="0.2"
+                        android:background="@color/text" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Use 24-hour clock"
+                            android:textColor="@color/text"
+                            android:textSize="16sp"
+                            android:alpha="0.9" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/clock_24_hour_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
 
                     </LinearLayout>
 
@@ -241,6 +273,187 @@
                             android:progressTint="@color/text"
                             android:progressBackgroundTint="@color/text"/>
 
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/text"
+                        android:alpha="0.2"
+                        android:layout_marginTop="16dp"
+                        android:layout_marginBottom="12dp"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingVertical="8dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Elderly readability mode"
+                                android:textSize="16sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.9"/>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Apply larger text and simpler visuals app-wide for easier reading"
+                                android:textSize="12sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.6"/>
+                        </LinearLayout>
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/elderly_opaque_switch"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:thumbTint="@color/text"
+                            app:trackTint="@color/text"/>
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Typography Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="24dp"
+                android:background="@drawable/rounded_background"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:id="@+id/typography_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Typography"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text"/>
+
+                    <TextView
+                        android:id="@+id/typography_arrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="▼"
+                        android:textSize="14sp"
+                        android:textColor="@color/text"
+                        android:alpha="0.7"/>
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/typography_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:layout_marginTop="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Text Size"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"/>
+
+                        <TextView
+                            android:id="@+id/typography_size_value_text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100%"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text"/>
+                    </LinearLayout>
+
+                    <SeekBar
+                        android:id="@+id/typography_size_seekbar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="60"
+                        android:progress="20"
+                        android:layout_marginTop="8dp"
+                        android:thumbTint="@color/text"
+                        android:progressTint="@color/text"
+                        android:progressBackgroundTint="@color/text"/>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Font Style"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"/>
+
+                        <Spinner
+                            android:id="@+id/typography_style_spinner"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/rounded_background"
+                            android:padding="8dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Font Intensity"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"/>
+
+                        <Spinner
+                            android:id="@+id/typography_intensity_spinner"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/rounded_background"
+                            android:padding="8dp"/>
                     </LinearLayout>
 
                 </LinearLayout>

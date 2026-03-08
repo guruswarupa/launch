@@ -15,13 +15,19 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.graphics.Rect
 import android.view.View
+import android.view.ViewGroup
+import android.view.LayoutInflater
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.util.Base64
+import android.widget.FrameLayout
 import android.widget.*
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SwitchCompat
@@ -29,11 +35,13 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
-import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
@@ -49,9 +57,104 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
+import android.os.Handler
+import android.os.Looper
+
 class SettingsActivity : ComponentActivity() {
+    companion object {
+        const val EXTRA_START_SETTINGS_TUTORIAL = "start_settings_tutorial"
+    }
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
+    private val handler = Handler(Looper.getMainLooper())
+    private val vaultManager by lazy { EncryptedFolderManager(this) }
+    private var settingsTutorialStepIndex = 0
+    private var settingsTutorialOverlay: View? = null
+    private var settingsTutorialActive = false
+    private var settingsTutorialRenderToken = 0
+
+    private data class SettingsTutorialStep(
+        val title: String,
+        val description: String,
+        val targetViewId: Int
+    )
+
+    private val settingsTutorialSteps = listOf(
+        SettingsTutorialStep(
+            title = "Display Style",
+            description = "Choose how apps are shown and toggle the clock format used across the launcher.",
+            targetViewId = R.id.display_style_header
+        ),
+        SettingsTutorialStep(
+            title = "Wallpaper",
+            description = "Change the wallpaper, adjust blur, and enable the readability mode for clearer visuals.",
+            targetViewId = R.id.wallpaper_header
+        ),
+        SettingsTutorialStep(
+            title = "Typography",
+            description = "Control text size, font family, and weight to match your preferred reading style.",
+            targetViewId = R.id.typography_header
+        ),
+        SettingsTutorialStep(
+            title = "Widgets",
+            description = "Open widget configuration to decide which widgets appear on the launcher.",
+            targetViewId = R.id.widgets_settings_header
+        ),
+        SettingsTutorialStep(
+            title = "Search Engine",
+            description = "Pick the web search provider used when the launcher sends a search to the browser.",
+            targetViewId = R.id.search_engine_header
+        ),
+        SettingsTutorialStep(
+            title = "Quick Actions",
+            description = "Configure gesture-driven and utility shortcuts like torch, dimmer, control center, and back tap actions.",
+            targetViewId = R.id.quick_actions_header
+        ),
+        SettingsTutorialStep(
+            title = "App Lock",
+            description = "Manage protected apps, the encrypted vault, and related security controls from here.",
+            targetViewId = R.id.app_lock_header
+        ),
+        SettingsTutorialStep(
+            title = "Backup and Restore",
+            description = "Export your setup or restore it later when moving to a new device or recovering state.",
+            targetViewId = R.id.backup_restore_header
+        ),
+        SettingsTutorialStep(
+            title = "Permissions",
+            description = "Review the Android permissions and system access that power launcher features.",
+            targetViewId = R.id.permissions_header
+        ),
+        SettingsTutorialStep(
+            title = "Tutorials",
+            description = "Restart the guided tour at any time from this section.",
+            targetViewId = R.id.tutorial_header
+        ),
+        SettingsTutorialStep(
+            title = "Launcher Controls",
+            description = "Use launcher maintenance actions like restart, cache cleanup, or data reset carefully.",
+            targetViewId = R.id.launcher_header
+        ),
+        SettingsTutorialStep(
+            title = "Support",
+            description = "Find project links, support options, and feedback actions in the final section.",
+            targetViewId = R.id.support_header
+        )
+    )
+    
+    private val securePrefs by lazy {
+        val masterKey = MasterKey.Builder(this)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        
+        EncryptedSharedPreferences.create(
+            this,
+            "vault_secure_prefs",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
 
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -88,12 +191,9 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         // Make status bar and navigation bar transparent before setContentView
-        @Suppress("DEPRECATION")
-        window.statusBarColor = Color.TRANSPARENT
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = Color.TRANSPARENT
         
         setContentView(R.layout.activity_settings)
+        applyContentInsets()
         
         // Ensure system bars are fully configured after view is created
         window.decorView.post {
@@ -191,19 +291,17 @@ class SettingsActivity : ComponentActivity() {
         
         // Setup expandable sections
         setupExpandableSections()
+
+        if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
+            window.decorView.post { startSettingsTutorial() }
+        }
     }
     
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         val overlay = findViewById<View>(R.id.settings_overlay)
         
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        
-        if (isDarkMode) {
-            overlay.setBackgroundColor("#CC000000".toColorInt()) // Darker overlay for dark mode
-        } else {
-            overlay.setBackgroundColor("#66FFFFFF".toColorInt()) // Lighter white overlay for light mode
-        }
+        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
@@ -228,7 +326,8 @@ class SettingsActivity : ComponentActivity() {
 
     private fun applyWallpaperBlur(imageView: ImageView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 imageView.setRenderEffect(
@@ -289,6 +388,13 @@ class SettingsActivity : ComponentActivity() {
         val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
         setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
+
+        // Typography Header
+        val typographyHeader = findViewById<LinearLayout>(R.id.typography_header)
+        val typographyContent = findViewById<LinearLayout>(R.id.typography_content)
+        val typographyArrow = findViewById<TextView>(R.id.typography_arrow)
+        setupSectionToggle(typographyHeader, typographyContent, typographyArrow)
+        setupTypographySettings()
         
         // Setup wallpaper blur slider
         val wallpaperBlurSeekBar = findViewById<SeekBar>(R.id.wallpaper_blur_seekbar)
@@ -313,6 +419,26 @@ class SettingsActivity : ComponentActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+
+        val elderlyReadableModeSwitch = findViewById<SwitchCompat>(R.id.elderly_opaque_switch)
+        elderlyReadableModeSwitch.isChecked = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+        elderlyReadableModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, isChecked) }
+            TypographyManager.applyToActivity(this)
+            setupWallpaper()
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
+            sendBroadcast(intent)
+        }
+
+        val clock24HourSwitch = findViewById<SwitchCompat>(R.id.clock_24_hour_switch)
+        clock24HourSwitch.isChecked = prefs.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
+        clock24HourSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, isChecked) }
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
+            sendBroadcast(intent)
+        }
 
         // Widgets Header
         val widgetsHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
@@ -454,7 +580,6 @@ class SettingsActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
         } else {
-            @Suppress("DEPRECATION")
             githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links))
         }
         githubLinksText.movementMethod = LinkMovementMethod.getInstance()
@@ -474,7 +599,6 @@ class SettingsActivity : ComponentActivity() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     textView.text = Html.fromHtml(textView.text.toString(), Html.FROM_HTML_MODE_COMPACT)
                 } else {
-                    @Suppress("DEPRECATION")
                     textView.text = Html.fromHtml(textView.text.toString())
                 }
             }
@@ -523,6 +647,114 @@ class SettingsActivity : ComponentActivity() {
                 val selectedEngine = engines[position]
                 prefs.edit { putString(Constants.Prefs.SEARCH_ENGINE, selectedEngine) }
                 
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
+    private fun setupTypographySettings() {
+        val sizeSeekBar = findViewById<SeekBar>(R.id.typography_size_seekbar)
+        val sizeValueText = findViewById<TextView>(R.id.typography_size_value_text)
+        val styleSpinner = findViewById<Spinner>(R.id.typography_style_spinner)
+        val intensitySpinner = findViewById<Spinner>(R.id.typography_intensity_spinner)
+
+        val currentScalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
+        sizeSeekBar.progress = currentScalePercent - 80
+        sizeValueText.text = "$currentScalePercent%"
+
+        val styleValues = arrayOf(
+            "default",
+            "serif",
+            "monospace",
+            "condensed",
+            "rounded",
+            "condensed_light",
+            "condensed_medium",
+            "serif_monospace",
+            "display",
+            "thin",
+            "medium",
+            "black",
+            "smallcaps",
+            "casual",
+            "cursive"
+        )
+        val styleLabels = arrayOf(
+            "Default",
+            "Serif",
+            "Monospace",
+            "Condensed",
+            "Rounded",
+            "Condensed Light",
+            "Condensed Medium",
+            "Serif Monospace",
+            "Display",
+            "Thin",
+            "Medium",
+            "Black",
+            "Small Caps",
+            "Casual",
+            "Cursive"
+        )
+        val styleAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, styleLabels)
+        styleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        styleSpinner.adapter = styleAdapter
+
+        val intensityValues = arrayOf("light", "regular", "bold")
+        val intensityLabels = arrayOf("Light", "Regular", "Bold")
+        val intensityAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, intensityLabels)
+        intensityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        intensitySpinner.adapter = intensityAdapter
+
+        val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        val currentIntensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
+        styleSpinner.setSelection(styleValues.indexOf(currentStyle).coerceAtLeast(0), false)
+        intensitySpinner.setSelection(intensityValues.indexOf(currentIntensity).coerceAtLeast(0), false)
+
+        sizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val scalePercent = progress + 80
+                sizeValueText.text = "$scalePercent%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, scalePercent) }
+                    TypographyManager.applyToActivity(this@SettingsActivity)
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
+                    sendBroadcast(intent)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        var styleInitialized = false
+        styleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (!styleInitialized) {
+                    styleInitialized = true
+                    return
+                }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, styleValues[position]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        var intensityInitialized = false
+        intensitySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (!intensityInitialized) {
+                    intensityInitialized = true
+                    return
+                }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, intensityValues[position]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
                 intent.setPackage(packageName)
                 sendBroadcast(intent)
@@ -816,18 +1048,17 @@ class SettingsActivity : ComponentActivity() {
                     exportFinanceData(settingsJson)
                     exportGithubWidgetData(settingsJson)
 
-                    // Add settings.json to ZIP
+                    // 1. Export JSON settings
                     zipOut.putNextEntry(ZipEntry("settings.json"))
-                    zipOut.write(settingsJson.toString(2).toByteArray())
+                    zipOut.write(settingsJson.toString(2).toByteArray(Charsets.UTF_8))
                     zipOut.closeEntry()
 
-                    // 2. Export Vault Files (Streamed to avoid OOM)
-                    val vaultManager = EncryptedFolderManager(this)
+                    // 2. Export Vault Files (Encrypted)
                     val vaultFolder = vaultManager.getEncryptedFolder()
                     val thumbFolder = vaultManager.getThumbnailFolder()
 
                     vaultFolder.listFiles()?.forEach { file ->
-                        zipOut.putNextEntry(ZipEntry("vault/${file.name}"))
+                        zipOut.putNextEntry(ZipEntry("data/${file.name}"))
                         file.inputStream().use { it.copyTo(zipOut) }
                         zipOut.closeEntry()
                     }
@@ -856,19 +1087,8 @@ class SettingsActivity : ComponentActivity() {
                                 val jsonString = zipIn.bufferedReader().readText()
                                 importJsonSettings(JSONObject(jsonString))
                             }
-                            entry.name.startsWith("vault/") -> {
-                                val fileName = entry.name.substringAfter("vault/")
-                                if (fileName.isNotEmpty()) {
-                                    val destFile = File(EncryptedFolderManager(this).getEncryptedFolder(), fileName)
-                                    destFile.outputStream().use { zipIn.copyTo(it) }
-                                }
-                            }
-                            entry.name.startsWith("thumbs/") -> {
-                                val fileName = entry.name.substringAfter("thumbs/")
-                                if (fileName.isNotEmpty()) {
-                                    val destFile = File(EncryptedFolderManager(this).getThumbnailFolder(), fileName)
-                                    destFile.outputStream().use { zipIn.copyTo(it) }
-                                }
+                            entry.name.startsWith("data/") || entry.name.startsWith("thumbs/") -> {
+                                handleVaultEntry(entry.name, zipIn, vaultManager)
                             }
                         }
                         zipIn.closeEntry()
@@ -876,10 +1096,33 @@ class SettingsActivity : ComponentActivity() {
                     }
                 }
             }
-            Toast.makeText(this, "Backup restored successfully", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Settings and vault data restored.", Toast.LENGTH_LONG).show()
             restartLauncher()
         } catch (e: Exception) {
+            e.printStackTrace()
             Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun handleVaultEntry(entryName: String, zipIn: ZipInputStream, vaultManager: EncryptedFolderManager) {
+        val parentDir: File? = when {
+            entryName.startsWith("data/") -> vaultManager.getEncryptedFolder()
+            entryName.startsWith("thumbs/") -> vaultManager.getThumbnailFolder()
+            else -> null
+        }
+        
+        val childPath = when {
+            entryName.startsWith("data/") -> entryName.substringAfter("data/")
+            entryName.startsWith("thumbs/") -> entryName.substringAfter("thumbs/")
+            else -> null
+        }
+
+        if (parentDir != null && childPath != null) {
+            val destFile = File(parentDir, childPath)
+            destFile.parentFile?.mkdirs()
+            destFile.outputStream().use { fos ->
+                zipIn.copyTo(fos)
+            }
         }
     }
 
@@ -945,6 +1188,164 @@ class SettingsActivity : ComponentActivity() {
         }
         startActivity(intent)
         finish()
+    }
+
+    private fun startSettingsTutorial() {
+        removeSettingsTutorialOverlay()
+        settingsTutorialStepIndex = 0
+        settingsTutorialActive = true
+        showCurrentSettingsTutorialStep()
+    }
+
+    private fun showCurrentSettingsTutorialStep() {
+        if (!settingsTutorialActive) return
+        if (settingsTutorialStepIndex >= settingsTutorialSteps.size) {
+            finishSettingsTutorial()
+            return
+        }
+
+        val step = settingsTutorialSteps[settingsTutorialStepIndex]
+        val scrollView = findViewById<ScrollView>(R.id.settings_scroll_view) ?: return
+        val overlayRoot = findViewById<ViewGroup>(android.R.id.content) ?: return
+        val targetView = findViewById<View>(step.targetViewId)
+        if (targetView == null) {
+            settingsTutorialStepIndex++
+            showCurrentSettingsTutorialStep()
+            return
+        }
+
+        val token = ++settingsTutorialRenderToken
+        scrollSettingsTutorialToView(scrollView, targetView)
+        scrollView.postDelayed({
+            if (!settingsTutorialActive || token != settingsTutorialRenderToken) return@postDelayed
+            showSettingsTutorialOverlay(step, overlayRoot, targetView)
+        }, 320L)
+    }
+
+    private fun scrollSettingsTutorialToView(scrollView: ScrollView, targetView: View) {
+        targetView.post {
+            val rect = Rect()
+            targetView.getDrawingRect(rect)
+            scrollView.offsetDescendantRectToMyCoords(targetView, rect)
+            val targetScrollY =
+                (rect.top - (scrollView.height / 2) + (targetView.height / 2)).coerceAtLeast(0)
+            val maxScrollY =
+                (scrollView.getChildAt(0)?.height?.minus(scrollView.height) ?: 0).coerceAtLeast(0)
+            scrollView.smoothScrollTo(0, targetScrollY.coerceAtMost(maxScrollY))
+        }
+    }
+
+    private fun showSettingsTutorialOverlay(
+        step: SettingsTutorialStep,
+        parentView: ViewGroup,
+        targetView: View
+    ) {
+        removeSettingsTutorialOverlay()
+
+        settingsTutorialOverlay = LayoutInflater.from(this).inflate(R.layout.tutorial_overlay, null)
+        parentView.addView(settingsTutorialOverlay)
+
+        settingsTutorialOverlay?.setOnTouchListener { view, _ ->
+            view.performClick()
+            false
+        }
+        settingsTutorialOverlay?.bringToFront()
+
+        settingsTutorialOverlay?.findViewById<TextView>(R.id.tutorial_title)?.text = step.title
+        settingsTutorialOverlay?.findViewById<TextView>(R.id.tutorial_description)?.text = step.description
+
+        val isLastStep = settingsTutorialStepIndex == settingsTutorialSteps.lastIndex
+        settingsTutorialOverlay?.findViewById<View>(R.id.tutorial_buttons_container)?.visibility =
+            if (isLastStep) View.GONE else View.VISIBLE
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_next)?.visibility =
+            if (isLastStep) View.GONE else View.VISIBLE
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)?.visibility =
+            if (isLastStep) View.VISIBLE else View.GONE
+
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_skip)?.setOnClickListener {
+            finishSettingsTutorial()
+        }
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_next)?.setOnClickListener {
+            settingsTutorialStepIndex++
+            showCurrentSettingsTutorialStep()
+        }
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)?.setOnClickListener {
+            finishSettingsTutorial()
+        }
+
+        settingsTutorialOverlay?.post {
+            positionSettingsTutorialOverlay(parentView, targetView)
+        }
+    }
+
+    private fun positionSettingsTutorialOverlay(parentView: ViewGroup, targetView: View) {
+        val overlay = settingsTutorialOverlay ?: return
+        val highlightView = overlay.findViewById<View>(R.id.tutorial_highlight)
+        val textContainer = overlay.findViewById<View>(R.id.tutorial_text_container)
+
+        val targetLocation = IntArray(2)
+        targetView.getLocationOnScreen(targetLocation)
+        val rootLocation = IntArray(2)
+        parentView.getLocationOnScreen(rootLocation)
+
+        val targetX = targetLocation[0] - rootLocation[0]
+        val targetY = targetLocation[1] - rootLocation[1]
+        val targetWidth = targetView.width.takeIf { it > 0 } ?: targetView.measuredWidth
+        val targetHeight = targetView.height.takeIf { it > 0 } ?: targetView.measuredHeight
+
+        val highlightParams = (highlightView.layoutParams as? FrameLayout.LayoutParams)
+            ?: FrameLayout.LayoutParams(targetWidth + 40, targetHeight + 40)
+        highlightParams.leftMargin = (targetX - 20).coerceAtLeast(0)
+        highlightParams.topMargin = (targetY - 20).coerceAtLeast(0)
+        highlightParams.width = targetWidth + 40
+        highlightParams.height = targetHeight + 40
+        highlightView.layoutParams = highlightParams
+
+        val textParams = (textContainer.layoutParams as? FrameLayout.LayoutParams)
+            ?: FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        val screenWidth = parentView.width
+        val screenHeight = parentView.height
+        val padding = 40
+
+        textContainer.measure(
+            View.MeasureSpec.makeMeasureSpec(screenWidth - padding * 2, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val textHeight = textContainer.measuredHeight
+        val preferredTop = targetY + targetHeight + padding
+        val maxTop = screenHeight - textHeight - padding
+        textParams.topMargin = if (preferredTop <= maxTop) {
+            preferredTop
+        } else {
+            (targetY - textHeight - padding).coerceAtLeast(padding)
+        }
+        textParams.leftMargin = padding
+        textParams.rightMargin = padding
+        textContainer.layoutParams = textParams
+    }
+
+    private fun finishSettingsTutorial() {
+        removeSettingsTutorialOverlay()
+        settingsTutorialActive = false
+        settingsTutorialRenderToken++
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("start_tutorial", true)
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun removeSettingsTutorialOverlay() {
+        settingsTutorialOverlay?.let { overlay ->
+            (overlay.parent as? ViewGroup)?.removeView(overlay)
+        }
+        settingsTutorialOverlay = null
     }
     
     private fun restartLauncher() {
@@ -1137,79 +1538,31 @@ class SettingsActivity : ComponentActivity() {
         val intent = Intent(Intent.ACTION_SET_WALLPAPER)
         wallpaperLauncher.launch(intent)
     }
+
+    private fun applyContentInsets() {
+        val contentRoot = findViewById<View>(android.R.id.content)
+        val scrollView = findViewById<ScrollView>(R.id.settings_scroll_view)
+        val initialLeft = scrollView.paddingLeft
+        val initialTop = scrollView.paddingTop
+        val initialRight = scrollView.paddingRight
+        val initialBottom = scrollView.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(contentRoot) { _, insets ->
+            val topInset = insets.getInsets(
+                WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout()
+            ).top
+            scrollView.setPadding(
+                initialLeft,
+                initialTop + topInset,
+                initialRight,
+                initialBottom
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(contentRoot)
+    }
     
     private fun makeSystemBarsTransparent() {
-        try {
-            val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                
-                WindowCompat.setDecorFitsSystemWindows(window, false)
-                
-                val insetsController = window.decorView.windowInsetsController
-                if (insetsController != null) {
-                    val appearance = if (!isDarkMode) {
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    } else {
-                        0
-                    }
-                    insetsController.setSystemBarsAppearance(
-                        appearance,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
-                    )
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                @Suppress("DEPRECATION")
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
-                @Suppress("DEPRECATION")
-                window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
-                
-                @Suppress("DEPRECATION")
-                val decorView = window.decorView
-                @Suppress("DEPRECATION")
-                var flags = decorView.systemUiVisibility
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                @Suppress("DEPRECATION")
-                flags = flags or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                
-                if (!isDarkMode) {
-                    @Suppress("DEPRECATION")
-                    flags = flags or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        @Suppress("DEPRECATION")
-                        flags = flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                    }
-                }
-                
-                @Suppress("DEPRECATION")
-                decorView.systemUiVisibility = flags
-            }
-            
-            // Apply blur effect to status bar
-            BlurUtils.applyBlurToStatusBar(this)
-        } catch (_: Exception) {
-            try {
-                @Suppress("DEPRECATION")
-                window.statusBarColor = Color.TRANSPARENT
-                @Suppress("DEPRECATION")
-                window.navigationBarColor = Color.TRANSPARENT
-                // Apply blur effect as fallback
-                BlurUtils.applyBlurToStatusBar(this)
-            } catch (_: Exception) {
-            }
-        }
     }
     
     /**

@@ -1,12 +1,14 @@
 package com.guruswarupa.launch.widgets
 
 import android.app.Activity
-import android.content.res.Configuration
+import android.content.Context
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.managers.AppDockManager
 
@@ -32,10 +34,18 @@ class WidgetThemeManager(
         currentUiMode = activity.resources.configuration.uiMode
         
         // Select appropriate background drawables
-        val widgetBackground = if (isNightMode) {
-            R.drawable.widget_background_dark // Semi-transparent black
+        val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        val opaqueSurfacesEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+
+        val widgetBackground = if (opaqueSurfacesEnabled) {
+            if (isNightMode) R.drawable.widget_background_opaque_dark else R.drawable.widget_background_opaque_light
         } else {
-            R.drawable.widget_background // Semi-transparent white
+            if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
+        }
+        val emptyStateBackground = if (opaqueSurfacesEnabled) {
+            if (isNightMode) R.drawable.drawer_widgets_empty_state_bg_opaque_dark else R.drawable.drawer_widgets_empty_state_bg_opaque_light
+        } else {
+            R.drawable.drawer_widgets_empty_state_bg
         }
         
         // Apply backgrounds to all widget containers
@@ -62,12 +72,20 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.todo_widget_main_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.finance_widget)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.weekly_usage_widget)?.setBackgroundResource(widgetBackground)
+
+        activity.findViewById<View>(R.id.widget_settings_header)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.widget_config_button)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(emptyStateBackground)
         
         // Apply theme to search box
         searchBox?.let { sb ->
-            val searchBg = if (isNightMode) R.drawable.search_box_transparent_bg else R.drawable.search_box_light_bg
+            val searchBg = if (opaqueSurfacesEnabled) {
+                if (isNightMode) R.drawable.search_box_opaque_dark_bg else R.drawable.search_box_opaque_light_bg
+            } else {
+                if (isNightMode) R.drawable.search_box_transparent_bg else R.drawable.search_box_light_bg
+            }
             val textColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
-            val hintColor = ContextCompat.getColor(activity, if (isNightMode) R.color.gray_light else R.color.gray)
+            val hintColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
             
             // Apply background to search container if initialized, otherwise to searchBox
             searchContainer?.let { sc ->
@@ -86,6 +104,8 @@ class WidgetThemeManager(
             voiceSearchButton?.setColorFilter(iconColor)
             searchTypeButton?.setColorFilter(iconColor)
         }
+        val weatherIconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+        activity.findViewById<ImageView>(R.id.weather_icon)?.setColorFilter(weatherIconColor)
         
         // Update dock icons to match current theme
         appDockManager?.updateDockIcons()

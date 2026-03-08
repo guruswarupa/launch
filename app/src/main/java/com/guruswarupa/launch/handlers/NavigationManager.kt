@@ -2,16 +2,15 @@ package com.guruswarupa.launch.handlers
 
 import android.os.Handler
 import android.os.Looper
-import androidx.core.view.GravityCompat
-import androidx.drawerlayout.widget.DrawerLayout
 import com.guruswarupa.launch.managers.GestureHandler
+import com.guruswarupa.launch.managers.ScreenPagerManager
 
 /**
  * Handles navigation and back press logic.
  * Extracted from MainActivity to reduce complexity.
  */
 class NavigationManager(
-    private val drawerLayout: DrawerLayout,
+    private val screenPagerManager: ScreenPagerManager,
     private val gestureHandler: GestureHandler,
     private val handler: Handler = Handler(Looper.getMainLooper())
 ) {
@@ -27,9 +26,10 @@ class NavigationManager(
             return
         }
 
-        // Close drawer if it's open, otherwise handle back button normally
-        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START)
+        if (screenPagerManager.isPageOpen(ScreenPagerManager.Page.LEFT) ||
+            screenPagerManager.isPageOpen(ScreenPagerManager.Page.RIGHT)
+        ) {
+            screenPagerManager.openCenterPage(animated = true)
         } else {
             superOnBackPressed()
         }

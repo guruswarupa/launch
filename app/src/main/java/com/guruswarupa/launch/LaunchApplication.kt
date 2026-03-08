@@ -1,12 +1,20 @@
 package com.guruswarupa.launch
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.net.toUri
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
@@ -18,6 +26,40 @@ import java.io.StringWriter
 class LaunchApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: android.os.Bundle?) {
+                if (activity is ComponentActivity) {
+                    val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+                    val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+
+                    activity.enableEdgeToEdge(
+                        statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+                        navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+                    )
+                    WindowCompat.getInsetsController(activity.window, activity.window.decorView)?.let { controller ->
+                        controller.isAppearanceLightStatusBars = false
+                        controller.isAppearanceLightNavigationBars = false
+                        controller.systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
+                    if (elderlyModeEnabled) {
+                        activity.window.setWindowAnimations(0)
+                    }
+                    activity.window.decorView.post {
+                        TypographyManager.applyToActivity(activity)
+                    }
+                }
+            }
+
+            override fun onActivityStarted(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) {
+                TypographyManager.applyToActivity(activity)
+            }
+            override fun onActivityPaused(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivitySaveInstanceState(activity: Activity, outState: android.os.Bundle) {}
+            override fun onActivityDestroyed(activity: Activity) {}
+        })
         setupCrashHandler()
         initServices()
     }
