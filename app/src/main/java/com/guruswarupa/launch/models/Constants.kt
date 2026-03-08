@@ -26,6 +26,9 @@ object Constants {
         const val SEARCH_ENGINE = "search_engine"
         const val ACCESSIBILITY_SHORTCUT_ENABLED = "accessibility_shortcut_enabled"
         const val CONTROL_CENTER_SHORTCUTS = "control_center_shortcuts"
+        const val TYPOGRAPHY_SCALE_PERCENT = "typography_scale_percent"
+        const val TYPOGRAPHY_FONT_STYLE = "typography_font_style"
+        const val TYPOGRAPHY_FONT_INTENSITY = "typography_font_intensity"
         
         // Vault Prefs (Simplified)
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"

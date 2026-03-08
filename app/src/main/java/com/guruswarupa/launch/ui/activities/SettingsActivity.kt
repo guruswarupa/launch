@@ -37,6 +37,7 @@ import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
@@ -308,6 +309,13 @@ class SettingsActivity : ComponentActivity() {
         val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
         setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
+
+        // Typography Header
+        val typographyHeader = findViewById<LinearLayout>(R.id.typography_header)
+        val typographyContent = findViewById<LinearLayout>(R.id.typography_content)
+        val typographyArrow = findViewById<TextView>(R.id.typography_arrow)
+        setupSectionToggle(typographyHeader, typographyContent, typographyArrow)
+        setupTypographySettings()
         
         // Setup wallpaper blur slider
         val wallpaperBlurSeekBar = findViewById<SeekBar>(R.id.wallpaper_blur_seekbar)
@@ -540,6 +548,114 @@ class SettingsActivity : ComponentActivity() {
                 val selectedEngine = engines[position]
                 prefs.edit { putString(Constants.Prefs.SEARCH_ENGINE, selectedEngine) }
                 
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
+    private fun setupTypographySettings() {
+        val sizeSeekBar = findViewById<SeekBar>(R.id.typography_size_seekbar)
+        val sizeValueText = findViewById<TextView>(R.id.typography_size_value_text)
+        val styleSpinner = findViewById<Spinner>(R.id.typography_style_spinner)
+        val intensitySpinner = findViewById<Spinner>(R.id.typography_intensity_spinner)
+
+        val currentScalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
+        sizeSeekBar.progress = currentScalePercent - 80
+        sizeValueText.text = "$currentScalePercent%"
+
+        val styleValues = arrayOf(
+            "default",
+            "serif",
+            "monospace",
+            "condensed",
+            "rounded",
+            "condensed_light",
+            "condensed_medium",
+            "serif_monospace",
+            "display",
+            "thin",
+            "medium",
+            "black",
+            "smallcaps",
+            "casual",
+            "cursive"
+        )
+        val styleLabels = arrayOf(
+            "Default",
+            "Serif",
+            "Monospace",
+            "Condensed",
+            "Rounded",
+            "Condensed Light",
+            "Condensed Medium",
+            "Serif Monospace",
+            "Display",
+            "Thin",
+            "Medium",
+            "Black",
+            "Small Caps",
+            "Casual",
+            "Cursive"
+        )
+        val styleAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, styleLabels)
+        styleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        styleSpinner.adapter = styleAdapter
+
+        val intensityValues = arrayOf("light", "regular", "bold")
+        val intensityLabels = arrayOf("Light", "Regular", "Bold")
+        val intensityAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, intensityLabels)
+        intensityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        intensitySpinner.adapter = intensityAdapter
+
+        val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        val currentIntensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
+        styleSpinner.setSelection(styleValues.indexOf(currentStyle).coerceAtLeast(0), false)
+        intensitySpinner.setSelection(intensityValues.indexOf(currentIntensity).coerceAtLeast(0), false)
+
+        sizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val scalePercent = progress + 80
+                sizeValueText.text = "$scalePercent%"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, scalePercent) }
+                    TypographyManager.applyToActivity(this@SettingsActivity)
+                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                    intent.setPackage(packageName)
+                    sendBroadcast(intent)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        var styleInitialized = false
+        styleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (!styleInitialized) {
+                    styleInitialized = true
+                    return
+                }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, styleValues[position]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+
+        var intensityInitialized = false
+        intensitySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (!intensityInitialized) {
+                    intensityInitialized = true
+                    return
+                }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, intensityValues[position]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
                 intent.setPackage(packageName)
                 sendBroadcast(intent)

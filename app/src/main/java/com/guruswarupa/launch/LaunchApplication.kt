@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.net.toUri
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
@@ -38,11 +39,16 @@ class LaunchApplication : Application() {
                         controller.systemBarsBehavior =
                             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                     }
+                    activity.window.decorView.post {
+                        TypographyManager.applyToActivity(activity)
+                    }
                 }
             }
 
             override fun onActivityStarted(activity: Activity) {}
-            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) {
+                TypographyManager.applyToActivity(activity)
+            }
             override fun onActivityPaused(activity: Activity) {}
             override fun onActivityStopped(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, outState: android.os.Bundle) {}
