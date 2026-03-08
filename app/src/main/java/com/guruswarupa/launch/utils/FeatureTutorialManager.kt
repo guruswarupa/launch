@@ -86,11 +86,53 @@ class FeatureTutorialManager(
             description = "The top card keeps time, date, weather, and status info visible without leaving the home page.",
             targetViewId = R.id.top_widget_container
         ),
+        APP_LIST(
+            page = TutorialPage.HOME,
+            title = "App List Actions",
+            description = "Your installed apps live here. Long press any app to open actions like Add to Favorites, share, app info, and limits.",
+            targetViewId = R.id.app_list,
+            highlightPosition = HighlightPosition.TOP
+        ),
         APP_DOCK(
             page = TutorialPage.HOME,
             title = "Dock Shortcuts",
             description = "The dock holds your quick actions like settings, favorites, workspace switching, focus mode, sharing tools and encrypted vault.",
             targetViewId = R.id.app_dock
+        ),
+        FAVORITES_TOGGLE(
+            page = TutorialPage.HOME,
+            title = "Favorites View",
+            description = "After adding apps to favorites from the app list, use this toggle to switch between Favorites and All Apps.",
+            targetViewId = R.id.app_dock,
+            targetViewTag = "favorite_toggle"
+        ),
+        WORKSPACE_TOGGLE(
+            page = TutorialPage.HOME,
+            title = "Workspaces",
+            description = "Long press this icon to create and manage workspaces. Tap it to enable a saved workspace, switch workspaces, or turn workspace mode off.",
+            targetViewId = R.id.app_dock,
+            targetViewTag = "workspace_toggle"
+        ),
+        FOCUS_MODE(
+            page = TutorialPage.HOME,
+            title = "Focus Mode",
+            description = "Long press here to build your focus app list. Tap it to start a focus session, pick a duration, and optionally enable Do Not Disturb.",
+            targetViewId = R.id.app_dock,
+            targetViewTag = "focus_mode_container"
+        ),
+        SHARE_BUTTON(
+            page = TutorialPage.HOME,
+            title = "Share Apps and Files",
+            description = "Use this shortcut to share installed app APKs or regular files directly from the launcher.",
+            targetViewId = R.id.app_dock,
+            targetViewTag = "apk_share_button"
+        ),
+        VAULT_BUTTON(
+            page = TutorialPage.HOME,
+            title = "Encrypted Vault",
+            description = "This opens the encrypted vault where you can keep private files protected inside the launcher.",
+            targetViewId = R.id.app_dock,
+            targetViewTag = "vault_button"
         ),
         SETTINGS_BUTTON(
             page = TutorialPage.HOME,
@@ -98,13 +140,6 @@ class FeatureTutorialManager(
             description = "This settings shortcut opens the full launcher configuration screen. The tutorial will walk through each settings section next.",
             targetViewId = R.id.app_dock,
             targetViewTag = "settings_button"
-        ),
-        APP_LIST(
-            page = TutorialPage.HOME,
-            title = "App List",
-            description = "Your installed apps live here. Scroll to browse and long press an app for more actions.",
-            targetViewId = R.id.app_list,
-            highlightPosition = HighlightPosition.TOP
         ),
         WIDGETS_PAGE(
             page = TutorialPage.WIDGETS,
@@ -117,9 +152,10 @@ class FeatureTutorialManager(
         ),
         WIDGETS_SETTINGS(
             page = TutorialPage.WIDGETS,
-            title = "Widget Controls",
-            description = "manage and configure which widgets appear on the widgets page from here.",
-            targetViewId = R.id.widget_settings_header
+            title = "Configure Widgets",
+            description = "Use this action to choose which widgets appear in the drawer and adjust the widgets page to fit your setup.",
+            targetViewId = R.id.widget_config_button,
+            scrollToTarget = false
         ),
         WIDGETS_SCROLL(
             page = TutorialPage.WIDGETS,
