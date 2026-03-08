@@ -11,9 +11,8 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import android.content.pm.ResolveInfo
-import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.AppAdapter
+import com.guruswarupa.launch.models.Constants
 
 class FastScroller @JvmOverloads constructor(
     context: Context,
@@ -67,6 +66,12 @@ class FastScroller @JvmOverloads constructor(
     }
 
     private fun animateAlpha(to: Float) {
+        if (isElderlyReadabilityModeEnabled()) {
+            alphaAnimator?.cancel()
+            currentAlpha = to
+            invalidate()
+            return
+        }
         alphaAnimator?.cancel()
         alphaAnimator = ValueAnimator.ofFloat(currentAlpha, to).apply {
             duration = 200
@@ -136,6 +141,11 @@ class FastScroller @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun isElderlyReadabilityModeEnabled(): Boolean {
+        val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
     }
 
     private fun handleTouch(y: Float) {

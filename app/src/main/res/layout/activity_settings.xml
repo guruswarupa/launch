@@ -277,7 +277,7 @@
                             <TextView
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="Make widget and search backgrounds fully opaque for better contrast"
+                                android:text="Apply larger text and simpler visuals app-wide for easier reading"
                                 android:textSize="12sp"
                                 android:textColor="@color/text"
                                 android:alpha="0.6"/>

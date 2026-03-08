@@ -14,17 +14,27 @@ object TypographyManager {
     private const val DEFAULT_SCALE_PERCENT = 100
     private const val MIN_SCALE_PERCENT = 80
     private const val MAX_SCALE_PERCENT = 140
+    private const val ELDERLY_MIN_SCALE_PERCENT = 125
 
     fun applyToActivity(activity: Activity) {
         val root = activity.window?.decorView ?: return
         val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Activity.MODE_PRIVATE)
+        val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
 
-        val scalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, DEFAULT_SCALE_PERCENT)
+        val configuredScalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, DEFAULT_SCALE_PERCENT)
             .coerceIn(MIN_SCALE_PERCENT, MAX_SCALE_PERCENT)
+        val scalePercent = if (elderlyModeEnabled) {
+            configuredScalePercent.coerceAtLeast(ELDERLY_MIN_SCALE_PERCENT)
+        } else {
+            configuredScalePercent
+        }
         val fontScale = scalePercent / 100f
 
-        val fontStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
-        val intensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
+        val configuredFontStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        val configuredIntensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
+
+        val fontStyle = if (elderlyModeEnabled) "default" else configuredFontStyle
+        val intensity = if (elderlyModeEnabled && configuredIntensity == "light") "regular" else configuredIntensity
 
         applyToViewTree(root, fontScale, fontStyle, intensity)
     }

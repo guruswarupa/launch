@@ -35,7 +35,7 @@ class WidgetThemeManager(
         
         // Select appropriate background drawables
         val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-        val opaqueSurfacesEnabled = prefs.getBoolean(Constants.Prefs.OPAQUE_SURFACES_ENABLED, false)
+        val opaqueSurfacesEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
 
         val widgetBackground = if (opaqueSurfacesEnabled) {
             if (isNightMode) R.drawable.widget_background_opaque_dark else R.drawable.widget_background_opaque_light

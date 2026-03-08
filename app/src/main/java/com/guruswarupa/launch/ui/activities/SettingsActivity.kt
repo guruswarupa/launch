@@ -218,20 +218,10 @@ class SettingsActivity : ComponentActivity() {
         val overlay = findViewById<View>(R.id.settings_overlay)
         
         val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        val opaqueSurfacesEnabled = prefs.getBoolean(Constants.Prefs.OPAQUE_SURFACES_ENABLED, false)
-        
-        if (opaqueSurfacesEnabled) {
-            if (isDarkMode) {
-                overlay.setBackgroundColor("#FF101010".toColorInt())
-            } else {
-                overlay.setBackgroundColor("#FFF4F4F4".toColorInt())
-            }
+        if (isDarkMode) {
+            overlay.setBackgroundColor("#CC000000".toColorInt()) // Darker overlay for dark mode
         } else {
-            if (isDarkMode) {
-                overlay.setBackgroundColor("#CC000000".toColorInt()) // Darker overlay for dark mode
-            } else {
-                overlay.setBackgroundColor("#66FFFFFF".toColorInt()) // Lighter white overlay for light mode
-            }
+            overlay.setBackgroundColor("#66FFFFFF".toColorInt()) // Lighter white overlay for light mode
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
@@ -257,7 +247,8 @@ class SettingsActivity : ComponentActivity() {
 
     private fun applyWallpaperBlur(imageView: ImageView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 imageView.setRenderEffect(
@@ -350,10 +341,11 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        val elderlyOpaqueSwitch = findViewById<SwitchCompat>(R.id.elderly_opaque_switch)
-        elderlyOpaqueSwitch.isChecked = prefs.getBoolean(Constants.Prefs.OPAQUE_SURFACES_ENABLED, false)
-        elderlyOpaqueSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(Constants.Prefs.OPAQUE_SURFACES_ENABLED, isChecked) }
+        val elderlyReadableModeSwitch = findViewById<SwitchCompat>(R.id.elderly_opaque_switch)
+        elderlyReadableModeSwitch.isChecked = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+        elderlyReadableModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, isChecked) }
+            TypographyManager.applyToActivity(this)
             setupWallpaper()
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
             intent.setPackage(packageName)

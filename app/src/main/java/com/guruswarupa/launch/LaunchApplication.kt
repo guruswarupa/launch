@@ -29,6 +29,9 @@ class LaunchApplication : Application() {
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: android.os.Bundle?) {
                 if (activity is ComponentActivity) {
+                    val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+                    val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
+
                     activity.enableEdgeToEdge(
                         statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
                         navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
@@ -38,6 +41,9 @@ class LaunchApplication : Application() {
                         controller.isAppearanceLightNavigationBars = false
                         controller.systemBarsBehavior =
                             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
+                    if (elderlyModeEnabled) {
+                        activity.window.setWindowAnimations(0)
                     }
                     activity.window.decorView.post {
                         TypographyManager.applyToActivity(activity)
