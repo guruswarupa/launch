@@ -96,6 +96,33 @@
     <color name="onboarding_input_background">#80000000</color>
     <color name="onboarding_input_text">@color/white</color>
     <color name="onboarding_input_hint">#B0B0B0</color>
+    <color name="onboarding_surface_start">#B3222E3D</color>
+    <color name="onboarding_surface_end">#A61A2432</color>
+    <color name="onboarding_surface_stroke">#52D8DEE9</color>
+    <color name="onboarding_hero_start">#C62A3646</color>
+    <color name="onboarding_hero_end">#B31F2B3B</color>
+    <color name="onboarding_hero_stroke">#66D8DEE9</color>
+    <color name="onboarding_primary_button_start">#7B9CC5</color>
+    <color name="onboarding_primary_button_end">#5E81AC</color>
+    <color name="onboarding_primary_button_text">#FFFFFF</color>
+    <color name="onboarding_secondary_button_start">#293D4F66</color>
+    <color name="onboarding_secondary_button_end">#1F2E3B4D</color>
+    <color name="onboarding_secondary_button_text">@color/white</color>
+    <color name="onboarding_option_selected_start">#405E81AC</color>
+    <color name="onboarding_option_selected_end">#334B688A</color>
+    <color name="onboarding_option_unselected_start">#263B4252</color>
+    <color name="onboarding_option_unselected_end">#1F2E3440</color>
+    <color name="onboarding_input_surface_start">#66303B4A</color>
+    <color name="onboarding_input_surface_end">#4D202A36</color>
+    <color name="onboarding_input_surface_stroke">#52D8DEE9</color>
+    <color name="onboarding_chip_background">#265E81AC</color>
+    <color name="onboarding_chip_stroke">#4D81A1C1</color>
+    <color name="onboarding_chip_text">@color/nord4</color>
+    <color name="onboarding_list_item_start">#333B4252</color>
+    <color name="onboarding_list_item_end">#26303B4A</color>
+    <color name="onboarding_list_item_stroke">#47D8DEE9</color>
+    <color name="onboarding_scrim_top">#66141B24</color>
+    <color name="onboarding_scrim_bottom">#D9111822</color>
     
     <!-- Colors for note editor and vault -->
     <color name="divider">#3A3A3A</color>

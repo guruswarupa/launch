@@ -3,462 +3,521 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:contentDescription="Background"
         android:scaleType="centerCrop"
-        android:src="@drawable/wallpaper_background"
-        android:contentDescription="Background"/>
+        android:src="@drawable/wallpaper_background" />
 
-    <!-- Semi-transparent overlay for better text visibility - Dynamic -->
     <View
         android:id="@+id/onboarding_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/onboarding_overlay"/>
+        android:background="@drawable/onboarding_backdrop_scrim" />
 
-    <!-- Content Container -->
     <ScrollView
         android:id="@+id/onboarding_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingTop="16dp"
+        android:paddingBottom="24dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:padding="24dp"
-            android:gravity="center_horizontal">
+            android:paddingHorizontal="20dp">
 
-            <!-- Progress Indicator -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="Launch setup"
+                android:textColor="@color/onboarding_chip_text"
+                android:textSize="12sp" />
+
             <LinearLayout
-                android:id="@+id/progress_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="32dp">
+                android:layout_marginTop="16dp"
+                android:background="@drawable/onboarding_hero_card"
+                android:elevation="8dp"
+                android:orientation="vertical"
+                android:padding="24dp">
 
-                <!-- Step 1 Indicator -->
-                <View
-                    android:id="@+id/step1_indicator"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:background="@drawable/circular_indicator"/>
-                <View
-                    android:id="@+id/step1_connector"
-                    android:layout_width="24dp"
-                    android:layout_height="3dp"
-                    android:background="@color/onboarding_step_indicator_inactive"
-                    android:layout_marginHorizontal="3dp"/>
+                <TextView
+                    android:id="@+id/progress_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Step 1 of 7"
+                    android:textColor="@color/onboarding_text_secondary"
+                    android:textSize="13sp" />
 
-                <!-- Step 2 Indicator -->
-                <View
-                    android:id="@+id/step2_indicator"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:background="@drawable/circular_indicator"/>
-                <View
-                    android:id="@+id/step2_connector"
-                    android:layout_width="24dp"
-                    android:layout_height="3dp"
-                    android:background="@color/onboarding_step_indicator_inactive"
-                    android:layout_marginHorizontal="3dp"/>
+                <TextView
+                    android:id="@+id/progress_subtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="Shape Launch around the way you want to use your home screen."
+                    android:textColor="@color/onboarding_text"
+                    android:textSize="24sp" />
 
-                <!-- Step 3 Indicator -->
-                <View
-                    android:id="@+id/step3_indicator"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:background="@drawable/circular_indicator"/>
-                <View
-                    android:id="@+id/step3_connector"
-                    android:layout_width="24dp"
-                    android:layout_height="3dp"
-                    android:background="@color/onboarding_step_indicator_inactive"
-                    android:layout_marginHorizontal="3dp"/>
+                <LinearLayout
+                    android:id="@+id/progress_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <!-- Step 4 Indicator -->
-                <View
-                    android:id="@+id/step4_indicator"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:background="@drawable/circular_indicator"/>
-                <View
-                    android:id="@+id/step4_connector"
-                    android:layout_width="24dp"
-                    android:layout_height="3dp"
-                    android:background="@color/onboarding_step_indicator_inactive"
-                    android:layout_marginHorizontal="3dp"/>
+                    <View
+                        android:id="@+id/step1_indicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/circular_indicator" />
 
-                <!-- Step 5 Indicator -->
-                <View
-                    android:id="@+id/step5_indicator"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:background="@drawable/circular_indicator"/>
+                    <View
+                        android:id="@+id/step1_connector"
+                        android:layout_width="0dp"
+                        android:layout_height="3dp"
+                        android:layout_marginHorizontal="6dp"
+                        android:layout_weight="1"
+                        android:background="@color/onboarding_step_indicator_inactive" />
 
+                    <View
+                        android:id="@+id/step2_indicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/circular_indicator" />
+
+                    <View
+                        android:id="@+id/step2_connector"
+                        android:layout_width="0dp"
+                        android:layout_height="3dp"
+                        android:layout_marginHorizontal="6dp"
+                        android:layout_weight="1"
+                        android:background="@color/onboarding_step_indicator_inactive" />
+
+                    <View
+                        android:id="@+id/step3_indicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/circular_indicator" />
+
+                    <View
+                        android:id="@+id/step3_connector"
+                        android:layout_width="0dp"
+                        android:layout_height="3dp"
+                        android:layout_marginHorizontal="6dp"
+                        android:layout_weight="1"
+                        android:background="@color/onboarding_step_indicator_inactive" />
+
+                    <View
+                        android:id="@+id/step4_indicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/circular_indicator" />
+
+                    <View
+                        android:id="@+id/step4_connector"
+                        android:layout_width="0dp"
+                        android:layout_height="3dp"
+                        android:layout_marginHorizontal="6dp"
+                        android:layout_weight="1"
+                        android:background="@color/onboarding_step_indicator_inactive" />
+
+                    <View
+                        android:id="@+id/step5_indicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/circular_indicator" />
+
+                    <View
+                        android:id="@+id/step5_connector"
+                        android:layout_width="0dp"
+                        android:layout_height="3dp"
+                        android:layout_marginHorizontal="6dp"
+                        android:layout_weight="1"
+                        android:background="@color/onboarding_step_indicator_inactive" />
+
+                    <View
+                        android:id="@+id/step6_indicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/circular_indicator" />
+
+                    <View
+                        android:id="@+id/step6_connector"
+                        android:layout_width="0dp"
+                        android:layout_height="3dp"
+                        android:layout_marginHorizontal="6dp"
+                        android:layout_weight="1"
+                        android:background="@color/onboarding_step_indicator_inactive" />
+
+                    <View
+                        android:id="@+id/step7_indicator"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/circular_indicator" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Step Content Container -->
             <FrameLayout
                 android:id="@+id/step_content_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="400dp">
+                android:layout_marginTop="18dp"
+                android:background="@drawable/onboarding_surface_card"
+                android:elevation="6dp"
+                android:minHeight="420dp"
+                android:padding="24dp">
 
-                <!-- Welcome Step -->
                 <LinearLayout
                     android:id="@+id/welcome_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="visible">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Welcome to Launch!"
-                        android:textSize="32sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/onboarding_text"
+                        android:fontFamily="sans-serif-medium"
                         android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
+                        android:text="Welcome to Launch"
+                        android:textColor="@color/onboarding_text"
+                        android:textSize="30sp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Your powerful, customizable launcher is ready to transform your home screen experience."
-                        android:textSize="16sp"
-                        android:textColor="@color/onboarding_text"
+                        android:layout_marginTop="12dp"
                         android:gravity="center"
-                        android:alpha="0.9"
                         android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="48dp"/>
+                        android:text="A launcher built for quick access, focused screens, and a calmer home layout."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="24dp"
+                        android:background="@drawable/onboarding_divider" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Let's set it up in just a few simple steps:"
-                        android:textSize="14sp"
+                        android:layout_marginTop="18dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="What this setup covers"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.8"
-                        android:layout_marginBottom="24dp"/>
+                        android:textSize="16sp" />
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
+                    <TextView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="start"
-                        android:layout_marginBottom="24dp">
+                        android:layout_marginTop="14dp"
+                        android:text="Privacy and permissions"
+                        android:textColor="@color/onboarding_text"
+                        android:textSize="15sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="✓ Data Privacy Disclosure"
-                            android:textSize="14sp"
-                            android:textColor="@color/onboarding_text"
-                            android:alpha="0.9"
-                            android:layout_marginBottom="8dp"/>
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Default launcher, layout style, favorites, and workspace structure"
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="13sp" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="✓ Grant necessary permissions"
-                            android:textSize="14sp"
-                            android:textColor="@color/onboarding_text"
-                            android:alpha="0.9"
-                            android:layout_marginBottom="8dp"/>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="✓ Set as default launcher"
-                            android:textSize="14sp"
-                            android:textColor="@color/onboarding_text"
-                            android:alpha="0.9"/>
-
-                    </LinearLayout>
-
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Optional weather integration and backup restore"
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="13sp" />
                 </LinearLayout>
 
-                <!-- Data Privacy Step (Prominent Disclosure) -->
                 <LinearLayout
                     android:id="@+id/data_privacy_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="gone">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Data Privacy"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Data privacy"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
+                        android:textSize="28sp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Your privacy is our priority. Please review our data usage policy:"
-                        android:textSize="16sp"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="24dp"/>
-
-                    <androidx.cardview.widget.CardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginHorizontal="8dp"
-                        android:layout_marginBottom="24dp"
-                        android:backgroundTint="#22FFFFFF">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:padding="16dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Installed Applications Disclosure"
-                                android:textSize="14sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/onboarding_text"
-                                android:layout_marginBottom="8dp"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Launch collects and accesses the list of your Installed Applications to enable its core launcher functionality, specifically to display your apps on the home screen, organize them into workspaces, and allow universal search."
-                                android:textSize="13sp"
-                                android:textColor="@color/onboarding_text"
-                                android:alpha="0.9"
-                                android:lineSpacingExtra="4dp"
-                                android:layout_marginBottom="12dp"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Data Commitment:"
-                                android:textSize="14sp"
-                                android:textStyle="bold"
-                                android:textColor="@color/onboarding_text"
-                                android:layout_marginBottom="8dp"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="• This data is processed locally on your device.\n• We do NOT upload or transmit your app list to any external servers.\n• We do NOT share this information with third parties."
-                                android:textSize="13sp"
-                                android:textColor="@color/onboarding_text"
-                                android:alpha="0.9"
-                                android:lineSpacingExtra="4dp"/>
-
-                        </LinearLayout>
-                    </androidx.cardview.widget.CardView>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="By clicking 'I Agree', you consent to the access of your installed applications list for these purposes."
-                        android:textSize="12sp"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="4dp"
+                        android:text="Launch needs local access to your installed apps so it can actually behave like a launcher."
                         android:textColor="@color/onboarding_text_secondary"
-                        android:gravity="center"
-                        android:alpha="0.8"
-                        android:paddingHorizontal="16dp"/>
+                        android:textSize="15sp" />
 
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/onboarding_divider" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Installed apps disclosure"
+                        android:textColor="@color/onboarding_text"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="4dp"
+                        android:text="Launch reads your installed application list to render the home screen, power search, and organize apps into workspaces."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Commitment"
+                        android:textColor="@color/onboarding_text"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingExtra="4dp"
+                        android:text="• Processed locally on your device&#10;• Not uploaded to external servers&#10;• Not shared with third parties"
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:gravity="center"
+                        android:text="Selecting I Agree confirms this local access."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="13sp" />
                 </LinearLayout>
 
-                <!-- Permissions Step -->
                 <LinearLayout
                     android:id="@+id/permissions_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Permissions"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="We'll guide you through each permission request and explain why it's needed. You can skip any permission and grant it later if needed."
-                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Permissions"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.9"
-                        android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="32dp"/>
+                        android:textSize="28sp" />
 
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="4dp"
+                        android:text="Each request is explained before Android shows it. Anything skipped here can still be granted later."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/onboarding_divider" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="Included in this step"
+                        android:textColor="@color/onboarding_text"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Contacts, calls, messages, notifications, media access, usage stats, and advanced launcher services."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- Default Launcher Step -->
                 <LinearLayout
                     android:id="@+id/default_launcher_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Set as Default Launcher"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="To use this launcher as your home screen, you need to set it as the default launcher. This allows you to access your apps, widgets, and shortcuts directly from the home screen."
-                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Set Launch as default"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.9"
-                        android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="32dp"/>
+                        android:textSize="28sp" />
 
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="4dp"
+                        android:text="This replaces your current home app so Launch can own the home gesture and launcher shortcuts."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/onboarding_divider" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="Recommended"
+                        android:textColor="@color/onboarding_step_indicator_active"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Set it now to test widgets, gestures, search, and workspace switching in the real launcher context."
+                        android:textColor="@color/onboarding_text"
+                        android:textSize="15sp" />
                 </LinearLayout>
 
-                <!-- Backup Import Step -->
                 <LinearLayout
                     android:id="@+id/backup_import_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Import Backup"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Do you have a backup file from a previous installation? You can import your settings, favorites, workspaces, and all other data."
-                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Restore an existing setup"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.9"
+                        android:textSize="28sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
                         android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="32dp"/>
+                        android:text="Import a backup if you already configured Launch before. Otherwise continue and build a fresh layout."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
 
                     <Button
                         android:id="@+id/import_backup_button"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Import Backup"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:paddingHorizontal="32dp"
+                        android:layout_marginTop="24dp"
+                        android:background="@drawable/onboarding_primary_button"
+                        android:fontFamily="sans-serif-medium"
+                        android:minHeight="56dp"
+                        android:paddingHorizontal="24dp"
                         android:paddingVertical="16dp"
-                        android:layout_marginBottom="16dp"
-                        android:backgroundTint="@color/nord7"
-                        android:textColor="@color/white"/>
-
+                        android:text="Import Backup"
+                        android:textAllCaps="false"
+                        android:textColor="@color/onboarding_primary_button_text"
+                        android:textSize="16sp" />
                 </LinearLayout>
 
-                <!-- Display Style Step -->
                 <LinearLayout
                     android:id="@+id/display_style_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Choose Display Style"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="How would you like to view your apps?"
-                        android:textSize="16sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Choose your display style"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.9"
-                        android:layout_marginBottom="32dp"/>
+                        android:textSize="28sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="Pick the default app drawer presentation. You can change it later."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp">
+                        android:layout_marginTop="22dp"
+                        android:orientation="horizontal">
 
                         <Button
                             android:id="@+id/grid_style_button"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
                             android:layout_marginEnd="8dp"
-                            android:text="Grid View"
+                            android:layout_weight="1"
+                            android:background="@drawable/onboarding_option_button"
+                            android:fontFamily="sans-serif-medium"
+                            android:minHeight="96dp"
+                            android:padding="18dp"
+                            android:text="Grid"
                             android:textAllCaps="false"
-                            android:background="@drawable/button_background"
                             android:textColor="@color/onboarding_text"
-                            android:padding="16dp"/>
+                            android:textSize="18sp" />
 
                         <Button
                             android:id="@+id/list_style_button"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
                             android:layout_marginStart="8dp"
-                            android:text="List View"
+                            android:layout_weight="1"
+                            android:background="@drawable/onboarding_option_button"
+                            android:fontFamily="sans-serif-medium"
+                            android:minHeight="96dp"
+                            android:padding="18dp"
+                            android:text="List"
                             android:textAllCaps="false"
-                            android:background="@drawable/button_background"
                             android:textColor="@color/onboarding_text"
-                            android:padding="16dp"/>
-
+                            android:textSize="18sp" />
                     </LinearLayout>
-
                 </LinearLayout>
 
-                <!-- Favorites Step -->
                 <LinearLayout
                     android:id="@+id/favorites_step"
                     android:layout_width="match_parent"
@@ -469,43 +528,44 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Select Favorite Apps"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Choose favorites"
                         android:textColor="@color/onboarding_text"
+                        android:textSize="28sp" />
+
+                    <TextView
+                        android:id="@+id/favorites_loading_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
                         android:gravity="center"
-                        android:layout_marginBottom="8dp"/>
+                        android:text="Loading apps..."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Choose which apps you want to see by default. You can change this later in settings."
-                        android:textSize="14sp"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.9"
-                        android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="16dp"/>
+                        android:layout_marginTop="10dp"
+                        android:text="These apps will be pinned into your default launcher experience first."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
 
                     <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
                         android:id="@+id/favorites_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="32dp"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
+                        android:layout_marginTop="18dp"
+                        android:background="@android:color/transparent"
                         android:clipToPadding="false"
+                        android:fadeScrollbars="false"
                         android:nestedScrollingEnabled="false"
                         android:overScrollMode="never"
-                        android:fadeScrollbars="true"
-                        android:scrollbars="none"
-                        android:background="@android:color/transparent"/>
-
+                        android:paddingBottom="12dp"
+                        android:scrollbars="none" />
                 </LinearLayout>
 
-                <!-- Workspaces Step -->
                 <LinearLayout
                     android:id="@+id/workspaces_step"
                     android:layout_width="match_parent"
@@ -516,293 +576,258 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Create Workspaces"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Create workspaces"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="8dp"/>
+                        android:textSize="28sp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Organize your apps into workspaces. You can create multiple workspaces and switch between them."
-                        android:textSize="14sp"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.9"
-                        android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="16dp"/>
+                        android:layout_marginTop="10dp"
+                        android:text="Split apps into focused spaces like Work, Personal, Study, or Travel."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
 
-                    <LinearLayout
+                    <EditText
+                        android:id="@+id/workspace_name_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="16dp"
-                        android:gravity="center_vertical">
-
-                        <EditText
-                            android:id="@+id/workspace_name_input"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="Workspace name (e.g., Work, Personal)"
-                            android:textSize="14sp"
-                            android:textColor="@color/onboarding_input_text"
-                            android:textColorHint="@color/onboarding_input_hint"
-                            android:background="@color/onboarding_input_background"
-                            android:alpha="0.9"
-                            android:padding="12dp"
-                            android:minHeight="48dp"/>
-
-                    </LinearLayout>
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/onboarding_input_field"
+                        android:hint="Workspace name"
+                        android:minHeight="56dp"
+                        android:paddingHorizontal="18dp"
+                        android:paddingVertical="16dp"
+                        android:textColor="@color/onboarding_input_text"
+                        android:textColorHint="@color/onboarding_input_hint"
+                        android:textSize="15sp" />
 
                     <TextView
                         android:id="@+id/workspaces_list_title"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Your Workspaces:"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
+                        android:layout_marginTop="18dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Saved workspaces"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="8dp"
-                        android:visibility="gone"/>
+                        android:textSize="16sp"
+                        android:visibility="gone" />
 
                     <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
                         android:id="@+id/workspaces_list_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="8dp"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
+                        android:layout_marginTop="10dp"
+                        android:background="@android:color/transparent"
                         android:clipToPadding="false"
                         android:nestedScrollingEnabled="false"
                         android:overScrollMode="never"
-                        android:fadeScrollbars="true"
+                        android:paddingBottom="6dp"
                         android:scrollbars="none"
-                        android:background="@android:color/transparent"
-                        android:visibility="gone"/>
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/workspaces_loading_text"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center"
+                        android:text="Loading apps..."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Select apps for workspace:"
-                        android:textSize="14sp"
+                        android:layout_marginTop="16dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Select apps for the workspace"
                         android:textColor="@color/onboarding_text"
-                        android:alpha="0.9"
-                        android:gravity="center"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="8dp"/>
+                        android:textSize="15sp" />
 
                     <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
                         android:id="@+id/workspaces_apps_recycler_view"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingTop="8dp"
-                        android:paddingBottom="16dp"
-                        android:paddingStart="0dp"
-                        android:paddingEnd="0dp"
+                        android:layout_marginTop="12dp"
+                        android:background="@android:color/transparent"
                         android:clipToPadding="false"
                         android:nestedScrollingEnabled="false"
                         android:overScrollMode="never"
-                        android:fadeScrollbars="true"
-                        android:scrollbars="none"
-                        android:background="@android:color/transparent"/>
+                        android:paddingBottom="12dp"
+                        android:scrollbars="none" />
 
-                    <!-- Add Workspace Button - Now at bottom for better UX -->
                     <Button
                         android:id="@+id/add_workspace_button"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Create Workspace"
-                        android:textAllCaps="false"
-                        android:background="@drawable/button_background"
-                        android:textColor="@color/onboarding_text"
-                        android:textSize="16sp"
-                        android:textStyle="bold"
+                        android:layout_marginTop="16dp"
+                        android:background="@drawable/onboarding_primary_button"
+                        android:fontFamily="sans-serif-medium"
+                        android:minHeight="56dp"
                         android:paddingHorizontal="24dp"
                         android:paddingVertical="16dp"
-                        android:layout_marginTop="16dp"
-                        android:layout_marginStart="16dp"
-                        android:layout_marginEnd="16dp"
-                        android:layout_marginBottom="8dp"
-                        android:minHeight="56dp"/>
-
+                        android:text="Create Workspace"
+                        android:textAllCaps="false"
+                        android:textColor="@color/onboarding_primary_button_text"
+                        android:textSize="16sp" />
                 </LinearLayout>
 
-                <!-- Weather API Key Step -->
                 <LinearLayout
                     android:id="@+id/weather_api_key_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Weather API Key (Optional)"
-                        android:textSize="28sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Enter your OpenWeatherMap API key to enable weather information on your home screen. You can skip this and add it later in Settings."
-                        android:textSize="14sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Weather setup"
                         android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:alpha="0.9"
+                        android:textSize="28sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
                         android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="24dp"/>
+                        android:text="Add an OpenWeatherMap API key if you want live weather on the launcher. This step is optional."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
 
                     <EditText
                         android:id="@+id/weather_api_key_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Enter OpenWeatherMap API Key"
-                        android:textSize="14sp"
+                        android:layout_marginTop="20dp"
+                        android:background="@drawable/onboarding_input_field"
+                        android:hint="OpenWeatherMap API key"
+                        android:inputType="text"
+                        android:paddingHorizontal="18dp"
+                        android:paddingVertical="16dp"
+                        android:singleLine="true"
                         android:textColor="@color/onboarding_input_text"
                         android:textColorHint="@color/onboarding_input_hint"
-                        android:alpha="0.9"
-                        android:background="@color/onboarding_input_background"
-                        android:padding="16dp"
-                        android:layout_marginHorizontal="24dp"
-                        android:layout_marginBottom="16dp"
-                        android:inputType="text"
-                        android:singleLine="true"/>
+                        android:textSize="15sp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Get a free API key at: openweathermap.org/api"
-                        android:textSize="12sp"
+                        android:layout_marginTop="10dp"
+                        android:text="Get a free key at openweathermap.org/api"
                         android:textColor="@color/onboarding_text_secondary"
-                        android:gravity="center"
-                        android:alpha="0.7"
-                        android:layout_marginBottom="16dp"/>
+                        android:textSize="13sp" />
 
                     <EditText
                         android:id="@+id/weather_location_input"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Enter city name (e.g., London, New York)"
-                        android:textSize="14sp"
+                        android:layout_marginTop="18dp"
+                        android:background="@drawable/onboarding_input_field"
+                        android:hint="City name"
+                        android:inputType="text"
+                        android:paddingHorizontal="18dp"
+                        android:paddingVertical="16dp"
+                        android:singleLine="true"
                         android:textColor="@color/onboarding_input_text"
                         android:textColorHint="@color/onboarding_input_hint"
-                        android:alpha="0.9"
-                        android:background="@color/onboarding_input_background"
-                        android:padding="16dp"
-                        android:layout_marginHorizontal="24dp"
-                        android:layout_marginBottom="8dp"
-                        android:inputType="text"
-                        android:singleLine="true"/>
+                        android:textSize="15sp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Enter the name of the city for weather information"
-                        android:textSize="12sp"
+                        android:layout_marginTop="10dp"
+                        android:text="Example: Bengaluru, London, or New York"
                         android:textColor="@color/onboarding_text_secondary"
-                        android:gravity="center"
-                        android:alpha="0.7"
-                        android:layout_marginBottom="32dp"/>
-
+                        android:textSize="13sp" />
                 </LinearLayout>
 
-                <!-- Complete Step -->
                 <LinearLayout
                     android:id="@+id/complete_step"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
                     android:orientation="vertical"
-                    android:gravity="center"
                     android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="All Set!"
-                        android:textSize="32sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/onboarding_text"
-                        android:gravity="center"
-                        android:layout_marginBottom="16dp"/>
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Your launcher is ready to use. Enjoy your new home screen experience!"
-                        android:textSize="16sp"
-                        android:textColor="@color/onboarding_text"
+                        android:fontFamily="sans-serif-medium"
                         android:gravity="center"
-                        android:alpha="0.9"
+                        android:text="All set"
+                        android:textColor="@color/onboarding_text"
+                        android:textSize="30sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center"
                         android:lineSpacingExtra="4dp"
-                        android:paddingHorizontal="16dp"
-                        android:layout_marginBottom="48dp"/>
-
+                        android:text="Your launcher setup is ready. Open Launch and start refining it from the home screen."
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="15sp" />
                 </LinearLayout>
-
             </FrameLayout>
 
-            <!-- Action Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_marginTop="18dp"
+                android:background="@drawable/onboarding_surface_card"
+                android:elevation="4dp"
                 android:gravity="center"
-                android:layout_marginTop="24dp">
+                android:orientation="horizontal"
+                android:padding="12dp">
 
                 <Button
                     android:id="@+id/back_button"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/onboarding_secondary_button"
+                    android:fontFamily="sans-serif-medium"
+                    android:minHeight="52dp"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:text="Back"
                     android:textAllCaps="false"
-                    android:background="@drawable/button_background"
-                    android:textColor="@color/onboarding_text"
-                    android:padding="16dp"
-                    android:visibility="gone"/>
+                    android:textColor="@color/onboarding_secondary_button_text"
+                    android:textSize="15sp"
+                    android:visibility="gone" />
 
                 <Button
                     android:id="@+id/next_button"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/onboarding_primary_button"
+                    android:fontFamily="sans-serif-medium"
+                    android:minHeight="52dp"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="14dp"
                     android:text="Next"
                     android:textAllCaps="false"
-                    android:background="@drawable/button_background"
-                    android:textColor="@color/onboarding_text"
-                    android:padding="16dp"/>
-
+                    android:textColor="@color/onboarding_primary_button_text"
+                    android:textSize="15sp" />
             </LinearLayout>
 
-            <!-- Developer Credit -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:alpha="0.65"
                 android:text="Developed by Guru Swarupa"
-                android:textSize="12sp"
                 android:textColor="@color/onboarding_text_secondary"
-                android:alpha="0.6"
-                android:gravity="center"
-                android:layout_marginTop="24dp"/>
-
+                android:textSize="12sp" />
         </LinearLayout>
-
     </ScrollView>
 
 </FrameLayout>
