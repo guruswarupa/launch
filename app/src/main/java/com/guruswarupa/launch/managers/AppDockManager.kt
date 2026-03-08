@@ -738,23 +738,13 @@ class AppDockManager(
      * Lock/unlock the left drawer for focus mode
      */
     fun lockDrawerForFocusMode(lock: Boolean) {
-        val drawerLayout = (context as? MainActivity)?.findViewById<androidx.drawerlayout.widget.DrawerLayout>(R.id.drawer_layout)
-        val leftCueView = (context as? MainActivity)?.findViewById<android.view.View>(R.id.left_drawer_cue)
+        val mainActivity = context as? MainActivity
         
         if (lock) {
-            // Lock the left drawer (widgets drawer) when focus mode is on
-            drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_LOCKED_CLOSED, androidx.core.view.GravityCompat.START)
-            // Close the drawer if it's open
-            if (drawerLayout?.isDrawerOpen(androidx.core.view.GravityCompat.START) == true) {
-                drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
-            }
-            // Hide the left drawer visual cue
-            leftCueView?.visibility = android.view.View.GONE
+            mainActivity?.setWidgetsPageLocked(true)
+            mainActivity?.openHomePage(animated = true)
         } else {
-            // Unlock the left drawer when focus mode is off
-            drawerLayout?.setDrawerLockMode(androidx.drawerlayout.widget.DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.START)
-            // Show the left drawer visual cue
-            leftCueView?.visibility = android.view.View.VISIBLE
+            mainActivity?.setWidgetsPageLocked(false)
         }
     }
 

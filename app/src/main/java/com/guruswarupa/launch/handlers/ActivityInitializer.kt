@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.view.ViewGroup
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.net.toUri
@@ -208,7 +209,7 @@ class ActivityInitializer(
             // Left drawer
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
-                val params = it.layoutParams as DrawerLayout.LayoutParams
+                val params = it.layoutParams as ViewGroup.LayoutParams
                 params.width = drawerWidth
                 it.layoutParams = params
 
@@ -241,7 +242,7 @@ class ActivityInitializer(
             // Right drawer
             val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
             rightDrawerView?.let {
-                val params = it.layoutParams as DrawerLayout.LayoutParams
+                val params = it.layoutParams as ViewGroup.LayoutParams
                 params.width = drawerWidth
                 it.layoutParams = params
             }

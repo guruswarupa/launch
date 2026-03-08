@@ -2,20 +2,17 @@ package com.guruswarupa.launch.managers
 
 import android.os.Handler
 import android.os.Looper
-import android.view.View
 import androidx.activity.OnBackPressedCallback
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
-import com.guruswarupa.launch.R
 import com.guruswarupa.launch.handlers.ActivityInitializer
 import com.guruswarupa.launch.handlers.NavigationManager
 
 /**
- * Manages DrawerLayout setup and drawer-related events.
+ * Sets up pager-based screen navigation while preserving the existing initialization flow.
  */
 class DrawerManager(
     private val activity: FragmentActivity,
-    private val drawerLayout: DrawerLayout,
+    private val screenPagerManager: ScreenPagerManager,
     private val gestureHandler: GestureHandler,
     private val usageStatsDisplayManager: UsageStatsDisplayManager,
     private val activityInitializer: ActivityInitializer,
@@ -29,28 +26,16 @@ class DrawerManager(
      * Sets up the DrawerLayout, listeners, and back-pressed callback.
      */
     fun setup() {
-        gestureHandler.setupTouchListener()
         gestureHandler.setupGestureExclusion()
-
         activityInitializer.setupDrawerLayout()
-        navigationManager = NavigationManager(drawerLayout, gestureHandler, handler)
-
-        // Add drawer listener to check for theme changes when drawer opens
-        drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
-            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
-            override fun onDrawerOpened(drawerView: View) {
-                // Check for theme changes when drawer opens
-                themeCheckCallback()
-                // Refresh usage data when widgets drawer opens
-                if (drawerView.id == R.id.widgets_drawer) {
-                    handler.post {
-                        usageStatsDisplayManager.loadWeeklyUsageData()
-                    }
-                }
+        screenPagerManager.setup()
+        navigationManager = NavigationManager(screenPagerManager, gestureHandler, handler)
+        screenPagerManager.setOnPageChanged { page ->
+            themeCheckCallback()
+            if (page == ScreenPagerManager.Page.LEFT) {
+                handler.post { usageStatsDisplayManager.loadWeeklyUsageData() }
             }
-            override fun onDrawerClosed(drawerView: View) {}
-            override fun onDrawerStateChanged(newState: Int) {}
-        })
+        }
 
         // Setup back pressed callback
         activity.onBackPressedDispatcher.addCallback(activity, object : OnBackPressedCallback(true) {

@@ -10,7 +10,6 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.edit
-import androidx.drawerlayout.widget.DrawerLayout
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import kotlin.math.abs
@@ -175,10 +174,9 @@ class FeatureTutorialManager(
         // For drawer-based steps, ensure drawer is open first
         val isInDrawer = isDrawerStep(step)
         if (isInDrawer) {
-            if (!activity.views.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
-                activity.views.drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
-                // Wait for drawer to open before finding view
-                activity.views.drawerLayout.postDelayed({
+            if (!activity.isWidgetsPageOpen()) {
+                activity.openWidgetsPage(animated = true)
+                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
                     findAndShowView(step)
                 }, 400)
                 return
@@ -203,9 +201,9 @@ class FeatureTutorialManager(
             // View not ready yet, try again after a delay
             // For drawer steps, ensure drawer is open
             val isInDrawer = isDrawerStep(step)
-            if (isInDrawer && !activity.views.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
-                activity.views.drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
-                activity.views.drawerLayout.postDelayed({
+            if (isInDrawer && !activity.isWidgetsPageOpen()) {
+                activity.openWidgetsPage(animated = true)
+                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
                     findAndShowView(step)
                 }, 400)
                 return
@@ -581,19 +579,15 @@ class FeatureTutorialManager(
      * Show drawer gesture tutorial (special case)
      */
     private fun showDrawerGestureTutorial() {
-        // Open the drawer first
-        activity.views.drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
+        activity.openWidgetsPage(animated = true)
         
-        // Wait for drawer animation to complete, then show tutorial inside drawer
-        activity.views.drawerLayout.postDelayed({
+        activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
             val step = TutorialStep.DRAWER_GESTURE
             val drawerView = activity.findViewById<View>(R.id.widgets_drawer)
             if (drawerView != null && drawerView.isAttachedToWindow) {
-                // Show tutorial overlay inside the drawer
                 showTutorialOverlay(step, drawerView)
             } else {
-                // Retry after a bit more delay
-                activity.views.drawerLayout.postDelayed({
+                activity.findViewById<ViewGroup>(android.R.id.content)?.postDelayed({
                     val retryDrawerView = activity.findViewById<View>(R.id.widgets_drawer)
                     if (retryDrawerView != null && retryDrawerView.isAttachedToWindow) {
                         showTutorialOverlay(step, retryDrawerView)
@@ -669,28 +663,23 @@ class FeatureTutorialManager(
         val isNextDrawerStep = isDrawerStep(nextStep) && nextStep != TutorialStep.DRAWER_GESTURE
         val wasPreviousDrawerStep = previousStep != null && isDrawerStep(previousStep) && previousStep != TutorialStep.DRAWER_GESTURE
         
-        // Only close drawer if moving to a non-drawer step
         if (!isNextDrawerStep) {
-            if (activity.views.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
-                activity.views.drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
-                // Wait for drawer to close before showing next step
-                activity.views.drawerLayout.postDelayed({
+            if (activity.isWidgetsPageOpen()) {
+                activity.openHomePage(animated = true)
+                activity.findViewById<View>(R.id.main_content)?.postDelayed({
                     showCurrentStep()
                 }, 300)
                 return
             }
         } else {
-            // Next step is in drawer - ensure drawer is open
-            if (!activity.views.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
-                activity.views.drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
-                // Wait for drawer to open before showing next step
-                activity.views.drawerLayout.postDelayed({
+            if (!activity.isWidgetsPageOpen()) {
+                activity.openWidgetsPage(animated = true)
+                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
                     showCurrentStep()
                 }, 400)
                 return
             } else if (wasPreviousDrawerStep) {
-                // Both previous and next steps are in drawer - add small delay for smooth transition
-                activity.views.drawerLayout.postDelayed({
+                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
                     showCurrentStep()
                 }, 150)
                 return
@@ -709,9 +698,8 @@ class FeatureTutorialManager(
         // Re-enable scrolling
         enableScrolling()
         
-        // Close drawer if open
-        if (activity.views.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
-            activity.views.drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
+        if (activity.isWidgetsPageOpen()) {
+            activity.openHomePage(animated = true)
         }
         
         markTutorialComplete()

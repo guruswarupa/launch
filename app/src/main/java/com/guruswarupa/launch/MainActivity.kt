@@ -115,6 +115,7 @@ class MainActivity : FragmentActivity() {
     internal lateinit var serviceManager: ServiceManager
     internal lateinit var appListUIUpdater: AppListUIUpdater
     internal lateinit var drawerManager: DrawerManager
+    internal lateinit var screenPagerManager: ScreenPagerManager
     internal lateinit var contactActionHandler: ContactActionHandler
     internal lateinit var settingsChangeCoordinator: SettingsChangeCoordinator
 
@@ -534,6 +535,40 @@ class MainActivity : FragmentActivity() {
     fun refreshAppsForFocusMode() {
         if (::appListUIUpdater.isInitialized) {
             appListUIUpdater.refreshAppsForFocusMode()
+        }
+    }
+
+    fun openWidgetsPage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openLeftPage(animated)
+        }
+    }
+
+    fun openHomePage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openCenterPage(animated)
+        }
+    }
+
+    fun openWallpaperPage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openRightPage(animated)
+        }
+    }
+
+    fun isWidgetsPageOpen(): Boolean {
+        return ::screenPagerManager.isInitialized &&
+            screenPagerManager.isPageOpen(ScreenPagerManager.Page.LEFT)
+    }
+
+    fun isWallpaperPageOpen(): Boolean {
+        return ::screenPagerManager.isInitialized &&
+            screenPagerManager.isPageOpen(ScreenPagerManager.Page.RIGHT)
+    }
+
+    fun setWidgetsPageLocked(locked: Boolean) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.setLeftPageLocked(locked)
         }
     }
     
