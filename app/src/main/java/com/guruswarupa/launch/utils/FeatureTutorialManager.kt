@@ -3,735 +3,439 @@ package com.guruswarupa.launch.utils
 import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.graphics.Rect
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.edit
+import androidx.core.widget.NestedScrollView
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import kotlin.math.abs
 
 /**
- * Manages the feature tutorial that shows users how to use each feature one by one
- * after completing onboarding.
+ * Page-aware tutorial flow for the launcher pager:
+ * widgets page -> home page -> wallpaper page.
  */
 class FeatureTutorialManager(
     private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences
 ) {
-    // All methods are defined below
     private var currentStep = 0
     private var tutorialOverlay: View? = null
     private var isTutorialActive = false
-    private var scrollViews: MutableList<View> = mutableListOf()
-    
+    private var renderToken = 0
+
     companion object {
         private const val PREF_TUTORIAL_SHOWN = "feature_tutorial_shown"
         private const val PREF_TUTORIAL_STEP = "feature_tutorial_current_step"
+        private const val PAGE_SETTLE_DELAY_MS = 260L
+        private const val RETRY_DELAY_MS = 180L
+        private const val MAX_RENDER_ATTEMPTS = 10
+        private const val SCROLL_SETTLE_DELAY_MS = 320L
     }
-    
-    enum class TutorialStep(
+
+    private enum class TutorialPage(val rootViewId: Int) {
+        HOME(R.id.main_content),
+        WIDGETS(R.id.widgets_drawer),
+        WALLPAPER(R.id.wallpaper_drawer)
+    }
+
+    private enum class HighlightPosition {
+        TOP, BOTTOM, LEFT, RIGHT, CENTER
+    }
+
+    private enum class TutorialStep(
+        val page: TutorialPage,
         val title: String,
         val description: String,
         val targetViewId: Int,
-        val position: HighlightPosition = HighlightPosition.BOTTOM,
-        val targetViewTag: String? = null // Optional tag for finding views by tag instead of ID
+        val highlightPosition: HighlightPosition = HighlightPosition.BOTTOM,
+        val targetViewTag: String? = null,
+        val highlightVisible: Boolean = true,
+        val scrollToTarget: Boolean = true
     ) {
-        WELCOME_OVERVIEW(
-            "Welcome to Launch",
-            "This is your new launcher home screen. You'll see widget at the top,  quick access buttons in the middle, app list at the bottom. Let's explore the features!",
-            R.id.main_content,
-            HighlightPosition.CENTER
+        HOME_OVERVIEW(
+            page = TutorialPage.HOME,
+            title = "Home Page",
+            description = "This middle page is your launcher home. It combines widgets, search, shortcuts, and the full app list in one vertical flow.",
+            targetViewId = R.id.main_content,
+            highlightPosition = HighlightPosition.CENTER,
+            highlightVisible = false,
+            scrollToTarget = false
         ),
         SEARCH_BAR(
-            "Universal Search",
-            "Search for apps, contacts, or web queries. Long press to open Google.",
-            R.id.search_box,
-            HighlightPosition.BOTTOM
+            page = TutorialPage.HOME,
+            title = "Universal Search",
+            description = "Search apps, contacts, and quick actions from here. Keep it empty to browse normally, or type to filter instantly.",
+            targetViewId = R.id.search_box
         ),
         VOICE_SEARCH(
-            "Voice Search",
-            "Tap the microphone to search using your voice. Try saying 'Open YouTube' or 'Call John'.",
-            R.id.voice_search_button,
-            HighlightPosition.BOTTOM
+            page = TutorialPage.HOME,
+            title = "Voice Search",
+            description = "Tap the mic to run voice commands or search hands-free.",
+            targetViewId = R.id.voice_search_button
         ),
-        TIME_WIDGET(
-            "Time Widget",
-            "Tap the time to open the Clock app.",
-            R.id.time_widget,
-            HighlightPosition.BOTTOM
+        TIME_AND_WEATHER(
+            page = TutorialPage.HOME,
+            title = "Top Widgets",
+            description = "The top card keeps time, date, weather, and status info visible without leaving the home page.",
+            targetViewId = R.id.top_widget_container
         ),
-        DATE_WIDGET(
-            "Date Widget",
-            "Tap the date to open the Calendar app and view your schedule.",
-            R.id.date_widget,
-            HighlightPosition.BOTTOM
-        ),
-        WEATHER_WIDGET(
-            "Weather Widget",
-            "View real-time weather information. Configure your API key in Settings if needed.",
-            R.id.weather_widget,
-            HighlightPosition.BOTTOM
-        ),
-        DOCK_SETTINGS(
-            "Settings",
-            "Access launcher settings to customize your experience, change wallpaper, manage widgets, and more.",
-            R.id.app_dock,
-            HighlightPosition.BOTTOM,
-            "settings_button"
-        ),
-        DOCK_FAVORITES(
-            "Favorites Toggle",
-            "Toggle between showing only your favorite apps or all apps. Tap the star to show favorites, tap the grid to show all.",
-            R.id.app_dock,
-            HighlightPosition.BOTTOM,
-            "favorite_toggle"
-        ),
-        DOCK_WORKSPACE(
-            "Workspace Toggle",
-            "Switch between different workspaces to organize your apps. Long press to configure workspaces.",
-            R.id.app_dock,
-            HighlightPosition.BOTTOM,
-            "workspace_toggle"
-        ),
-        DOCK_FOCUS_MODE(
-            "Focus Mode",
-            "Enable focus mode to temporarily hide distracting apps. Long press to configure which apps are allowed during focus mode.",
-            R.id.app_dock,
-            HighlightPosition.BOTTOM,
-            "focus_mode_toggle"
-        ),
-
-        DOCK_SHARE_APK(
-            "Share APK",
-            "Share APK files of installed apps. Useful for backing up apps or sharing with others.",
-            R.id.app_dock,
-            HighlightPosition.BOTTOM,
-            "apk_share_button"
+        APP_DOCK(
+            page = TutorialPage.HOME,
+            title = "Dock Shortcuts",
+            description = "The dock holds your quick actions like settings, favorites, workspace switching, focus mode, sharing tools and encrypted vault.",
+            targetViewId = R.id.app_dock
         ),
         APP_LIST(
-            "Smart App List",
-            "Apps are sorted alphabetically. Long press any app to uninstall, share, and add to favorites.",
-            R.id.app_list,
-            HighlightPosition.TOP
+            page = TutorialPage.HOME,
+            title = "App List",
+            description = "Your installed apps live here. Scroll to browse and long press an app for more actions.",
+            targetViewId = R.id.app_list,
+            highlightPosition = HighlightPosition.TOP
         ),
-        DRAWER_GESTURE(
-            "Widgets Drawer",
-            "Swipe from the left side of the screen to open the widgets drawer. Swipe from the right side to open the right drawer. Works anywhere on the screen, even over widgets and app lists.",
-            R.id.widgets_drawer,
-            HighlightPosition.CENTER
+        WIDGETS_PAGE(
+            page = TutorialPage.WIDGETS,
+            title = "Widgets Page",
+            description = "The left page is widgets page. Swipe over to see larger widgets and utility panels.",
+            targetViewId = R.id.widgets_drawer,
+            highlightPosition = HighlightPosition.CENTER,
+            highlightVisible = false,
+            scrollToTarget = false
+        ),
+        WIDGETS_SETTINGS(
+            page = TutorialPage.WIDGETS,
+            title = "Widget Controls",
+            description = "manage and configure which widgets appear on the widgets page from here.",
+            targetViewId = R.id.widget_settings_header
+        ),
+        WIDGETS_SCROLL(
+            page = TutorialPage.WIDGETS,
+            title = "Scrollable Widget Feed",
+            description = "This page scrolls vertically, so you can keep multiple widgets here without crowding the home page.",
+            targetViewId = R.id.widgets_drawer_scroll,
+            highlightPosition = HighlightPosition.CENTER,
+            highlightVisible = false,
+            scrollToTarget = false
+        ),
+        WALLPAPER_PAGE(
+            page = TutorialPage.WALLPAPER,
+            title = "Wallpaper Page",
+            description = "The right page gives you a clean wallpaper-focused view with a large ambient clock.",
+            targetViewId = R.id.wallpaper_drawer,
+            highlightPosition = HighlightPosition.CENTER,
+            highlightVisible = false,
+            scrollToTarget = false
+        ),
+        WALLPAPER_CLOCK(
+            page = TutorialPage.WALLPAPER,
+            title = "Ambient Clock",
+            description = "Use this page when you want a distraction-free wallpaper and clock view.",
+            targetViewId = R.id.right_drawer_time
+        ),
+        PAGE_NAVIGATION(
+            page = TutorialPage.HOME,
+            title = "Pager Navigation",
+            description = "Swipe left for widgets, stay in the middle for home, and swipe right for the wallpaper page. The tutorial will always return here when it finishes.",
+            targetViewId = R.id.main_content,
+            highlightPosition = HighlightPosition.CENTER,
+            highlightVisible = false,
+            scrollToTarget = false
         )
     }
-    
-    enum class HighlightPosition {
-        TOP, BOTTOM, LEFT, RIGHT, CENTER
-    }
-    
-    /**
-     * Check if tutorial should be shown
-     */
+
     fun shouldShowTutorial(): Boolean {
         return !sharedPreferences.getBoolean(PREF_TUTORIAL_SHOWN, false)
     }
-    
-    /**
-     * Start the tutorial
-     */
+
     fun startTutorial() {
-        if (isTutorialActive) return
-        
+        removeTutorialOverlay()
         currentStep = sharedPreferences.getInt(PREF_TUTORIAL_STEP, 0)
         if (currentStep >= TutorialStep.entries.size) {
-            // Tutorial already completed
             markTutorialComplete()
             return
         }
-        
+
         isTutorialActive = true
         showCurrentStep()
     }
-    
-    /**
-     * Show the current tutorial step
-     */
+
     private fun showCurrentStep() {
+        if (!isTutorialActive) return
         if (currentStep >= TutorialStep.entries.size) {
             finishTutorial()
             return
         }
-        
+
         val step = TutorialStep.entries[currentStep]
-        
-        // Special handling for drawer gesture
-        if (step == TutorialStep.DRAWER_GESTURE) {
-            showDrawerGestureTutorial()
-            return
+        val token = ++renderToken
+        openPage(step.page, animated = false) {
+            renderStep(step, token, attempt = 0)
         }
-        
-        // For drawer-based steps, ensure drawer is open first
-        val isInDrawer = isDrawerStep(step)
-        if (isInDrawer) {
-            if (!activity.isWidgetsPageOpen()) {
-                activity.openWidgetsPage(animated = true)
-                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
-                    findAndShowView(step)
-                }, 400)
+    }
+
+    private fun renderStep(step: TutorialStep, token: Int, attempt: Int) {
+        if (!isTutorialActive || token != renderToken) return
+
+        val pageRoot = activity.findViewById<ViewGroup>(step.page.rootViewId)
+        val targetView = resolveTargetView(step, pageRoot)
+        if (pageRoot == null || targetView == null || !targetView.isAttachedToWindow) {
+            if (attempt >= MAX_RENDER_ATTEMPTS) {
+                nextStep()
                 return
             }
+            (pageRoot ?: activity.findViewById(android.R.id.content))?.postDelayed({
+                renderStep(step, token, attempt + 1)
+            }, RETRY_DELAY_MS)
+            return
         }
-        
-        findAndShowView(step)
+
+        if (step.scrollToTarget) {
+            scrollToView(targetView)
+        }
+
+        pageRoot.postDelayed({
+            if (!isTutorialActive || token != renderToken) return@postDelayed
+            showTutorialOverlay(step, pageRoot, targetView)
+        }, if (step.scrollToTarget) SCROLL_SETTLE_DELAY_MS else 60L)
     }
-    
-    /**
-     * Find the target view and show tutorial overlay
-     */
-    private fun findAndShowView(step: TutorialStep) {
-        // Find view by tag if specified, otherwise by ID
-        val targetView = if (step.targetViewTag != null) {
-            findViewByTag(step.targetViewTag)
+
+    private fun resolveTargetView(step: TutorialStep, pageRoot: ViewGroup?): View? {
+        if (pageRoot == null) return null
+        return if (step.targetViewTag != null) {
+            pageRoot.findViewWithTag(step.targetViewTag)
         } else {
-            activity.findViewById(step.targetViewId)
+            pageRoot.findViewById(step.targetViewId)
         }
-        
-        if (targetView == null || !targetView.isAttachedToWindow) {
-            // View not ready yet, try again after a delay
-            // For drawer steps, ensure drawer is open
-            val isInDrawer = isDrawerStep(step)
-            if (isInDrawer && !activity.isWidgetsPageOpen()) {
-                activity.openWidgetsPage(animated = true)
-                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
-                    findAndShowView(step)
-                }, 400)
-                return
-            }
-            activity.findViewById<ViewGroup>(android.R.id.content)?.postDelayed({
-                findAndShowView(step)
-            }, 500)
-            return
+    }
+
+    private fun openPage(page: TutorialPage, animated: Boolean, onReady: () -> Unit) {
+        when (page) {
+            TutorialPage.HOME -> activity.openHomePage(animated)
+            TutorialPage.WIDGETS -> activity.openWidgetsPage(animated)
+            TutorialPage.WALLPAPER -> activity.openWallpaperPage(animated)
         }
-        
-        // Always scroll to center the widget for better tutorial visibility
-        scrollToView(targetView)
-        // Wait for scroll animation to complete (smooth scroll takes ~300ms), then show overlay
-        targetView.postDelayed({
-            showTutorialOverlay(step, targetView)
-        }, 500)
+
+        val rootView = activity.findViewById<View>(page.rootViewId)
+        rootView?.postDelayed(onReady, if (animated) PAGE_SETTLE_DELAY_MS else 80L) ?: onReady()
     }
-    
-    /**
-     * Find a view by tag, searching in the app dock
-     */
-    private fun findViewByTag(tag: String): View? {
-        val appDock = activity.findViewById<ViewGroup>(R.id.app_dock)
-        return appDock?.findViewWithTag(tag)
-    }
-    
-    /**
-     * Show tutorial overlay for a specific view
-     */
+
     @SuppressLint("InflateParams")
-    private fun showTutorialOverlay(step: TutorialStep, targetView: View) {
-        // Remove existing overlay if any
+    private fun showTutorialOverlay(step: TutorialStep, parentView: ViewGroup, targetView: View) {
         removeTutorialOverlay()
-        
-        val inflater = LayoutInflater.from(activity)
-        tutorialOverlay = inflater.inflate(R.layout.tutorial_overlay, null)
-        
-        // Determine the correct parent view - use drawer if target is in drawer, otherwise use main content
-        val isInDrawer = isDrawerStep(step) && step != TutorialStep.DRAWER_GESTURE
-        val parentView = if (isInDrawer) {
-            // Find the drawer's root view (widgets_drawer FrameLayout)
-            activity.findViewById<ViewGroup>(R.id.widgets_drawer) 
-                ?: activity.findViewById(android.R.id.content)
-        } else {
-            activity.findViewById(android.R.id.content)
-        }
-        
+
+        tutorialOverlay = LayoutInflater.from(activity).inflate(R.layout.tutorial_overlay, null)
         parentView.addView(tutorialOverlay)
-        
-        // Allow touch events to pass through to underlying views for scrolling
-        // Return false to allow events to propagate to children (buttons) and underlying views (scroll views)
+
         @SuppressLint("ClickableViewAccessibility")
-        tutorialOverlay?.setOnTouchListener { v, _ ->
-            v.performClick()
-            // Return false to indicate we didn't consume the event
-            // This allows child views (buttons) to handle clicks
-            // and allows scroll gestures to pass through to underlying scroll views
+        tutorialOverlay?.setOnTouchListener { view, _ ->
+            view.performClick()
             false
         }
-        tutorialOverlay?.visibility = View.VISIBLE
-        
-        // Ensure overlay is on top
         tutorialOverlay?.bringToFront()
-        
+
         val titleText = tutorialOverlay?.findViewById<TextView>(R.id.tutorial_title)
         val descriptionText = tutorialOverlay?.findViewById<TextView>(R.id.tutorial_description)
         val buttonsContainer = tutorialOverlay?.findViewById<View>(R.id.tutorial_buttons_container)
         val skipButton = tutorialOverlay?.findViewById<Button>(R.id.tutorial_skip)
         val nextButton = tutorialOverlay?.findViewById<Button>(R.id.tutorial_next)
         val gotItButton = tutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)
-        
+
         titleText?.text = step.title
         descriptionText?.text = step.description
-        
-        val isLastStep = currentStep == TutorialStep.entries.size - 1
+
+        val isLastStep = currentStep == TutorialStep.entries.lastIndex
         buttonsContainer?.visibility = if (isLastStep) View.GONE else View.VISIBLE
         nextButton?.visibility = if (isLastStep) View.GONE else View.VISIBLE
         gotItButton?.visibility = if (isLastStep) View.VISIBLE else View.GONE
-        
-        skipButton?.setOnClickListener {
-            finishTutorial()
-        }
-        
-        nextButton?.setOnClickListener {
-            nextStep()
-        }
-        
-        gotItButton?.setOnClickListener {
-            finishTutorial()
-        }
-        
-        // Don't disable scrolling - allow users to scroll while tutorial is active
-        
-        // Position the highlight and text based on target view
-        // Use a post to ensure overlay is fully laid out
+
+        skipButton?.setOnClickListener { finishTutorial() }
+        nextButton?.setOnClickListener { nextStep() }
+        gotItButton?.setOnClickListener { finishTutorial() }
+
         tutorialOverlay?.post {
-            // Ensure overlay is visible
-            tutorialOverlay?.visibility = View.VISIBLE
-            positionTutorialOverlay(step, targetView)
+            positionTutorialOverlay(step, parentView, targetView)
         }
     }
-    
-    /**
-     * Position the tutorial overlay relative to the target view
-     */
-    private fun positionTutorialOverlay(step: TutorialStep, targetView: View) {
-        tutorialOverlay?.let { overlay ->
-            val highlightView = overlay.findViewById<View>(R.id.tutorial_highlight)
-            val textContainer = overlay.findViewById<View>(R.id.tutorial_text_container)
-            
-            // Wait for both views to be laid out and measured
-            targetView.post {
-                overlay.post {
-                    // Get the parent view (could be main content or drawer)
-                    val parentView = overlay.parent as? ViewGroup
-                        ?: activity.findViewById(android.R.id.content)
-                        ?: return@post
-                    
-                    // Ensure views are measured
-                    if (targetView.width == 0 || targetView.height == 0) {
-                        targetView.measure(
-                            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-                        )
-                    }
-                    
-                    // Get screen coordinates for both views
-                    val targetLocation = IntArray(2)
-                    targetView.getLocationOnScreen(targetLocation)
-                    
-                    val rootLocation = IntArray(2)
-                    parentView.getLocationOnScreen(rootLocation)
-                    
-                    // Calculate position relative to root content view (overlay's parent)
-                    val targetX = targetLocation[0] - rootLocation[0]
-                    val targetY = targetLocation[1] - rootLocation[1]
-                    val targetWidth = if (targetView.width > 0) targetView.width else targetView.measuredWidth
-                    val targetHeight = if (targetView.height > 0) targetView.height else targetView.measuredHeight
-                    
-                    // Special handling for welcome overview - hide highlight to show whole window
-                    if (step == TutorialStep.WELCOME_OVERVIEW) {
-                        highlightView.visibility = View.GONE
-                    } else if (targetWidth > 0 && targetHeight > 0) {
-                        // Position highlight view to match target view using FrameLayout.LayoutParams
-                        val highlightParams = highlightView.layoutParams as? FrameLayout.LayoutParams
-                            ?: FrameLayout.LayoutParams(
-                                targetWidth + 40,
-                                targetHeight + 40
-                            )
-                        
-                        highlightParams.leftMargin = (targetX - 20).coerceAtLeast(0)
-                        highlightParams.topMargin = (targetY - 20).coerceAtLeast(0)
-                        highlightParams.width = targetWidth + 40
-                        highlightParams.height = targetHeight + 40
-                        highlightView.layoutParams = highlightParams
-                        highlightView.visibility = View.VISIBLE
-                    } else {
-                        // Hide highlight if we can't position it
-                        highlightView.visibility = View.GONE
-                    }
-                    
-                    // Position text container based on position preference
-                    val textParams = textContainer.layoutParams as? FrameLayout.LayoutParams
-                        ?: FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT
-                        )
-                    
-                    val screenWidth = parentView.width
-                    val screenHeight = parentView.height
-                    val padding = 40
-                    
-                    // Measure text container to get actual height
-                    textContainer.measure(
-                        View.MeasureSpec.makeMeasureSpec(screenWidth - padding * 2, View.MeasureSpec.AT_MOST),
-                        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-                    )
-                    val textContainerHeight = textContainer.measuredHeight
-                    
-                    // Check if target view is very tall (long widget)
-                    val isLongWidget = targetHeight > screenHeight * 0.6
-                    
-                    // Determine if we should center the text container
-                    var shouldCenter = false
-                    
-                    when (step.position) {
-                        HighlightPosition.TOP -> {
-                            val topMargin = (targetY - textContainerHeight - padding).coerceAtLeast(padding)
-                            // If target is too high or text would go off top, center instead
-                            if (targetY < padding * 2 || topMargin < padding) {
-                                shouldCenter = true
-                            } else {
-                                textParams.topMargin = topMargin
-                                textParams.leftMargin = padding
-                                textParams.rightMargin = padding
-                            }
-                        }
-                        HighlightPosition.BOTTOM -> {
-                            val bottomMargin = targetY + targetHeight + padding
-                            val maxBottom = screenHeight - textContainerHeight - padding
-                            // If widget is long or text would go off screen, center instead
-                            if (isLongWidget || bottomMargin > maxBottom || bottomMargin + textContainerHeight > screenHeight - padding) {
-                                shouldCenter = true
-                            } else {
-                                textParams.topMargin = bottomMargin.coerceAtMost(maxBottom)
-                                textParams.leftMargin = padding
-                                textParams.rightMargin = padding
-                            }
-                        }
-                        HighlightPosition.LEFT -> {
-                            val textWidth = 350 // Approximate width of text container
-                            textParams.topMargin = targetY
-                            textParams.leftMargin = (targetX - textWidth - padding).coerceAtLeast(padding)
-                            textParams.rightMargin = padding
-                        }
-                        HighlightPosition.RIGHT -> {
-                            textParams.topMargin = targetY
-                            textParams.leftMargin = targetX + targetWidth + padding
-                            textParams.rightMargin = padding
-                        }
-                        HighlightPosition.CENTER -> {
-                            shouldCenter = true
-                        }
-                    }
-                    
-                    // Center the text container if needed
-                    if (shouldCenter) {
-                        textParams.topMargin = ((screenHeight - textContainerHeight) / 2).coerceAtLeast(padding)
-                        textParams.leftMargin = padding
-                        textParams.rightMargin = padding
-                    }
-                    
-                    textContainer.layoutParams = textParams
-                    textContainer.visibility = View.VISIBLE
-                    
-                    // Final check: Ensure text container is actually visible on screen
-                    textContainer.post {
-                        val textLocation = IntArray(2)
-                        textContainer.getLocationOnScreen(textLocation)
-                        val textHeight = textContainer.height
-                        val currentScreenHeight = parentView.height
-                        
-                        // If text container is off screen or not fully visible, center it
-                        val isOffScreen = textLocation[1] < padding || textLocation[1] + textHeight > currentScreenHeight - padding
-                        val isPartiallyVisible = textLocation[1] < 0 || textLocation[1] + textHeight > currentScreenHeight
-                        
-                        if (isOffScreen || isPartiallyVisible) {
-                            // Reposition to center
-                            val fallbackParams = textContainer.layoutParams as? FrameLayout.LayoutParams
-                                ?: FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.MATCH_PARENT,
-                                    FrameLayout.LayoutParams.WRAP_CONTENT
-                                )
-                            val actualTextHeight = if (textHeight > 0) textHeight else textContainerHeight
-                            fallbackParams.topMargin = ((currentScreenHeight - actualTextHeight) / 2).coerceAtLeast(padding)
-                            fallbackParams.leftMargin = padding
-                            fallbackParams.rightMargin = padding
-                            textContainer.layoutParams = fallbackParams
-                        }
-                    }
+
+    private fun positionTutorialOverlay(step: TutorialStep, parentView: ViewGroup, targetView: View) {
+        val overlay = tutorialOverlay ?: return
+        val highlightView = overlay.findViewById<View>(R.id.tutorial_highlight)
+        val textContainer = overlay.findViewById<View>(R.id.tutorial_text_container)
+
+        val targetLocation = IntArray(2)
+        targetView.getLocationOnScreen(targetLocation)
+        val rootLocation = IntArray(2)
+        parentView.getLocationOnScreen(rootLocation)
+
+        val targetX = targetLocation[0] - rootLocation[0]
+        val targetY = targetLocation[1] - rootLocation[1]
+        val targetWidth = targetView.width.takeIf { it > 0 } ?: targetView.measuredWidth
+        val targetHeight = targetView.height.takeIf { it > 0 } ?: targetView.measuredHeight
+
+        if (!step.highlightVisible || targetWidth <= 0 || targetHeight <= 0) {
+            highlightView.visibility = View.GONE
+        } else {
+            val params = (highlightView.layoutParams as? FrameLayout.LayoutParams)
+                ?: FrameLayout.LayoutParams(targetWidth + 40, targetHeight + 40)
+            params.leftMargin = (targetX - 20).coerceAtLeast(0)
+            params.topMargin = (targetY - 20).coerceAtLeast(0)
+            params.width = targetWidth + 40
+            params.height = targetHeight + 40
+            highlightView.layoutParams = params
+            highlightView.visibility = View.VISIBLE
+        }
+
+        val textParams = (textContainer.layoutParams as? FrameLayout.LayoutParams)
+            ?: FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        val screenWidth = parentView.width
+        val screenHeight = parentView.height
+        val padding = 40
+
+        textContainer.measure(
+            View.MeasureSpec.makeMeasureSpec(screenWidth - padding * 2, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val textHeight = textContainer.measuredHeight
+        val longTarget = targetHeight > screenHeight * 0.6
+        var centerText = step.highlightPosition == HighlightPosition.CENTER
+
+        when (step.highlightPosition) {
+            HighlightPosition.TOP -> {
+                val topMargin = (targetY - textHeight - padding).coerceAtLeast(padding)
+                if (topMargin <= padding) {
+                    centerText = true
+                } else {
+                    textParams.topMargin = topMargin
                 }
             }
+
+            HighlightPosition.BOTTOM -> {
+                val topMargin = targetY + targetHeight + padding
+                val maxTop = screenHeight - textHeight - padding
+                if (longTarget || topMargin > maxTop) {
+                    centerText = true
+                } else {
+                    textParams.topMargin = topMargin.coerceAtMost(maxTop)
+                }
+            }
+
+            HighlightPosition.LEFT -> {
+                textParams.topMargin = targetY
+                textParams.leftMargin = padding
+            }
+
+            HighlightPosition.RIGHT -> {
+                textParams.topMargin = targetY
+                textParams.leftMargin = padding
+            }
+
+            HighlightPosition.CENTER -> {
+                centerText = true
+            }
         }
+
+        if (centerText) {
+            textParams.topMargin = ((screenHeight - textHeight) / 2).coerceAtLeast(padding)
+        }
+
+        textParams.leftMargin = padding
+        textParams.rightMargin = padding
+        textContainer.layoutParams = textParams
     }
-    
-    /**
-     * Scroll to make the target view visible
-     */
+
     private fun scrollToView(targetView: View) {
         targetView.post {
-            val scrollView = findScrollView(targetView)
-            if (scrollView != null) {
-                scrollView.post {
-                    // Get current scroll position
-                    val currentScrollY = when (scrollView) {
-                        is androidx.core.widget.NestedScrollView -> scrollView.scrollY
-                        is android.widget.ScrollView -> scrollView.scrollY
-                        else -> 0
-                    }
-                    
-                    // Use a more accurate method to get view position in scroll view
-                    // Get screen coordinates
-                    val targetLocation = IntArray(2)
-                    targetView.getLocationOnScreen(targetLocation)
-                    
-                    val scrollViewLocation = IntArray(2)
-                    scrollView.getLocationOnScreen(scrollViewLocation)
-                    
-                    // Calculate view's Y position relative to scroll view's content
-                    // The view's position in the scroll view = screen position difference + current scroll
-                    val viewTopInContent = targetLocation[1] - scrollViewLocation[1] + currentScrollY
-                    
-                    // Always center the widget on screen for tutorial
-                    // Calculate desired scroll position to center the widget vertically
-                    val scrollViewHeight = scrollView.height
-                    val targetViewHeight = targetView.height
-                    
-                    // Calculate the center position: widget center should be at screen center
-                    // desiredScrollY = viewTopInContent - (screenHeight / 2) + (widgetHeight / 2)
-                    val desiredScrollY = (viewTopInContent - (scrollViewHeight / 2) + (targetViewHeight / 2)).coerceAtLeast(0)
-                    
-                    // Get max scroll position
-                    val maxScrollY = when (scrollView) {
-                        is androidx.core.widget.NestedScrollView -> {
-                            val child = scrollView.getChildAt(0)
-                            if (child != null) {
-                                (child.height - scrollViewHeight).coerceAtLeast(0)
-                            } else {
-                                0
-                            }
-                        }
-                        is android.widget.ScrollView -> {
-                            val child = scrollView.getChildAt(0)
-                            if (child != null) {
-                                (child.height - scrollViewHeight).coerceAtLeast(0)
-                            } else {
-                                0
-                            }
-                        }
-                        else -> 0
-                    }
-                    
-                    // Clamp the desired scroll position to valid range
-                    val finalScrollY = desiredScrollY.coerceIn(0, maxScrollY)
-                    
-                    // Only scroll if it's a significant change (more than 10 pixels)
-                    if (abs(finalScrollY - currentScrollY) > 10) {
-                        when (scrollView) {
-                            is androidx.core.widget.NestedScrollView -> {
-                                // Use smooth scroll for better animation
-                                scrollView.smoothScrollTo(0, finalScrollY)
-                            }
-                            is android.widget.ScrollView -> {
-                                scrollView.smoothScrollTo(0, finalScrollY)
-                            }
-                        }
-                    }
-                    // Note: showTutorialOverlay is called from findAndShowView after scrolling completes
-                }
-            } else {
-                // No scroll view found, try to center the view using requestRectangleOnScreen
-                targetView.post {
-                    val rect = Rect()
-                    targetView.getHitRect(rect)
-                    // Center the view on screen by expanding rect equally above and below
-                    val screenHeight = activity.findViewById<ViewGroup>(android.R.id.content)?.height ?: 0
-                    val viewHeight = targetView.height
-                    val centerOffset = (screenHeight / 2) - (viewHeight / 2)
-                    rect.top -= centerOffset
-                    rect.bottom += centerOffset
-                    targetView.requestRectangleOnScreen(rect, true)
+            val scrollView = findVerticalScrollParent(targetView) ?: run {
+                val rect = Rect()
+                targetView.getHitRect(rect)
+                val rootHeight = activity.findViewById<ViewGroup>(android.R.id.content)?.height ?: 0
+                val centerOffset = (rootHeight / 2) - (targetView.height / 2)
+                rect.top -= centerOffset
+                rect.bottom += centerOffset
+                targetView.requestRectangleOnScreen(rect, true)
+                return@post
+            }
+
+            scrollView.post {
+                val currentScrollY = scrollView.scrollY
+
+                val targetLocation = IntArray(2)
+                targetView.getLocationOnScreen(targetLocation)
+                val scrollLocation = IntArray(2)
+                scrollView.getLocationOnScreen(scrollLocation)
+
+                val targetTopInContent = targetLocation[1] - scrollLocation[1] + currentScrollY
+                val desiredScrollY =
+                    (targetTopInContent - (scrollView.height / 2) + (targetView.height / 2)).coerceAtLeast(0)
+                val maxScrollY =
+                    (scrollView.getChildAt(0)?.height?.minus(scrollView.height) ?: 0).coerceAtLeast(0)
+                val finalScrollY = desiredScrollY.coerceIn(0, maxScrollY)
+
+                if (abs(finalScrollY - currentScrollY) > 10) {
+                    scrollView.smoothScrollTo(0, finalScrollY)
                 }
             }
         }
     }
-    
-    /**
-     * Find the scroll view containing the target view
-     */
-    private fun findScrollView(view: View): View? {
+
+    private fun findVerticalScrollParent(view: View): NestedScrollView? {
         var parent = view.parent
-        while (parent != null && parent is View) {
-            if (parent is androidx.core.widget.NestedScrollView || 
-                parent is android.widget.ScrollView) {
-                return parent as View
+        while (parent is View) {
+            if (parent is NestedScrollView) {
+                return parent
             }
             parent = parent.parent
         }
         return null
     }
-    
-    /**
-     * Show drawer gesture tutorial (special case)
-     */
-    private fun showDrawerGestureTutorial() {
-        activity.openWidgetsPage(animated = true)
-        
-        activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
-            val step = TutorialStep.DRAWER_GESTURE
-            val drawerView = activity.findViewById<View>(R.id.widgets_drawer)
-            if (drawerView != null && drawerView.isAttachedToWindow) {
-                showTutorialOverlay(step, drawerView)
-            } else {
-                activity.findViewById<ViewGroup>(android.R.id.content)?.postDelayed({
-                    val retryDrawerView = activity.findViewById<View>(R.id.widgets_drawer)
-                    if (retryDrawerView != null && retryDrawerView.isAttachedToWindow) {
-                        showTutorialOverlay(step, retryDrawerView)
-                    } else {
-                        nextStep()
-                    }
-                }, 300)
-            }
-        }, 400) // Wait for drawer animation
-    }
-    
-    /**
-     * Find and disable all scroll views recursively
-     */
-    private fun findAndDisableScrollViews(parent: ViewGroup) {
-        for (i in 0 until parent.childCount) {
-            when (val child = parent.getChildAt(i)) {
-                is androidx.core.widget.NestedScrollView -> {
-                    // Disable nested scrolling to prevent automatic scrolling
-                    child.isNestedScrollingEnabled = false
-                    scrollViews.add(child)
-                }
-                is android.widget.ScrollView -> {
-                    // Store original scroll state
-                    scrollViews.add(child)
-                }
-                is ViewGroup -> {
-                    findAndDisableScrollViews(child)
-                }
-            }
-        }
-    }
-    
-    /**
-     * Re-enable scrolling after tutorial
-     */
-    private fun enableScrolling() {
-        scrollViews.forEach { scrollView ->
-            when (scrollView) {
-                is androidx.core.widget.NestedScrollView -> {
-                    scrollView.isNestedScrollingEnabled = true
-                    scrollView.setOnTouchListener(null) // Restore default behavior
-                }
-                is android.widget.ScrollView -> {
-                    scrollView.setOnTouchListener(null) // Restore default behavior
-                }
-            }
-        }
-        scrollViews.clear()
-    }
-    
-    /**
-     * Check if a tutorial step is in the drawer
-     */
-    private fun isDrawerStep(step: TutorialStep): Boolean {
-        return step == TutorialStep.DRAWER_GESTURE
-    }
-    
-    /**
-     * Move to next tutorial step
-     */
+
     private fun nextStep() {
-        val previousStep = if (currentStep > 0) TutorialStep.entries[currentStep - 1] else null
         currentStep++
         sharedPreferences.edit { putInt(PREF_TUTORIAL_STEP, currentStep) }
-        
+
         if (currentStep >= TutorialStep.entries.size) {
             finishTutorial()
             return
         }
-        
-        val nextStep = TutorialStep.entries[currentStep]
-        val isNextDrawerStep = isDrawerStep(nextStep) && nextStep != TutorialStep.DRAWER_GESTURE
-        val wasPreviousDrawerStep = previousStep != null && isDrawerStep(previousStep) && previousStep != TutorialStep.DRAWER_GESTURE
-        
-        if (!isNextDrawerStep) {
-            if (activity.isWidgetsPageOpen()) {
-                activity.openHomePage(animated = true)
-                activity.findViewById<View>(R.id.main_content)?.postDelayed({
-                    showCurrentStep()
-                }, 300)
-                return
-            }
-        } else {
-            if (!activity.isWidgetsPageOpen()) {
-                activity.openWidgetsPage(animated = true)
-                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
-                    showCurrentStep()
-                }, 400)
-                return
-            } else if (wasPreviousDrawerStep) {
-                activity.findViewById<View>(R.id.widgets_drawer)?.postDelayed({
-                    showCurrentStep()
-                }, 150)
-                return
-            }
-        }
-        
+
         showCurrentStep()
     }
-    
-    /**
-     * Finish the tutorial
-     */
+
     private fun finishTutorial() {
         removeTutorialOverlay()
-        
-        // Re-enable scrolling
-        enableScrolling()
-        
-        if (activity.isWidgetsPageOpen()) {
-            activity.openHomePage(animated = true)
-        }
-        
+        isTutorialActive = false
+        renderToken++
+        activity.openHomePage(animated = false)
         markTutorialComplete()
     }
-    
-    /**
-     * Mark tutorial as complete
-     */
+
     private fun markTutorialComplete() {
         sharedPreferences.edit {
             putBoolean(PREF_TUTORIAL_SHOWN, true)
             putInt(PREF_TUTORIAL_STEP, TutorialStep.entries.size)
         }
-        isTutorialActive = false
     }
-    
-    /**
-     * Remove tutorial overlay
-     */
+
     private fun removeTutorialOverlay() {
-        tutorialOverlay?.let {
-            val parent = it.parent as? ViewGroup
-            parent?.removeView(it)
-            tutorialOverlay = null
+        tutorialOverlay?.let { overlay ->
+            (overlay.parent as? ViewGroup)?.removeView(overlay)
         }
+        tutorialOverlay = null
     }
-    
-    /**
-     * Reset tutorial (for testing or if user wants to see it again)
-     */
+
     @Suppress("unused")
     fun resetTutorial() {
+        renderToken++
+        removeTutorialOverlay()
+        isTutorialActive = false
         sharedPreferences.edit {
             putBoolean(PREF_TUTORIAL_SHOWN, false)
             putInt(PREF_TUTORIAL_STEP, 0)

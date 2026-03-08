@@ -6,6 +6,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -456,6 +457,11 @@ class MainActivity : FragmentActivity() {
         if (::systemBarManager.isInitialized) {
             systemBarManager.makeSystemBarsTransparent()
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
     
 
