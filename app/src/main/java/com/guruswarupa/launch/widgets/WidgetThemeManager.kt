@@ -5,6 +5,7 @@ import android.content.Context
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
@@ -79,7 +80,7 @@ class WidgetThemeManager(
                 if (isNightMode) R.drawable.search_box_transparent_bg else R.drawable.search_box_light_bg
             }
             val textColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
-            val hintColor = ContextCompat.getColor(activity, if (isNightMode) R.color.gray_light else R.color.gray)
+            val hintColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
             
             // Apply background to search container if initialized, otherwise to searchBox
             searchContainer?.let { sc ->
@@ -98,6 +99,8 @@ class WidgetThemeManager(
             voiceSearchButton?.setColorFilter(iconColor)
             searchTypeButton?.setColorFilter(iconColor)
         }
+        val weatherIconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+        activity.findViewById<ImageView>(R.id.weather_icon)?.setColorFilter(weatherIconColor)
         
         // Update dock icons to match current theme
         appDockManager?.updateDockIcons()

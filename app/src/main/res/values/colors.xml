@@ -64,7 +64,7 @@
     
     <!-- Dynamic Text Colors -->
     <color name="widget_text">@color/black</color>
-    <color name="widget_text_secondary">@color/text_secondary</color>
+    <color name="widget_text_secondary">@color/black</color>
     <color name="widget_divider">#33000000</color>
     <color name="widget_item_background">#1A000000</color>
     <color name="widget_item_stroke">#33000000</color>
