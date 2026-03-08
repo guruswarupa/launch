@@ -74,7 +74,7 @@
             android:ellipsize="end"
             android:maxLines="1"
             android:text="Widget Name"
-            android:textColor="@android:color/white"
+            android:textColor="@color/widget_config_text_primary"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -86,7 +86,7 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:text="Widget description"
-            android:textColor="#CCFFFFFF"
+            android:textColor="@color/widget_config_text_secondary"
             android:textSize="13sp" />
 
         <TextView
@@ -99,7 +99,7 @@
             android:paddingEnd="10dp"
             android:paddingBottom="4dp"
             android:text="Tap to configure"
-            android:textColor="#E6FFFFFF"
+            android:textColor="@color/widget_config_chip_text"
             android:textSize="11sp" />
 
     </LinearLayout>

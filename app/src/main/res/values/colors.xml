@@ -56,6 +56,11 @@
     <color name="dialog_preview_frame_stroke">#2E000000</color>
     <color name="dialog_preview_secondary_fill">#14000000</color>
     <color name="dialog_preview_secondary_stroke">#33000000</color>
+    <color name="widget_config_text_primary">#FF111111</color>
+    <color name="widget_config_text_secondary">#B3121212</color>
+    <color name="widget_config_text_hint">#80111111</color>
+    <color name="widget_config_chip_text">#D9111111</color>
+    <color name="widget_config_secondary_button_text">#FF111111</color>
     
     <!-- Dynamic Text Colors -->
     <color name="widget_text">@color/black</color>

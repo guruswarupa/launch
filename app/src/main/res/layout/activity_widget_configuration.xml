@@ -42,7 +42,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Configure Widgets"
-                    android:textColor="@android:color/white"
+                    android:textColor="@color/widget_config_text_primary"
                     android:textSize="25sp"
                     android:textStyle="bold" />
 
@@ -51,7 +51,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Organize your drawer layout"
-                    android:textColor="#CCFFFFFF"
+                    android:textColor="@color/widget_config_text_secondary"
                     android:textSize="13sp" />
             </LinearLayout>
         </LinearLayout>
@@ -62,7 +62,7 @@
             android:layout_marginTop="14dp"
             android:layout_marginBottom="12dp"
             android:text="Drag to reorder. Tap a card to preview and enable or disable it."
-            android:textColor="#D9FFFFFF"
+            android:textColor="@color/widget_config_text_secondary"
             android:textSize="14sp" />
 
         <EditText
@@ -79,8 +79,9 @@
             android:paddingTop="12dp"
             android:paddingEnd="14dp"
             android:paddingBottom="12dp"
-            android:textColor="@android:color/white"
-            android:textColorHint="#B3FFFFFF"
+            android:textColor="@color/widget_config_text_primary"
+            android:textColorHint="@color/widget_config_text_hint"
+            android:drawableTint="@color/widget_config_text_secondary"
             android:textCursorDrawable="@null" />
 
         <TextView
@@ -90,7 +91,7 @@
             android:layout_marginTop="14dp"
             android:layout_marginBottom="8dp"
             android:text="Available Widgets"
-            android:textColor="@android:color/white"
+            android:textColor="@color/widget_config_text_primary"
             android:textSize="17sp"
             android:textStyle="bold" />
 
@@ -122,7 +123,7 @@
                 android:minWidth="0dp"
                 android:text="Cancel"
                 android:textAllCaps="false"
-                android:textColor="@android:color/white"
+                android:textColor="@color/widget_config_secondary_button_text"
                 android:textSize="15sp" />
 
             <androidx.appcompat.widget.AppCompatButton
