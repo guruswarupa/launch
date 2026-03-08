@@ -15,12 +15,16 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.graphics.Rect
 import android.view.View
+import android.view.ViewGroup
+import android.view.LayoutInflater
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.util.Base64
+import android.widget.FrameLayout
 import android.widget.*
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -57,10 +61,86 @@ import android.os.Handler
 import android.os.Looper
 
 class SettingsActivity : ComponentActivity() {
+    companion object {
+        const val EXTRA_START_SETTINGS_TUTORIAL = "start_settings_tutorial"
+    }
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
     private val handler = Handler(Looper.getMainLooper())
     private val vaultManager by lazy { EncryptedFolderManager(this) }
+    private var settingsTutorialStepIndex = 0
+    private var settingsTutorialOverlay: View? = null
+    private var settingsTutorialActive = false
+    private var settingsTutorialRenderToken = 0
+
+    private data class SettingsTutorialStep(
+        val title: String,
+        val description: String,
+        val targetViewId: Int
+    )
+
+    private val settingsTutorialSteps = listOf(
+        SettingsTutorialStep(
+            title = "Display Style",
+            description = "Choose how apps are shown and toggle the clock format used across the launcher.",
+            targetViewId = R.id.display_style_header
+        ),
+        SettingsTutorialStep(
+            title = "Wallpaper",
+            description = "Change the wallpaper, adjust blur, and enable the readability mode for clearer visuals.",
+            targetViewId = R.id.wallpaper_header
+        ),
+        SettingsTutorialStep(
+            title = "Typography",
+            description = "Control text size, font family, and weight to match your preferred reading style.",
+            targetViewId = R.id.typography_header
+        ),
+        SettingsTutorialStep(
+            title = "Widgets",
+            description = "Open widget configuration to decide which widgets appear on the launcher.",
+            targetViewId = R.id.widgets_settings_header
+        ),
+        SettingsTutorialStep(
+            title = "Search Engine",
+            description = "Pick the web search provider used when the launcher sends a search to the browser.",
+            targetViewId = R.id.search_engine_header
+        ),
+        SettingsTutorialStep(
+            title = "Quick Actions",
+            description = "Configure gesture-driven and utility shortcuts like torch, dimmer, control center, and back tap actions.",
+            targetViewId = R.id.quick_actions_header
+        ),
+        SettingsTutorialStep(
+            title = "App Lock",
+            description = "Manage protected apps, the encrypted vault, and related security controls from here.",
+            targetViewId = R.id.app_lock_header
+        ),
+        SettingsTutorialStep(
+            title = "Backup and Restore",
+            description = "Export your setup or restore it later when moving to a new device or recovering state.",
+            targetViewId = R.id.backup_restore_header
+        ),
+        SettingsTutorialStep(
+            title = "Permissions",
+            description = "Review the Android permissions and system access that power launcher features.",
+            targetViewId = R.id.permissions_header
+        ),
+        SettingsTutorialStep(
+            title = "Tutorials",
+            description = "Restart the guided tour at any time from this section.",
+            targetViewId = R.id.tutorial_header
+        ),
+        SettingsTutorialStep(
+            title = "Launcher Controls",
+            description = "Use launcher maintenance actions like restart, cache cleanup, or data reset carefully.",
+            targetViewId = R.id.launcher_header
+        ),
+        SettingsTutorialStep(
+            title = "Support",
+            description = "Find project links, support options, and feedback actions in the final section.",
+            targetViewId = R.id.support_header
+        )
+    )
     
     private val securePrefs by lazy {
         val masterKey = MasterKey.Builder(this)
@@ -211,6 +291,10 @@ class SettingsActivity : ComponentActivity() {
         
         // Setup expandable sections
         setupExpandableSections()
+
+        if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
+            window.decorView.post { startSettingsTutorial() }
+        }
     }
     
     private fun setupWallpaper() {
@@ -1104,6 +1188,164 @@ class SettingsActivity : ComponentActivity() {
         }
         startActivity(intent)
         finish()
+    }
+
+    private fun startSettingsTutorial() {
+        removeSettingsTutorialOverlay()
+        settingsTutorialStepIndex = 0
+        settingsTutorialActive = true
+        showCurrentSettingsTutorialStep()
+    }
+
+    private fun showCurrentSettingsTutorialStep() {
+        if (!settingsTutorialActive) return
+        if (settingsTutorialStepIndex >= settingsTutorialSteps.size) {
+            finishSettingsTutorial()
+            return
+        }
+
+        val step = settingsTutorialSteps[settingsTutorialStepIndex]
+        val scrollView = findViewById<ScrollView>(R.id.settings_scroll_view) ?: return
+        val overlayRoot = findViewById<ViewGroup>(android.R.id.content) ?: return
+        val targetView = findViewById<View>(step.targetViewId)
+        if (targetView == null) {
+            settingsTutorialStepIndex++
+            showCurrentSettingsTutorialStep()
+            return
+        }
+
+        val token = ++settingsTutorialRenderToken
+        scrollSettingsTutorialToView(scrollView, targetView)
+        scrollView.postDelayed({
+            if (!settingsTutorialActive || token != settingsTutorialRenderToken) return@postDelayed
+            showSettingsTutorialOverlay(step, overlayRoot, targetView)
+        }, 320L)
+    }
+
+    private fun scrollSettingsTutorialToView(scrollView: ScrollView, targetView: View) {
+        targetView.post {
+            val rect = Rect()
+            targetView.getDrawingRect(rect)
+            scrollView.offsetDescendantRectToMyCoords(targetView, rect)
+            val targetScrollY =
+                (rect.top - (scrollView.height / 2) + (targetView.height / 2)).coerceAtLeast(0)
+            val maxScrollY =
+                (scrollView.getChildAt(0)?.height?.minus(scrollView.height) ?: 0).coerceAtLeast(0)
+            scrollView.smoothScrollTo(0, targetScrollY.coerceAtMost(maxScrollY))
+        }
+    }
+
+    private fun showSettingsTutorialOverlay(
+        step: SettingsTutorialStep,
+        parentView: ViewGroup,
+        targetView: View
+    ) {
+        removeSettingsTutorialOverlay()
+
+        settingsTutorialOverlay = LayoutInflater.from(this).inflate(R.layout.tutorial_overlay, null)
+        parentView.addView(settingsTutorialOverlay)
+
+        settingsTutorialOverlay?.setOnTouchListener { view, _ ->
+            view.performClick()
+            false
+        }
+        settingsTutorialOverlay?.bringToFront()
+
+        settingsTutorialOverlay?.findViewById<TextView>(R.id.tutorial_title)?.text = step.title
+        settingsTutorialOverlay?.findViewById<TextView>(R.id.tutorial_description)?.text = step.description
+
+        val isLastStep = settingsTutorialStepIndex == settingsTutorialSteps.lastIndex
+        settingsTutorialOverlay?.findViewById<View>(R.id.tutorial_buttons_container)?.visibility =
+            if (isLastStep) View.GONE else View.VISIBLE
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_next)?.visibility =
+            if (isLastStep) View.GONE else View.VISIBLE
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)?.visibility =
+            if (isLastStep) View.VISIBLE else View.GONE
+
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_skip)?.setOnClickListener {
+            finishSettingsTutorial()
+        }
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_next)?.setOnClickListener {
+            settingsTutorialStepIndex++
+            showCurrentSettingsTutorialStep()
+        }
+        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)?.setOnClickListener {
+            finishSettingsTutorial()
+        }
+
+        settingsTutorialOverlay?.post {
+            positionSettingsTutorialOverlay(parentView, targetView)
+        }
+    }
+
+    private fun positionSettingsTutorialOverlay(parentView: ViewGroup, targetView: View) {
+        val overlay = settingsTutorialOverlay ?: return
+        val highlightView = overlay.findViewById<View>(R.id.tutorial_highlight)
+        val textContainer = overlay.findViewById<View>(R.id.tutorial_text_container)
+
+        val targetLocation = IntArray(2)
+        targetView.getLocationOnScreen(targetLocation)
+        val rootLocation = IntArray(2)
+        parentView.getLocationOnScreen(rootLocation)
+
+        val targetX = targetLocation[0] - rootLocation[0]
+        val targetY = targetLocation[1] - rootLocation[1]
+        val targetWidth = targetView.width.takeIf { it > 0 } ?: targetView.measuredWidth
+        val targetHeight = targetView.height.takeIf { it > 0 } ?: targetView.measuredHeight
+
+        val highlightParams = (highlightView.layoutParams as? FrameLayout.LayoutParams)
+            ?: FrameLayout.LayoutParams(targetWidth + 40, targetHeight + 40)
+        highlightParams.leftMargin = (targetX - 20).coerceAtLeast(0)
+        highlightParams.topMargin = (targetY - 20).coerceAtLeast(0)
+        highlightParams.width = targetWidth + 40
+        highlightParams.height = targetHeight + 40
+        highlightView.layoutParams = highlightParams
+
+        val textParams = (textContainer.layoutParams as? FrameLayout.LayoutParams)
+            ?: FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+
+        val screenWidth = parentView.width
+        val screenHeight = parentView.height
+        val padding = 40
+
+        textContainer.measure(
+            View.MeasureSpec.makeMeasureSpec(screenWidth - padding * 2, View.MeasureSpec.AT_MOST),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val textHeight = textContainer.measuredHeight
+        val preferredTop = targetY + targetHeight + padding
+        val maxTop = screenHeight - textHeight - padding
+        textParams.topMargin = if (preferredTop <= maxTop) {
+            preferredTop
+        } else {
+            (targetY - textHeight - padding).coerceAtLeast(padding)
+        }
+        textParams.leftMargin = padding
+        textParams.rightMargin = padding
+        textContainer.layoutParams = textParams
+    }
+
+    private fun finishSettingsTutorial() {
+        removeSettingsTutorialOverlay()
+        settingsTutorialActive = false
+        settingsTutorialRenderToken++
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("start_tutorial", true)
+        }
+        startActivity(intent)
+        finish()
+    }
+
+    private fun removeSettingsTutorialOverlay() {
+        settingsTutorialOverlay?.let { overlay ->
+            (overlay.parent as? ViewGroup)?.removeView(overlay)
+        }
+        settingsTutorialOverlay = null
     }
     
     private fun restartLauncher() {

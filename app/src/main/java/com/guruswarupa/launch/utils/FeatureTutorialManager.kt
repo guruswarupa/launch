@@ -1,6 +1,7 @@
 package com.guruswarupa.launch.utils
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Rect
 import android.view.LayoutInflater
@@ -13,6 +14,7 @@ import androidx.core.content.edit
 import androidx.core.widget.NestedScrollView
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.ui.activities.SettingsActivity
 import kotlin.math.abs
 
 /**
@@ -89,6 +91,13 @@ class FeatureTutorialManager(
             title = "Dock Shortcuts",
             description = "The dock holds your quick actions like settings, favorites, workspace switching, focus mode, sharing tools and encrypted vault.",
             targetViewId = R.id.app_dock
+        ),
+        SETTINGS_BUTTON(
+            page = TutorialPage.HOME,
+            title = "Launcher Settings",
+            description = "This settings shortcut opens the full launcher configuration screen. The tutorial will walk through each settings section next.",
+            targetViewId = R.id.app_dock,
+            targetViewTag = "settings_button"
         ),
         APP_LIST(
             page = TutorialPage.HOME,
@@ -398,6 +407,11 @@ class FeatureTutorialManager(
     }
 
     private fun nextStep() {
+        if (TutorialStep.entries[currentStep] == TutorialStep.SETTINGS_BUTTON) {
+            launchSettingsTutorial()
+            return
+        }
+
         currentStep++
         sharedPreferences.edit { putInt(PREF_TUTORIAL_STEP, currentStep) }
 
@@ -407,6 +421,21 @@ class FeatureTutorialManager(
         }
 
         showCurrentStep()
+    }
+
+    private fun launchSettingsTutorial() {
+        currentStep++
+        sharedPreferences.edit { putInt(PREF_TUTORIAL_STEP, currentStep) }
+
+        removeTutorialOverlay()
+        isTutorialActive = false
+        renderToken++
+
+        activity.startActivity(
+            Intent(activity, SettingsActivity::class.java).apply {
+                putExtra(SettingsActivity.EXTRA_START_SETTINGS_TUTORIAL, true)
+            }
+        )
     }
 
     private fun finishTutorial() {
