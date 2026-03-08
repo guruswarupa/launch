@@ -42,6 +42,11 @@ class WidgetThemeManager(
         } else {
             if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
         }
+        val emptyStateBackground = if (opaqueSurfacesEnabled) {
+            if (isNightMode) R.drawable.drawer_widgets_empty_state_bg_opaque_dark else R.drawable.drawer_widgets_empty_state_bg_opaque_light
+        } else {
+            R.drawable.drawer_widgets_empty_state_bg
+        }
         
         // Apply backgrounds to all widget containers
         activity.findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
@@ -70,7 +75,7 @@ class WidgetThemeManager(
 
         activity.findViewById<View>(R.id.widget_settings_header)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.widget_config_button)?.setBackgroundResource(widgetBackground)
-        activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(emptyStateBackground)
         
         // Apply theme to search box
         searchBox?.let { sb ->

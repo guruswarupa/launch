@@ -320,17 +320,39 @@
                 android:background="@drawable/drawer_widgets_empty_state_bg"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:padding="32dp"
+                android:paddingStart="24dp"
+                android:paddingTop="28dp"
+                android:paddingEnd="24dp"
+                android:paddingBottom="28dp"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp">
+
+                <FrameLayout
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/drawer_widgets_empty_icon_bg"
+                    android:foregroundGravity="center">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_widget_placeholder"
+                        android:tint="@color/widget_text" />
+                </FrameLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="No widgets enabled"
                     android:textColor="@color/widget_text"
-                    android:textSize="18sp"
-                    android:textStyle="bold" android:layout_marginBottom="8dp" />
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -338,7 +360,8 @@
                     android:text="Tap Gear icon above to add and configure widgets"
                     android:textColor="@color/widget_text_secondary"
                     android:textSize="14sp"
-                    android:gravity="center" />
+                    android:gravity="center"
+                    android:alpha="0.78" />
             </LinearLayout>
 
             <!-- Notifications Widget -->
