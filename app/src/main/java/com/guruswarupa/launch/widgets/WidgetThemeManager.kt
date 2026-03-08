@@ -67,24 +67,9 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.finance_widget)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.weekly_usage_widget)?.setBackgroundResource(widgetBackground)
 
-        val drawerHeaderBackground = if (opaqueSurfacesEnabled) {
-            if (isNightMode) R.drawable.drawer_widgets_header_bg_opaque_dark else R.drawable.drawer_widgets_header_bg_opaque_light
-        } else {
-            R.drawable.drawer_widgets_header_bg
-        }
-        val drawerActionBackground = if (opaqueSurfacesEnabled) {
-            if (isNightMode) R.drawable.drawer_widgets_action_bg_opaque_dark else R.drawable.drawer_widgets_action_bg_opaque_light
-        } else {
-            R.drawable.drawer_widgets_action_bg
-        }
-        val drawerEmptyStateBackground = if (opaqueSurfacesEnabled) {
-            if (isNightMode) R.drawable.drawer_widgets_empty_state_bg_opaque_dark else R.drawable.drawer_widgets_empty_state_bg_opaque_light
-        } else {
-            R.drawable.drawer_widgets_empty_state_bg
-        }
-        activity.findViewById<View>(R.id.widget_settings_header)?.setBackgroundResource(drawerHeaderBackground)
-        activity.findViewById<View>(R.id.widget_config_button)?.setBackgroundResource(drawerActionBackground)
-        activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(drawerEmptyStateBackground)
+        activity.findViewById<View>(R.id.widget_settings_header)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.widget_config_button)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(widgetBackground)
         
         // Apply theme to search box
         searchBox?.let { sb ->

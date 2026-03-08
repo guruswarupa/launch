@@ -56,11 +56,11 @@
     <color name="dialog_preview_frame_stroke">#4DFFFFFF</color>
     <color name="dialog_preview_secondary_fill">#2EFFFFFF</color>
     <color name="dialog_preview_secondary_stroke">#66FFFFFF</color>
-    <color name="widget_config_text_primary">#FFFFFFFF</color>
-    <color name="widget_config_text_secondary">#CCFFFFFF</color>
-    <color name="widget_config_text_hint">#B3FFFFFF</color>
-    <color name="widget_config_chip_text">#E6FFFFFF</color>
-    <color name="widget_config_secondary_button_text">#FFFFFFFF</color>
+    <color name="widget_config_text_primary">@color/widget_text</color>
+    <color name="widget_config_text_secondary">@color/widget_text_secondary</color>
+    <color name="widget_config_text_hint">@color/widget_text_secondary</color>
+    <color name="widget_config_chip_text">@color/widget_text</color>
+    <color name="widget_config_secondary_button_text">@color/widget_text</color>
     
     <!-- Icon colors for dark mode -->
     <color name="icon_color">#FFFFFF</color> <!-- White icons for dark mode -->
