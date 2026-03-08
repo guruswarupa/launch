@@ -2,6 +2,8 @@ package com.guruswarupa.launch.handlers
 
 import android.content.Context
 import android.content.Intent
+import android.provider.AlarmClock
+import android.provider.CalendarContract
 import android.view.View
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
@@ -10,6 +12,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.net.toUri
@@ -24,6 +27,7 @@ import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.MainActivityViews
 import com.guruswarupa.launch.ui.views.FastScroller
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
+import java.util.Locale
 
 /**
  * Handles MainActivity initialization logic.
@@ -34,6 +38,11 @@ class ActivityInitializer(
     private val sharedPreferences: android.content.SharedPreferences,
     private val appLauncher: AppLauncher
 ) {
+    companion object {
+        private const val CATEGORY_APP_CLOCK = "android.intent.category.APP_CLOCK"
+        private const val CATEGORY_APP_CALENDAR = "android.intent.category.APP_CALENDAR"
+    }
+
     val views = MainActivityViews()
 
     fun initializeViews() {
@@ -111,12 +120,82 @@ class ActivityInitializer(
 
     private fun setupTimeDateListeners(timeTextView: TextView, dateTextView: TextView) {
         timeTextView.setOnClickListener {
-            appLauncher.launchAppWithLockCheck("com.google.android.deskclock", "Google Clock")
+            val launched = launchResolvedAppWithLockCheck(
+                Intent(Intent.ACTION_MAIN).addCategory(CATEGORY_APP_CLOCK),
+                "Clock"
+            )
+            if (!launched) {
+                val openedClock = launchIntentDirect(Intent(AlarmClock.ACTION_SHOW_ALARMS))
+                    || launchIntentDirect(Intent(AlarmClock.ACTION_SHOW_TIMERS))
+                    || launchIntentDirect(Intent(AlarmClock.ACTION_SET_ALARM))
+                    || launchLikelyClockLauncherApp()
+                if (!openedClock) {
+                    Toast.makeText(activity, "No clock app found", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         dateTextView.setOnClickListener {
-            appLauncher.launchAppWithLockCheck("com.google.android.calendar", "Google Calendar")
+            val launched = launchResolvedAppWithLockCheck(
+                Intent(Intent.ACTION_MAIN).addCategory(CATEGORY_APP_CALENDAR),
+                "Calendar"
+            )
+            if (!launched) {
+                val openedCalendar = launchIntentDirect(
+                    Intent(Intent.ACTION_VIEW).setData(CalendarContract.CONTENT_URI)
+                )
+                if (!openedCalendar) {
+                    Toast.makeText(activity, "No calendar app found", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
+    }
+
+    private fun launchResolvedAppWithLockCheck(intent: Intent, fallbackName: String): Boolean {
+        val resolveInfo = activity.packageManager.resolveActivity(intent, 0) ?: return false
+        val packageName = resolveInfo.activityInfo?.packageName ?: return false
+        val appName = try {
+            activity.packageManager.getApplicationLabel(resolveInfo.activityInfo.applicationInfo).toString()
+        } catch (_: Exception) {
+            fallbackName
+        }
+        appLauncher.launchAppWithLockCheck(packageName, appName)
+        return true
+    }
+
+    private fun launchIntentDirect(intent: Intent): Boolean {
+        try {
+            activity.startActivity(intent)
+            return true
+        } catch (_: Exception) {
+            return false
+        }
+    }
+
+    private fun launchLikelyClockLauncherApp(): Boolean {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val candidates = activity.packageManager.queryIntentActivities(launcherIntent, 0)
+
+        val clockApp = candidates
+            .asSequence()
+            .mapNotNull { info ->
+                val packageName = info.activityInfo?.packageName ?: return@mapNotNull null
+                val label = try {
+                    activity.packageManager.getApplicationLabel(info.activityInfo.applicationInfo).toString()
+                } catch (_: Exception) {
+                    packageName
+                }
+                packageName to label
+            }
+            .distinctBy { it.first }
+            .firstOrNull { (packageName, label) ->
+                val packageLower = packageName.lowercase(Locale.ROOT)
+                val labelLower = label.lowercase(Locale.ROOT)
+                "clock" in packageLower || "clock" in labelLower || "alarm" in packageLower || "alarm" in labelLower
+            } ?: return false
+
+        appLauncher.launchAppWithLockCheck(clockApp.first, clockApp.second)
+        return true
     }
 
     fun setupDrawerLayout() {
