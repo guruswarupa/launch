@@ -132,12 +132,12 @@
                 android:layout_height="48dp"
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
-                android:background="@drawable/widget_config_primary_button"
+                android:background="@drawable/widget_config_secondary_button"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
                 android:text="Save"
                 android:textAllCaps="false"
-                android:textColor="@android:color/white"
+                android:textColor="@color/widget_config_secondary_button_text"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
