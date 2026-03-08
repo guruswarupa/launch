@@ -71,6 +71,7 @@
     <color name="widget_divider">#33FFFFFF</color>
     <color name="widget_item_background">#1AFFFFFF</color>
     <color name="widget_item_stroke">#33FFFFFF</color>
+    <color name="settings_overlay">@android:color/transparent</color>
 
     <!-- Grid Item Background Colors -->
     <color name="grid_item_background">#80000000</color>

@@ -72,7 +72,7 @@
     <color name="widget_border">@color/outlineColor</color>
     
     <!-- Settings Specific Colors -->
-    <color name="settings_overlay">#66FFFFFF</color> <!-- Lighter overlay for light mode -->
+    <color name="settings_overlay">@android:color/transparent</color>
     <color name="settings_header_text">@color/text</color>
 
     <!-- Grid Item Background Colors -->

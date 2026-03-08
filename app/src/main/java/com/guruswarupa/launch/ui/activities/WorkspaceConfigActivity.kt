@@ -73,12 +73,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
             android.content.res.Configuration.UI_MODE_NIGHT_YES
             
-        val overlayColor = if (isNightMode) {
-            Color.parseColor("#90000000") // Darker overlay for dark mode
-        } else {
-            Color.parseColor("#40000000") // Lighter overlay for light mode
-        }
-        themeOverlay.setBackgroundColor(overlayColor)
+        themeOverlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
         
         val widgetBg = if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
         workspacesContainer.setBackgroundResource(widgetBg)

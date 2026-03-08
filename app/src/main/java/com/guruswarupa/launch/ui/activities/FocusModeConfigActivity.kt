@@ -101,12 +101,7 @@ class FocusModeConfigActivity : ComponentActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
             android.content.res.Configuration.UI_MODE_NIGHT_YES
             
-        val overlayColor = if (isNightMode) {
-            Color.parseColor("#90000000")
-        } else {
-            Color.parseColor("#40000000")
-        }
-        themeOverlay.setBackgroundColor(overlayColor)
+        themeOverlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
         
         val widgetBg = if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
         appsContainer.setBackgroundResource(widgetBg)

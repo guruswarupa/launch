@@ -154,14 +154,9 @@ class AppLockSettingsActivity : ComponentActivity() {
     }
     
     private fun setupTheme() {
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val overlay = findViewById<View>(R.id.settings_overlay)
-        
-        if (isDarkMode) {
-            overlay.setBackgroundColor("#CC000000".toColorInt())
-        } else {
-            overlay.setBackgroundColor("#66FFFFFF".toColorInt())
-        }
+        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
         
         setupWallpaper()
         

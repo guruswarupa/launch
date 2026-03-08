@@ -217,12 +217,7 @@ class SettingsActivity : ComponentActivity() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         val overlay = findViewById<View>(R.id.settings_overlay)
         
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        if (isDarkMode) {
-            overlay.setBackgroundColor("#CC000000".toColorInt()) // Darker overlay for dark mode
-        } else {
-            overlay.setBackgroundColor("#66FFFFFF".toColorInt()) // Lighter white overlay for light mode
-        }
+        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {

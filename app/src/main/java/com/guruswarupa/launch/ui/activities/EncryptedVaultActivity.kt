@@ -213,8 +213,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         val overlay = findViewById<View>(R.id.settings_overlay)
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        overlay.setBackgroundColor(if (isDarkMode) "#CC000000".toColorInt() else "#66FFFFFF".toColorInt())
+        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
 
         try {
             val wallpaperManager = WallpaperManager.getInstance(this)
