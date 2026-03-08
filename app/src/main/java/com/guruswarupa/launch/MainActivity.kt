@@ -27,6 +27,7 @@ import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.services.*
 import com.guruswarupa.launch.models.MainActivityViews
+import com.guruswarupa.launch.models.Constants
 
 import com.guruswarupa.launch.widgets.WidgetSetupManager
 import com.guruswarupa.launch.widgets.WidgetThemeManager
@@ -132,6 +133,7 @@ class MainActivity : FragmentActivity() {
     fun isHiddenAppManagerInitialized() = ::hiddenAppManager.isInitialized
     fun isAppListLoaderInitialized() = ::appListLoader.isInitialized
     fun isFinanceWidgetManagerInitialized() = ::financeWidgetManager.isInitialized
+    fun isTimeDateManagerInitialized() = ::timeDateManager.isInitialized
 
     /**
      * Initializes core managers that are needed early in the lifecycle.
@@ -365,7 +367,14 @@ class MainActivity : FragmentActivity() {
      * Initializes time/date and weather widgets.
      */
     internal fun initializeTimeDateAndWeather() {
-        timeDateManager = TimeDateManager(views.timeTextView, views.dateTextView, views.rightDrawerTime, views.rightDrawerDate)
+        val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
+        timeDateManager = TimeDateManager(
+            views.timeTextView,
+            views.dateTextView,
+            views.rightDrawerTime,
+            views.rightDrawerDate,
+            use24HourClock
+        )
         timeDateManager.startUpdates()
         
         widgetSetupManager = WidgetSetupManager(this, usageStatsManager, weatherManager, permissionManager)

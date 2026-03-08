@@ -5,6 +5,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.AppAdapter
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.managers.AppDockManager
 import com.guruswarupa.launch.widgets.WidgetSetupManager
 import com.guruswarupa.launch.widgets.WidgetThemeManager
@@ -44,8 +45,13 @@ class SettingsChangeCoordinator(
         val sharedPreferences = activity.sharedPreferences
         val views = activity.views
         val adapter = adapterProvider()
+        val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
 
         applyThemeBasedWidgetBackgrounds()
+
+        if (activity.isTimeDateManagerInitialized()) {
+            activity.timeDateManager.setUse24HourFormat(use24HourClock)
+        }
         
         // Update display style if changed
         val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"

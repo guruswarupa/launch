@@ -352,6 +352,15 @@ class SettingsActivity : ComponentActivity() {
             sendBroadcast(intent)
         }
 
+        val clock24HourSwitch = findViewById<SwitchCompat>(R.id.clock_24_hour_switch)
+        clock24HourSwitch.isChecked = prefs.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
+        clock24HourSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, isChecked) }
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
+            sendBroadcast(intent)
+        }
+
         // Widgets Header
         val widgetsHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
         val widgetsContent = findViewById<LinearLayout>(R.id.widgets_settings_content)
