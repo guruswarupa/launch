@@ -44,6 +44,8 @@ class SettingsChangeCoordinator(
         val sharedPreferences = activity.sharedPreferences
         val views = activity.views
         val adapter = adapterProvider()
+
+        applyThemeBasedWidgetBackgrounds()
         
         // Update display style if changed
         val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"

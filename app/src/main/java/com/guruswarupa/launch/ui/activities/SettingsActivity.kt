@@ -218,11 +218,20 @@ class SettingsActivity : ComponentActivity() {
         val overlay = findViewById<View>(R.id.settings_overlay)
         
         val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val opaqueSurfacesEnabled = prefs.getBoolean(Constants.Prefs.OPAQUE_SURFACES_ENABLED, false)
         
-        if (isDarkMode) {
-            overlay.setBackgroundColor("#CC000000".toColorInt()) // Darker overlay for dark mode
+        if (opaqueSurfacesEnabled) {
+            if (isDarkMode) {
+                overlay.setBackgroundColor("#FF101010".toColorInt())
+            } else {
+                overlay.setBackgroundColor("#FFF4F4F4".toColorInt())
+            }
         } else {
-            overlay.setBackgroundColor("#66FFFFFF".toColorInt()) // Lighter white overlay for light mode
+            if (isDarkMode) {
+                overlay.setBackgroundColor("#CC000000".toColorInt()) // Darker overlay for dark mode
+            } else {
+                overlay.setBackgroundColor("#66FFFFFF".toColorInt()) // Lighter white overlay for light mode
+            }
         }
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
@@ -340,6 +349,16 @@ class SettingsActivity : ComponentActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+
+        val elderlyOpaqueSwitch = findViewById<SwitchCompat>(R.id.elderly_opaque_switch)
+        elderlyOpaqueSwitch.isChecked = prefs.getBoolean(Constants.Prefs.OPAQUE_SURFACES_ENABLED, false)
+        elderlyOpaqueSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.OPAQUE_SURFACES_ENABLED, isChecked) }
+            setupWallpaper()
+            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+            intent.setPackage(packageName)
+            sendBroadcast(intent)
+        }
 
         // Widgets Header
         val widgetsHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)

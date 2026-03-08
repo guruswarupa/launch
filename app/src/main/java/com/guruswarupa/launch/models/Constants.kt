@@ -23,6 +23,7 @@ object Constants {
         const val BACK_TAP_MULTIPLIER = "back_tap_multiplier"
         const val BACK_TAP_DOUBLE_ACTION = "back_tap_double_action"
         const val WALLPAPER_BLUR_LEVEL = "wallpaper_blur_level"
+        const val OPAQUE_SURFACES_ENABLED = "opaque_surfaces_enabled"
         const val SEARCH_ENGINE = "search_engine"
         const val ACCESSIBILITY_SHORTCUT_ENABLED = "accessibility_shortcut_enabled"
         const val CONTROL_CENTER_SHORTCUTS = "control_center_shortcuts"
