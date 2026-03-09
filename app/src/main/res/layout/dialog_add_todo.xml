@@ -12,13 +12,10 @@
         <!-- Task Input -->
         <EditText
             android:id="@+id/task_input"
+            style="@style/DialogEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Enter todo item"
-            android:textColor="@color/text"
-            android:textColorHint="@color/text_secondary"
-            android:background="@drawable/search_box_transparent_bg"
-            android:padding="12dp"
             android:layout_marginBottom="16dp" />
 
         <!-- Category Selection -->

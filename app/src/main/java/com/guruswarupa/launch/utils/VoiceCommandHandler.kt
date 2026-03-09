@@ -67,7 +67,8 @@ class VoiceCommandHandler(
                 val contactName = command.substringAfter("call ", "").trim()
                 val phoneNumber = getPhoneNumberForContact(contactName)
                 phoneNumber?.let {
-                    val callIntent = Intent(Intent.ACTION_CALL)
+                    // Use ACTION_DIAL instead of ACTION_CALL to avoid needing CALL_PHONE permission
+                    val callIntent = Intent(Intent.ACTION_DIAL)
                     callIntent.data = "tel:$it".toUri()
                     activity.startActivity(callIntent)
                     searchBox.text.clear()

@@ -8,40 +8,32 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        style="@style/DialogFieldLabel"
         android:text="Title"
-        android:textColor="@color/text"
-        android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
     <EditText
         android:id="@+id/countdown_title_input"
+        style="@style/DialogEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Enter countdown title"
-        android:textColor="@color/text"
-        android:textColorHint="@color/text_secondary"
-        android:background="@drawable/widget_background"
-        android:padding="12dp"
         android:layout_marginBottom="16dp"
         android:inputType="text" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        style="@style/DialogFieldLabel"
         android:text="Date"
-        android:textColor="@color/text"
-        android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
     <EditText
         android:id="@+id/countdown_date_input"
+        style="@style/DialogEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Select date"
-        android:textColor="@color/text"
-        android:textColorHint="@color/text_secondary"
-        android:background="@drawable/widget_background"
-        android:padding="12dp"
         android:layout_marginBottom="16dp"
         android:focusable="false"
         android:clickable="true" />
@@ -49,20 +41,16 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        style="@style/DialogFieldLabel"
         android:text="Time"
-        android:textColor="@color/text"
-        android:textSize="14sp"
         android:layout_marginBottom="4dp" />
 
     <EditText
         android:id="@+id/countdown_time_input"
+        style="@style/DialogEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Select time"
-        android:textColor="@color/text"
-        android:textColorHint="@color/text_secondary"
-        android:background="@drawable/widget_background"
-        android:padding="12dp"
         android:layout_marginBottom="16dp"
         android:focusable="false"
         android:clickable="true" />

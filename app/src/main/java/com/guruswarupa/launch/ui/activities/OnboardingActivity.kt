@@ -14,6 +14,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.graphics.Color
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
@@ -21,6 +22,7 @@ import android.text.TextWatcher
 import android.text.Editable
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -100,8 +102,13 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var nextButton: Button
     private lateinit var gridStyleButton: Button
     private lateinit var listStyleButton: Button
+    private lateinit var stepContentContainer: FrameLayout
+    private lateinit var progressTitle: TextView
+    private lateinit var progressSubtitle: TextView
     private lateinit var weatherApiKeyInput: EditText
     private lateinit var weatherLocationInput: EditText
+    private lateinit var favoritesLoadingText: TextView
+    private lateinit var workspacesLoadingText: TextView
     private lateinit var favoritesRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var favoritesAdapter: FavoritesOnboardingAdapter
     private var selectedFavorites = mutableSetOf<String>()
@@ -118,6 +125,7 @@ class OnboardingActivity : ComponentActivity() {
     private var currentWorkspaceApps = mutableSetOf<String>()
     private var createdWorkspaces = mutableListOf<Pair<String, Set<String>>>() // name to apps
     private var cachedAppsList: List<android.content.pm.ResolveInfo>? = null // Cached app list
+    private val appListCallbacks = mutableListOf<(List<android.content.pm.ResolveInfo>) -> Unit>()
     private var isPreloadingApps = false // Track if preload is in progress
     private var allAppsList = listOf<android.content.pm.ResolveInfo>() // Store all apps
 
@@ -127,10 +135,14 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var step3Indicator: View
     private lateinit var step4Indicator: View
     private lateinit var step5Indicator: View
+    private lateinit var step6Indicator: View
+    private lateinit var step7Indicator: View
     private lateinit var step1Connector: View
     private lateinit var step2Connector: View
     private lateinit var step3Connector: View
     private lateinit var step4Connector: View
+    private lateinit var step5Connector: View
+    private lateinit var step6Connector: View
 
     // Define all permissions with explanations
     private val permissionList = mutableListOf<PermissionInfo>().apply {
@@ -265,10 +277,33 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.apply {
+                setSystemBarsAppearance(
+                    if (isDarkMode) 0 else WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                )
+                setSystemBarsAppearance(
+                    if (isDarkMode) 0 else WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+                )
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    (if (isDarkMode) 0 else View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
+        }
     }
 
     private fun initializeViews() {
         onboardingScrollView = findViewById(R.id.onboarding_scroll_view)
+        stepContentContainer = findViewById(R.id.step_content_container)
         welcomeStep = findViewById(R.id.welcome_step)
         dataPrivacyStep = findViewById(R.id.data_privacy_step)
         permissionsStep = findViewById(R.id.permissions_step)
@@ -313,18 +348,32 @@ class OnboardingActivity : ComponentActivity() {
         nextButton = findViewById(R.id.next_button)
         gridStyleButton = findViewById(R.id.grid_style_button)
         listStyleButton = findViewById(R.id.list_style_button)
+        progressTitle = findViewById(R.id.progress_title)
+        progressSubtitle = findViewById(R.id.progress_subtitle)
         weatherApiKeyInput = findViewById(R.id.weather_api_key_input)
         weatherLocationInput = findViewById(R.id.weather_location_input)
+        favoritesLoadingText = findViewById(R.id.favorites_loading_text)
+        workspacesLoadingText = findViewById(R.id.workspaces_loading_text)
 
         step1Indicator = findViewById(R.id.step1_indicator)
         step2Indicator = findViewById(R.id.step2_indicator)
         step3Indicator = findViewById(R.id.step3_indicator)
         step4Indicator = findViewById(R.id.step4_indicator)
         step5Indicator = findViewById(R.id.step5_indicator)
+        step6Indicator = findViewById(R.id.step6_indicator)
+        step7Indicator = findViewById(R.id.step7_indicator)
         step1Connector = findViewById(R.id.step1_connector)
         step2Connector = findViewById(R.id.step2_connector)
         step3Connector = findViewById(R.id.step3_connector)
         step4Connector = findViewById(R.id.step4_connector)
+        step5Connector = findViewById(R.id.step5_connector)
+        step6Connector = findViewById(R.id.step6_connector)
+
+        val savedStyle = prefs.getString("view_preference", null)
+        if (savedStyle != null) {
+            displayStyleSelected = true
+        }
+        updateDisplayStyleButtons(savedStyle)
     }
 
     private fun setupClickListeners() {
@@ -336,6 +385,7 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun showStep(step: OnboardingStep) {
         currentStep = step
+        updateProgressHeader(step)
         
         // Hide all steps first
         welcomeStep.visibility = View.GONE
@@ -355,6 +405,7 @@ class OnboardingActivity : ComponentActivity() {
                 welcomeStep.visibility = View.VISIBLE
                 backButton.visibility = View.GONE
                 nextButton.setText(R.string.onboarding_get_started)
+                nextButton.isEnabled = true
                 updateProgressIndicator(1)
                 nextButton.setOnClickListener { goToNextStep() }
             }
@@ -378,6 +429,7 @@ class OnboardingActivity : ComponentActivity() {
                 permissionsStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
                 nextButton.setText(R.string.onboarding_start_permissions)
+                nextButton.isEnabled = true
                 updateProgressIndicator(1)
                 nextButton.setOnClickListener { startPermissionFlow() }
             }
@@ -385,6 +437,7 @@ class OnboardingActivity : ComponentActivity() {
                 defaultLauncherStep.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
                 nextButton.text = if (isDefaultLauncher()) getString(R.string.onboarding_continue) else "Set as Default"
+                nextButton.isEnabled = true
                 updateProgressIndicator(2)
                 nextButton.setOnClickListener { goToNextStep() }
             }
@@ -404,6 +457,7 @@ class OnboardingActivity : ComponentActivity() {
                 nextButton.text = if (displayStyleSelected) getString(R.string.onboarding_continue) else "Select Style First"
                 nextButton.isEnabled = displayStyleSelected
                 updateProgressIndicator(4)
+                updateDisplayStyleButtons(prefs.getString("view_preference", null))
                 if (cachedAppsList == null && !isPreloadingApps) {
                     preloadAppList()
                 }
@@ -452,10 +506,20 @@ class OnboardingActivity : ComponentActivity() {
                 completeStep.visibility = View.VISIBLE
                 backButton.visibility = View.GONE
                 nextButton.setText(R.string.onboarding_launch_app)
+                nextButton.isEnabled = true
                 updateProgressIndicator(7)
                 nextButton.setOnClickListener { finishSetup() }
             }
         }
+
+        stepContentContainer.alpha = 0f
+        stepContentContainer.translationY = 20f
+        stepContentContainer.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(220L)
+            .start()
+        updateNavigationButtons()
     }
 
     private fun updateProgressIndicator(activeStep: Int) {
@@ -482,10 +546,14 @@ class OnboardingActivity : ComponentActivity() {
         setViewColor(step3Indicator, inactiveColor, true)
         setViewColor(step4Indicator, inactiveColor, true)
         setViewColor(step5Indicator, inactiveColor, true)
+        setViewColor(step6Indicator, inactiveColor, true)
+        setViewColor(step7Indicator, inactiveColor, true)
         setViewColor(step1Connector, inactiveColor)
         setViewColor(step2Connector, inactiveColor)
         setViewColor(step3Connector, inactiveColor)
         setViewColor(step4Connector, inactiveColor)
+        setViewColor(step5Connector, inactiveColor)
+        setViewColor(step6Connector, inactiveColor)
 
         if (activeStep >= 1) setViewColor(step1Indicator, activeColor, true)
         if (activeStep >= 2) {
@@ -504,6 +572,37 @@ class OnboardingActivity : ComponentActivity() {
             setViewColor(step4Connector, activeColor)
             setViewColor(step5Indicator, activeColor, true)
         }
+        if (activeStep >= 6) {
+            setViewColor(step5Connector, activeColor)
+            setViewColor(step6Indicator, activeColor, true)
+        }
+        if (activeStep >= 7) {
+            setViewColor(step6Connector, activeColor)
+            setViewColor(step7Indicator, activeColor, true)
+        }
+    }
+
+    private fun updateProgressHeader(step: OnboardingStep) {
+        val (stage, description) = when (step) {
+            OnboardingStep.WELCOME -> 1 to "Start with the launcher essentials."
+            OnboardingStep.DATA_PRIVACY -> 1 to "Review the local data access disclosure."
+            OnboardingStep.PERMISSIONS -> 1 to "Grant only the permissions you want enabled."
+            OnboardingStep.DEFAULT_LAUNCHER -> 2 to "Make Launch your home app."
+            OnboardingStep.BACKUP_IMPORT -> 3 to "Restore an old setup or continue clean."
+            OnboardingStep.DISPLAY_STYLE -> 4 to "Choose how apps should be presented."
+            OnboardingStep.FAVORITES -> 5 to "Pin the apps you want closest."
+            OnboardingStep.WORKSPACES -> 6 to "Shape focused spaces around tasks."
+            OnboardingStep.WEATHER_API_KEY -> 7 to "Finish optional weather integration."
+            OnboardingStep.COMPLETE -> 7 to "Everything is configured and ready."
+        }
+
+        progressTitle.text = if (step == OnboardingStep.COMPLETE) "Ready to launch" else "Step $stage of 7"
+        progressSubtitle.text = description
+    }
+
+    private fun updateNavigationButtons() {
+        backButton.alpha = if (backButton.visibility == View.VISIBLE && backButton.isEnabled) 1f else 0.6f
+        nextButton.alpha = if (nextButton.isEnabled) 1f else 0.5f
     }
 
     private fun goToPreviousStep() {
@@ -812,63 +911,96 @@ class OnboardingActivity : ComponentActivity() {
     private fun selectDisplayStyle(style: String) {
         prefs.edit { putString("view_preference", style) }
         displayStyleSelected = true
-        if (style == "grid") {
-            gridStyleButton.alpha = 1.0f
-            listStyleButton.alpha = 0.5f
-        } else {
-            gridStyleButton.alpha = 0.5f
-            listStyleButton.alpha = 1.0f
-        }
+        updateDisplayStyleButtons(style)
         nextButton.isEnabled = true
         nextButton.setText(R.string.onboarding_continue)
+        updateNavigationButtons()
+    }
+
+    private fun updateDisplayStyleButtons(style: String?) {
+        val selectedTextColor = ContextCompat.getColor(this, R.color.onboarding_text)
+        val defaultTextColor = ContextCompat.getColor(this, R.color.onboarding_text)
+
+        val gridSelected = style == "grid"
+        val listSelected = style == "list"
+
+        gridStyleButton.background = ContextCompat.getDrawable(
+            this,
+            if (gridSelected) R.drawable.onboarding_option_button_selected else R.drawable.onboarding_option_button
+        )
+        listStyleButton.background = ContextCompat.getDrawable(
+            this,
+            if (listSelected) R.drawable.onboarding_option_button_selected else R.drawable.onboarding_option_button
+        )
+        gridStyleButton.setTextColor(if (gridSelected) selectedTextColor else defaultTextColor)
+        listStyleButton.setTextColor(if (listSelected) selectedTextColor else defaultTextColor)
+        gridStyleButton.alpha = if (listSelected) 0.72f else 1f
+        listStyleButton.alpha = if (gridSelected) 0.72f else 1f
     }
     
-    private fun preloadAppList() {
-        if (cachedAppsList != null || isPreloadingApps) return
+    private fun preloadAppList(onLoaded: ((List<android.content.pm.ResolveInfo>) -> Unit)? = null) {
+        cachedAppsList?.let { apps ->
+            if (onLoaded != null) {
+                runOnUiThread { onLoaded(apps) }
+            }
+            return
+        }
+
+        if (onLoaded != null) {
+            synchronized(appListCallbacks) {
+                appListCallbacks.add(onLoaded)
+            }
+        }
+
+        if (isPreloadingApps) return
         isPreloadingApps = true
         Thread {
-            try {
-                val pm = packageManager
-                val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                val allApps = pm.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-                cachedAppsList = allApps.sortedWith(compareBy { app ->
-                    try { app.loadLabel(pm).toString().lowercase() } catch (_: Exception) { app.activityInfo.packageName.lowercase() }
-                })
-            } catch (_: Exception) {} finally { isPreloadingApps = false }
+            val apps = try {
+                queryLaunchableApps()
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            cachedAppsList = apps
+            allAppsList = apps
+            isPreloadingApps = false
+
+            val callbacks = synchronized(appListCallbacks) {
+                appListCallbacks.toList().also { appListCallbacks.clear() }
+            }
+
+            runOnUiThread {
+                callbacks.forEach { it(apps) }
+            }
         }.start()
+    }
+
+    private fun queryLaunchableApps(): List<android.content.pm.ResolveInfo> {
+        val pm = packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+        return pm.queryIntentActivities(mainIntent, 0)
+            .filter { it.activityInfo.packageName != packageName }
+            .sortedWith(compareBy { app ->
+                try {
+                    app.loadLabel(pm).toString().lowercase()
+                } catch (_: Exception) {
+                    app.activityInfo.packageName.lowercase()
+                }
+            })
     }
     
     private fun loadAppsForFavoritesSelection() {
+        favoritesLoadingText.visibility = View.VISIBLE
         favoritesRecyclerView.visibility = View.GONE
-        if (cachedAppsList == null && isPreloadingApps) {
-            Thread {
-                var waited = 0
-                while (cachedAppsList == null && waited < 1000 && isPreloadingApps) { Thread.sleep(50); waited += 50 }
-                loadAppsForFavoritesSelectionInternal()
-            }.start()
-        } else {
-            loadAppsForFavoritesSelectionInternal()
+        preloadAppList { apps ->
+            selectedFavorites = FavoriteAppManager(prefs).getFavoriteApps().toMutableSet()
+            favoritesAdapter = FavoritesOnboardingAdapter(apps, selectedFavorites) { packageName, isChecked ->
+                if (isChecked) selectedFavorites.add(packageName) else selectedFavorites.remove(packageName)
+            }
+            favoritesRecyclerView.adapter = favoritesAdapter
+            favoritesLoadingText.visibility = View.GONE
+            favoritesRecyclerView.visibility = View.VISIBLE
         }
-    }
-    
-    private fun loadAppsForFavoritesSelectionInternal() {
-        Thread {
-            try {
-                val pm = packageManager
-                val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                val quickApps = pm.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }.sortedBy { it.activityInfo.packageName.lowercase() }
-                val existingFavorites = FavoriteAppManager(prefs).getFavoriteApps().toMutableSet()
-                runOnUiThread {
-                    selectedFavorites = existingFavorites
-                    val appsToShow = cachedAppsList ?: quickApps
-                    favoritesAdapter = FavoritesOnboardingAdapter(appsToShow, selectedFavorites) { packageName, isChecked ->
-                        if (isChecked) selectedFavorites.add(packageName) else selectedFavorites.remove(packageName)
-                    }
-                    favoritesRecyclerView.adapter = favoritesAdapter
-                    favoritesRecyclerView.visibility = View.VISIBLE
-                }
-            } catch (_: Exception) { runOnUiThread { favoritesRecyclerView.visibility = View.VISIBLE } }
-        }.start()
     }
     
     private fun saveSelectedFavorites() {
@@ -879,30 +1011,23 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun loadAppsForWorkspacesSelection() {
+        workspacesLoadingText.visibility = View.VISIBLE
         workspacesAppsRecyclerView.visibility = View.GONE
-        Thread {
-            try {
-                val apps = cachedAppsList ?: run {
-                    val pm = packageManager
-                    val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
-                    pm.queryIntentActivities(mainIntent, 0).filter { it.activityInfo.packageName != "com.guruswarupa.launch" }.sortedBy { it.activityInfo.packageName.lowercase() }
-                }
-                runOnUiThread {
-                    allAppsList = apps
-                    updateAvailableAppsForWorkspace()
-                    workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
-                        createdWorkspaces.removeAt(position)
-                        @SuppressLint("NotifyDataSetChanged")
-                        workspacesListAdapter.notifyDataSetChanged()
-                        updateWorkspacesListVisibility()
-                        updateAvailableAppsForWorkspace()
-                    }
-                    workspacesListRecyclerView.adapter = workspacesListAdapter
-                    updateWorkspacesListVisibility()
-                    workspacesAppsRecyclerView.visibility = View.VISIBLE
-                }
-            } catch (_: Exception) { runOnUiThread { workspacesAppsRecyclerView.visibility = View.VISIBLE } }
-        }.start()
+        preloadAppList { apps ->
+            allAppsList = apps
+            updateAvailableAppsForWorkspace()
+            workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
+                createdWorkspaces.removeAt(position)
+                @SuppressLint("NotifyDataSetChanged")
+                workspacesListAdapter.notifyDataSetChanged()
+                updateWorkspacesListVisibility()
+                updateAvailableAppsForWorkspace()
+            }
+            workspacesListRecyclerView.adapter = workspacesListAdapter
+            updateWorkspacesListVisibility()
+            workspacesLoadingText.visibility = View.GONE
+            workspacesAppsRecyclerView.visibility = View.VISIBLE
+        }
     }
     
     private fun updateAvailableAppsForWorkspace() {
@@ -989,7 +1114,10 @@ class OnboardingActivity : ComponentActivity() {
     }
 
     private fun setupBackupImportButtons() {
-        findViewById<Button>(R.id.import_backup_button).setOnClickListener { requestBackupFile() }
+        findViewById<Button>(R.id.import_backup_button).apply {
+            alpha = 1f
+            setOnClickListener { requestBackupFile() }
+        }
     }
     
     private fun requestBackupFile() {

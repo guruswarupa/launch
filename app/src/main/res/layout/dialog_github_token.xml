@@ -12,36 +12,42 @@
         android:text="Enter your GitHub Personal Access Token"
         android:textSize="14sp"
         android:layout_marginBottom="16dp"
-        android:textColor="?android:attr/textColorPrimary" />
+        android:textColor="@color/dialog_text_secondary" />
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/DialogTextInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:hint="GitHub Username"
-        android:theme="@style/CustomDialogTheme">
+        android:hint="GitHub Username">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/github_username_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:textColor="@color/dialog_text"
+            android:textSize="15sp" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
+        style="@style/DialogTextInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:hint="GitHub Personal Access Token"
-        android:theme="@style/CustomDialogTheme">
+        android:hint="GitHub Personal Access Token">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/github_token_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textPassword"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:textColor="@color/dialog_text"
+            android:textSize="15sp" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -49,7 +55,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="To create a Personal Access Token:\n1. Go to GitHub Settings\n2. Click Developer settings\n3. Click Personal access tokens\n4. Generate new token with 'read:user' scope"
-        android:textSize="12sp"
-        android:textColor="?android:attr/textColorSecondary" />
+        style="@style/DialogHelperText" />
 
 </LinearLayout>

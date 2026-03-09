@@ -3,43 +3,93 @@
     <style name="CustomDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:windowBackground">@drawable/alert_dialog_background</item>
         <item name="colorSurface">@android:color/transparent</item> <!-- Transparent surface -->
-        <item name="colorOnSurface">@color/text</item> <!-- Text color -->
-        <item name="colorPrimary">@color/nord7</item> <!-- Button color -->
-        <item name="colorAccent">@color/nord7</item> <!-- Cursor and selection highlight -->
-        <item name="colorControlActivated">@color/nord7</item> <!-- Focused highlight color -->
+        <item name="colorOnSurface">@color/dialog_text</item>
+        <item name="colorPrimary">@color/nord7</item>
+        <item name="colorAccent">@color/nord7</item>
+        <item name="colorControlActivated">@color/nord7</item>
+        <item name="colorControlHighlight">@color/dialog_button_background</item>
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">16dp</item> <!-- Rounded corners -->
+        <item name="materialAlertDialogTitleTextStyle">@style/CustomDialogTitleStyle</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/CustomDialogBodyStyle</item>
+        <item name="buttonBarPositiveButtonStyle">@style/CustomDialogPositiveButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/CustomDialogNegativeButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/CustomDialogNeutralButton</item>
+        <item name="android:editTextStyle">@style/DialogEditText</item>
+        <item name="editTextStyle">@style/DialogEditText</item>
         
         <!-- Explicit text colors for latest Android compatibility -->
-        <item name="android:textColorPrimary">@color/text</item>
-        <item name="android:textColorSecondary">@color/text_secondary</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColorPrimary">@color/dialog_text</item>
+        <item name="android:textColorSecondary">@color/dialog_text_secondary</item>
+        <item name="android:textColor">@color/dialog_text</item>
     </style>
     
     <style name="CustomDialogTitleStyle" parent="TextAppearance.MaterialComponents.Headline6">
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">@color/dialog_text</item>
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
+        <item name="fontFamily">sans-serif-medium</item>
     </style>
     
     <style name="CustomDialogBodyStyle" parent="TextAppearance.MaterialComponents.Body1">
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/dialog_text_secondary</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:lineSpacingExtra">2dp</item>
     </style>
     
     <style name="CustomDialogPositiveButton" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="android:textColor">@color/nord7</item>
-        <item name="rippleColor">@color/nord7</item>
+        <item name="rippleColor">@color/dialog_button_background</item>
+        <item name="android:textStyle">bold</item>
     </style>
     
     <style name="CustomDialogNegativeButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textColor">@color/text</item>
-        <item name="rippleColor">@color/text</item>
+        <item name="android:textColor">@color/dialog_text</item>
+        <item name="rippleColor">@color/dialog_button_background</item>
     </style>
     
     <style name="CustomDialogNeutralButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textColor">@color/text</item>
-        <item name="rippleColor">@color/text</item>
+        <item name="android:textColor">@color/dialog_text</item>
+        <item name="rippleColor">@color/dialog_button_background</item>
+    </style>
+
+    <style name="DialogEditText" parent="Widget.AppCompat.EditText">
+        <item name="android:textColor">@color/dialog_text</item>
+        <item name="android:textColorHint">@color/dialog_text_secondary</item>
+        <item name="android:textCursorDrawable">@null</item>
+        <item name="android:background">@drawable/dialog_input_background</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="DialogFieldLabel" parent="TextAppearance.AppCompat.Body2">
+        <item name="android:textColor">@color/dialog_text_secondary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="DialogHelperText" parent="TextAppearance.AppCompat.Caption">
+        <item name="android:textColor">@color/dialog_text_secondary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="DialogTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
+        <item name="boxBackgroundColor">@android:color/transparent</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxStrokeColor">@color/dialog_text_secondary</item>
+        <item name="hintTextColor">@color/dialog_text_secondary</item>
+        <item name="android:textColorHint">@color/dialog_text_secondary</item>
+        <item name="helperTextTextColor">@color/dialog_text_secondary</item>
+        <item name="counterTextColor">@color/dialog_text_secondary</item>
+        <item name="errorTextColor">@color/red</item>
     </style>
     
     <style name="TextAppearance.Dialog.Title" parent="TextAppearance.MaterialComponents.Headline6">

@@ -860,7 +860,7 @@ class AppAdapter(
         builder.setCustomTitle(titleView)
             .setAdapter(adapter) { _, which ->
                 when (which) {
-                    0 -> showCallConfirmationDialog(contactName)
+                    0 -> call(phoneNumber)
                     1 -> activity.contactActionHandler.openWhatsAppChat(contactName)
                     2 -> activity.contactActionHandler.openSMSChat(contactName)
                 }
@@ -887,18 +887,9 @@ class AppAdapter(
         return photoUri
     }
 
-    fun showCallConfirmationDialog(contactName: String) {
-        val phoneNumber = getPhoneNumberForContact(contactName)
-        AlertDialog.Builder(activity, R.style.CustomDialogTheme)
-            .setTitle(activity.getString(R.string.call_contact_title, contactName))
-            .setMessage(activity.getString(R.string.call_contact_message, phoneNumber))
-            .setPositiveButton(activity.getString(R.string.call_button)) { _, _ -> call(phoneNumber) }
-            .setNegativeButton(activity.getString(R.string.cancel_button), null)
-            .show()
-    }
-
     private fun call(phoneNumber: String) {
-        val intent = Intent(Intent.ACTION_CALL).apply { data = "tel:$phoneNumber".toUri() }
+        // Use ACTION_DIAL instead of ACTION_CALL to avoid needing CALL_PHONE permission
+        val intent = Intent(Intent.ACTION_DIAL).apply { data = "tel:$phoneNumber".toUri() }
         activity.startActivity(intent)
     }
 

@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -35,6 +36,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.utils.DialogStyler
 import java.io.File
 import java.text.DecimalFormat
 
@@ -160,11 +162,13 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         val input = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             hint = "Enter New Vault Password"
+            DialogStyler.styleInput(this@EncryptedVaultActivity, this)
         }
+        val horizontalInset = dp(20)
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Setup Vault")
             .setMessage("Set a password to encrypt your vault. Remember it carefully, it cannot be recovered.")
-            .setView(input)
+            .setView(input, horizontalInset, 0, horizontalInset, 0)
             .setPositiveButton("Set Password") { _, _ ->
                 val password = input.text.toString()
                 if (password.length >= 4) {
@@ -189,10 +193,13 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         val input = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             hint = "Enter Vault Password"
+            DialogStyler.styleInput(this@EncryptedVaultActivity, this)
         }
+        val horizontalInset = dp(20)
+        val topInset = dp(12)
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Vault Locked")
-            .setView(input)
+            .setView(input, horizontalInset, topInset, horizontalInset, 0)
             .setPositiveButton("Unlock") { _, _ ->
                 val password = input.text.toString()
                 if (vaultManager.unlock(password)) {
@@ -209,6 +216,13 @@ class EncryptedVaultActivity : VaultBaseActivity() {
 
     private fun makeSystemBarsTransparent() {
     }
+
+    private fun dp(value: Int): Int =
+        TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            value.toFloat(),
+            resources.displayMetrics
+        ).toInt()
 
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
