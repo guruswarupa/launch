@@ -125,22 +125,6 @@ class PermissionsActivity : ComponentActivity() {
             isGranted = contactsGranted
         ))
 
-        val callGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            permission = Manifest.permission.CALL_PHONE,
-            name = "Phone Calls",
-            description = "Make phone calls directly from the launcher",
-            isGranted = callGranted
-        ))
-
-        val smsGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            permission = Manifest.permission.SEND_SMS,
-            name = "SMS",
-            description = "Send text messages directly from the launcher",
-            isGranted = smsGranted
-        ))
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val storageGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
             allPermissions.add(PermissionItem(
