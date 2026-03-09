@@ -152,18 +152,6 @@ class OnboardingActivity : ComponentActivity() {
             "We need access to your contacts so you can search for people by name in the universal search bar. This allows you to quickly call, message, or WhatsApp your contacts directly from the launcher.",
             100
         ))
-        add(PermissionInfo(
-            Manifest.permission.CALL_PHONE,
-            "Phone Call Permission",
-            "This permission lets you make phone calls directly from search results. When you search for a contact, you can tap to call them instantly without opening the phone app.",
-            101
-        ))
-        add(PermissionInfo(
-            Manifest.permission.SEND_SMS,
-            "SMS Permission",
-            "This allows you to send text messages directly from the launcher. When you search for a contact, you can quickly send them an SMS without leaving the launcher.",
-            102
-        ))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(PermissionInfo(
                 Manifest.permission.READ_MEDIA_IMAGES,
