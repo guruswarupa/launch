@@ -20,6 +20,7 @@ import com.guruswarupa.launch.ui.activities.FocusModeConfigActivity
 import com.guruswarupa.launch.ui.activities.SettingsActivity
 import com.guruswarupa.launch.ui.activities.WorkspaceConfigActivity
 import com.guruswarupa.launch.ui.activities.EncryptedVaultActivity
+import com.guruswarupa.launch.utils.DialogStyler
 import java.util.Locale
 
 class AppDockManager(
@@ -560,6 +561,7 @@ class AppDockManager(
         val input = android.widget.EditText(context).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
             hint = "Enter minutes (1-480)"
+            DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)

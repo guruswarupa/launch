@@ -16,6 +16,7 @@ import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.Workspace
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.utils.DialogStyler
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
@@ -134,6 +135,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
     private fun showCreateWorkspaceDialog() {
         val input = EditText(this)
         input.hint = "Workspace name"
+        DialogStyler.styleInput(this, input)
         
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Create Workspace")
@@ -252,6 +254,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         val input = EditText(this)
         input.setText(workspace.name)
         input.hint = "Workspace name"
+        DialogStyler.styleInput(this, input)
         
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Rename Workspace")

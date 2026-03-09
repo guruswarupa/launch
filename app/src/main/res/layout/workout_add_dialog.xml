@@ -10,9 +10,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Exercise Type"
-        android:textColor="@color/text"
-        android:textSize="14sp"
-        android:textStyle="bold"
+        style="@style/DialogFieldLabel"
         android:layout_marginBottom="8dp" />
 
     <RadioGroup
@@ -46,9 +44,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Quick Add (Presets)"
-        android:textColor="@color/text"
-        android:textSize="14sp"
-        android:textStyle="bold"
+        style="@style/DialogFieldLabel"
         android:layout_marginBottom="12dp" />
 
     <ScrollView
@@ -74,21 +70,16 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Or add custom exercise"
-        android:textColor="@color/text"
-        android:textSize="14sp"
-        android:textStyle="bold"
+        style="@style/DialogFieldLabel"
         android:layout_marginBottom="8dp" />
 
     <EditText
         android:id="@+id/custom_exercise_input"
+        style="@style/DialogEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Exercise name"
-        android:textColor="@color/text"
-        android:textColorHint="@color/text_secondary"
         android:inputType="text"
-        android:padding="12dp"
-        android:background="@drawable/widget_background"
         android:textSize="14sp" />
 
 </LinearLayout>

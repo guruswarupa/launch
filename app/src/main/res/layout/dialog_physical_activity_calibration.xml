@@ -22,42 +22,32 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Height (cm)"
-            android:textColor="@color/text"
-            android:textSize="16sp"
-            android:textStyle="bold"
+            style="@style/DialogFieldLabel"
             android:layout_marginBottom="8dp" />
 
         <EditText
             android:id="@+id/height_input"
+            style="@style/DialogEditText"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="@drawable/input_field_background"
             android:hint="e.g. 175"
             android:inputType="number"
-            android:paddingHorizontal="16dp"
-            android:textColor="@color/text"
-            android:textColorHint="@color/text_secondary"
             android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Stride Length (meters)"
-            android:textColor="@color/text"
-            android:textSize="16sp"
-            android:textStyle="bold"
+            style="@style/DialogFieldLabel"
             android:layout_marginBottom="8dp" />
 
         <EditText
             android:id="@+id/stride_length_input"
+            style="@style/DialogEditText"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:background="@drawable/input_field_background"
             android:hint="e.g. 0.75"
             android:inputType="numberDecimal"
-            android:paddingHorizontal="16dp"
-            android:textColor="@color/text"
-            android:textColorHint="@color/text_secondary"
             android:layout_marginBottom="12dp" />
 
         <TextView

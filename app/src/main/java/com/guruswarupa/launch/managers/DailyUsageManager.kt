@@ -10,6 +10,7 @@ import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.utils.DialogStyler
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 
@@ -146,8 +147,7 @@ class DailyUsageManager(private val context: Context) {
         val input = EditText(context).apply {
             hint = "Enter minutes (0 to disable)"
             setText(if (currentLimit > 0) (currentLimit / 60000).toString() else "")
-            setTextColor(ContextCompat.getColor(context, R.color.text))
-            setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+            DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)

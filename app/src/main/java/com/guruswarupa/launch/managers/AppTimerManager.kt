@@ -18,6 +18,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.utils.DialogStyler
 import java.util.Calendar
 import java.util.concurrent.Executors
 
@@ -122,9 +123,7 @@ class AppTimerManager(private val context: Context) {
     private fun showCustomDailyLimitDialog(packageName: String, onLimitSet: () -> Unit) {
         val input = EditText(context)
         input.hint = "Enter minutes"
-        val textColor = ContextCompat.getColor(context, R.color.text)
-        input.setTextColor(textColor)
-        input.setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+        DialogStyler.styleInput(context, input)
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Daily Limit")
@@ -245,9 +244,7 @@ class AppTimerManager(private val context: Context) {
     private fun showCustomTimerDialog(onTimerSet: (Long) -> Unit) {
         val input = EditText(context)
         input.hint = "Enter minutes"
-        val textColor = ContextCompat.getColor(context, R.color.text)
-        input.setTextColor(textColor)
-        input.setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
+        DialogStyler.styleInput(context, input)
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Timer")

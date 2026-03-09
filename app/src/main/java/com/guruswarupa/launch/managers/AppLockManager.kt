@@ -14,6 +14,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.utils.DialogStyler
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -82,14 +83,10 @@ class AppLockManager(private val context: Context) {
 
     // Set up PIN for the first time
     fun setupPin(callback: (Boolean) -> Unit) {
-        val textColor = ContextCompat.getColor(context, R.color.text)
-        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
-        
         val pinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             hint = "Enter 4-6 digit PIN"
-            setTextColor(textColor)
-            setHintTextColor(secondaryTextColor)
+            DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
@@ -102,8 +99,7 @@ class AppLockManager(private val context: Context) {
                     val confirmInput = EditText(context).apply {
                         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
                         hint = "Confirm PIN"
-                        setTextColor(textColor)
-                        setHintTextColor(secondaryTextColor)
+                        DialogStyler.styleInput(context, this)
                     }
 
                     AlertDialog.Builder(context, R.style.CustomDialogTheme)
@@ -207,14 +203,10 @@ class AppLockManager(private val context: Context) {
     }
 
     private fun showPinPrompt(callback: (Boolean) -> Unit) {
-        val textColor = ContextCompat.getColor(context, R.color.text)
-        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
-        
         val pinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             hint = "Enter PIN"
-            setTextColor(textColor)
-            setHintTextColor(secondaryTextColor)
+            DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
@@ -306,14 +298,10 @@ class AppLockManager(private val context: Context) {
             return
         }
 
-        val textColor = ContextCompat.getColor(context, R.color.text)
-        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
-        
         val oldPinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             hint = "Enter current PIN"
-            setTextColor(textColor)
-            setHintTextColor(secondaryTextColor)
+            DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
@@ -344,14 +332,10 @@ class AppLockManager(private val context: Context) {
             return
         }
 
-        val textColor = ContextCompat.getColor(context, R.color.text)
-        val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
-        
         val oldPinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
             hint = "Enter current PIN"
-            setTextColor(textColor)
-            setHintTextColor(secondaryTextColor)
+            DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)

@@ -18,6 +18,7 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.ActivityData
 import com.guruswarupa.launch.managers.PhysicalActivityManager
 import com.guruswarupa.launch.services.PhysicalActivityTrackingService
+import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.ui.views.HourlyStepsChartView
 import com.guruswarupa.launch.ui.views.PhysicalActivityCalendarView
 import java.text.DecimalFormat
@@ -361,6 +362,7 @@ class PhysicalActivityWidget(
             val currentHeight = activityManager.getUserHeightCm()
             if (currentHeight > 0) setText(currentHeight.toString())
             hint = "Height in cm (e.g. 175)"
+            DialogStyler.styleInput(context, this)
         }
         
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
@@ -387,6 +389,7 @@ class PhysicalActivityWidget(
             val currentStride = activityManager.getStrideLengthMeters()
             setText(String.format(Locale.US, "%.2f", currentStride))
             hint = "Stride length in meters (e.g. 0.75)"
+            DialogStyler.styleInput(context, this)
         }
         
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
