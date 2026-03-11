@@ -207,11 +207,13 @@
         <!-- Fast Scroller -->
         <com.guruswarupa.launch.ui.views.FastScroller
             android:id="@+id/fast_scroller"
-            android:layout_width="20dp"
-            android:layout_height="300dp"
-            android:layout_gravity="end|top"
-            android:layout_marginTop="380dp"
-            android:layout_marginEnd="28dp"
+            android:layout_width="72dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:layout_marginTop="48dp"
+            android:layout_marginBottom="48dp"
+            android:layout_marginEnd="16dp"
+            android:background="@android:color/transparent"
             android:visibility="gone" />
 
     </FrameLayout>
