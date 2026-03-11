@@ -46,6 +46,7 @@ import com.guruswarupa.launch.ui.adapters.FavoritesOnboardingAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesListAdapter
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.models.Constants
 import org.json.JSONArray
 import org.json.JSONObject
@@ -130,6 +131,7 @@ class OnboardingActivity : ComponentActivity() {
     private val appListCallbacks = mutableListOf<(List<android.content.pm.ResolveInfo>) -> Unit>()
     private var isPreloadingApps = false // Track if preload is in progress
     private var allAppsList = listOf<android.content.pm.ResolveInfo>() // Store all apps
+    private var pendingFavoritesApps: List<android.content.pm.ResolveInfo>? = null
 
     // Progress indicators
     private lateinit var step1Indicator: View
@@ -302,6 +304,7 @@ class OnboardingActivity : ComponentActivity() {
         onboardingScrollView = findViewById(R.id.onboarding_scroll_view)
         stepContentContainer = findViewById(R.id.step_content_container)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
         
         welcomeStep = findViewById(R.id.welcome_step)
         dataPrivacyStep = findViewById(R.id.data_privacy_step)
@@ -342,6 +345,11 @@ class OnboardingActivity : ComponentActivity() {
         workspacesAppsRecyclerView.setRecycledViewPool(androidx.recyclerview.widget.RecyclerView.RecycledViewPool().apply {
             setMaxRecycledViews(0, 20)
         })
+
+        pendingFavoritesApps?.let {
+            ensureFavoritesAdapterReady(it)
+            pendingFavoritesApps = null
+        }
         
         backButton = findViewById(R.id.back_button)
         nextButton = findViewById(R.id.next_button)
@@ -984,6 +992,11 @@ class OnboardingActivity : ComponentActivity() {
     }
 
     private fun ensureFavoritesAdapterReady(apps: List<android.content.pm.ResolveInfo>) {
+        if (!::favoritesRecyclerView.isInitialized) {
+            pendingFavoritesApps = apps
+            return
+        }
+
         if (favoritesAdapter == null) {
             selectedFavorites = FavoriteAppManager(prefs).getFavoriteApps().toMutableSet()
             favoritesAdapter = FavoritesOnboardingAdapter(apps, selectedFavorites) { packageName, isChecked ->

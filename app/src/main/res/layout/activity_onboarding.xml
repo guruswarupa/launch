@@ -8,8 +8,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="Background"
-        android:scaleType="centerCrop"
-        android:src="@drawable/wallpaper_background" />
+        android:scaleType="centerCrop" />
 
     <View
         android:id="@+id/onboarding_overlay"

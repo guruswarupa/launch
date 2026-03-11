@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.FocusModeManager
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.ui.adapters.FocusModeAppAdapter
 import java.util.concurrent.Executors
 
@@ -88,13 +89,7 @@ class FocusModeConfigActivity : ComponentActivity() {
 
     private fun applyThemeAndWallpaper() {
         // Set system wallpaper
-        try {
-            val wallpaperManager = android.app.WallpaperManager.getInstance(this)
-            val drawable = wallpaperManager.drawable
-            wallpaperBackground.setImageDrawable(drawable)
-        } catch (_: Exception) {
-            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-        }
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
         // Apply theme-based colors and backgrounds
         val isNightMode = (resources.configuration.uiMode and 

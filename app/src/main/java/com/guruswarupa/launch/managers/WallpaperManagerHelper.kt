@@ -77,8 +77,8 @@ class WallpaperManagerHelper(
             }
         } catch (e: SecurityException) {
             Log.w("WallpaperManagerHelper", "No permission to read wallpaper, showing default", e)
-            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-            drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
+            wallpaperBackground.setImageResource(R.drawable.wallpaper_background)
+            drawerWallpaperBackground?.setImageResource(R.drawable.wallpaper_background)
             return
         } catch (_: Exception) {
             // Synchronous wallpaper load failed, trying async
@@ -91,8 +91,8 @@ class WallpaperManagerHelper(
                 
                 if (drawable == null) {
                     handler.post {
-                        wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-                        drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
+                        wallpaperBackground.setImageResource(R.drawable.wallpaper_background)
+                        drawerWallpaperBackground?.setImageResource(R.drawable.wallpaper_background)
                     }
                     return@execute
                 }
@@ -129,20 +129,20 @@ class WallpaperManagerHelper(
                     }
                 } else {
                     handler.post {
-                        wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-                        drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
+                        wallpaperBackground.setImageResource(R.drawable.wallpaper_background)
+                        drawerWallpaperBackground?.setImageResource(R.drawable.wallpaper_background)
                     }
                 }
             } catch (e: SecurityException) {
                 Log.w("WallpaperManagerHelper", "No permission to read wallpaper, showing default", e)
                 handler.post {
-                    wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-                    drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
+                    wallpaperBackground.setImageResource(R.drawable.wallpaper_background)
+                    drawerWallpaperBackground?.setImageResource(R.drawable.wallpaper_background)
                 }
             } catch (_: Exception) {
                 handler.post {
-                    wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-                    drawerWallpaperBackground?.setImageResource(R.drawable.default_wallpaper)
+                    wallpaperBackground.setImageResource(R.drawable.wallpaper_background)
+                    drawerWallpaperBackground?.setImageResource(R.drawable.wallpaper_background)
                 }
             }
         }

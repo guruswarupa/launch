@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Background Image -->
-    <item>
-        <bitmap
-            android:src="@drawable/default_wallpaper"
-            android:gravity="center"/>
-    </item>
-
-    <!-- Dark Overlay for Readability -->
+    <!-- Transparent fallback when wallpaper cannot load -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#66000000"/> <!-- 40% Black Transparent -->
+            <solid android:color="@android:color/transparent"/>
         </shape>
     </item>
 

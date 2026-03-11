@@ -43,6 +43,7 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
@@ -303,24 +304,7 @@ class SettingsActivity : ComponentActivity() {
         
         overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
-            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
-            try {
-                val wallpaperManager = WallpaperManager.getInstance(this)
-                val wallpaperDrawable = wallpaperManager.drawable
-                if (wallpaperDrawable != null) {
-                    wallpaperImageView.setImageDrawable(wallpaperDrawable)
-                }
-            } catch (_: Exception) {
-                // Fallback to default wallpaper if anything fails
-                wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
-            }
-        } else {
-            // Default wallpaper if permission not granted
-            wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
-        }
-        
-        // Apply blur to settings wallpaper if enabled
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
         applyWallpaperBlur(wallpaperImageView)
     }
 
