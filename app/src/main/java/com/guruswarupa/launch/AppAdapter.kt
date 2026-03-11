@@ -1,7 +1,7 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ResolveInfo
@@ -30,6 +30,7 @@ import androidx.recyclerview.widget.DiffUtil
 import java.io.File
 import java.util.concurrent.*
 import androidx.core.content.FileProvider
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.managers.TypographyManager
@@ -839,7 +840,7 @@ class AppAdapter(
             }
         }
 
-        val builder = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+        val builder = MaterialAlertDialogBuilder(activity, R.style.CustomDialogTheme)
         
         // Custom title view for premium look
         val titleView = LayoutInflater.from(activity).inflate(R.layout.dialog_contact_title, null)
