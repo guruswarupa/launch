@@ -22,14 +22,6 @@
       height="80"
     />
   </a>
-  &nbsp;&nbsp;&nbsp;
-  <a href="https://f-droid.org/packages/com.guruswarupa.launchh/">
-    <img
-      src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-      height="80"
-    />
-  </a>
-</p>
 
 <!-- Alternative / OSS-friendly -->
 <p align="center">
