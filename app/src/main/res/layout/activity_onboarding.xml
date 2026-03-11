@@ -24,32 +24,35 @@
         android:clipToPadding="false"
         android:fillViewport="true"
         android:paddingTop="16dp"
-        android:paddingBottom="24dp">
+        android:paddingBottom="24dp"
+        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp">
+            android:paddingHorizontal="24dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="32dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Launch setup"
-                android:textColor="@color/onboarding_chip_text"
-                android:textSize="12sp" />
+                android:text="LAUNCH SETUP"
+                android:textColor="@color/white"
+                android:letterSpacing="0.1"
+                android:alpha="0.8"
+                android:textSize="11sp" />
 
             <LinearLayout
+                android:id="@+id/hero_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="20dp"
                 android:background="@drawable/onboarding_hero_card"
-                android:elevation="8dp"
                 android:orientation="vertical"
-                android:padding="24dp">
+                android:padding="28dp">
 
                 <TextView
                     android:id="@+id/progress_title"
@@ -68,104 +71,104 @@
                     android:fontFamily="sans-serif-medium"
                     android:text="Shape Launch around the way you want to use your home screen."
                     android:textColor="@color/onboarding_text"
-                    android:textSize="24sp" />
+                    android:textSize="22sp" />
 
                 <LinearLayout
                     android:id="@+id/progress_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="24dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
                     <View
                         android:id="@+id/step1_indicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/circular_indicator" />
 
                     <View
                         android:id="@+id/step1_connector"
                         android:layout_width="0dp"
-                        android:layout_height="3dp"
+                        android:layout_height="2dp"
                         android:layout_marginHorizontal="6dp"
                         android:layout_weight="1"
                         android:background="@color/onboarding_step_indicator_inactive" />
 
                     <View
                         android:id="@+id/step2_indicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/circular_indicator" />
 
                     <View
                         android:id="@+id/step2_connector"
                         android:layout_width="0dp"
-                        android:layout_height="3dp"
+                        android:layout_height="2dp"
                         android:layout_marginHorizontal="6dp"
                         android:layout_weight="1"
                         android:background="@color/onboarding_step_indicator_inactive" />
 
                     <View
                         android:id="@+id/step3_indicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/circular_indicator" />
 
                     <View
                         android:id="@+id/step3_connector"
                         android:layout_width="0dp"
-                        android:layout_height="3dp"
+                        android:layout_height="2dp"
                         android:layout_marginHorizontal="6dp"
                         android:layout_weight="1"
                         android:background="@color/onboarding_step_indicator_inactive" />
 
                     <View
                         android:id="@+id/step4_indicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/circular_indicator" />
 
                     <View
                         android:id="@+id/step4_connector"
                         android:layout_width="0dp"
-                        android:layout_height="3dp"
+                        android:layout_height="2dp"
                         android:layout_marginHorizontal="6dp"
                         android:layout_weight="1"
                         android:background="@color/onboarding_step_indicator_inactive" />
 
                     <View
                         android:id="@+id/step5_indicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/circular_indicator" />
 
                     <View
                         android:id="@+id/step5_connector"
                         android:layout_width="0dp"
-                        android:layout_height="3dp"
+                        android:layout_height="2dp"
                         android:layout_marginHorizontal="6dp"
                         android:layout_weight="1"
                         android:background="@color/onboarding_step_indicator_inactive" />
 
                     <View
                         android:id="@+id/step6_indicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/circular_indicator" />
 
                     <View
                         android:id="@+id/step6_connector"
                         android:layout_width="0dp"
-                        android:layout_height="3dp"
+                        android:layout_height="2dp"
                         android:layout_marginHorizontal="6dp"
                         android:layout_weight="1"
                         android:background="@color/onboarding_step_indicator_inactive" />
 
                     <View
                         android:id="@+id/step7_indicator"
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/circular_indicator" />
                 </LinearLayout>
             </LinearLayout>
@@ -174,11 +177,10 @@
                 android:id="@+id/step_content_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="20dp"
                 android:background="@drawable/onboarding_surface_card"
-                android:elevation="6dp"
-                android:minHeight="420dp"
-                android:padding="24dp">
+                android:minHeight="400dp"
+                android:padding="28dp">
 
                 <LinearLayout
                     android:id="@+id/welcome_step"
@@ -195,7 +197,7 @@
                         android:gravity="center"
                         android:text="Welcome to Launch"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="30sp" />
+                        android:textSize="28sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -210,13 +212,13 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginTop="24dp"
-                        android:background="@drawable/onboarding_divider" />
+                        android:layout_marginTop="28dp"
+                        android:background="@color/onboarding_divider" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
+                        android:layout_marginTop="20dp"
                         android:fontFamily="sans-serif-medium"
                         android:text="What this setup covers"
                         android:textColor="@color/onboarding_text"
@@ -260,7 +262,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Data privacy"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -275,7 +277,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginTop="20dp"
-                        android:background="@drawable/onboarding_divider" />
+                        android:background="@color/onboarding_divider" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -309,7 +311,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="4dp"
-                        android:text="• Processed locally on your device&#10;• Not uploaded to external servers&#10;• Not shared with third parties"
+                        android:text="• Processed locally on your device\n• Not uploaded to external servers\n• Not shared with third parties"
                         android:textColor="@color/onboarding_text_secondary"
                         android:textSize="14sp" />
 
@@ -336,7 +338,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Permissions"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -351,7 +353,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginTop="20dp"
-                        android:background="@drawable/onboarding_divider" />
+                        android:background="@color/onboarding_divider" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -383,7 +385,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Set Launch as default"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -398,7 +400,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
                         android:layout_marginTop="20dp"
-                        android:background="@drawable/onboarding_divider" />
+                        android:background="@color/onboarding_divider" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -430,7 +432,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Restore an existing setup"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -470,7 +472,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Choose your display style"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -494,8 +496,11 @@
                             android:layout_weight="1"
                             android:background="@drawable/onboarding_option_button"
                             android:fontFamily="sans-serif-medium"
-                            android:minHeight="96dp"
-                            android:padding="18dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
                             android:text="Grid"
                             android:textAllCaps="false"
                             android:textColor="@color/onboarding_text"
@@ -509,8 +514,11 @@
                             android:layout_weight="1"
                             android:background="@drawable/onboarding_option_button"
                             android:fontFamily="sans-serif-medium"
-                            android:minHeight="96dp"
-                            android:padding="18dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
                             android:text="List"
                             android:textAllCaps="false"
                             android:textColor="@color/onboarding_text"
@@ -531,7 +539,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Choose favorites"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:id="@+id/favorites_loading_text"
@@ -579,7 +587,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Create workspaces"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -688,7 +696,7 @@
                         android:fontFamily="sans-serif-medium"
                         android:text="Weather setup"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="28sp" />
+                        android:textSize="26sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -761,7 +769,7 @@
                         android:gravity="center"
                         android:text="All set"
                         android:textColor="@color/onboarding_text"
-                        android:textSize="30sp" />
+                        android:textSize="28sp" />
 
                     <TextView
                         android:layout_width="match_parent"
@@ -770,20 +778,18 @@
                         android:gravity="center"
                         android:lineSpacingExtra="4dp"
                         android:text="Your launcher setup is ready. Open Launch and start refining it from the home screen."
-                        android:textColor="@color/onboarding_text_secondary"
+                        android:textColor="@color/white"
                         android:textSize="15sp" />
                 </LinearLayout>
             </FrameLayout>
 
             <LinearLayout
+                android:id="@+id/navigation_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:background="@drawable/onboarding_surface_card"
-                android:elevation="4dp"
                 android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="12dp">
+                android:orientation="horizontal">
 
                 <Button
                     android:id="@+id/back_button"
@@ -822,10 +828,10 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="24dp"
                 android:alpha="0.65"
                 android:text="Developed by Guru Swarupa"
-                android:textColor="@color/onboarding_text_secondary"
+                android:textColor="@color/white"
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>
