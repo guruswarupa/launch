@@ -49,6 +49,7 @@ class SettingsChangeCoordinator(
 
         applyThemeBasedWidgetBackgrounds()
         TypographyManager.applyToActivity(activity)
+        views.fastScroller.refreshTypography(sharedPreferences)
 
         if (activity.isTimeDateManagerInitialized()) {
             activity.timeDateManager.setUse24HourFormat(use24HourClock)

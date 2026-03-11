@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.view.ViewGroup
+import android.view.Gravity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.net.toUri
@@ -54,6 +55,15 @@ class ActivityInitializer(
             fastScroller = activity.findViewById(R.id.fast_scroller)
             fastScroller.setRecyclerView(recyclerView)
             
+            // Position FastScroller to avoid search bar/mic and start from below the app dock area
+            // Set height to 65% of screen height and align to bottom to ensure it stays away from search bar
+            val displayMetrics = activity.resources.displayMetrics
+            val screenHeight = displayMetrics.heightPixels
+            val scrollerParams = fastScroller.layoutParams as FrameLayout.LayoutParams
+            scrollerParams.height = (screenHeight * 0.65).toInt()
+            scrollerParams.gravity = Gravity.BOTTOM or Gravity.END
+            fastScroller.layoutParams = scrollerParams
+
             // Disable animations to prevent "Tmp detached view" crash during rapid updates
             recyclerView.itemAnimator = null
             voiceSearchButton = activity.findViewById(R.id.voice_search_button)

@@ -204,15 +204,13 @@
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
 
-        <!-- Fast Scroller -->
+        <!-- Fast Scroller: Positioned dynamically in ActivityInitializer to avoid mic button -->
+        <!-- Increased width to provide a larger capture area -->
         <com.guruswarupa.launch.ui.views.FastScroller
             android:id="@+id/fast_scroller"
-            android:layout_width="72dp"
+            android:layout_width="80dp"
             android:layout_height="match_parent"
             android:layout_gravity="end"
-            android:layout_marginTop="48dp"
-            android:layout_marginBottom="48dp"
-            android:layout_marginEnd="16dp"
             android:background="@android:color/transparent"
             android:visibility="gone" />
 

@@ -2,6 +2,7 @@ package com.guruswarupa.launch.ui.views
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
@@ -9,6 +10,7 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -17,6 +19,7 @@ import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.AppAdapter
+import com.guruswarupa.launch.models.Constants
 
 class FastScroller @JvmOverloads constructor(
     context: Context,
@@ -103,6 +106,7 @@ class FastScroller @JvmOverloads constructor(
 
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
+        refreshTypography()
     }
 
     fun setRecyclerView(rv: RecyclerView) {
@@ -122,6 +126,42 @@ class FastScroller @JvmOverloads constructor(
         previewTextPaint.color = color
         updateWaveShader()
         invalidate()
+    }
+
+    fun refreshTypography(preferences: SharedPreferences = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)) {
+        val fontStyle = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        val intensity = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
+        applyTypeface(fontStyle, intensity)
+    }
+
+    private fun applyTypeface(fontStyle: String, intensity: String) {
+        val family = resolveTypographyFamily(fontStyle, intensity)
+        val style = if (intensity == "bold") Typeface.BOLD else Typeface.NORMAL
+        val typeface = Typeface.create(family, style)
+        letterPaint.typeface = typeface
+        selectedLetterPaint.typeface = typeface
+        previewTextPaint.typeface = typeface
+        invalidate()
+    }
+
+    private fun resolveTypographyFamily(style: String, intensity: String): String {
+        return when (style) {
+            "serif" -> "serif"
+            "monospace" -> "monospace"
+            "condensed" -> "sans-serif-condensed"
+            "rounded" -> "sans-serif-rounded"
+            "condensed_light" -> "sans-serif-condensed-light"
+            "condensed_medium" -> "sans-serif-condensed-medium"
+            "serif_monospace" -> "serif-monospace"
+            "display" -> "sans-serif"
+            "thin" -> "sans-serif-thin"
+            "medium" -> "sans-serif-medium"
+            "black" -> "sans-serif-black"
+            "smallcaps" -> "sans-serif-smallcaps"
+            "casual" -> "casual"
+            "cursive" -> "cursive"
+            else -> if (intensity == "light") "sans-serif-light" else "sans-serif"
+        }
     }
 
     private fun animateAlpha(to: Float) {
@@ -150,7 +190,7 @@ class FastScroller @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        trackX = width - paddingEnd - trackStroke
+        trackX = width - paddingEnd - trackStroke - 4f * density
         trackTop = paddingTop + extraVerticalPadding
         trackBottom = height - paddingBottom - extraVerticalPadding
         if (trackBottom <= trackTop) {
@@ -244,18 +284,25 @@ class FastScroller @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        val x = event.x
+        val y = event.y
+        
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
+                // Only respond to touches on the rightmost part (track area) to avoid interfering with other views
+                val touchThreshold = width - 40f * density
+                if (x < touchThreshold) return false
+                
                 isSliding = true
                 animateAlpha(1f)
                 animateWaveProgress(1f)
                 parent?.requestDisallowInterceptTouchEvent(true)
-                handleTouch(event.y)
+                handleTouch(y)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (isSliding) {
-                    handleTouch(event.y)
+                    handleTouch(y)
                     return true
                 }
             }

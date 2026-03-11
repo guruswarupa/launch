@@ -249,6 +249,7 @@ class MainActivity : FragmentActivity() {
      */
     internal fun initializeViews() {
         activityInitializer.initializeViews()
+        views.fastScroller.refreshTypography(sharedPreferences)
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
