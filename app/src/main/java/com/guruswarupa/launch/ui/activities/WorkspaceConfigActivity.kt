@@ -1,13 +1,9 @@
 package com.guruswarupa.launch.ui.activities
 
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.content.Intent
-import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
@@ -15,8 +11,8 @@ import com.guruswarupa.launch.managers.WorkspaceManager
 import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.Workspace
-import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.setDialogInputView
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class WorkspaceConfigActivity : ComponentActivity() {
@@ -134,7 +130,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Create Workspace")
-            .setView(input)
+            .setDialogInputView(this, input)
             .setPositiveButton("Create") { _, _ ->
                 val workspaceName = input.text.toString().trim()
                 if (workspaceName.isNotEmpty()) {
@@ -253,7 +249,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Rename Workspace")
-            .setView(input)
+            .setDialogInputView(this, input)
             .setPositiveButton("Rename") { _, _ ->
                 val newName = input.text.toString().trim()
                 if (newName.isNotEmpty()) {

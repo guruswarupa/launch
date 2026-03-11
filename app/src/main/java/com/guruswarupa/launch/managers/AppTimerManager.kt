@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.setDialogInputView
 import java.util.Calendar
 import java.util.concurrent.Executors
 
@@ -128,7 +129,7 @@ class AppTimerManager(private val context: Context) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Daily Limit")
             .setMessage("Enter time in minutes:")
-            .setView(input)
+            .setDialogInputView(context, input)
             .setPositiveButton("Set") { _, _ ->
                 try {
                     val minutesString = input.text.toString()
@@ -249,7 +250,7 @@ class AppTimerManager(private val context: Context) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Timer")
             .setMessage("Enter time in minutes:")
-            .setView(input)
+            .setDialogInputView(context, input)
             .setPositiveButton("Set") { _, _ ->
                 try {
                     val minutesString = input.text.toString()
