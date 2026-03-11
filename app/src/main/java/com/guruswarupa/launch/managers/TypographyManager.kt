@@ -17,22 +17,24 @@ object TypographyManager {
 
     fun applyToActivity(activity: Activity) {
         val root = activity.window?.decorView ?: return
-        val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Activity.MODE_PRIVATE)
+        applyToView(root)
+    }
+
+    fun applyToView(view: View) {
+        val context = view.context
+        val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Activity.MODE_PRIVATE)
 
         val configuredScalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, DEFAULT_SCALE_PERCENT)
             .coerceIn(MIN_SCALE_PERCENT, MAX_SCALE_PERCENT)
         val fontScale = configuredScalePercent / 100f
 
-        val configuredFontStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
-        val configuredIntensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
+        val fontStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        val intensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
 
-        val fontStyle = configuredFontStyle
-        val intensity = configuredIntensity
-
-        applyToViewTree(root, fontScale, fontStyle, intensity)
+        applyToViewTree(view, fontScale, fontStyle, intensity)
     }
 
-    private fun applyToViewTree(view: View, fontScale: Float, fontStyle: String, intensity: String) {
+    fun applyToViewTree(view: View, fontScale: Float, fontStyle: String, intensity: String) {
         if (view is TextView) {
             val baseSizePx = (view.getTag(R.id.tag_typography_base_size_px) as? Float)
                 ?: view.textSize.also { view.setTag(R.id.tag_typography_base_size_px, it) }

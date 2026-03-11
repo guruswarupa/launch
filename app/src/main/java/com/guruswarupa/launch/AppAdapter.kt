@@ -32,6 +32,7 @@ import java.util.concurrent.*
 import androidx.core.content.FileProvider
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.models.AppMetadata
 import com.guruswarupa.launch.models.Constants
@@ -283,6 +284,9 @@ class AppAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        // Apply typography to the item view tree
+        TypographyManager.applyToView(holder.itemView)
+        
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
 
