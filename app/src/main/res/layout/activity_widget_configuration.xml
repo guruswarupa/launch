@@ -64,24 +64,41 @@
             android:textColor="@color/widget_config_text_secondary"
             android:textSize="14sp" />
 
-        <EditText
-            android:id="@+id/search_widget_input"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
             android:background="@drawable/widget_config_search_background"
-            android:drawableStart="@android:drawable/ic_menu_search"
-            android:drawablePadding="10dp"
-            android:hint="Search widgets"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:paddingStart="14dp"
-            android:paddingTop="12dp"
-            android:paddingEnd="14dp"
-            android:paddingBottom="12dp"
-            android:textColor="@color/widget_config_text_primary"
-            android:textColorHint="@color/widget_config_text_hint"
-            android:drawableTint="@color/widget_config_text_secondary"
-            android:textCursorDrawable="@null" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageButton
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_search"
+                android:contentDescription="Search"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:tint="@color/widget_config_text_secondary" />
+
+            <EditText
+                android:id="@+id/search_widget_input"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="Search widgets"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:paddingStart="4dp"
+                android:paddingEnd="14dp"
+                android:textColor="@color/widget_config_text_primary"
+                android:textColorHint="@color/widget_config_text_hint"
+                android:textCursorDrawable="@null"
+                android:textSize="16sp" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/widgets_header"
@@ -108,13 +125,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:orientation="horizontal">
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/cancel_button"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
                 android:background="@drawable/widget_config_secondary_button"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
@@ -125,9 +143,10 @@
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/save_button"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="48dp"
-                android:layout_marginTop="8dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
                 android:background="@drawable/widget_config_secondary_button"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
