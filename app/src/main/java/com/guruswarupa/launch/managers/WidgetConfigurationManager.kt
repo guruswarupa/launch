@@ -3,6 +3,7 @@ package com.guruswarupa.launch.managers
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
@@ -49,7 +50,8 @@ class WidgetConfigurationManager(
         val providerPackage: String? = null,
         val providerClass: String? = null,
         val appWidgetId: Int? = null,
-        val isProvider: Boolean = false
+        val isProvider: Boolean = false,
+        val appName: String? = null
     )
     
     /**
@@ -72,7 +74,7 @@ class WidgetConfigurationManager(
                     val cls = jsonObject.optString("providerClass", null)
                     val widgetId = if (jsonObject.has("appWidgetId")) jsonObject.getInt("appWidgetId") else null
                     
-                    savedWidgetsList.add(WidgetInfo(id, name, enabled, isSystem, pkg, cls, widgetId))
+                    savedWidgetsList.add(WidgetInfo(id, name, enabled, isSystem, pkg, cls, widgetId, appName = getAppName(pkg)))
                 }
             } catch (_: Exception) {}
         }
@@ -112,14 +114,16 @@ class WidgetConfigurationManager(
                 val providerId = "provider_${provider.provider.packageName}_${provider.provider.className}"
                 if (!currentIds.contains(providerId)) {
                     val label = provider.loadLabel(context.packageManager)
+                    val pkg = provider.provider.packageName
                     result.add(WidgetInfo(
                         id = providerId,
                         name = label,
                         enabled = false,
                         isSystemWidget = true,
-                        providerPackage = provider.provider.packageName,
+                        providerPackage = pkg,
                         providerClass = provider.provider.className,
-                        isProvider = true
+                        isProvider = true,
+                        appName = getAppName(pkg)
                     ))
                 }
             }
@@ -129,11 +133,28 @@ class WidgetConfigurationManager(
         // Separate disabled widgets by type so system vs custom stay grouped below.
         val enabledWidgets = result.filter { it.enabled }
         val customDisabled = result.filter { !it.enabled && !it.isSystemWidget }.sortedBy { it.name }
-        val systemDisabled = result.filter { !it.enabled && it.isSystemWidget }.sortedBy { it.name }
+        
+        // Arrange system widgets based on app name in ascending order
+        val systemDisabled = result.filter { !it.enabled && it.isSystemWidget }
+            .sortedWith(
+                compareBy<WidgetInfo> { it.appName ?: "" }
+                    .thenBy { it.name }
+            )
 
         return enabledWidgets + customDisabled + systemDisabled
     }
     
+    private fun getAppName(packageName: String?): String? {
+        if (packageName == null) return null
+        return try {
+            val pm = context.packageManager
+            val ai = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(ai).toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            packageName
+        }
+    }
+
     /**
      * Get the current widget order (only for already added/active widgets)
      */
@@ -169,7 +190,8 @@ class WidgetConfigurationManager(
                         isSystemWidget = true,
                         providerPackage = packageName,
                         providerClass = className,
-                        appWidgetId = appWidgetId
+                        appWidgetId = appWidgetId,
+                        appName = getAppName(packageName)
                     ))
                 }
             }

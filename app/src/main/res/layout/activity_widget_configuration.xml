@@ -108,15 +108,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:gravity="end"
-            android:orientation="horizontal">
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/cancel_button"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginEnd="6dp"
-                android:layout_weight="1"
                 android:background="@drawable/widget_config_secondary_button"
                 android:minHeight="0dp"
                 android:minWidth="0dp"
@@ -127,10 +125,9 @@
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/save_button"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/widget_config_secondary_button"
                 android:minHeight="0dp"
                 android:minWidth="0dp"

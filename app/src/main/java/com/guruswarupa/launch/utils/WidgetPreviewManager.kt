@@ -1,15 +1,18 @@
 package com.guruswarupa.launch.utils
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.LinearLayout
 import androidx.collection.LruCache
+import com.guruswarupa.launch.R
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import com.guruswarupa.launch.R
+
 /**
  * Manages generation and caching of widget preview images
  */
@@ -68,6 +71,11 @@ class WidgetPreviewManager(private val context: Context) {
      * Create preview bitmap for a specific widget
      */
     private fun createWidgetPreview(widgetId: String, widgetName: String): Bitmap? {
+        // Handle system widgets first
+        if (widgetId.startsWith("system_widget_") || widgetId.startsWith("provider_")) {
+            return getSystemWidgetPreview(widgetId)
+        }
+
         return when (widgetId) {
             "calculator_widget_container" -> createCalculatorPreview()
             "compass_widget_container" -> createCompassPreview()
@@ -85,194 +93,71 @@ class WidgetPreviewManager(private val context: Context) {
             "weekly_usage_widget" -> createWeeklyUsagePreview()
             "network_stats_widget_container" -> createNetworkStatsPreview()
             "device_info_widget_container" -> createDeviceInfoPreview()
+            "year_progress_widget_container" -> createYearProgressPreview()
+            "github_contributions_widget_container" -> createGithubContributionsPreview()
             else -> createDefaultPreview(widgetName)
         }
     }
-    
-    private fun createCalculatorPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_calculator_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
+
+    private fun getSystemWidgetPreview(widgetId: String): Bitmap? {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        
+        val provider = if (widgetId.startsWith("system_widget_")) {
+            val appWidgetId = widgetId.removePrefix("system_widget_").toIntOrNull() ?: return null
+            appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider
+        } else {
+            // provider_pkg_cls format
+            val parts = widgetId.split("_")
+            if (parts.size >= 3) {
+                ComponentName(parts[1], parts[2])
+            } else null
+        } ?: return null
+
+        val info = appWidgetManager.installedProviders.find { it.provider == provider } ?: return null
+        
+        // Try to load the preview image provided by the app
+        val drawable = info.loadPreviewImage(context, 0) ?: info.loadIcon(context, 0)
+        
+        return if (drawable is BitmapDrawable) {
+            drawable.bitmap
+        } else if (drawable != null) {
+            val bitmap = Bitmap.createBitmap(
+                drawable.intrinsicWidth.coerceAtLeast(1),
+                drawable.intrinsicHeight.coerceAtLeast(1),
+                Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            bitmap
+        } else {
             null
         }
     }
     
-    private fun createCompassPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_compass_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
+    private fun createCalculatorPreview(): Bitmap? = inflateAndCapture(R.layout.widget_calculator_preview)
+    private fun createCompassPreview(): Bitmap? = inflateAndCapture(R.layout.widget_compass_preview)
+    private fun createNotificationsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_notifications_preview)
+    private fun createCalendarPreview(): Bitmap? = inflateAndCapture(R.layout.widget_calendar_preview)
+    private fun createCountdownPreview(): Bitmap? = inflateAndCapture(R.layout.widget_countdown_preview)
+    private fun createPhysicalActivityPreview(): Bitmap? = inflateAndCapture(R.layout.widget_physical_activity_preview)
+    private fun createPressurePreview(): Bitmap? = inflateAndCapture(R.layout.widget_pressure_preview)
+    private fun createProximityPreview(): Bitmap? = inflateAndCapture(R.layout.widget_proximity_preview)
+    private fun createTemperaturePreview(): Bitmap? = inflateAndCapture(R.layout.widget_temperature_preview)
+    private fun createNoiseDecibelPreview(): Bitmap? = inflateAndCapture(R.layout.widget_noise_decibel_preview)
+    private fun createWorkoutPreview(): Bitmap? = inflateAndCapture(R.layout.widget_workout_preview)
+    private fun createTodoPreview(): Bitmap? = inflateAndCapture(R.layout.widget_todo_preview)
+    private fun createFinancePreview(): Bitmap? = inflateAndCapture(R.layout.widget_finance_preview)
+    private fun createWeeklyUsagePreview(): Bitmap? = inflateAndCapture(R.layout.widget_weekly_usage_preview)
+    private fun createNetworkStatsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_network_stats_preview)
+    private fun createDeviceInfoPreview(): Bitmap? = inflateAndCapture(R.layout.widget_device_info_preview)
+    private fun createYearProgressPreview(): Bitmap? = inflateAndCapture(R.layout.widget_year_progress)
+    private fun createGithubContributionsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_github_contributions)
     
-    private fun createNotificationsPreview(): Bitmap? {
+    private fun inflateAndCapture(layoutResId: Int): Bitmap? {
         return try {
             val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_notifications_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createCalendarPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_calendar_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createCountdownPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_countdown_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createPhysicalActivityPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_physical_activity_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createPressurePreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_pressure_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createProximityPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_proximity_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createTemperaturePreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_temperature_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createNoiseDecibelPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_noise_decibel_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createWorkoutPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_workout_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createTodoPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_todo_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createFinancePreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_finance_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createWeeklyUsagePreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_weekly_usage_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createNetworkStatsPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_network_stats_preview, null)
-            measureAndLayoutView(previewView)
-            viewToBitmap(previewView)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-    
-    private fun createDeviceInfoPreview(): Bitmap? {
-        return try {
-            val inflater = LayoutInflater.from(context)
-            val previewView = inflater.inflate(R.layout.widget_device_info_preview, null)
+            val previewView = inflater.inflate(layoutResId, null)
             measureAndLayoutView(previewView)
             viewToBitmap(previewView)
         } catch (e: Exception) {

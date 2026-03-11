@@ -4,40 +4,43 @@
     android:layout_height="wrap_content"
     android:background="@drawable/dialog_preview_surface"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="24dp">
 
     <TextView
+        android:id="@+id/dialog_preview_tag"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/dialog_preview_chip"
-        android:paddingStart="10dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="10dp"
-        android:paddingBottom="4dp"
-        android:text="Widget Preview"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp"
+        android:text="WIDGET PREVIEW"
         android:textColor="@color/dialog_preview_chip_text"
-        android:textSize="11sp"
+        android:textSize="10sp"
+        android:letterSpacing="0.1"
         android:textStyle="bold" />
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="220dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="14dp"
+        android:layout_height="240dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="20dp"
         android:background="@drawable/dialog_preview_frame"
-        android:padding="8dp">
+        android:padding="1dp">
 
         <ImageView
             android:id="@+id/dialog_preview_image"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:contentDescription="Widget preview"
-            android:scaleType="fitCenter" />
+            android:scaleType="fitCenter"
+            android:background="@color/widget_background" />
 
         <ProgressBar
             android:id="@+id/dialog_loading_progress"
-            android:layout_width="42dp"
-            android:layout_height="42dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_gravity="center"
             android:indeterminate="true"
             android:indeterminateTint="@color/nord8"
@@ -52,16 +55,17 @@
         android:maxLines="1"
         android:text="Widget Name"
         android:textColor="@color/dialog_text"
-        android:textSize="22sp"
-        android:textStyle="bold" />
+        android:textSize="24sp"
+        android:fontFamily="sans-serif-medium" />
 
     <TextView
         android:id="@+id/dialog_widget_description"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:layout_marginBottom="18dp"
-        android:text="Widget description"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="24dp"
+        android:lineSpacingExtra="2dp"
+        android:text="Widget description goes here with some more detail to fill the space."
         android:textColor="@color/dialog_text_secondary"
         android:textSize="14sp" />
 
@@ -73,12 +77,10 @@
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_close"
             android:layout_width="0dp"
-            android:layout_height="46dp"
-            android:layout_marginEnd="6dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:background="@drawable/dialog_preview_secondary_button"
-            android:minHeight="0dp"
-            android:minWidth="0dp"
             android:text="Close"
             android:textAllCaps="false"
             android:textColor="@color/dialog_text"
@@ -87,12 +89,10 @@
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btn_enable"
             android:layout_width="0dp"
-            android:layout_height="46dp"
-            android:layout_marginStart="6dp"
-            android:layout_weight="1"
+            android:layout_height="52dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1.2"
             android:background="@drawable/dialog_preview_primary_button"
-            android:minHeight="0dp"
-            android:minWidth="0dp"
             android:text="Enable"
             android:textAllCaps="false"
             android:textColor="@android:color/white"
