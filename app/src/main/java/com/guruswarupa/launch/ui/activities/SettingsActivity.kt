@@ -310,8 +310,7 @@ class SettingsActivity : ComponentActivity() {
 
     private fun applyWallpaperBlur(imageView: ImageView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 imageView.setRenderEffect(
@@ -403,17 +402,6 @@ class SettingsActivity : ComponentActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        val elderlyReadableModeSwitch = findViewById<SwitchCompat>(R.id.elderly_opaque_switch)
-        elderlyReadableModeSwitch.isChecked = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-        elderlyReadableModeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, isChecked) }
-            TypographyManager.applyToActivity(this)
-            setupWallpaper()
-            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-            intent.setPackage(packageName)
-            sendBroadcast(intent)
-        }
 
         val clock24HourSwitch = findViewById<SwitchCompat>(R.id.clock_24_hour_switch)
         clock24HourSwitch.isChecked = prefs.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)

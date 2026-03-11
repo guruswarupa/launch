@@ -153,8 +153,7 @@ class WallpaperManagerHelper(
      */
     fun applyBlurToViews() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             val effect = if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 RenderEffect.createBlurEffect(blurRadius, blurRadius, Shader.TileMode.CLAMP)

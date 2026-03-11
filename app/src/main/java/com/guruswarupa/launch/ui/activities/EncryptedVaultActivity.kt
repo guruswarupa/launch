@@ -235,8 +235,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
 
     private fun applyWallpaperBlur(imageView: ImageView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 imageView.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP))

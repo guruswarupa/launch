@@ -282,44 +282,6 @@
                         android:layout_marginTop="16dp"
                         android:layout_marginBottom="12dp"/>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="8dp">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Elderly readability mode"
-                                android:textSize="16sp"
-                                android:textColor="@color/text"
-                                android:alpha="0.9"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Apply larger text and simpler visuals app-wide for easier reading"
-                                android:textSize="12sp"
-                                android:textColor="@color/text"
-                                android:alpha="0.6"/>
-                        </LinearLayout>
-
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/elderly_opaque_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:thumbTint="@color/text"
-                            app:trackTint="@color/text"/>
-                    </LinearLayout>
-
                 </LinearLayout>
 
             </LinearLayout>
