@@ -125,12 +125,13 @@ class WidgetConfigurationManager(
             }
         }
         
-        // Arrange the widgets: keep all enabled widgets on top based on fifo (original saved order),
-        // remaining (disabled) widgets in ascending order of the name.
+        // Keep enabled widgets in their saved order so the drawer still respects how the user arranged them.
+        // Separate disabled widgets by type so system vs custom stay grouped below.
         val enabledWidgets = result.filter { it.enabled }
-        val disabledWidgets = result.filter { !it.enabled }.sortedBy { it.name }
-        
-        return enabledWidgets + disabledWidgets
+        val customDisabled = result.filter { !it.enabled && !it.isSystemWidget }.sortedBy { it.name }
+        val systemDisabled = result.filter { !it.enabled && it.isSystemWidget }.sortedBy { it.name }
+
+        return enabledWidgets + customDisabled + systemDisabled
     }
     
     /**

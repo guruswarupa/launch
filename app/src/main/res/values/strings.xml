@@ -120,6 +120,9 @@ No personal data is collected, stored, or shared with third parties.</string>
 
     <!-- Widget Strings -->
     <string name="screen_time_format">Screen Time: %1$s</string>
+    <string name="widget_section_enabled">Enabled widgets</string>
+    <string name="widget_section_custom_disabled">Custom widgets (disabled)</string>
+    <string name="widget_section_system_disabled">System widgets (disabled)</string>
 
     <!-- Hidden Apps Strings -->
     <string name="no_hidden_apps">No hidden apps. Long press an app in the app list to hide it.</string>
