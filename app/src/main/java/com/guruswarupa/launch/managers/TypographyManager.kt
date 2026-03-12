@@ -8,9 +8,9 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.res.ResourcesCompat
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.managers.DownloadableFontManager
 
 object TypographyManager {
 
@@ -113,16 +113,17 @@ object TypographyManager {
     }
 
     private fun resolveCustomTypeface(context: Context, style: String): Typeface? {
+        DownloadableFontManager.getTypeface(style)?.let { return it }
         return when (style) {
-            "droid_sans_fallback" -> ResourcesCompat.getFont(context, R.font.droid_sans_fallback)
-            "ubuntu_regular" -> ResourcesCompat.getFont(context, R.font.ubuntu_regular)
-            "noto_sans" -> ResourcesCompat.getFont(context, R.font.noto_sans)
-            "noto_serif" -> ResourcesCompat.getFont(context, R.font.noto_serif)
-            "noto_sans_display" -> ResourcesCompat.getFont(context, R.font.noto_sans_display)
-            "dejavu_sans" -> ResourcesCompat.getFont(context, R.font.dejavu_sans)
-            "dejavu_serif" -> ResourcesCompat.getFont(context, R.font.dejavu_serif)
-            "dejavu_mono" -> ResourcesCompat.getFont(context, R.font.dejavu_mono)
-            "fira_code" -> ResourcesCompat.getFont(context, R.font.fira_code)
+            "droid_sans_fallback" -> Typeface.create("Droid Sans", Typeface.NORMAL)
+            "ubuntu_regular" -> Typeface.create("Ubuntu", Typeface.NORMAL)
+            "noto_sans" -> Typeface.create("Noto Sans", Typeface.NORMAL)
+            "noto_serif" -> Typeface.create("Noto Serif", Typeface.NORMAL)
+            "noto_sans_display" -> Typeface.create("Noto Sans Display", Typeface.NORMAL)
+            "dejavu_sans" -> Typeface.create("sans-serif", Typeface.NORMAL)
+            "dejavu_serif" -> Typeface.create("serif", Typeface.NORMAL)
+            "dejavu_mono" -> Typeface.create("monospace", Typeface.NORMAL)
+            "fira_code" -> Typeface.create("monospace", Typeface.NORMAL)
             else -> null
         }
     }

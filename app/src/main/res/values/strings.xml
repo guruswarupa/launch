@@ -154,6 +154,16 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="update_workspace">Update Workspace</string>
     <string name="workspace_edit_description">Edit workspace</string>
     <string name="workspace_delete_description">Delete workspace</string>
+    <string name="font_download">Download</string>
+    <string name="font_downloading">Downloading…</string>
+    <string name="font_installed">Installed</string>
+    <string name="font_downloaded_message">%1$s downloaded</string>
+    <string name="font_remove">Remove</string>
+    <string name="font_removed_message">%1$s removed</string>
+    <string name="font_removing">Removing…</string>
+    <string name="font_download_failed">Failed to download %1$s</string>
+    <string name="font_install">Install</string>
+    <string name="font_uninstall">Uninstall</string>
 
     <!-- Physical Activity Strings -->
     <string name="distance_km_format">%1$s km</string>
