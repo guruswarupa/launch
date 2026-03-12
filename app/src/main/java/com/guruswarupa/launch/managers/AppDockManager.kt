@@ -1,6 +1,6 @@
 package com.guruswarupa.launch.managers
 
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -21,13 +21,14 @@ import com.guruswarupa.launch.ui.activities.SettingsActivity
 import com.guruswarupa.launch.ui.activities.WorkspaceConfigActivity
 import com.guruswarupa.launch.ui.activities.EncryptedVaultActivity
 import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.setDialogInputView
 import java.util.Locale
 
 class AppDockManager(
-    private val activity: MainActivity,
+    activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
-    private val packageManager: PackageManager,
+    packageManager: PackageManager,
     private val favoriteAppManager: FavoriteAppManager
 ) {
     private val context: Context = activity
@@ -42,7 +43,7 @@ class AppDockManager(
     private lateinit var apkShareButton: ImageView
     private lateinit var vaultButton: ImageView
     private lateinit var favoriteToggle: ImageView
-    private lateinit var pomodoroManager: PomodoroManager
+    private val pomodoroManager: PomodoroManager
     private var isFocusMode: Boolean = false
     private val res = context.resources
     private var timerHandler: android.os.Handler? = null
@@ -59,7 +60,7 @@ class AppDockManager(
         pomodoroManager.onTimerTick = { remainingMillis, state ->
             updatePomodoroTimerDisplay(remainingMillis, state)
         }
-        pomodoroManager.onStateChanged = { state, isWorkFocus ->
+        pomodoroManager.onStateChanged = { _, isWorkFocus ->
             isFocusMode = isWorkFocus
             updateFocusModeIcon()
             updateDockVisibility()
@@ -567,7 +568,7 @@ class AppDockManager(
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Duration")
             .setMessage("Enter duration in minutes:")
-            .setView(input)
+            .setDialogInputView(context, input)
             .setPositiveButton("Start") { _, _ ->
                 val minutes = input.text.toString().toIntOrNull()
                 if (minutes != null && minutes in 1..480) {

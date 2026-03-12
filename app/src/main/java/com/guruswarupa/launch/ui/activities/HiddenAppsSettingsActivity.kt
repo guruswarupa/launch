@@ -2,7 +2,6 @@ package com.guruswarupa.launch.ui.activities
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.WallpaperManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
@@ -24,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.HiddenAppManager
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class HiddenAppsSettingsActivity : ComponentActivity() {
 
@@ -74,20 +74,7 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
-            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
-            try {
-                val wallpaperManager = WallpaperManager.getInstance(this)
-                val wallpaperDrawable = wallpaperManager.drawable
-                if (wallpaperDrawable != null) {
-                    wallpaperImageView.setImageDrawable(wallpaperDrawable)
-                }
-            } catch (_: Exception) {
-                wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
-            }
-        } else {
-            wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
-        }
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
     }
     
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {

@@ -61,6 +61,7 @@
     <color name="widget_config_text_hint">@color/widget_text_secondary</color>
     <color name="widget_config_chip_text">@color/widget_text</color>
     <color name="widget_config_secondary_button_text">@color/widget_text</color>
+    <color name="widget_config_surface">#33000000</color>
     
     <!-- Icon colors for dark mode -->
     <color name="icon_color">#FFFFFF</color> <!-- White icons for dark mode -->
@@ -88,43 +89,57 @@
     <color name="tutorial_ripple">#40FFFFFF</color>
 
     <!-- Onboarding Colors -->
-    <color name="onboarding_overlay">#CC000000</color>
-    <color name="onboarding_text">@color/white</color>
-    <color name="onboarding_text_secondary">@color/text_secondary</color>
-    <color name="onboarding_step_indicator_active">@color/nord9</color>
-    <color name="onboarding_step_indicator_inactive">@color/nord3</color>
-    <color name="onboarding_input_background">#80000000</color>
+    <color name="onboarding_overlay">#1A000000</color> <!-- 10% black for subtle glass -->
+    <color name="onboarding_text">@color/white</color> 
+    <color name="onboarding_text_secondary">#CCCCCC</color>
+    <color name="onboarding_step_indicator_active">@color/nord8</color>
+    <color name="onboarding_step_indicator_inactive">#4DFFFFFF</color>
+    <color name="onboarding_input_background">#33000000</color>
     <color name="onboarding_input_text">@color/white</color>
-    <color name="onboarding_input_hint">#B0B0B0</color>
-    <color name="onboarding_surface_start">#B3222E3D</color>
-    <color name="onboarding_surface_end">#A61A2432</color>
-    <color name="onboarding_surface_stroke">#52D8DEE9</color>
-    <color name="onboarding_hero_start">#C62A3646</color>
-    <color name="onboarding_hero_end">#B31F2B3B</color>
-    <color name="onboarding_hero_stroke">#66D8DEE9</color>
-    <color name="onboarding_primary_button_start">#7B9CC5</color>
+    <color name="onboarding_input_hint">#80FFFFFF</color>
+    <color name="onboarding_surface_start">#4D000000</color> <!-- Dark Glass surface -->
+    <color name="onboarding_surface_end">#33000000</color>
+    <color name="onboarding_surface_stroke">#33FFFFFF</color>
+    <color name="onboarding_hero_start">#66000000</color>
+    <color name="onboarding_hero_end">#4D000000</color>
+    <color name="onboarding_hero_stroke">#4DFFFFFF</color>
+    <color name="onboarding_primary_button_start">#81A1C1</color>
     <color name="onboarding_primary_button_end">#5E81AC</color>
     <color name="onboarding_primary_button_text">#FFFFFF</color>
-    <color name="onboarding_secondary_button_start">#293D4F66</color>
-    <color name="onboarding_secondary_button_end">#1F2E3B4D</color>
+    <color name="onboarding_secondary_button_start">#1AFFFFFF</color>
+    <color name="onboarding_secondary_button_end">#0DFFFFFF</color>
     <color name="onboarding_secondary_button_text">@color/white</color>
-    <color name="onboarding_option_selected_start">#405E81AC</color>
-    <color name="onboarding_option_selected_end">#334B688A</color>
-    <color name="onboarding_option_unselected_start">#263B4252</color>
-    <color name="onboarding_option_unselected_end">#1F2E3440</color>
-    <color name="onboarding_input_surface_start">#66303B4A</color>
-    <color name="onboarding_input_surface_end">#4D202A36</color>
-    <color name="onboarding_input_surface_stroke">#52D8DEE9</color>
-    <color name="onboarding_chip_background">#265E81AC</color>
-    <color name="onboarding_chip_stroke">#4D81A1C1</color>
-    <color name="onboarding_chip_text">@color/nord4</color>
-    <color name="onboarding_list_item_start">#333B4252</color>
-    <color name="onboarding_list_item_end">#26303B4A</color>
-    <color name="onboarding_list_item_stroke">#47D8DEE9</color>
-    <color name="onboarding_scrim_top">#66141B24</color>
-    <color name="onboarding_scrim_bottom">#D9111822</color>
+    <color name="onboarding_option_selected_start">#805E81AC</color>
+    <color name="onboarding_option_selected_end">#80434C5E</color>
+    <color name="onboarding_option_unselected_start">#1AFFFFFF</color>
+    <color name="onboarding_option_unselected_end">#0DFFFFFF</color>
+    <color name="onboarding_input_surface_start">#26FFFFFF</color>
+    <color name="onboarding_input_surface_end">#1AFFFFFF</color>
+    <color name="onboarding_input_surface_stroke">#33FFFFFF</color>
+    <color name="onboarding_chip_background">#2688C0D0</color>
+    <color name="onboarding_chip_stroke">#4D88C0D0</color>
+    <color name="onboarding_chip_text">#D8DEE9</color>
+    <color name="onboarding_list_item_start">#1AFFFFFF</color>
+    <color name="onboarding_list_item_end">#0DFFFFFF</color>
+    <color name="onboarding_list_item_stroke">#26FFFFFF</color>
+    <color name="onboarding_scrim_top">#0DFFFFFF</color>
+    <color name="onboarding_scrim_bottom">#4D000000</color>
+    <color name="onboarding_divider">#26FFFFFF</color>
     
     <!-- Colors for note editor and vault -->
+    <color name="note_editor_gradient_start">#0F1119</color>
+    <color name="note_editor_gradient_end">#161A24</color>
+    <color name="note_editor_title_text">#F5F6FF</color>
+    <color name="note_editor_subtitle_text">#B6BCE0</color>
+    <color name="note_editor_label_text">#8B95B7</color>
+    <color name="note_editor_helper_text">#8B95B7</color>
+    <color name="note_editor_card_surface">#1D2231</color>
+    <color name="note_editor_card_stroke">#2E364A</color>
+    <color name="note_editor_card_surface_translucent">#C0111626</color>
+    <color name="note_editor_card_stroke_translucent">#88FFFFFF</color>
+    <color name="note_editor_input_stroke">#2E364A</color>
+    <color name="note_editor_input_surface">#1E2431</color>
+    <color name="note_editor_icon_tint">@color/white</color>
     <color name="divider">#3A3A3A</color>
     <color name="text_hint">#B0B0B0</color>
 </resources>

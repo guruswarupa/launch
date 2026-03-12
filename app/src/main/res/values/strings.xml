@@ -120,6 +120,9 @@ No personal data is collected, stored, or shared with third parties.</string>
 
     <!-- Widget Strings -->
     <string name="screen_time_format">Screen Time: %1$s</string>
+    <string name="widget_section_enabled">Enabled widgets</string>
+    <string name="widget_section_custom_disabled">Custom widgets (disabled)</string>
+    <string name="widget_section_system_disabled">System widgets (disabled)</string>
 
     <!-- Hidden Apps Strings -->
     <string name="no_hidden_apps">No hidden apps. Long press an app in the app list to hide it.</string>
@@ -147,6 +150,20 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_launch_app">Launch App</string>
+    <string name="create_workspace">Create Workspace</string>
+    <string name="update_workspace">Update Workspace</string>
+    <string name="workspace_edit_description">Edit workspace</string>
+    <string name="workspace_delete_description">Delete workspace</string>
+    <string name="font_download">Download</string>
+    <string name="font_downloading">Downloading…</string>
+    <string name="font_installed">Installed</string>
+    <string name="font_downloaded_message">%1$s downloaded</string>
+    <string name="font_remove">Remove</string>
+    <string name="font_removed_message">%1$s removed</string>
+    <string name="font_removing">Removing…</string>
+    <string name="font_download_failed">Failed to download %1$s</string>
+    <string name="font_install">Install</string>
+    <string name="font_uninstall">Uninstall</string>
 
     <!-- Physical Activity Strings -->
     <string name="distance_km_format">%1$s km</string>

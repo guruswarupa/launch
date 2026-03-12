@@ -2,6 +2,7 @@ package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
 import android.app.NotificationManager
+import android.app.WallpaperManager
 import android.app.admin.DevicePolicyManager
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
@@ -203,6 +204,7 @@ class MainActivity : FragmentActivity() {
                     wallpaperManagerHelper.clearCache()
                     wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
                 }
+                refreshRightDrawerWallpaper()
             },
             onBatteryChanged = { 
                 if (::usageStatsRefreshManager.isInitialized) {
@@ -232,11 +234,22 @@ class MainActivity : FragmentActivity() {
     
 
     
+    internal fun refreshRightDrawerWallpaper() {
+        if (!views.isRightDrawerWallpaperInitialized()) return
+        try {
+            val drawable = WallpaperManager.getInstance(this).drawable
+            views.rightDrawerWallpaper.setImageDrawable(drawable)
+        } catch (_: Exception) {
+            // Ignore failures when the system wallpaper can't be loaded
+        }
+    }
+
     /**
      * Initializes all view components.
      */
     internal fun initializeViews() {
         activityInitializer.initializeViews()
+        views.fastScroller.refreshTypography(sharedPreferences)
 
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
@@ -673,6 +686,9 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onResume(intent)
+        }
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openCenterPage(animated = false)
         }
     }
 

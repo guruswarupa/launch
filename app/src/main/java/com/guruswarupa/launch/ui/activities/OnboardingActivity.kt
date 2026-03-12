@@ -26,6 +26,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ImageView
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -45,6 +46,7 @@ import com.guruswarupa.launch.ui.adapters.FavoritesOnboardingAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
 import com.guruswarupa.launch.ui.adapters.WorkspacesListAdapter
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.models.Constants
 import org.json.JSONArray
 import org.json.JSONObject
@@ -96,6 +98,7 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var backupImportStep: LinearLayout
     private lateinit var displayStyleStep: LinearLayout
     private lateinit var favoritesStep: LinearLayout
+    private lateinit var workspacesStep: LinearLayout
     private lateinit var weatherApiKeyStep: LinearLayout
     private lateinit var completeStep: LinearLayout
     private lateinit var backButton: Button
@@ -103,6 +106,7 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var gridStyleButton: Button
     private lateinit var listStyleButton: Button
     private lateinit var stepContentContainer: FrameLayout
+    private lateinit var wallpaperBackground: ImageView
     private lateinit var progressTitle: TextView
     private lateinit var progressSubtitle: TextView
     private lateinit var weatherApiKeyInput: EditText
@@ -110,13 +114,14 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var favoritesLoadingText: TextView
     private lateinit var workspacesLoadingText: TextView
     private lateinit var favoritesRecyclerView: androidx.recyclerview.widget.RecyclerView
-    private lateinit var favoritesAdapter: FavoritesOnboardingAdapter
+    private var favoritesAdapter: FavoritesOnboardingAdapter? = null
     private var selectedFavorites = mutableSetOf<String>()
     
     // Workspaces UI
-    private lateinit var workspacesStep: LinearLayout
     private lateinit var workspaceNameInput: EditText
-    private lateinit var addWorkspaceButton: Button
+    private lateinit var workspaceActionFab: Button
+    private lateinit var cancelWorkspaceButton: Button
+    private lateinit var workspaceButtonsContainer: LinearLayout
     private lateinit var workspacesListRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var workspacesAppsRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var workspacesListTitle: TextView
@@ -124,10 +129,12 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var workspacesAppsAdapter: WorkspacesAppsAdapter
     private var currentWorkspaceApps = mutableSetOf<String>()
     private var createdWorkspaces = mutableListOf<Pair<String, Set<String>>>() // name to apps
+    private var editingWorkspaceIndex: Int? = null
     private var cachedAppsList: List<android.content.pm.ResolveInfo>? = null // Cached app list
     private val appListCallbacks = mutableListOf<(List<android.content.pm.ResolveInfo>) -> Unit>()
     private var isPreloadingApps = false // Track if preload is in progress
     private var allAppsList = listOf<android.content.pm.ResolveInfo>() // Store all apps
+    private var pendingFavoritesApps: List<android.content.pm.ResolveInfo>? = null
 
     // Progress indicators
     private lateinit var step1Indicator: View
@@ -216,6 +223,7 @@ class OnboardingActivity : ComponentActivity() {
                 setContentView(R.layout.activity_onboarding)
                 initializeViews()
                 setupClickListeners()
+                applyBlurEffects()
                 showStep(OnboardingStep.DATA_PRIVACY)
                 backButton.visibility = View.GONE
                 return
@@ -249,6 +257,7 @@ class OnboardingActivity : ComponentActivity() {
 
         initializeViews()
         setupClickListeners()
+        applyBlurEffects()
         
         // Preload app list ONLY if consent is already given
         if (prefs.getBoolean("app_data_consent_given", false)) {
@@ -264,6 +273,12 @@ class OnboardingActivity : ComponentActivity() {
         }
     }
     
+    private fun applyBlurEffects() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            BlurUtils.applyBlurToView(wallpaperBackground, 60f)
+        }
+    }
+
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -271,11 +286,11 @@ class OnboardingActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.insetsController?.apply {
                 setSystemBarsAppearance(
-                    if (isDarkMode) 0 else WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                    0,
                     WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                 )
                 setSystemBarsAppearance(
-                    if (isDarkMode) 0 else WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                    0,
                     WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
                 )
             }
@@ -284,14 +299,16 @@ class OnboardingActivity : ComponentActivity() {
             window.decorView.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                     View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    (if (isDarkMode) 0 else View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
         }
     }
 
     private fun initializeViews() {
         onboardingScrollView = findViewById(R.id.onboarding_scroll_view)
         stepContentContainer = findViewById(R.id.step_content_container)
+        wallpaperBackground = findViewById(R.id.wallpaper_background)
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
+        
         welcomeStep = findViewById(R.id.welcome_step)
         dataPrivacyStep = findViewById(R.id.data_privacy_step)
         permissionsStep = findViewById(R.id.permissions_step)
@@ -312,7 +329,9 @@ class OnboardingActivity : ComponentActivity() {
         })
         
         workspaceNameInput = findViewById(R.id.workspace_name_input)
-        addWorkspaceButton = findViewById(R.id.add_workspace_button)
+        workspaceActionFab = findViewById(R.id.workspace_action_fab)
+        cancelWorkspaceButton = findViewById(R.id.cancel_workspace_button)
+        workspaceButtonsContainer = findViewById(R.id.workspace_buttons_container)
         workspacesListRecyclerView = findViewById(R.id.workspaces_list_recycler_view)
         workspacesAppsRecyclerView = findViewById(R.id.workspaces_apps_recycler_view)
         workspacesListTitle = findViewById(R.id.workspaces_list_title)
@@ -331,6 +350,11 @@ class OnboardingActivity : ComponentActivity() {
         workspacesAppsRecyclerView.setRecycledViewPool(androidx.recyclerview.widget.RecyclerView.RecycledViewPool().apply {
             setMaxRecycledViews(0, 20)
         })
+
+        pendingFavoritesApps?.let {
+            ensureFavoritesAdapterReady(it)
+            pendingFavoritesApps = null
+        }
         
         backButton = findViewById(R.id.back_button)
         nextButton = findViewById(R.id.next_button)
@@ -374,6 +398,7 @@ class OnboardingActivity : ComponentActivity() {
     private fun showStep(step: OnboardingStep) {
         currentStep = step
         updateProgressHeader(step)
+        workspaceActionFab.visibility = View.GONE
         
         // Hide all steps first
         welcomeStep.visibility = View.GONE
@@ -460,6 +485,7 @@ class OnboardingActivity : ComponentActivity() {
             }
             OnboardingStep.WORKSPACES -> {
                 workspacesStep.visibility = View.VISIBLE
+                workspaceActionFab.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
                 nextButton.setText(R.string.onboarding_continue)
                 nextButton.isEnabled = true
@@ -679,46 +705,19 @@ class OnboardingActivity : ComponentActivity() {
         currentPermissionIndex++
         while (currentPermissionIndex < permissionList.size) {
             val permissionInfo = permissionList[currentPermissionIndex]
-            
-            // Handle special permissions that don't use standard permission checking
-            when (permissionInfo.permission) {
-                "" -> {
-                    // Special permission that requires custom handling
-                    when (permissionInfo.requestCode) {
-                        106 -> { // Notification policy access
-                            if (!hasNotificationPolicyPermission()) {
-                                showPermissionExplanation(permissionInfo)
-                                return
-                            }
-                        }
-                        107 -> { // Accessibility service
-                            if (!hasAccessibilityServicePermission()) {
-                                showPermissionExplanation(permissionInfo)
-                                return
-                            }
-                        }
-                        108 -> { // Notification listener
-                            if (!hasNotificationListenerPermission()) {
-                                showPermissionExplanation(permissionInfo)
-                                return
-                            }
-                        }
-                        else -> {
-                            // For any other special permissions
-                            showPermissionExplanation(permissionInfo)
-                            return
-                        }
-                    }
-                }
-                else -> {
-                    // Standard permission check
-                    if (ContextCompat.checkSelfPermission(this, permissionInfo.permission) != PackageManager.PERMISSION_GRANTED) {
-                        showPermissionExplanation(permissionInfo)
-                        return
-                    }
-                }
+
+            if (isPermissionAlreadyGranted(permissionInfo)) {
+                currentPermissionIndex++
+                continue
             }
-            currentPermissionIndex++
+
+            if (hasPermissionBeenDenied(permissionInfo)) {
+                currentPermissionIndex++
+                continue
+            }
+
+            showPermissionExplanation(permissionInfo)
+            return
         }
         requestUsageStatsPermission()
     }
@@ -749,7 +748,7 @@ class OnboardingActivity : ComponentActivity() {
                 }
             }
             .setNegativeButton("Skip") { _, _ ->
-                markPermissionAsDenied(permissionInfo.permission)
+                markPermissionAsDenied(permissionInfo)
                 requestNextPermission()
             }
             .setCancelable(false)
@@ -766,20 +765,54 @@ class OnboardingActivity : ComponentActivity() {
         } else {
             val permissionInfo = permissionList.find { it.requestCode == requestCode }
             if (permissionInfo != null) {
-                markPermissionAsDenied(permissionInfo.permission)
+                markPermissionAsDenied(permissionInfo)
                 showPermissionDeniedDialog(permissionInfo.title, permissionInfo.explanation)
             }
             requestNextPermission()
         }
     }
 
-    private fun markPermissionAsDenied(permission: String) {
-        when (permission) {
-            Manifest.permission.READ_CONTACTS -> prefs.edit { putBoolean("contacts_permission_denied", true) }
-            Manifest.permission.SEND_SMS -> prefs.edit { putBoolean("sms_permission_denied", true) }
-            Manifest.permission.CALL_PHONE -> prefs.edit { putBoolean("call_phone_permission_denied", true) }
-            Manifest.permission.POST_NOTIFICATIONS -> prefs.edit { putBoolean("notification_permission_denied", true) }
-            Manifest.permission.ACTIVITY_RECOGNITION -> prefs.edit { putBoolean("activity_recognition_permission_denied", true) }
+    private fun markPermissionAsDenied(permissionInfo: PermissionInfo) {
+        prefs.edit {
+            putBoolean(getPermissionDeniedPrefKey(permissionInfo), true)
+            when (permissionInfo.permission) {
+                Manifest.permission.READ_CONTACTS -> putBoolean("contacts_permission_denied", true)
+                Manifest.permission.SEND_SMS -> putBoolean("sms_permission_denied", true)
+                Manifest.permission.CALL_PHONE -> putBoolean("call_phone_permission_denied", true)
+                Manifest.permission.POST_NOTIFICATIONS -> putBoolean("notification_permission_denied", true)
+                Manifest.permission.ACTIVITY_RECOGNITION -> putBoolean("activity_recognition_permission_denied", true)
+            }
+        }
+    }
+
+    private fun hasPermissionBeenDenied(permissionInfo: PermissionInfo): Boolean =
+        prefs.getBoolean(getPermissionDeniedPrefKey(permissionInfo), false)
+
+    private fun clearPermissionDeniedFlag(permissionInfo: PermissionInfo) {
+        prefs.edit { putBoolean(getPermissionDeniedPrefKey(permissionInfo), false) }
+    }
+
+    private fun isPermissionAlreadyGranted(permissionInfo: PermissionInfo): Boolean {
+        val granted = when (permissionInfo.permission) {
+            "" -> when (permissionInfo.requestCode) {
+                106 -> hasNotificationPolicyPermission()
+                107 -> hasAccessibilityServicePermission()
+                108 -> hasNotificationListenerPermission()
+                else -> false
+            }
+            else -> ContextCompat.checkSelfPermission(this, permissionInfo.permission) == PackageManager.PERMISSION_GRANTED
+        }
+        if (granted) {
+            clearPermissionDeniedFlag(permissionInfo)
+        }
+        return granted
+    }
+
+    private fun getPermissionDeniedPrefKey(permissionInfo: PermissionInfo): String {
+        return if (permissionInfo.permission.isNotBlank()) {
+            "permission_denied_${permissionInfo.permission}"
+        } else {
+            "permission_denied_request_${permissionInfo.requestCode}"
         }
     }
     
@@ -928,8 +961,9 @@ class OnboardingActivity : ComponentActivity() {
     
     private fun preloadAppList(onLoaded: ((List<android.content.pm.ResolveInfo>) -> Unit)? = null) {
         cachedAppsList?.let { apps ->
-            if (onLoaded != null) {
-                runOnUiThread { onLoaded(apps) }
+            runOnUiThread {
+                ensureFavoritesAdapterReady(apps)
+                onLoaded?.invoke(apps)
             }
             return
         }
@@ -958,9 +992,25 @@ class OnboardingActivity : ComponentActivity() {
             }
 
             runOnUiThread {
+                ensureFavoritesAdapterReady(apps)
                 callbacks.forEach { it(apps) }
             }
         }.start()
+    }
+
+    private fun ensureFavoritesAdapterReady(apps: List<android.content.pm.ResolveInfo>) {
+        if (!::favoritesRecyclerView.isInitialized) {
+            pendingFavoritesApps = apps
+            return
+        }
+
+        if (favoritesAdapter == null) {
+            selectedFavorites = FavoriteAppManager(prefs).getFavoriteApps().toMutableSet()
+            favoritesAdapter = FavoritesOnboardingAdapter(apps, selectedFavorites) { packageName, isChecked ->
+                if (isChecked) selectedFavorites.add(packageName) else selectedFavorites.remove(packageName)
+            }
+        }
+        favoritesRecyclerView.adapter = favoritesAdapter
     }
 
     private fun queryLaunchableApps(): List<android.content.pm.ResolveInfo> {
@@ -981,11 +1031,7 @@ class OnboardingActivity : ComponentActivity() {
         favoritesLoadingText.visibility = View.VISIBLE
         favoritesRecyclerView.visibility = View.GONE
         preloadAppList { apps ->
-            selectedFavorites = FavoriteAppManager(prefs).getFavoriteApps().toMutableSet()
-            favoritesAdapter = FavoritesOnboardingAdapter(apps, selectedFavorites) { packageName, isChecked ->
-                if (isChecked) selectedFavorites.add(packageName) else selectedFavorites.remove(packageName)
-            }
-            favoritesRecyclerView.adapter = favoritesAdapter
+            ensureFavoritesAdapterReady(apps)
             favoritesLoadingText.visibility = View.GONE
             favoritesRecyclerView.visibility = View.VISIBLE
         }
@@ -1004,13 +1050,20 @@ class OnboardingActivity : ComponentActivity() {
         preloadAppList { apps ->
             allAppsList = apps
             updateAvailableAppsForWorkspace()
-            workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
-                createdWorkspaces.removeAt(position)
-                @SuppressLint("NotifyDataSetChanged")
-                workspacesListAdapter.notifyDataSetChanged()
-                updateWorkspacesListVisibility()
-                updateAvailableAppsForWorkspace()
-            }
+            workspacesListAdapter = WorkspacesListAdapter(
+                createdWorkspaces,
+                onDelete = { position ->
+                    createdWorkspaces.removeAt(position)
+                    @SuppressLint("NotifyDataSetChanged")
+                    workspacesListAdapter.notifyDataSetChanged()
+                    exitWorkspaceEditMode()
+                    updateWorkspacesListVisibility()
+                    updateAvailableAppsForWorkspace()
+                },
+                onEdit = { position ->
+                    enterWorkspaceEditMode(position)
+                }
+            )
             workspacesListRecyclerView.adapter = workspacesListAdapter
             updateWorkspacesListVisibility()
             workspacesLoadingText.visibility = View.GONE
@@ -1019,50 +1072,98 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun updateAvailableAppsForWorkspace() {
-        val usedApps = createdWorkspaces.flatMap { it.second }.toSet()
+        val usedApps = createdWorkspaces.withIndex()
+            .filter { it.index != editingWorkspaceIndex }
+            .flatMap { it.value.second }
+            .toSet()
         val availableApps = allAppsList.filter { it.activityInfo.packageName !in usedApps }
         workspacesAppsAdapter = WorkspacesAppsAdapter(availableApps, currentWorkspaceApps) { packageName, isChecked ->
             if (isChecked) currentWorkspaceApps.add(packageName) else currentWorkspaceApps.remove(packageName)
-            updateAddWorkspaceButtonState()
+            updateWorkspaceActionButtons()
         }
         workspacesAppsRecyclerView.adapter = workspacesAppsAdapter
-        updateAddWorkspaceButtonState()
+        updateWorkspaceActionButtons()
         workspacesAppsRecyclerView.post { workspacesAppsRecyclerView.requestLayout() }
     }
     
-    private fun updateAddWorkspaceButtonState() {
+    private fun updateWorkspaceActionButtons() {
         val hasName = workspaceNameInput.text.toString().trim().isNotEmpty()
         val hasApps = currentWorkspaceApps.isNotEmpty()
-        addWorkspaceButton.isEnabled = hasName && hasApps
-        addWorkspaceButton.alpha = if (hasName && hasApps) 1.0f else 0.5f
+        val buttonTextRes = if (editingWorkspaceIndex == null) R.string.create_workspace else R.string.update_workspace
+        val enabled = hasName && hasApps
+
+        // Show buttons container only when editing or creating a workspace
+        workspaceButtonsContainer.visibility = if (editingWorkspaceIndex != null || hasName || hasApps) View.VISIBLE else View.GONE
+        
+        // Show cancel button only when editing an existing workspace
+        cancelWorkspaceButton.visibility = if (editingWorkspaceIndex != null) View.VISIBLE else View.GONE
+        
+        workspaceActionFab.text = getString(buttonTextRes)
+        workspaceActionFab.isEnabled = enabled
+        workspaceActionFab.alpha = if (enabled) 1.0f else 0.5f
     }
     
     private fun setupWorkspaceButtons() {
         workspaceNameInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updateAddWorkspaceButtonState() }
-            override fun afterTextChanged(s: Editable?) { updateAddWorkspaceButtonState() }
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updateWorkspaceActionButtons() }
+            override fun afterTextChanged(s: Editable?) { updateWorkspaceActionButtons() }
         })
-        updateAddWorkspaceButtonState()
-        addWorkspaceButton.setOnClickListener {
-            val workspaceName = workspaceNameInput.text.toString().trim()
-            if (workspaceName.isEmpty()) { workspaceNameInput.requestFocus(); return@setOnClickListener }
-            if (currentWorkspaceApps.isEmpty()) return@setOnClickListener
+        updateWorkspaceActionButtons()
+        workspaceActionFab.setOnClickListener { handleWorkspaceAction() }
+        cancelWorkspaceButton.setOnClickListener { exitWorkspaceEditMode() }
+    }
+    
+    private fun handleWorkspaceAction() {
+        val workspaceName = workspaceNameInput.text.toString().trim()
+        if (workspaceName.isEmpty()) {
+            workspaceNameInput.requestFocus()
+            return
+        }
+        if (currentWorkspaceApps.isEmpty()) return
+
+        if (editingWorkspaceIndex != null) {
+            createdWorkspaces[editingWorkspaceIndex!!] = Pair(workspaceName, currentWorkspaceApps.toSet())
+        } else {
             createdWorkspaces.add(Pair(workspaceName, currentWorkspaceApps.toSet()))
-            @SuppressLint("NotifyDataSetChanged")
-            workspacesListAdapter.notifyDataSetChanged()
-            workspaceNameInput.text.clear()
-            currentWorkspaceApps.clear()
-            updateAvailableAppsForWorkspace()
-            updateWorkspacesListVisibility()
-            onboardingScrollView.post {
-                if (workspacesListRecyclerView.isVisible) {
-                    onboardingScrollView.smoothScrollTo(0, workspacesListRecyclerView.top - 100)
-                }
+        }
+        @SuppressLint("NotifyDataSetChanged")
+        workspacesListAdapter.notifyDataSetChanged()
+        exitWorkspaceEditMode()
+        workspaceNameInput.text.clear()
+        currentWorkspaceApps.clear()
+        updateAvailableAppsForWorkspace()
+        updateWorkspacesListVisibility()
+        onboardingScrollView.post {
+            if (workspacesListRecyclerView.isVisible) {
+                onboardingScrollView.smoothScrollTo(0, workspacesListRecyclerView.top - 100)
             }
         }
     }
-    
+
+    private fun enterWorkspaceEditMode(position: Int) {
+        val (name, apps) = createdWorkspaces[position]
+        editingWorkspaceIndex = position
+        workspaceNameInput.setText(name)
+        workspaceNameInput.setSelection(name.length)
+        workspaceNameInput.requestFocus()
+        currentWorkspaceApps.clear()
+        currentWorkspaceApps.addAll(apps)
+        updateAvailableAppsForWorkspace()
+        updateWorkspaceActionButtons()
+        onboardingScrollView.post {
+            onboardingScrollView.smoothScrollTo(0, workspaceNameInput.top - 100)
+        }
+    }
+
+    private fun exitWorkspaceEditMode() {
+        editingWorkspaceIndex = null
+        workspaceNameInput.text.clear()
+        currentWorkspaceApps.clear()
+        updateAvailableAppsForWorkspace()
+        updateWorkspaceActionButtons()
+    }
+
     private fun updateWorkspacesListVisibility() {
         workspacesListTitle.isVisible = createdWorkspaces.isNotEmpty()
         workspacesListRecyclerView.isVisible = createdWorkspaces.isNotEmpty()

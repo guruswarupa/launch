@@ -1,18 +1,16 @@
 package com.guruswarupa.launch.managers
 
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.content.Context
 import android.content.SharedPreferences
 import android.widget.EditText
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.utils.DialogStyler
-
-import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.utils.setDialogInputView
 
 /**
  * Manages daily usage limits and tracking for apps.
@@ -145,6 +143,7 @@ class DailyUsageManager(private val context: Context) {
     fun showSetLimitDialog(packageName: String, appName: String, onLimitSet: (Long) -> Unit) {
         val currentLimit = getDailyLimit(packageName)
         val input = EditText(context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
             hint = "Enter minutes (0 to disable)"
             setText(if (currentLimit > 0) (currentLimit / 60000).toString() else "")
             DialogStyler.styleInput(context, this)
@@ -153,7 +152,7 @@ class DailyUsageManager(private val context: Context) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Set Daily Limit for $appName")
             .setMessage("Enter daily usage limit in minutes:")
-            .setView(input)
+            .setDialogInputView(context, input)
             .setPositiveButton("Set") { _, _ ->
                 try {
                     val minutes = input.text.toString().toLongOrNull() ?: 0L

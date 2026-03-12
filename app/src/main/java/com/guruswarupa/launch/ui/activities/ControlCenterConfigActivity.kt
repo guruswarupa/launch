@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import java.util.*
 
 class ControlCenterConfigActivity : ComponentActivity() {
@@ -26,6 +27,9 @@ class ControlCenterConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_control_center_config)
+
+        val wallpaperBackground = findViewById<ImageView>(R.id.wallpaper_background)
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
 
         recyclerView = findViewById(R.id.rv_shortcuts)
         recyclerView.layoutManager = LinearLayoutManager(this)

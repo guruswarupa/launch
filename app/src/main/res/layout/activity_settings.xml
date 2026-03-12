@@ -10,7 +10,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        android:src="@drawable/wallpaper_background"
         android:contentDescription="Background"/>
 
     <!-- Semi-transparent overlay for better text visibility -->
@@ -283,44 +282,6 @@
                         android:layout_marginTop="16dp"
                         android:layout_marginBottom="12dp"/>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingVertical="8dp">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Elderly readability mode"
-                                android:textSize="16sp"
-                                android:textColor="@color/text"
-                                android:alpha="0.9"/>
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="Apply larger text and simpler visuals app-wide for easier reading"
-                                android:textSize="12sp"
-                                android:textColor="@color/text"
-                                android:alpha="0.6"/>
-                        </LinearLayout>
-
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/elderly_opaque_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:thumbTint="@color/text"
-                            app:trackTint="@color/text"/>
-                    </LinearLayout>
-
                 </LinearLayout>
 
             </LinearLayout>
@@ -409,6 +370,43 @@
                         android:progressBackgroundTint="@color/text"/>
 
                     <LinearLayout
+                        android:id="@+id/downloadable_fonts_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="20dp"
+                        android:padding="8dp"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:id="@+id/downloadable_fonts_arrow"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_arrow_right"
+                            android:contentDescription="Toggle downloadable fonts"
+                            android:tint="@color/text"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Downloadable fonts"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"
+                            android:layout_marginStart="8dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/downloadable_fonts_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone"/>
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
@@ -450,6 +448,30 @@
 
                         <Spinner
                             android:id="@+id/typography_intensity_spinner"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/rounded_background"
+                            android:padding="8dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Text Color"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.9"/>
+
+                        <Spinner
+                            android:id="@+id/typography_color_spinner"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:background="@drawable/rounded_background"

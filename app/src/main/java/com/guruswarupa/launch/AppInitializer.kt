@@ -217,12 +217,8 @@ class AppInitializer(private val activity: MainActivity) {
             wallpaperManagerHelper.setWallpaperBackground()
             
             // Set wallpaper for the new right drawer immediately
-            if (views.isRightDrawerWallpaperInitialized() && activity.isWallpaperManagerHelperInitialized()) {
-                try {
-                    val wallpaperManager = android.app.WallpaperManager.getInstance(activity)
-                    val drawable = wallpaperManager.drawable
-                    views.rightDrawerWallpaper.setImageDrawable(drawable)
-                } catch (_: Exception) {}
+            if (activity.isWallpaperManagerHelperInitialized()) {
+                activity.refreshRightDrawerWallpaper()
             }
 
             // Initialize voice search manager

@@ -10,13 +10,15 @@ import com.guruswarupa.launch.R
 
 class WorkspacesListAdapter(
     private val workspaces: List<Pair<String, Set<String>>>,
-    private val onDelete: (Int) -> Unit
+    private val onDelete: (Int) -> Unit,
+    private val onEdit: (Int) -> Unit
 ) : RecyclerView.Adapter<WorkspacesListAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val workspaceName: TextView = view.findViewById(R.id.workspace_name)
         val appCount: TextView = view.findViewById(R.id.app_count)
         val deleteButton: ImageButton = view.findViewById(R.id.delete_button)
+        val editButton: ImageButton = view.findViewById(R.id.edit_button)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -35,6 +37,20 @@ class WorkspacesListAdapter(
             val currentPos = holder.bindingAdapterPosition
             if (currentPos != RecyclerView.NO_POSITION) {
                 onDelete(currentPos)
+            }
+        }
+
+        holder.editButton.setOnClickListener {
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                onEdit(currentPos)
+            }
+        }
+
+        holder.itemView.setOnClickListener {
+            val currentPos = holder.bindingAdapterPosition
+            if (currentPos != RecyclerView.NO_POSITION) {
+                onEdit(currentPos)
             }
         }
     }

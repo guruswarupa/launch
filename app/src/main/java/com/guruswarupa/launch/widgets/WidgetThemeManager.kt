@@ -1,16 +1,15 @@
 package com.guruswarupa.launch.widgets
 
 import android.app.Activity
-import android.content.Context
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.R
-import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.managers.AppDockManager
+import com.guruswarupa.launch.managers.TypographyManager
 
 class WidgetThemeManager(
     private val activity: Activity,
@@ -34,19 +33,12 @@ class WidgetThemeManager(
         currentUiMode = activity.resources.configuration.uiMode
         
         // Select appropriate background drawables
-        val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-        val opaqueSurfacesEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-
-        val widgetBackground = if (opaqueSurfacesEnabled) {
-            if (isNightMode) R.drawable.widget_background_opaque_dark else R.drawable.widget_background_opaque_light
+        val widgetBackground = if (isNightMode) {
+            R.drawable.widget_background_dark
         } else {
-            if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
+            R.drawable.widget_background
         }
-        val emptyStateBackground = if (opaqueSurfacesEnabled) {
-            if (isNightMode) R.drawable.drawer_widgets_empty_state_bg_opaque_dark else R.drawable.drawer_widgets_empty_state_bg_opaque_light
-        } else {
-            R.drawable.drawer_widgets_empty_state_bg
-        }
+        val emptyStateBackground = R.drawable.drawer_widgets_empty_state_bg
         
         // Apply backgrounds to all widget containers
         activity.findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
@@ -79,10 +71,10 @@ class WidgetThemeManager(
         
         // Apply theme to search box
         searchBox?.let { sb ->
-            val searchBg = if (opaqueSurfacesEnabled) {
-                if (isNightMode) R.drawable.search_box_opaque_dark_bg else R.drawable.search_box_opaque_light_bg
+            val searchBg = if (isNightMode) {
+                R.drawable.search_box_transparent_bg
             } else {
-                if (isNightMode) R.drawable.search_box_transparent_bg else R.drawable.search_box_light_bg
+                R.drawable.search_box_light_bg
             }
             val textColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
             val hintColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
@@ -96,7 +88,13 @@ class WidgetThemeManager(
             }
             
             sb.setTextColor(textColor)
-            sb.setHintTextColor(hintColor)
+            val configuredFontColor = TypographyManager.getConfiguredFontColor(sb.context)
+            if (configuredFontColor != null) {
+                sb.setHintTextColor(configuredFontColor)
+            } else {
+                sb.setHintTextColor(hintColor)
+            }
+            TypographyManager.applyToView(sb)
             
             // Tint search icons
             val iconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK

@@ -1,13 +1,20 @@
 package com.guruswarupa.launch.ui.activities
 
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.Typeface
 import android.os.Bundle
 import android.text.Editable
+import android.text.TextPaint
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -15,6 +22,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.core.SystemBarManager
 import com.guruswarupa.launch.managers.WallpaperManagerHelper
 import com.guruswarupa.launch.managers.WidgetConfigurationManager
@@ -25,6 +33,7 @@ import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.handlers.ActivityResultHandler
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.managers.TypographyManager
 
 class WidgetConfigurationActivity : AppCompatActivity() {
 
@@ -35,6 +44,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private val prefsName = "com.guruswarupa.launch.PREFS"
     private lateinit var wallpaperManagerHelper: WallpaperManagerHelper
     private val backgroundExecutor = Executors.newFixedThreadPool(2)
+    private lateinit var widgetsRecyclerView: RecyclerView
+    private lateinit var widgetSectionDecoration: WidgetSectionDecoration
     
     // Widget data
     private var allWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
@@ -83,15 +94,24 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         wallpaperManagerHelper = WallpaperManagerHelper(this, wallpaperBackground, null, backgroundExecutor)
         wallpaperManagerHelper.setWallpaperBackground()
 
-        val recyclerView = findViewById<RecyclerView>(R.id.widgets_recycler_view)
+        widgetsRecyclerView = findViewById(R.id.widgets_recycler_view)
+        widgetSectionDecoration = WidgetSectionDecoration(this)
+        widgetsRecyclerView.addItemDecoration(widgetSectionDecoration)
         val cancelButton = findViewById<Button>(R.id.cancel_button)
         val saveButton = findViewById<Button>(R.id.save_button)
         val searchInput = findViewById<EditText>(R.id.search_widget_input)
 
+        val configuredFontColor = TypographyManager.getConfiguredFontColor(this)
+        if (configuredFontColor != null) {
+            searchInput.setTextColor(configuredFontColor)
+            searchInput.setHintTextColor(configuredFontColor)
+        }
+        TypographyManager.applyToView(searchInput)
+
         // Load current widget configuration
         loadWidgets()
 
-        recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+        widgetsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
         
         // Setup drag to reorder
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
@@ -140,7 +160,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                 viewHolder.itemView.scaleY = 1.0f
             }
         })
-        itemTouchHelper.attachToRecyclerView(recyclerView)
+        itemTouchHelper.attachToRecyclerView(widgetsRecyclerView)
 
         // Setup button listeners
         cancelButton.setOnClickListener {
@@ -179,12 +199,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                     updateWidgetState(widgetId, isChecked)
                 }
             )
-            findViewById<RecyclerView>(R.id.widgets_recycler_view).adapter = adapter
+            widgetsRecyclerView.adapter = adapter
         } else {
             adapter?.updateWidgets(filteredWidgets)
             adapter?.notifyDataSetChanged()
         }
-        
+
+        refreshSectionHeaders()
+
         // Update header visibility
         val header = findViewById<TextView>(R.id.widgets_header)
         header.visibility = if (filteredWidgets.isNotEmpty()) View.VISIBLE else View.GONE
@@ -274,7 +296,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         
         adapter?.updateWidgets(filteredWidgets)
         adapter?.notifyDataSetChanged()
-        
+
+        refreshSectionHeaders()
+
         findViewById<TextView>(R.id.widgets_header).visibility = 
             if (filteredWidgets.isNotEmpty()) View.VISIBLE else View.GONE
     }
@@ -288,10 +312,30 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             if (index >= 0) index else Int.MAX_VALUE
         }
     }
-    
+
+    private fun refreshSectionHeaders() {
+        val sections = mutableListOf<WidgetSectionDecoration.SectionInfo>()
+        val seenCategories = mutableSetOf<WidgetSectionCategory>()
+
+        filteredWidgets.forEachIndexed { index, widget ->
+            val category = when {
+                widget.enabled -> WidgetSectionCategory.ENABLED
+                widget.isSystemWidget -> WidgetSectionCategory.SYSTEM_DISABLED
+                else -> WidgetSectionCategory.CUSTOM_DISABLED
+            }
+
+            if (seenCategories.add(category)) {
+                sections.add(WidgetSectionDecoration.SectionInfo(index, getString(category.titleRes)))
+            }
+        }
+
+        widgetSectionDecoration.updateSections(sections)
+        widgetsRecyclerView.invalidateItemDecorations()
+    }
+
     private fun getWidgetDescription(widget: WidgetConfigurationManager.WidgetInfo): String {
         if (widget.isSystemWidget) return "System provided widget"
-        
+
         return when (widget.id) {
             "calculator_widget_container" -> "Perform calculations and unit conversions"
             "compass_widget_container" -> "Digital compass with direction tracking"
@@ -310,6 +354,64 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             "network_stats_widget_container" -> "Network connection and data usage"
             "device_info_widget_container" -> "Device information and system stats"
             else -> "System provided widget"
+        }
+    }
+
+    private enum class WidgetSectionCategory(@StringRes val titleRes: Int) {
+        ENABLED(R.string.widget_section_enabled),
+        CUSTOM_DISABLED(R.string.widget_section_custom_disabled),
+        SYSTEM_DISABLED(R.string.widget_section_system_disabled)
+    }
+
+    private class WidgetSectionDecoration(context: Context) : RecyclerView.ItemDecoration() {
+        data class SectionInfo(val position: Int, val title: String)
+
+        private val headerHeightPx = (context.resources.displayMetrics.density * 36f).toInt().coerceAtLeast(1)
+        private val horizontalMarginPx = (context.resources.displayMetrics.density * 16f).toInt()
+        private val backgroundPaint = Paint().apply {
+            color = ContextCompat.getColor(context, R.color.widget_config_surface)
+        }
+        private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = ContextCompat.getColor(context, R.color.widget_config_text_secondary)
+            textSize = 14f * context.resources.displayMetrics.scaledDensity
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        private val sections = mutableListOf<SectionInfo>()
+        private val headerPositions = mutableSetOf<Int>()
+
+        fun updateSections(newSections: List<SectionInfo>) {
+            sections.clear()
+            sections.addAll(newSections.sortedBy { it.position })
+            headerPositions.clear()
+            headerPositions.addAll(sections.map { it.position })
+        }
+
+        override fun getItemOffsets(outRect: Rect, view: View, parent: RecyclerView, state: RecyclerView.State) {
+            val position = parent.getChildAdapterPosition(view)
+            if (position == RecyclerView.NO_POSITION) return
+            if (headerPositions.contains(position)) {
+                outRect.top = headerHeightPx
+            }
+        }
+
+        override fun onDrawOver(canvas: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+            sections.forEach { section ->
+                val view = parent.layoutManager?.findViewByPosition(section.position) ?: return@forEach
+                val top = view.top - headerHeightPx
+                val left = parent.paddingLeft.toFloat()
+                val right = (parent.width - parent.paddingRight).toFloat().coerceAtLeast(left)
+                val bottom = top + headerHeightPx
+
+                canvas.drawRect(left, top.toFloat(), right, bottom.toFloat(), backgroundPaint)
+                val textBaseline = top + headerHeightPx / 2f - (textPaint.descent() + textPaint.ascent()) / 2f
+                canvas.drawText(
+                    section.title,
+                    left + horizontalMarginPx,
+                    textBaseline,
+                    textPaint
+                )
+            }
         }
     }
 }

@@ -1,14 +1,20 @@
 package com.guruswarupa.launch.ui.activities
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
+import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import java.io.File
 
 
@@ -16,12 +22,19 @@ class NoteEditorActivity : VaultBaseActivity() {
     private lateinit var noteTitle: EditText
     private lateinit var noteContent: EditText
     private lateinit var vaultManager: EncryptedFolderManager
+    private lateinit var wallpaperBackground: ImageView
+    private lateinit var wallpaperOverlay: View
+    private lateinit var headerTitle: TextView
     private var isEditing = false
     private var fileName: String? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note_editor)
+        wallpaperBackground = findViewById(R.id.wallpaper_background)
+        wallpaperOverlay = findViewById(R.id.note_editor_overlay)
+        headerTitle = findViewById(R.id.title_text)
+        setupWallpaper()
         
         vaultManager = EncryptedFolderManager(this)
         
@@ -46,12 +59,79 @@ class NoteEditorActivity : VaultBaseActivity() {
         
         fileName = intent.getStringExtra("FILE_NAME")
         isEditing = !fileName.isNullOrEmpty()
-        
+        updateHeaderTitle()
+
         if (isEditing) {
-            findViewById<TextView>(R.id.title_text).text = "Edit Note"
+            headerTitle.setOnClickListener { showRenameDialog() }
             loadExistingNote()
+        } else {
+            headerTitle.setOnClickListener(null)
         }
     }
+
+    private fun setupWallpaper() {
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
+        val overlayColorRes = if (isNightMode()) {
+            R.color.note_editor_overlay_dark
+        } else {
+            R.color.note_editor_overlay_light
+        }
+        wallpaperOverlay.setBackgroundColor(ContextCompat.getColor(this, overlayColorRes))
+    }
+
+    private fun isNightMode(): Boolean {
+        val uiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        return uiMode == Configuration.UI_MODE_NIGHT_YES
+    }
+
+    private fun updateHeaderTitle() {
+        headerTitle.text = fileName ?: "New Note"
+    }
+
+    private fun showRenameDialog() {
+        val currentName = fileName ?: return
+        val editText = EditText(this).apply {
+            setText(currentName)
+            setSelection(currentName.length)
+            DialogStyler.styleInput(this@NoteEditorActivity, this)
+        }
+
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Rename file")
+            .setView(editText, dp(20), dp(12), dp(20), 0)
+            .setPositiveButton("Rename") { _, _ ->
+                val candidate = editText.text.toString()
+                val sanitized = sanitizeFileName(candidate)
+                if (sanitized.isBlank()) {
+                    Toast.makeText(this, "File name cannot be empty", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                if (sanitized == currentName) return@setPositiveButton
+
+                val renamed = vaultManager.renameFile(currentName, sanitized)
+                if (renamed) {
+                    fileName = sanitized
+                    updateHeaderTitle()
+                    Toast.makeText(this, "Renamed to $sanitized", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Unable to rename file", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun sanitizeFileName(input: String): String {
+        var name = input.trim().replace(Regex("[/\\\\]"), "_")
+        if (name.isEmpty()) return ""
+        if (!name.contains('.')) {
+            name += ".txt"
+        }
+        return name
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
     
     private fun loadExistingNote() {
         val fileNameToLoad = fileName

@@ -1,6 +1,5 @@
 package com.guruswarupa.launch.handlers
 
-import android.app.WallpaperManager
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.guruswarupa.launch.MainActivity
@@ -9,6 +8,7 @@ import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.managers.AppDockManager
 import com.guruswarupa.launch.widgets.WidgetSetupManager
 import com.guruswarupa.launch.widgets.WidgetThemeManager
+import com.guruswarupa.launch.managers.TypographyManager
 
 /**
  * Coordinates UI and service updates when settings or theme changes.
@@ -48,6 +48,8 @@ class SettingsChangeCoordinator(
         val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
 
         applyThemeBasedWidgetBackgrounds()
+        TypographyManager.applyToActivity(activity)
+        views.fastScroller.refreshTypography(sharedPreferences)
 
         if (activity.isTimeDateManagerInitialized()) {
             activity.timeDateManager.setUse24HourFormat(use24HourClock)
@@ -106,17 +108,11 @@ class SettingsChangeCoordinator(
         
         // Refresh wallpaper in case it was changed from settings
         if (activity.isWallpaperManagerHelperInitialized()) {
+            activity.wallpaperManagerHelper.applyBlurToViews()
             activity.wallpaperManagerHelper.clearCache()
             activity.wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
             
-            // Update right drawer wallpaper as well
-            try {
-                val wallpaperManager = WallpaperManager.getInstance(activity)
-                val drawable = wallpaperManager.drawable
-                if (views.isRightDrawerWallpaperInitialized()) {
-                    views.rightDrawerWallpaper.setImageDrawable(drawable)
-                }
-            } catch (_: Exception) {}
+            activity.refreshRightDrawerWallpaper()
         }
     }
 }

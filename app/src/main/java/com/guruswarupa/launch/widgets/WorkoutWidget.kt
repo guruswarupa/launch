@@ -19,7 +19,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.handlers.WorkoutStopwatch
-import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.ExerciseType
 import com.guruswarupa.launch.models.WorkoutExercise
 import com.guruswarupa.launch.ui.adapters.DayExercisesAdapter
@@ -662,11 +661,6 @@ class WorkoutAdapter(
     override fun onBindViewHolder(holder: WorkoutViewHolder, position: Int) {
         val exercise = exercises[position]
         val context = holder.itemView.context
-        val elderlyModeEnabled = context.getSharedPreferences(
-            Constants.Prefs.PREFS_NAME,
-            Context.MODE_PRIVATE
-        ).getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-        
         holder.exerciseNameText.text = exercise.name
         
         // Clean up previous stopwatch
@@ -705,25 +699,19 @@ class WorkoutAdapter(
             holder.bestDayText.text = context.getString(R.string.workout_best_format, exercise.getBestDisplayValue())
             
             // Animate count change
-            if (!elderlyModeEnabled) {
-                val animation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)
-                holder.todayCountText.startAnimation(animation)
-            }
+            val animation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)
+            holder.todayCountText.startAnimation(animation)
             
             holder.incrementButton.setOnClickListener {
                 onIncrementClick(exercise, 1)
-                if (!elderlyModeEnabled) {
-                    val scaleAnimation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)
-                    holder.todayCountText.startAnimation(scaleAnimation)
-                }
+                val scaleAnimation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)
+                holder.todayCountText.startAnimation(scaleAnimation)
             }
             
             holder.increment5Button.setOnClickListener {
                 onIncrementClick(exercise, 5)
-                if (!elderlyModeEnabled) {
-                    val scaleAnimation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)
-                    holder.todayCountText.startAnimation(scaleAnimation)
-                }
+                val scaleAnimation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)
+                holder.todayCountText.startAnimation(scaleAnimation)
             }
         }
         

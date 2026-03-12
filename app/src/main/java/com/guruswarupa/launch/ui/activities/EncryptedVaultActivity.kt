@@ -2,7 +2,6 @@ package com.guruswarupa.launch.ui.activities
 
 import android.Manifest
 import android.app.Activity
-import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -37,6 +36,7 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import java.io.File
 import java.text.DecimalFormat
 
@@ -229,22 +229,13 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         val overlay = findViewById<View>(R.id.settings_overlay)
         overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
 
-        try {
-            val wallpaperManager = WallpaperManager.getInstance(this)
-            val wallpaperDrawable = wallpaperManager.drawable
-            if (wallpaperDrawable != null) {
-                wallpaperImageView.setImageDrawable(wallpaperDrawable)
-            }
-        } catch (_: Exception) {
-            wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
-        }
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
         applyWallpaperBlur(wallpaperImageView)
     }
 
     private fun applyWallpaperBlur(imageView: ImageView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 imageView.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP))

@@ -15,6 +15,7 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.setDialogInputView
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -92,7 +93,7 @@ class AppLockManager(private val context: Context) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Set App Lock PIN")
             .setMessage("Choose a PIN to protect your apps")
-            .setView(pinInput)
+            .setDialogInputView(context, pinInput)
             .setPositiveButton("Set PIN") { _, _ ->
                 val pin = pinInput.text.toString()
                 if (pin.length in 4..6 && pin.all { it.isDigit() }) {
@@ -104,7 +105,7 @@ class AppLockManager(private val context: Context) {
 
                     AlertDialog.Builder(context, R.style.CustomDialogTheme)
                         .setTitle("Confirm PIN")
-                        .setView(confirmInput)
+                        .setDialogInputView(context, confirmInput)
                         .setPositiveButton("Confirm") { _, _ ->
                             val confirmPin = confirmInput.text.toString()
                             if (pin == confirmPin) {
@@ -212,7 +213,7 @@ class AppLockManager(private val context: Context) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enter PIN")
             .setMessage("Enter your PIN to unlock this app")
-            .setView(pinInput)
+            .setDialogInputView(context, pinInput)
             .setPositiveButton("Unlock") { _, _ ->
                 val enteredPin = pinInput.text.toString()
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
@@ -307,7 +308,7 @@ class AppLockManager(private val context: Context) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Change PIN")
             .setMessage("Enter your current PIN")
-            .setView(oldPinInput)
+            .setDialogInputView(context, oldPinInput)
             .setPositiveButton("Continue") { _, _ ->
                 val oldPin = oldPinInput.text.toString()
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
@@ -341,7 +342,7 @@ class AppLockManager(private val context: Context) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Reset App Lock")
             .setMessage("Enter your current PIN to reset App Lock")
-            .setView(oldPinInput)
+            .setDialogInputView(context, oldPinInput)
             .setPositiveButton("Continue") { _, _ ->
                 val oldPin = oldPinInput.text.toString()
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")

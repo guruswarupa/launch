@@ -32,6 +32,7 @@ import java.util.concurrent.*
 import androidx.core.content.FileProvider
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.models.AppMetadata
 import com.guruswarupa.launch.models.Constants
@@ -278,6 +279,7 @@ class AppAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val layoutId = if (viewType == VIEW_TYPE_GRID) R.layout.app_item_grid else R.layout.app_item
         val view = LayoutInflater.from(parent.context).inflate(layoutId, parent, false)
+        TypographyManager.applyToView(view)
         return ViewHolder(view)
     }
 

@@ -41,8 +41,10 @@ import androidx.core.view.isVisible
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
+import com.guruswarupa.launch.managers.DownloadableFontManager
 import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
@@ -303,31 +305,13 @@ class SettingsActivity : ComponentActivity() {
         
         overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED ||
-            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED)) {
-            try {
-                val wallpaperManager = WallpaperManager.getInstance(this)
-                val wallpaperDrawable = wallpaperManager.drawable
-                if (wallpaperDrawable != null) {
-                    wallpaperImageView.setImageDrawable(wallpaperDrawable)
-                }
-            } catch (_: Exception) {
-                // Fallback to default wallpaper if anything fails
-                wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
-            }
-        } else {
-            // Default wallpaper if permission not granted
-            wallpaperImageView.setImageResource(R.drawable.wallpaper_background)
-        }
-        
-        // Apply blur to settings wallpaper if enabled
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
         applyWallpaperBlur(wallpaperImageView)
     }
 
     private fun applyWallpaperBlur(imageView: ImageView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val elderlyModeEnabled = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-            val blurLevel = if (elderlyModeEnabled) 0 else prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
+            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
             if (blurLevel > 0) {
                 val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
                 imageView.setRenderEffect(
@@ -394,6 +378,7 @@ class SettingsActivity : ComponentActivity() {
         val typographyContent = findViewById<LinearLayout>(R.id.typography_content)
         val typographyArrow = findViewById<TextView>(R.id.typography_arrow)
         setupSectionToggle(typographyHeader, typographyContent, typographyArrow)
+        setupTypographySpinner()
         setupTypographySettings()
         
         // Setup wallpaper blur slider
@@ -419,17 +404,6 @@ class SettingsActivity : ComponentActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        val elderlyReadableModeSwitch = findViewById<SwitchCompat>(R.id.elderly_opaque_switch)
-        elderlyReadableModeSwitch.isChecked = prefs.getBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, false)
-        elderlyReadableModeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(Constants.Prefs.ELDERLY_READABILITY_MODE_ENABLED, isChecked) }
-            TypographyManager.applyToActivity(this)
-            setupWallpaper()
-            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-            intent.setPackage(packageName)
-            sendBroadcast(intent)
-        }
 
         val clock24HourSwitch = findViewById<SwitchCompat>(R.id.clock_24_hour_switch)
         clock24HourSwitch.isChecked = prefs.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
@@ -655,16 +629,9 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun setupTypographySettings() {
-        val sizeSeekBar = findViewById<SeekBar>(R.id.typography_size_seekbar)
-        val sizeValueText = findViewById<TextView>(R.id.typography_size_value_text)
+    private fun setupTypographySpinner() {
         val styleSpinner = findViewById<Spinner>(R.id.typography_style_spinner)
-        val intensitySpinner = findViewById<Spinner>(R.id.typography_intensity_spinner)
-
-        val currentScalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
-        sizeSeekBar.progress = currentScalePercent - 80
-        sizeValueText.text = "$currentScalePercent%"
-
+        
         val styleValues = arrayOf(
             "default",
             "serif",
@@ -680,7 +647,17 @@ class SettingsActivity : ComponentActivity() {
             "black",
             "smallcaps",
             "casual",
-            "cursive"
+            "cursive",
+            "sans_serif_light",
+            "droid_sans_fallback",
+            "ubuntu_regular",
+            "noto_sans",
+            "noto_serif",
+            "noto_sans_display",
+            "dejavu_sans",
+            "dejavu_serif",
+            "dejavu_mono",
+            "fira_code"
         )
         val styleLabels = arrayOf(
             "Default",
@@ -697,21 +674,81 @@ class SettingsActivity : ComponentActivity() {
             "Black",
             "Small Caps",
             "Casual",
-            "Cursive"
+            "Cursive",
+            "Sans Serif Light",
+            "Droid Sans Fallback",
+            "Ubuntu Regular",
+            "Noto Sans",
+            "Noto Serif",
+            "Noto Sans Display",
+            "DejaVu Sans",
+            "DejaVu Serif",
+            "DejaVu Mono",
+            "Fira Code"
         )
-        val styleAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, styleLabels)
+        
+        // Filter to only show available (installed) fonts
+        val availableFontIndices = styleValues.indices.filter { index ->
+            val styleValue = styleValues[index]
+            // Always include default and built-in system fonts
+            if (index <= 15) return@filter true
+            // For downloadable fonts, only show if installed
+            DownloadableFontManager.isDownloaded(this, styleValue)
+        }
+        
+        val filteredStyleValues = availableFontIndices.map { styleValues[it] }.toTypedArray()
+        val filteredStyleLabels = availableFontIndices.map { styleLabels[it] }.toTypedArray()
+        
+        val styleAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, filteredStyleLabels)
         styleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         styleSpinner.adapter = styleAdapter
 
-        val intensityValues = arrayOf("light", "regular", "bold")
-        val intensityLabels = arrayOf("Light", "Regular", "Bold")
+        val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        
+        // Check if current style is available (for downloadable fonts)
+        val effectiveCurrentStyle = if (currentStyle in filteredStyleValues) {
+            currentStyle
+        } else {
+            // If not available, fall back to default and update preference
+            prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
+            "default"
+        }
+        
+        styleSpinner.setSelection(filteredStyleValues.indexOf(effectiveCurrentStyle).coerceAtLeast(0), false)
+        
+        var styleInitialized = false
+        styleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (!styleInitialized) {
+                    styleInitialized = true
+                    return
+                }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, filteredStyleValues[position]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun setupTypographySettings() {
+        val sizeSeekBar = findViewById<SeekBar>(R.id.typography_size_seekbar)
+        val sizeValueText = findViewById<TextView>(R.id.typography_size_value_text)
+        val intensitySpinner = findViewById<Spinner>(R.id.typography_intensity_spinner)
+
+        val currentScalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
+        sizeSeekBar.progress = currentScalePercent - 80
+        sizeValueText.text = "$currentScalePercent%"
+
+        val intensityValues = arrayOf("light", "regular", "bold", "extra_bold")
+        val intensityLabels = arrayOf("Light", "Regular", "Bold", "Extra Bold")
         val intensityAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, intensityLabels)
         intensityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         intensitySpinner.adapter = intensityAdapter
 
-        val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
         val currentIntensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
-        styleSpinner.setSelection(styleValues.indexOf(currentStyle).coerceAtLeast(0), false)
         intensitySpinner.setSelection(intensityValues.indexOf(currentIntensity).coerceAtLeast(0), false)
 
         sizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -730,22 +767,6 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        var styleInitialized = false
-        styleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                if (!styleInitialized) {
-                    styleInitialized = true
-                    return
-                }
-                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, styleValues[position]) }
-                TypographyManager.applyToActivity(this@SettingsActivity)
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                intent.setPackage(packageName)
-                sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-
         var intensityInitialized = false
         intensitySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
@@ -760,6 +781,188 @@ class SettingsActivity : ComponentActivity() {
                 sendBroadcast(intent)
             }
             override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        setupDownloadableFontsSection()
+
+        val colorSpinner = findViewById<Spinner>(R.id.typography_color_spinner)
+        val colorLabelList = arrayOf(
+            "Default",
+            "Black",
+            "White",
+            "Accent Teal",
+            "Nord Mint",
+            "Nord Lavender",
+            "Nord Orange",
+            "Deep Purple",
+            "Electric Blue",
+            "Soft Pink",
+            "Olive",
+            "Sandstone",
+            "Slate Gray",
+            "Forest Green",
+            "Sunset Orange",
+            "Royal Purple",
+            "Amber Glow",
+            "Solar Yellow",
+            "Sky Blue",
+            "Midnight Cyan",
+            "Fiery Coral",
+            "Soft Mint",
+            "Forest Shadow",
+            "Chrome"
+        )
+        val colorValueList = arrayOf(
+            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT,
+            "#FF000000", // Black
+            "#FFFFFFFF", // White
+            "#FF03DAC5", // Accent Teal
+            "#FF8FBCBB", // Nord Mint
+            "#FFB48EAD", // Nord Lavender
+            "#FFD08770", // Nord Orange
+            "#FF6200EE", // Deep Purple
+            "#FF2196F3", // Electric Blue
+            "#FFF48FB1", // Soft Pink
+            "#FF7B8D42", // Olive
+            "#FFC6AA7F", // Sandstone
+            "#FF4A5568", // Slate Gray
+            "#FF1B5E20", // Forest Green
+            "#FFFF7043", // Sunset Orange
+            "#FF6A1B9A", // Royal Purple
+            "#FFFFAB00", // Amber Glow
+            "#FFFFD600", // Solar Yellow
+            "#FF56CCF2", // Sky Blue
+            "#FF00838F", // Midnight Cyan
+            "#FFFF6B6B", // Fiery Coral
+            "#FFB8F2E6", // Soft Mint
+            "#FF0D1B2A", // Forest Shadow
+            "#FFF1F3F4"  // Chrome
+        )
+        val colorAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, colorLabelList)
+        colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        colorSpinner.adapter = colorAdapter
+
+        val currentColorValue = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)
+            ?: Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT
+        colorSpinner.setSelection(colorValueList.indexOf(currentColorValue).coerceAtLeast(0), false)
+
+        var colorInitialized = false
+        colorSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (!colorInitialized) {
+                    colorInitialized = true
+                    return
+                }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, colorValueList[position]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+    }
+
+    private fun setupDownloadableFontsSection() {
+        val header = findViewById<View>(R.id.downloadable_fonts_header)
+        val arrow = findViewById<ImageView>(R.id.downloadable_fonts_arrow)
+        val container = findViewById<LinearLayout>(R.id.downloadable_fonts_container)
+        
+        // Toggle collapsible section
+        header.setOnClickListener {
+            if (container.visibility == View.VISIBLE) {
+                container.visibility = View.GONE
+                arrow.rotation = 0f
+            } else {
+                container.visibility = View.VISIBLE
+                arrow.rotation = 90f
+            }
+        }
+        
+        // Show all fonts with install/uninstall buttons
+        updateDownloadableFontsList(container, arrow)
+    }
+    
+    private fun updateDownloadableFontsList(container: LinearLayout, arrow: ImageView) {
+        container.removeAllViews()
+        val allFonts = DownloadableFontManager.getFontOptions()
+        
+        if (allFonts.isEmpty()) {
+            // Show "no fonts available" message
+            val emptyView = layoutInflater.inflate(R.layout.item_empty_fonts, null)
+            container.addView(emptyView)
+            arrow.rotation = 0f
+        } else {
+            // Show all fonts with install/uninstall buttons
+            allFonts.forEach { option ->
+                val itemView = layoutInflater.inflate(R.layout.item_downloadable_font_option, null)
+                val label = itemView.findViewById<TextView>(R.id.downloadable_font_label)
+                val button = itemView.findViewById<Button>(R.id.downloadable_font_button)
+                label.text = option.displayName
+                
+                val isInstalled = DownloadableFontManager.isDownloaded(this, option.styleKey)
+                
+                if (isInstalled) {
+                    // Show Uninstall button in red
+                    button.text = getString(R.string.font_remove)
+                    button.isEnabled = true
+                    button.setTextColor(Color.parseColor("#FF0000"))
+                    button.setOnClickListener {
+                        button.isEnabled = false
+                        button.text = getString(R.string.font_removing)
+                        handler.post {
+                            val wasCurrentFont = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == option.styleKey
+                            DownloadableFontManager.uninstallFont(this, option.styleKey)
+                            Toast.makeText(this, getString(R.string.font_removed_message, option.displayName), Toast.LENGTH_SHORT).show()
+                            TypographyManager.applyToActivity(this)
+                            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                            intent.setPackage(packageName)
+                            sendBroadcast(intent)
+                            
+                            // If the uninstalled font was currently selected, switch to default
+                            if (wasCurrentFont) {
+                                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
+                                runOnUiThread {
+                                    setupTypographySpinner() // Refresh the spinner with available fonts
+                                }
+                            }
+                            
+                            // Refresh the list
+                            updateDownloadableFontsList(container, arrow)
+                        }
+                    }
+                } else {
+                    // Show Install button in green
+                    button.text = getString(R.string.font_install)
+                    button.isEnabled = true
+                    button.setTextColor(Color.parseColor("#008000"))
+                    button.setOnClickListener {
+                        button.isEnabled = false
+                        button.text = getString(R.string.font_downloading)
+                        DownloadableFontManager.requestFont(this, option.styleKey) { success ->
+                            handler.post {
+                                if (success) {
+                                    Toast.makeText(this, getString(R.string.font_downloaded_message, option.displayName), Toast.LENGTH_SHORT).show()
+                                    TypographyManager.applyToActivity(this)
+                                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                                    intent.setPackage(packageName)
+                                    sendBroadcast(intent)
+                                    // Refresh the list and spinner
+                                    runOnUiThread {
+                                        setupTypographySpinner() // Refresh the font style spinner
+                                    }
+                                    updateDownloadableFontsList(container, arrow)
+                                } else {
+                                    Toast.makeText(this, getString(R.string.font_download_failed, option.displayName), Toast.LENGTH_LONG).show()
+                                    button.isEnabled = true
+                                    button.text = getString(R.string.font_install)
+                                }
+                            }
+                        }
+                    }
+                }
+                container.addView(itemView)
+            }
         }
     }
 

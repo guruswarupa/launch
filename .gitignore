@@ -20,3 +20,4 @@ wrapper/
 .tmp/
 android/
 kotlin-profile/
+jdks/

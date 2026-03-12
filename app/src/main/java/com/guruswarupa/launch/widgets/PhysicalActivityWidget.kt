@@ -1,6 +1,6 @@
 package com.guruswarupa.launch.widgets
 
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -19,6 +19,7 @@ import com.guruswarupa.launch.managers.ActivityData
 import com.guruswarupa.launch.managers.PhysicalActivityManager
 import com.guruswarupa.launch.services.PhysicalActivityTrackingService
 import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.setDialogInputView
 import com.guruswarupa.launch.ui.views.HourlyStepsChartView
 import com.guruswarupa.launch.ui.views.PhysicalActivityCalendarView
 import java.text.DecimalFormat
@@ -368,7 +369,7 @@ class PhysicalActivityWidget(
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enter Your Height")
             .setMessage("Your stride length will be calculated based on your height (approx. 43% of height).")
-            .setView(input)
+            .setDialogInputView(context, input)
             .setPositiveButton("Save") { _, _ ->
                 val height = input.text.toString().toIntOrNull()
                 if (height != null && height in 50..250) {
@@ -395,7 +396,7 @@ class PhysicalActivityWidget(
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enter Stride Length")
             .setMessage("Enter the average distance of one step in meters.")
-            .setView(input)
+            .setDialogInputView(context, input)
             .setPositiveButton("Save") { _, _ ->
                 val stride = input.text.toString().toDoubleOrNull()
                 if (stride != null && stride in 0.1..2.0) {

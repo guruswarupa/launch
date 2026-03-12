@@ -24,13 +24,13 @@ object Constants {
         const val BACK_TAP_DOUBLE_ACTION = "back_tap_double_action"
         const val WALLPAPER_BLUR_LEVEL = "wallpaper_blur_level"
         const val OPAQUE_SURFACES_ENABLED = "opaque_surfaces_enabled"
-        const val ELDERLY_READABILITY_MODE_ENABLED = OPAQUE_SURFACES_ENABLED
         const val SEARCH_ENGINE = "search_engine"
         const val ACCESSIBILITY_SHORTCUT_ENABLED = "accessibility_shortcut_enabled"
         const val CONTROL_CENTER_SHORTCUTS = "control_center_shortcuts"
         const val TYPOGRAPHY_SCALE_PERCENT = "typography_scale_percent"
         const val TYPOGRAPHY_FONT_STYLE = "typography_font_style"
         const val TYPOGRAPHY_FONT_INTENSITY = "typography_font_intensity"
+        const val TYPOGRAPHY_FONT_COLOR = "typography_font_color"
         const val CLOCK_24_HOUR_FORMAT = "clock_24_hour_format"
         
         // Vault Prefs (Simplified)
@@ -39,6 +39,8 @@ object Constants {
         const val VAULT_SETUP_COMPLETE = "vault_setup_complete"
 
     }
+
+    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "default"
     
     // FileProvider
     const val FILE_PROVIDER_AUTHORITY_SUFFIX = ".fileprovider"

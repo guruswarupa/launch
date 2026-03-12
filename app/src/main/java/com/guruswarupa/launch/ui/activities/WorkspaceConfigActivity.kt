@@ -1,22 +1,22 @@
 package com.guruswarupa.launch.ui.activities
 
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.content.Intent
-import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
 import android.view.View
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.managers.WorkspaceManager
 import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.Workspace
-import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
 import com.guruswarupa.launch.utils.DialogStyler
+import com.guruswarupa.launch.utils.setDialogInputView
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
@@ -61,13 +61,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
     
     private fun applyThemeAndWallpaper() {
         // Set system wallpaper
-        try {
-            val wallpaperManager = android.app.WallpaperManager.getInstance(this)
-            val drawable = wallpaperManager.drawable
-            wallpaperBackground.setImageDrawable(drawable)
-        } catch (_: Exception) {
-            wallpaperBackground.setImageResource(R.drawable.default_wallpaper)
-        }
+        WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
         // Apply theme-based colors and backgrounds
         val isNightMode = (resources.configuration.uiMode and 
@@ -139,7 +133,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Create Workspace")
-            .setView(input)
+            .setDialogInputView(this, input)
             .setPositiveButton("Create") { _, _ ->
                 val workspaceName = input.text.toString().trim()
                 if (workspaceName.isNotEmpty()) {
@@ -179,55 +173,54 @@ class WorkspaceConfigActivity : ComponentActivity() {
             return
         }
         
-        val appNames = allApps.map { 
-            it.loadLabel(pm).toString()
-        }.toTypedArray()
-        
         val selectedApps = mutableSetOf<String>()
         if (existingWorkspaceId != null) {
             val existingWorkspace = workspaceManager.getWorkspace(existingWorkspaceId)
             selectedApps.addAll(existingWorkspace?.appPackageNames ?: emptySet())
         }
-        
-        val checkedItems = BooleanArray(allApps.size) { index ->
-            val packageName = allApps[index].activityInfo.packageName
-            selectedApps.contains(packageName)
-        }
-        
-        val dialogBuilder = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Select Apps for '$workspaceName'")
 
-        dialogBuilder
-            .setMultiChoiceItems(appNames, checkedItems) { _, which, isChecked ->
-                val packageName = allApps[which].activityInfo.packageName
-                if (isChecked) {
-                    selectedApps.add(packageName)
-                } else {
-                    selectedApps.remove(packageName)
-                }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_workspace_app_picker, null)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.app_picker_recycler_view)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = WorkspacesAppsAdapter(allApps, selectedApps) { packageName, isChecked ->
+            if (isChecked) {
+                selectedApps.add(packageName)
+            } else {
+                selectedApps.remove(packageName)
             }
-            .setPositiveButton("Save") { _, _ ->
+        }
+
+        val positiveLabel = if (existingWorkspaceId != null) "Save" else "Create"
+        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Select Apps for '$workspaceName'")
+            .setView(dialogView)
+            .setPositiveButton(positiveLabel, null)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 if (selectedApps.isEmpty()) {
                     Toast.makeText(this, "Please select at least one app", Toast.LENGTH_SHORT).show()
-                    // Re-show dialog if no apps selected
-                    showAppPickerForWorkspace(workspaceName, existingWorkspaceId)
-                } else {
-                    try {
-                        if (existingWorkspaceId != null) {
-                            workspaceManager.updateWorkspace(existingWorkspaceId, workspaceName, selectedApps)
-                            Toast.makeText(this, "Workspace updated", Toast.LENGTH_SHORT).show()
-                        } else {
-                            workspaceManager.createWorkspace(workspaceName, selectedApps)
-                            Toast.makeText(this, "Workspace created with ${selectedApps.size} apps", Toast.LENGTH_SHORT).show()
-                        }
-                        loadWorkspaces()
-                    } catch (e: Exception) {
-                        Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                try {
+                    if (existingWorkspaceId != null) {
+                        workspaceManager.updateWorkspace(existingWorkspaceId, workspaceName, selectedApps)
+                        Toast.makeText(this, "Workspace updated", Toast.LENGTH_SHORT).show()
+                    } else {
+                        workspaceManager.createWorkspace(workspaceName, selectedApps)
+                        Toast.makeText(this, "Workspace created with ${selectedApps.size} apps", Toast.LENGTH_SHORT).show()
                     }
+                    loadWorkspaces()
+                    dialog.dismiss()
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
+
+        dialog.show()
     }
     
     private fun showWorkspaceEditor(workspace: Workspace) {
@@ -258,7 +251,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Rename Workspace")
-            .setView(input)
+            .setDialogInputView(this, input)
             .setPositiveButton("Rename") { _, _ ->
                 val newName = input.text.toString().trim()
                 if (newName.isNotEmpty()) {

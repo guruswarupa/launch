@@ -13,6 +13,7 @@ import com.guruswarupa.launch.utils.WidgetPreviewManager
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.ui.activities.WidgetConfigurationActivity
 import com.guruswarupa.launch.utils.WidgetPreviewDialog
+import com.guruswarupa.launch.managers.TypographyManager
 
 class WidgetConfigAdapter(
     private val context: Context,
@@ -33,6 +34,7 @@ class WidgetConfigAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WidgetViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.widget_preview_item, parent, false)
+        TypographyManager.applyToView(view)
         return WidgetViewHolder(view)
     }
 
