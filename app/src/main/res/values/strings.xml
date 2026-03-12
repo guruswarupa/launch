@@ -162,6 +162,8 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="font_removed_message">%1$s removed</string>
     <string name="font_removing">Removing…</string>
     <string name="font_download_failed">Failed to download %1$s</string>
+    <string name="font_install">Install</string>
+    <string name="font_uninstall">Uninstall</string>
 
     <!-- Physical Activity Strings -->
     <string name="distance_km_format">%1$s km</string>
