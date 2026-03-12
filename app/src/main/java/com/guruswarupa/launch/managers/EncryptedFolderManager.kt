@@ -161,6 +161,25 @@ class EncryptedFolderManager(private val context: Context) {
         return File(encryptedFolder, fileName).delete()
     }
 
+    fun renameFile(oldName: String, newName: String): Boolean {
+        val oldEncrypted = File(encryptedFolder, oldName)
+        if (!oldEncrypted.exists()) return false
+        val newEncrypted = File(encryptedFolder, newName)
+        if (oldName == newName) return true
+        if (newEncrypted.exists()) {
+            newEncrypted.delete()
+            File(thumbnailFolder, "$newName.thumb").delete()
+        }
+        val renamed = oldEncrypted.renameTo(newEncrypted)
+        if (renamed) {
+            val oldThumb = File(thumbnailFolder, "$oldName.thumb")
+            if (oldThumb.exists()) {
+                oldThumb.renameTo(File(thumbnailFolder, "$newName.thumb"))
+            }
+        }
+        return renamed
+    }
+
     fun getEncryptedFiles(): List<File> {
         return encryptedFolder.listFiles()?.filter { 
             !it.name.startsWith(".") && it.name != CONFIG_FILE 

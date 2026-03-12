@@ -1,88 +1,182 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/background">
+    android:layout_height="match_parent">
 
-    <RelativeLayout
+    <ImageView
+        android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@color/card_background"
-        android:paddingHorizontal="16dp">
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="Wallpaper background" />
 
-        <ImageView
-            android:id="@+id/back_button"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:padding="12dp"
-            android:src="@drawable/ic_back"
-            android:contentDescription="Back"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            app:tint="@color/text"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
-
-        <TextView
-            android:id="@+id/title_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="New Note"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/text"
-            android:layout_centerInParent="true"
-            android:layout_toStartOf="@id/save_button"
-            android:layout_toEndOf="@id/back_button"
-            android:ellipsize="marquee"
-            android:gravity="center"/>
-
-        <ImageView
-            android:id="@+id/save_button"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:padding="12dp"
-            android:src="@drawable/ic_save"
-            android:contentDescription="Save"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            app:tint="@color/text"
-            android:background="?attr/selectableItemBackgroundBorderless"/>
-
-    </RelativeLayout>
-
-    <EditText
-        android:id="@+id/note_title"
+    <View
+        android:id="@+id/note_editor_overlay"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Note Title"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
-        android:padding="12dp"
-        android:background="@drawable/edit_text_background"
-        android:textColor="@color/text"
-        android:textColorHint="@color/text_hint"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:maxLines="1"
-        android:inputType="textCapSentences"/>
+        android:layout_height="match_parent"
+        android:background="@color/note_editor_overlay_dark" />
 
-    <EditText
-        android:id="@+id/note_content"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:hint="Start typing your note here..."
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="12dp"
-        android:padding="12dp"
-        android:background="@drawable/edit_text_background"
-        android:textColor="@color/text"
-        android:textColorHint="@color/text_hint"
-        android:textSize="14sp"
-        android:gravity="top"
-        android:inputType="textMultiLine|textCapSentences"
-        android:scrollbars="vertical"/>
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingBottom="@dimen/note_editor_section_spacing"
+        android:paddingTop="@dimen/note_editor_status_padding"
+        android:paddingStart="@dimen/note_editor_horizontal_padding"
+        android:paddingEnd="@dimen/note_editor_horizontal_padding">
 
-</LinearLayout>
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="@dimen/note_editor_section_spacing"
+            android:layout_marginBottom="@dimen/note_editor_section_spacing"
+            app:cardBackgroundColor="@color/note_editor_card_surface_translucent"
+            app:cardCornerRadius="@dimen/note_editor_card_corner"
+            app:cardElevation="@dimen/note_editor_card_elevation"
+            app:strokeColor="@color/note_editor_card_stroke_translucent"
+            app:strokeWidth="@dimen/note_editor_card_border_width"
+            app:cardPreventCornerOverlap="false"
+            app:cardUseCompatPadding="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:paddingStart="@dimen/note_editor_horizontal_padding"
+                    android:paddingEnd="@dimen/note_editor_horizontal_padding"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/back_button"
+                        android:layout_width="@dimen/note_editor_icon_size"
+                        android:layout_height="@dimen/note_editor_icon_size"
+                        android:contentDescription="Back"
+                        android:background="@drawable/note_editor_icon_background"
+                        android:padding="@dimen/note_editor_icon_inner_padding"
+                        android:src="@drawable/ic_back"
+                        app:tint="@color/note_editor_icon_tint" />
+
+                    <TextView
+                        android:id="@+id/title_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp"
+                        android:ellipsize="marquee"
+                        android:gravity="center"
+                        android:singleLine="true"
+                        android:text="New Note"
+                        android:textAppearance="@style/NoteEditor.HeaderTitle" />
+
+                    <ImageView
+                        android:id="@+id/save_button"
+                        android:layout_width="@dimen/note_editor_icon_size"
+                        android:layout_height="@dimen/note_editor_icon_size"
+                        android:contentDescription="Save"
+                        android:background="@drawable/note_editor_icon_background"
+                        android:padding="@dimen/note_editor_icon_inner_padding"
+                        android:src="@drawable/ic_save"
+                        app:tint="@color/note_editor_icon_tint" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/note_editor_card_stroke" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:fillViewport="true"
+                    android:paddingBottom="@dimen/note_editor_section_spacing">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingStart="@dimen/note_editor_horizontal_padding"
+                        android:paddingEnd="@dimen/note_editor_horizontal_padding"
+                        android:paddingTop="@dimen/note_editor_section_spacing">
+
+                        <TextView
+                            style="@style/NoteEditor.Subtitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:text="Secure note stored in your encrypted vault" />
+
+                        <TextView
+                            style="@style/NoteEditor.HelperText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="@dimen/note_editor_section_spacing"
+                            android:text="Only you can decrypt the content inside this note." />
+
+                        <TextView
+                            style="@style/NoteEditor.Label"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Title" />
+
+                        <EditText
+                            android:id="@+id/note_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/note_editor_input_background"
+                            android:hint="Note Title"
+                            android:inputType="textCapSentences"
+                            android:maxLines="1"
+                            android:paddingHorizontal="14dp"
+                            android:paddingVertical="12dp"
+                            android:textColor="@color/text"
+                            android:textColorHint="@color/text_hint"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            style="@style/NoteEditor.Label"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="Body" />
+
+                        <EditText
+                            android:id="@+id/note_content"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/note_editor_input_background"
+                            android:gravity="top"
+                            android:hint="Start typing your note here..."
+                            android:inputType="textMultiLine|textCapSentences"
+                            android:minHeight="220dp"
+                            android:padding="12dp"
+                            android:scrollbars="vertical"
+                            android:textColor="@color/text"
+                            android:textColorHint="@color/text_hint"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            style="@style/NoteEditor.HelperText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/note_editor_section_spacing"
+                            android:paddingEnd="@dimen/note_editor_horizontal_padding"
+                            android:text="Tap save to keep the note encrypted and locked inside the vault." />
+                    </LinearLayout>
+                </ScrollView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</FrameLayout>

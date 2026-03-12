@@ -129,6 +129,28 @@
         <item name="android:textColor">@color/text</item>
     </style>
 
+    <style name="NoteEditor.HeaderTitle" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:textColor">@color/note_editor_title_text</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="NoteEditor.Subtitle" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/note_editor_subtitle_text</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="NoteEditor.Label" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">@color/note_editor_label_text</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:letterSpacing">0.05</item>
+    </style>
+
+    <style name="NoteEditor.HelperText" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">@color/note_editor_helper_text</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
     <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>

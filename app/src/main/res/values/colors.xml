@@ -131,6 +131,21 @@
     <color name="onboarding_divider">#26000000</color>
     
     <!-- Colors for note editor and vault -->
+    <color name="note_editor_gradient_start">#F3F6FF</color>
+    <color name="note_editor_gradient_end">#FDFDFF</color>
+    <color name="note_editor_title_text">#1E2441</color>
+    <color name="note_editor_subtitle_text">#4A5175</color>
+    <color name="note_editor_label_text">#7A84A0</color>
+    <color name="note_editor_helper_text">#6E7894</color>
+    <color name="note_editor_card_surface">#FFFFFF</color>
+    <color name="note_editor_card_stroke">#D7DFF2</color>
+    <color name="note_editor_card_surface_translucent">#CCFFFFFF</color>
+    <color name="note_editor_card_stroke_translucent">#55FFFFFF</color>
+    <color name="note_editor_input_stroke">#D7DFF2</color>
+    <color name="note_editor_input_surface">#F8F9FF</color>
+    <color name="note_editor_icon_tint">#1E2441</color>
     <color name="divider">#E0E0E0</color>
     <color name="text_hint">#888888</color>
+    <color name="note_editor_overlay_light">#CCFFFFFF</color>
+    <color name="note_editor_overlay_dark">#66000000</color>
 </resources>
