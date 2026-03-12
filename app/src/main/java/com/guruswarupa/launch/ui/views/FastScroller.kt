@@ -19,6 +19,7 @@ import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.AppAdapter
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.models.Constants
 
 class FastScroller @JvmOverloads constructor(
@@ -132,6 +133,7 @@ class FastScroller @JvmOverloads constructor(
         val fontStyle = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
         val intensity = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
         applyTypeface(fontStyle, intensity)
+        TypographyManager.getConfiguredFontColor(context)?.let { setTextColor(it) }
     }
 
     private fun applyTypeface(fontStyle: String, intensity: String) {
