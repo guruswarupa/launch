@@ -62,6 +62,9 @@
     <color name="widget_config_chip_text">@color/widget_text</color>
     <color name="widget_config_secondary_button_text">@color/widget_text</color>
     
+    <!-- Widget configuration surfaces -->
+    <color name="widget_config_surface">#80FFFFFF</color>
+
     <!-- Dynamic Text Colors -->
     <color name="widget_text">@color/black</color>
     <color name="widget_text_secondary">@color/black</color>

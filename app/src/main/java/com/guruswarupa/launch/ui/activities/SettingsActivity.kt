@@ -652,7 +652,17 @@ class SettingsActivity : ComponentActivity() {
             "black",
             "smallcaps",
             "casual",
-            "cursive"
+            "cursive",
+            "sans_serif_light",
+            "droid_sans_fallback",
+            "ubuntu_regular",
+            "noto_sans",
+            "noto_serif",
+            "noto_sans_display",
+            "dejavu_sans",
+            "dejavu_serif",
+            "dejavu_mono",
+            "fira_code"
         )
         val styleLabels = arrayOf(
             "Default",
@@ -669,14 +679,24 @@ class SettingsActivity : ComponentActivity() {
             "Black",
             "Small Caps",
             "Casual",
-            "Cursive"
+            "Cursive",
+            "Sans Serif Light",
+            "Droid Sans Fallback",
+            "Ubuntu Regular",
+            "Noto Sans",
+            "Noto Serif",
+            "Noto Sans Display",
+            "DejaVu Sans",
+            "DejaVu Serif",
+            "DejaVu Mono",
+            "Fira Code"
         )
         val styleAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, styleLabels)
         styleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         styleSpinner.adapter = styleAdapter
 
-        val intensityValues = arrayOf("light", "regular", "bold")
-        val intensityLabels = arrayOf("Light", "Regular", "Bold")
+        val intensityValues = arrayOf("light", "regular", "bold", "extra_bold")
+        val intensityLabels = arrayOf("Light", "Regular", "Bold", "Extra Bold")
         val intensityAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, intensityLabels)
         intensityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         intensitySpinner.adapter = intensityAdapter
@@ -726,6 +746,83 @@ class SettingsActivity : ComponentActivity() {
                     return
                 }
                 prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, intensityValues[position]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+                intent.setPackage(packageName)
+                sendBroadcast(intent)
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+
+        val colorSpinner = findViewById<Spinner>(R.id.typography_color_spinner)
+        val colorLabelList = arrayOf(
+            "Default",
+            "Black",
+            "White",
+            "Accent Teal",
+            "Nord Mint",
+            "Nord Lavender",
+            "Nord Orange",
+            "Deep Purple",
+            "Electric Blue",
+            "Soft Pink",
+            "Olive",
+            "Sandstone",
+            "Slate Gray",
+            "Forest Green",
+            "Sunset Orange",
+            "Royal Purple",
+            "Amber Glow",
+            "Solar Yellow",
+            "Sky Blue",
+            "Midnight Cyan",
+            "Fiery Coral",
+            "Soft Mint",
+            "Forest Shadow",
+            "Chrome"
+        )
+        val colorValueList = arrayOf(
+            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT,
+            "#FF000000", // Black
+            "#FFFFFFFF", // White
+            "#FF03DAC5", // Accent Teal
+            "#FF8FBCBB", // Nord Mint
+            "#FFB48EAD", // Nord Lavender
+            "#FFD08770", // Nord Orange
+            "#FF6200EE", // Deep Purple
+            "#FF2196F3", // Electric Blue
+            "#FFF48FB1", // Soft Pink
+            "#FF7B8D42", // Olive
+            "#FFC6AA7F", // Sandstone
+            "#FF4A5568", // Slate Gray
+            "#FF1B5E20", // Forest Green
+            "#FFFF7043", // Sunset Orange
+            "#FF6A1B9A", // Royal Purple
+            "#FFFFAB00", // Amber Glow
+            "#FFFFD600", // Solar Yellow
+            "#FF56CCF2", // Sky Blue
+            "#FF00838F", // Midnight Cyan
+            "#FFFF6B6B", // Fiery Coral
+            "#FFB8F2E6", // Soft Mint
+            "#FF0D1B2A", // Forest Shadow
+            "#FFF1F3F4"  // Chrome
+        )
+        val colorAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, colorLabelList)
+        colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        colorSpinner.adapter = colorAdapter
+
+        val currentColorValue = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)
+            ?: Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT
+        colorSpinner.setSelection(colorValueList.indexOf(currentColorValue).coerceAtLeast(0), false)
+
+        var colorInitialized = false
+        colorSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                if (!colorInitialized) {
+                    colorInitialized = true
+                    return
+                }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, colorValueList[position]) }
                 TypographyManager.applyToActivity(this@SettingsActivity)
                 val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
                 intent.setPackage(packageName)

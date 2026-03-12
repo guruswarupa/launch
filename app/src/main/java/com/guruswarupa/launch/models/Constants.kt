@@ -30,6 +30,7 @@ object Constants {
         const val TYPOGRAPHY_SCALE_PERCENT = "typography_scale_percent"
         const val TYPOGRAPHY_FONT_STYLE = "typography_font_style"
         const val TYPOGRAPHY_FONT_INTENSITY = "typography_font_intensity"
+        const val TYPOGRAPHY_FONT_COLOR = "typography_font_color"
         const val CLOCK_24_HOUR_FORMAT = "clock_24_hour_format"
         
         // Vault Prefs (Simplified)
@@ -38,6 +39,8 @@ object Constants {
         const val VAULT_SETUP_COMPLETE = "vault_setup_complete"
 
     }
+
+    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "default"
     
     // FileProvider
     const val FILE_PROVIDER_AUTHORITY_SUFFIX = ".fileprovider"

@@ -33,6 +33,7 @@ import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.handlers.ActivityResultHandler
 import com.guruswarupa.launch.utils.BlurUtils
+import com.guruswarupa.launch.managers.TypographyManager
 
 class WidgetConfigurationActivity : AppCompatActivity() {
 
@@ -99,6 +100,13 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val cancelButton = findViewById<Button>(R.id.cancel_button)
         val saveButton = findViewById<Button>(R.id.save_button)
         val searchInput = findViewById<EditText>(R.id.search_widget_input)
+
+        val configuredFontColor = TypographyManager.getConfiguredFontColor(this)
+        if (configuredFontColor != null) {
+            searchInput.setTextColor(configuredFontColor)
+            searchInput.setHintTextColor(configuredFontColor)
+        }
+        TypographyManager.applyToView(searchInput)
 
         // Load current widget configuration
         loadWidgets()
@@ -361,7 +369,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         private val headerHeightPx = (context.resources.displayMetrics.density * 36f).toInt().coerceAtLeast(1)
         private val horizontalMarginPx = (context.resources.displayMetrics.density * 16f).toInt()
         private val backgroundPaint = Paint().apply {
-            color = ContextCompat.getColor(context, R.color.widget_divider)
+            color = ContextCompat.getColor(context, R.color.widget_config_surface)
         }
         private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = ContextCompat.getColor(context, R.color.widget_config_text_secondary)

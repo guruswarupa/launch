@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.managers.AppDockManager
+import com.guruswarupa.launch.managers.TypographyManager
 
 class WidgetThemeManager(
     private val activity: Activity,
@@ -87,7 +88,13 @@ class WidgetThemeManager(
             }
             
             sb.setTextColor(textColor)
-            sb.setHintTextColor(hintColor)
+            val configuredFontColor = TypographyManager.getConfiguredFontColor(sb.context)
+            if (configuredFontColor != null) {
+                sb.setHintTextColor(configuredFontColor)
+            } else {
+                sb.setHintTextColor(hintColor)
+            }
+            TypographyManager.applyToView(sb)
             
             // Tint search icons
             val iconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
