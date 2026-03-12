@@ -120,6 +120,8 @@ class OnboardingActivity : ComponentActivity() {
     // Workspaces UI
     private lateinit var workspaceNameInput: EditText
     private lateinit var workspaceActionFab: Button
+    private lateinit var cancelWorkspaceButton: Button
+    private lateinit var workspaceButtonsContainer: LinearLayout
     private lateinit var workspacesListRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var workspacesAppsRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var workspacesListTitle: TextView
@@ -328,6 +330,8 @@ class OnboardingActivity : ComponentActivity() {
         
         workspaceNameInput = findViewById(R.id.workspace_name_input)
         workspaceActionFab = findViewById(R.id.workspace_action_fab)
+        cancelWorkspaceButton = findViewById(R.id.cancel_workspace_button)
+        workspaceButtonsContainer = findViewById(R.id.workspace_buttons_container)
         workspacesListRecyclerView = findViewById(R.id.workspaces_list_recycler_view)
         workspacesAppsRecyclerView = findViewById(R.id.workspaces_apps_recycler_view)
         workspacesListTitle = findViewById(R.id.workspaces_list_title)
@@ -1088,6 +1092,12 @@ class OnboardingActivity : ComponentActivity() {
         val buttonTextRes = if (editingWorkspaceIndex == null) R.string.create_workspace else R.string.update_workspace
         val enabled = hasName && hasApps
 
+        // Show buttons container only when editing or creating a workspace
+        workspaceButtonsContainer.visibility = if (editingWorkspaceIndex != null || hasName || hasApps) View.VISIBLE else View.GONE
+        
+        // Show cancel button only when editing an existing workspace
+        cancelWorkspaceButton.visibility = if (editingWorkspaceIndex != null) View.VISIBLE else View.GONE
+        
         workspaceActionFab.text = getString(buttonTextRes)
         workspaceActionFab.isEnabled = enabled
         workspaceActionFab.alpha = if (enabled) 1.0f else 0.5f
@@ -1101,6 +1111,7 @@ class OnboardingActivity : ComponentActivity() {
         })
         updateWorkspaceActionButtons()
         workspaceActionFab.setOnClickListener { handleWorkspaceAction() }
+        cancelWorkspaceButton.setOnClickListener { exitWorkspaceEditMode() }
     }
     
     private fun handleWorkspaceAction() {
@@ -1147,6 +1158,9 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun exitWorkspaceEditMode() {
         editingWorkspaceIndex = null
+        workspaceNameInput.text.clear()
+        currentWorkspaceApps.clear()
+        updateAvailableAppsForWorkspace()
         updateWorkspaceActionButtons()
     }
 

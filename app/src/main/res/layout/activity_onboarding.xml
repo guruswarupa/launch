@@ -821,18 +821,40 @@
         </LinearLayout>
     </ScrollView>
 
-    <Button
-        android:id="@+id/workspace_action_fab"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="32dp"
-        android:layout_marginBottom="32dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:background="@drawable/onboarding_primary_button"
-        android:minHeight="56dp"
-        android:text="@string/create_workspace"
-        android:textAllCaps="false"
-        android:textColor="@color/onboarding_primary_button_text"
-        android:visibility="gone" />
+        android:layout_marginBottom="32dp"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        android:id="@+id/workspace_buttons_container">
+
+        <Button
+            android:id="@+id/cancel_workspace_button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/onboarding_secondary_button"
+            android:minHeight="56dp"
+            android:text="Cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/onboarding_secondary_button_text"
+            android:visibility="visible" />
+
+        <Button
+            android:id="@+id/workspace_action_fab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/onboarding_primary_button"
+            android:minHeight="56dp"
+            android:text="@string/create_workspace"
+            android:textAllCaps="false"
+            android:textColor="@color/onboarding_primary_button_text"
+            android:visibility="visible" />
+    </LinearLayout>
 
 </FrameLayout>
