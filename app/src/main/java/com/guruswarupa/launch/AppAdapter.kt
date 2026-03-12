@@ -1,7 +1,7 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AlertDialog
+import android.app.AlertDialog
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ResolveInfo
@@ -30,10 +30,8 @@ import androidx.recyclerview.widget.DiffUtil
 import java.io.File
 import java.util.concurrent.*
 import androidx.core.content.FileProvider
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
-import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.models.AppMetadata
 import com.guruswarupa.launch.models.Constants
@@ -285,9 +283,6 @@ class AppAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        // Apply typography to the item view tree
-        TypographyManager.applyToView(holder.itemView)
-        
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
 
@@ -840,7 +835,7 @@ class AppAdapter(
             }
         }
 
-        val builder = MaterialAlertDialogBuilder(activity, R.style.CustomDialogTheme)
+        val builder = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
         
         // Custom title view for premium look
         val titleView = LayoutInflater.from(activity).inflate(R.layout.dialog_contact_title, null)
