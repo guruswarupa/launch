@@ -150,6 +150,10 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_continue">Continue</string>
     <string name="onboarding_launch_app">Launch App</string>
+    <string name="create_workspace">Create Workspace</string>
+    <string name="update_workspace">Update Workspace</string>
+    <string name="workspace_edit_description">Edit workspace</string>
+    <string name="workspace_delete_description">Delete workspace</string>
 
     <!-- Physical Activity Strings -->
     <string name="distance_km_format">%1$s km</string>

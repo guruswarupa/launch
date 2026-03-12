@@ -23,7 +23,7 @@
         android:clipToPadding="false"
         android:fillViewport="true"
         android:paddingTop="16dp"
-        android:paddingBottom="24dp"
+        android:paddingBottom="140dp"
         android:scrollbars="none">
 
         <LinearLayout
@@ -666,20 +666,6 @@
                         android:paddingBottom="12dp"
                         android:scrollbars="none" />
 
-                    <Button
-                        android:id="@+id/add_workspace_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:background="@drawable/onboarding_primary_button"
-                        android:fontFamily="sans-serif-medium"
-                        android:minHeight="56dp"
-                        android:paddingHorizontal="24dp"
-                        android:paddingVertical="16dp"
-                        android:text="Create Workspace"
-                        android:textAllCaps="false"
-                        android:textColor="@color/onboarding_primary_button_text"
-                        android:textSize="16sp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -834,5 +820,19 @@
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>
+
+    <Button
+        android:id="@+id/workspace_action_fab"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="32dp"
+        android:layout_marginBottom="32dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:background="@drawable/onboarding_primary_button"
+        android:minHeight="56dp"
+        android:text="@string/create_workspace"
+        android:textAllCaps="false"
+        android:textColor="@color/onboarding_primary_button_text"
+        android:visibility="gone" />
 
 </FrameLayout>

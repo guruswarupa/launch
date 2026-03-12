@@ -119,7 +119,7 @@ class OnboardingActivity : ComponentActivity() {
     
     // Workspaces UI
     private lateinit var workspaceNameInput: EditText
-    private lateinit var addWorkspaceButton: Button
+    private lateinit var workspaceActionFab: Button
     private lateinit var workspacesListRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var workspacesAppsRecyclerView: androidx.recyclerview.widget.RecyclerView
     private lateinit var workspacesListTitle: TextView
@@ -127,6 +127,7 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var workspacesAppsAdapter: WorkspacesAppsAdapter
     private var currentWorkspaceApps = mutableSetOf<String>()
     private var createdWorkspaces = mutableListOf<Pair<String, Set<String>>>() // name to apps
+    private var editingWorkspaceIndex: Int? = null
     private var cachedAppsList: List<android.content.pm.ResolveInfo>? = null // Cached app list
     private val appListCallbacks = mutableListOf<(List<android.content.pm.ResolveInfo>) -> Unit>()
     private var isPreloadingApps = false // Track if preload is in progress
@@ -326,7 +327,7 @@ class OnboardingActivity : ComponentActivity() {
         })
         
         workspaceNameInput = findViewById(R.id.workspace_name_input)
-        addWorkspaceButton = findViewById(R.id.add_workspace_button)
+        workspaceActionFab = findViewById(R.id.workspace_action_fab)
         workspacesListRecyclerView = findViewById(R.id.workspaces_list_recycler_view)
         workspacesAppsRecyclerView = findViewById(R.id.workspaces_apps_recycler_view)
         workspacesListTitle = findViewById(R.id.workspaces_list_title)
@@ -393,6 +394,7 @@ class OnboardingActivity : ComponentActivity() {
     private fun showStep(step: OnboardingStep) {
         currentStep = step
         updateProgressHeader(step)
+        workspaceActionFab.visibility = View.GONE
         
         // Hide all steps first
         welcomeStep.visibility = View.GONE
@@ -479,6 +481,7 @@ class OnboardingActivity : ComponentActivity() {
             }
             OnboardingStep.WORKSPACES -> {
                 workspacesStep.visibility = View.VISIBLE
+                workspaceActionFab.visibility = View.VISIBLE
                 backButton.visibility = View.VISIBLE
                 nextButton.setText(R.string.onboarding_continue)
                 nextButton.isEnabled = true
@@ -1043,13 +1046,20 @@ class OnboardingActivity : ComponentActivity() {
         preloadAppList { apps ->
             allAppsList = apps
             updateAvailableAppsForWorkspace()
-            workspacesListAdapter = WorkspacesListAdapter(createdWorkspaces) { position ->
-                createdWorkspaces.removeAt(position)
-                @SuppressLint("NotifyDataSetChanged")
-                workspacesListAdapter.notifyDataSetChanged()
-                updateWorkspacesListVisibility()
-                updateAvailableAppsForWorkspace()
-            }
+            workspacesListAdapter = WorkspacesListAdapter(
+                createdWorkspaces,
+                onDelete = { position ->
+                    createdWorkspaces.removeAt(position)
+                    @SuppressLint("NotifyDataSetChanged")
+                    workspacesListAdapter.notifyDataSetChanged()
+                    exitWorkspaceEditMode()
+                    updateWorkspacesListVisibility()
+                    updateAvailableAppsForWorkspace()
+                },
+                onEdit = { position ->
+                    enterWorkspaceEditMode(position)
+                }
+            )
             workspacesListRecyclerView.adapter = workspacesListAdapter
             updateWorkspacesListVisibility()
             workspacesLoadingText.visibility = View.GONE
@@ -1058,50 +1068,88 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun updateAvailableAppsForWorkspace() {
-        val usedApps = createdWorkspaces.flatMap { it.second }.toSet()
+        val usedApps = createdWorkspaces.withIndex()
+            .filter { it.index != editingWorkspaceIndex }
+            .flatMap { it.value.second }
+            .toSet()
         val availableApps = allAppsList.filter { it.activityInfo.packageName !in usedApps }
         workspacesAppsAdapter = WorkspacesAppsAdapter(availableApps, currentWorkspaceApps) { packageName, isChecked ->
             if (isChecked) currentWorkspaceApps.add(packageName) else currentWorkspaceApps.remove(packageName)
-            updateAddWorkspaceButtonState()
+            updateWorkspaceActionButtons()
         }
         workspacesAppsRecyclerView.adapter = workspacesAppsAdapter
-        updateAddWorkspaceButtonState()
+        updateWorkspaceActionButtons()
         workspacesAppsRecyclerView.post { workspacesAppsRecyclerView.requestLayout() }
     }
     
-    private fun updateAddWorkspaceButtonState() {
+    private fun updateWorkspaceActionButtons() {
         val hasName = workspaceNameInput.text.toString().trim().isNotEmpty()
         val hasApps = currentWorkspaceApps.isNotEmpty()
-        addWorkspaceButton.isEnabled = hasName && hasApps
-        addWorkspaceButton.alpha = if (hasName && hasApps) 1.0f else 0.5f
+        val buttonTextRes = if (editingWorkspaceIndex == null) R.string.create_workspace else R.string.update_workspace
+        val enabled = hasName && hasApps
+
+        workspaceActionFab.text = getString(buttonTextRes)
+        workspaceActionFab.isEnabled = enabled
+        workspaceActionFab.alpha = if (enabled) 1.0f else 0.5f
     }
     
     private fun setupWorkspaceButtons() {
         workspaceNameInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updateAddWorkspaceButtonState() }
-            override fun afterTextChanged(s: Editable?) { updateAddWorkspaceButtonState() }
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updateWorkspaceActionButtons() }
+            override fun afterTextChanged(s: Editable?) { updateWorkspaceActionButtons() }
         })
-        updateAddWorkspaceButtonState()
-        addWorkspaceButton.setOnClickListener {
-            val workspaceName = workspaceNameInput.text.toString().trim()
-            if (workspaceName.isEmpty()) { workspaceNameInput.requestFocus(); return@setOnClickListener }
-            if (currentWorkspaceApps.isEmpty()) return@setOnClickListener
+        updateWorkspaceActionButtons()
+        workspaceActionFab.setOnClickListener { handleWorkspaceAction() }
+    }
+    
+    private fun handleWorkspaceAction() {
+        val workspaceName = workspaceNameInput.text.toString().trim()
+        if (workspaceName.isEmpty()) {
+            workspaceNameInput.requestFocus()
+            return
+        }
+        if (currentWorkspaceApps.isEmpty()) return
+
+        if (editingWorkspaceIndex != null) {
+            createdWorkspaces[editingWorkspaceIndex!!] = Pair(workspaceName, currentWorkspaceApps.toSet())
+        } else {
             createdWorkspaces.add(Pair(workspaceName, currentWorkspaceApps.toSet()))
-            @SuppressLint("NotifyDataSetChanged")
-            workspacesListAdapter.notifyDataSetChanged()
-            workspaceNameInput.text.clear()
-            currentWorkspaceApps.clear()
-            updateAvailableAppsForWorkspace()
-            updateWorkspacesListVisibility()
-            onboardingScrollView.post {
-                if (workspacesListRecyclerView.isVisible) {
-                    onboardingScrollView.smoothScrollTo(0, workspacesListRecyclerView.top - 100)
-                }
+        }
+        @SuppressLint("NotifyDataSetChanged")
+        workspacesListAdapter.notifyDataSetChanged()
+        exitWorkspaceEditMode()
+        workspaceNameInput.text.clear()
+        currentWorkspaceApps.clear()
+        updateAvailableAppsForWorkspace()
+        updateWorkspacesListVisibility()
+        onboardingScrollView.post {
+            if (workspacesListRecyclerView.isVisible) {
+                onboardingScrollView.smoothScrollTo(0, workspacesListRecyclerView.top - 100)
             }
         }
     }
-    
+
+    private fun enterWorkspaceEditMode(position: Int) {
+        val (name, apps) = createdWorkspaces[position]
+        editingWorkspaceIndex = position
+        workspaceNameInput.setText(name)
+        workspaceNameInput.setSelection(name.length)
+        workspaceNameInput.requestFocus()
+        currentWorkspaceApps.clear()
+        currentWorkspaceApps.addAll(apps)
+        updateAvailableAppsForWorkspace()
+        updateWorkspaceActionButtons()
+        onboardingScrollView.post {
+            onboardingScrollView.smoothScrollTo(0, workspaceNameInput.top - 100)
+        }
+    }
+
+    private fun exitWorkspaceEditMode() {
+        editingWorkspaceIndex = null
+        updateWorkspaceActionButtons()
+    }
+
     private fun updateWorkspacesListVisibility() {
         workspacesListTitle.isVisible = createdWorkspaces.isNotEmpty()
         workspacesListRecyclerView.isVisible = createdWorkspaces.isNotEmpty()
