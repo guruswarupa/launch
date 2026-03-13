@@ -96,15 +96,8 @@ class FeatureTutorialManager(
         APP_DOCK(
             page = TutorialPage.HOME,
             title = "Dock Shortcuts",
-            description = "The dock holds your quick actions like settings, favorites, workspace switching, focus mode, sharing tools and encrypted vault.",
+            description = "The dock holds your quick actions like settings, favorites, workspace switching, focus mode and encrypted vault.",
             targetViewId = R.id.app_dock
-        ),
-        FAVORITES_TOGGLE(
-            page = TutorialPage.HOME,
-            title = "Favorites View",
-            description = "After adding apps to favorites from the app list, use this toggle to switch between Favorites and All Apps.",
-            targetViewId = R.id.app_dock,
-            targetViewTag = "favorite_toggle"
         ),
         WORKSPACE_TOGGLE(
             page = TutorialPage.HOME,
@@ -119,13 +112,6 @@ class FeatureTutorialManager(
             description = "Long press here to build your focus app list. Tap it to start a focus session, pick a duration, and optionally enable Do Not Disturb.",
             targetViewId = R.id.app_dock,
             targetViewTag = "focus_mode_container"
-        ),
-        SHARE_BUTTON(
-            page = TutorialPage.HOME,
-            title = "Share Apps and Files",
-            description = "Use this shortcut to share installed app APKs or regular files directly from the launcher.",
-            targetViewId = R.id.app_dock,
-            targetViewTag = "apk_share_button"
         ),
         VAULT_BUTTON(
             page = TutorialPage.HOME,

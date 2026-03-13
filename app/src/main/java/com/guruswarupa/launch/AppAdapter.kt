@@ -819,7 +819,6 @@ class AppAdapter(
             Toast.makeText(activity, activity.getString(R.string.added_to_favorites, appName), Toast.LENGTH_SHORT).show()
         }
         activity.filterAppsWithoutReload()
-        activity.appDockManager.refreshFavoriteToggle()
     }
 
     private fun toggleHideApp(packageName: String, appInfo: ResolveInfo) {

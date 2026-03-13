@@ -5,7 +5,6 @@ import androidx.appcompat.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.SharedPreferences
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -18,7 +17,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
-import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.ui.activities.FocusModeConfigActivity
 import com.guruswarupa.launch.ui.activities.SettingsActivity
 import com.guruswarupa.launch.ui.activities.WorkspaceConfigActivity
@@ -31,9 +29,7 @@ import kotlin.math.abs
 class AppDockManager(
     private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
-    private val appDock: LinearLayout,
-    packageManager: PackageManager,
-    private val favoriteAppManager: FavoriteAppManager
+    private val appDock: LinearLayout
 ) {
     private val context: Context = activity
     private val dockIconPaddingPx = (6 * context.resources.displayMetrics.density).toInt()
@@ -44,7 +40,6 @@ class AppDockManager(
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
-    private lateinit var apkShareButton: ImageView
     private lateinit var vaultButton: ImageView
     private val pomodoroManager: PomodoroManager
     private var isFocusMode: Boolean = false
@@ -121,35 +116,6 @@ class AppDockManager(
         }
     }
 
-    private fun ensureApkShareButton() {
-        if (appDock.findViewWithTag<ImageView>("apk_share_button") == null) {
-            apkShareButton = ImageView(context).apply {
-                tag = "apk_share_button"
-                setImageResource(R.drawable.ic_share)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                )
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { showApkShareDialog() }
-                setOnLongClickListener {
-                    Toast.makeText(context, "Share Apps/Files", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            // Find the position after focus mode container
-            var insertIndex = appDock.childCount
-            for (i in 0 until appDock.childCount) {
-                val child = appDock.getChildAt(i)
-                if (child.tag == "focus_mode_container") {
-                    insertIndex = i + 1
-                    break
-                }
-            }
-            appDock.addView(apkShareButton, insertIndex)
-        }
-    }
-
     private fun ensureVaultButton() {
         if (appDock.findViewWithTag<ImageView>("vault_button") == null) {
             vaultButton = ImageView(context).apply {
@@ -169,10 +135,11 @@ class AppDockManager(
                 }
             }
             
-            // Insert after APK share button
+            // Insert after focus mode container
             var insertIndex = appDock.childCount
             for (i in 0 until appDock.childCount) {
-                if (appDock.getChildAt(i).tag == "apk_share_button") {
+                val child = appDock.getChildAt(i)
+                if (child.tag == "focus_mode_container") {
                     insertIndex = i + 1
                     break
                 }
@@ -191,8 +158,7 @@ class AppDockManager(
         ensureSettingsButton()       // 1. Settings
         ensureWorkspaceToggle()      // 2. Workspace toggle
         ensureFocusModeToggle()      // 3. Focus mode
-        ensureApkShareButton()       // 4. Share APK icon
-        ensureVaultButton()          // 5. Encrypted Vault
+        ensureVaultButton()          // 4. Encrypted Vault
         updateDockVisibility()
     }
     
@@ -204,9 +170,6 @@ class AppDockManager(
         if (::workspaceToggle.isInitialized) {
             updateWorkspaceIcon()
         }
-        if (::apkShareButton.isInitialized) {
-            apkShareButton.setImageResource(R.drawable.ic_share)
-        }
         if (::vaultButton.isInitialized) {
             vaultButton.setImageResource(R.drawable.ic_vault)
         }
@@ -217,11 +180,6 @@ class AppDockManager(
             updateWorkspaceIcon()
         }
     }
-
-    fun refreshFavoriteToggle() {
-        // No-op as favorite toggle is removed
-    }
-
 
     private fun ensureFocusModeToggle() {
         if (appDock.findViewWithTag<ImageView>("focus_mode_toggle") == null) {
@@ -758,7 +716,7 @@ class AppDockManager(
                 "focus_mode_container", "workspace_toggle" -> {
                     child.visibility = View.VISIBLE
                 }
-                "add_icon", "apk_share_button", "vault_button" -> {
+                "add_icon", "vault_button" -> {
                     child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
                 }
                 else -> {
@@ -826,12 +784,5 @@ class AppDockManager(
 
     fun getCurrentMode(): Boolean {
         return isFocusMode
-    }
-
-    // APK sharing functionality moved to ApkShareManager
-    private val shareManager = ShareManager(context)
-
-    private fun showApkShareDialog() {
-        shareManager.showApkSharingDialog()
     }
 }

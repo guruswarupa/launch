@@ -130,7 +130,6 @@ class AppListUIUpdater(
                     
                     activity.runOnUiThread {
                         updateAppListUI(listWithSeparators, currentFullList, isFinal = true)
-                        appDockManager.refreshFavoriteToggle()
                     }
                 } catch (e: Exception) {
                     activity.runOnUiThread {

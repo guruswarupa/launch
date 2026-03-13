@@ -104,7 +104,7 @@ class AppInitializer(private val activity: MainActivity) {
                 initializeDeferredWidgets()
             }, 30) // Reduced from 100ms
 
-            appDockManager = AppDockManager(activity, sharedPreferences, views.appDock, packageManager, favoriteAppManager)
+            appDockManager = AppDockManager(activity, sharedPreferences, views.appDock)
             
             // Initialize widget theme manager
             widgetThemeManager = WidgetThemeManager(activity) { resources.configuration.uiMode }
@@ -142,7 +142,7 @@ class AppInitializer(private val activity: MainActivity) {
             
             // Initialize app list loader
             appListLoader = AppListLoader(
-                activity, packageManager, appListManager, appDockManager, favoriteAppManager,
+                activity, packageManager, appListManager, appDockManager,
                 cacheManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
             )
             

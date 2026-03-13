@@ -28,7 +28,6 @@ class AppListLoader(
     private val packageManager: PackageManager,
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
-    private val favoriteAppManager: FavoriteAppManager,
     private val cacheManager: CacheManager?,
     private val backgroundExecutor: Executor,
     private val handler: Handler,
@@ -238,16 +237,6 @@ class AppListLoader(
                         } else if (recyclerView.adapter != adapter) {
                             recyclerView.adapter = adapter
                         }
-                    }
-                    
-                    // Dock toggle refresh (use post instead of postDelayed to avoid artificial latency)
-                    handler.post {
-                        if (activity.isFinishing || activity.isDestroyed) {
-                            return@post
-                        }
-                        
-                        // Update dock toggle icon (non-critical)
-                        appDockManager.refreshFavoriteToggle()
                     }
                     
                     // STEP 3: Refine sorting in background with fresh labels (after UI is shown)
