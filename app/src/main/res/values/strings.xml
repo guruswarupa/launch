@@ -79,6 +79,8 @@ No personal data is collected, stored, or shared with third parties.</string>
     <!-- App Lock Strings -->
     <string name="set_pin">Set PIN</string>
     <string name="change_pin">Change PIN</string>
+    <string name="set_access_pin">Set Access PIN</string>
+    <string name="change_access_pin">Change Access PIN</string>
 
     <!-- Share Manager strings -->
     <string name="share_dialog_title">What would you like to share?</string>

@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -12,241 +11,264 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay -->
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#95000000"/>
+        android:background="#4D000000"/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingHorizontal="16dp">
 
-        <!-- Toolbar area -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginTop="48dp"
+            android:layout_marginBottom="24dp"
+            android:paddingHorizontal="8dp">
 
             <ImageButton
                 android:id="@+id/back_button"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_revert"
-                android:tint="@color/text"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/settings_card_background"
+                android:src="@drawable/ic_back"
+                app:tint="@color/white"
                 android:contentDescription="Back"
-                android:rotation="180"/>
+                android:padding="8dp"
+                android:scaleType="centerInside"/>
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Privacy Dashboard"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="@color/text"
-                android:layout_marginStart="8dp"/>
-
+                android:layout_marginStart="16dp"
+                android:text="Privacy Hub"
+                android:textSize="32sp"
+                android:fontFamily="sans-serif-black"
+                android:textColor="@color/white"
+                android:shadowColor="#80000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="4"/>
         </LinearLayout>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Monitor which apps are accessing sensitive data on your device."
-            android:textColor="@color/text"
-            android:alpha="0.7"
-            android:textSize="14sp"
-            android:layout_marginBottom="16dp"
-            android:layout_marginStart="8dp"/>
-
-        <!-- Search Box -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:background="@drawable/rounded_background"
-            android:padding="4dp"
-            android:layout_marginBottom="16dp"
-            android:gravity="center_vertical">
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="12dp"
-                android:src="@android:drawable/ic_menu_search"
-                android:alpha="0.5"
-                app:tint="@color/text"/>
-            <EditText
-                android:id="@+id/search_box"
+            android:layout_marginBottom="20dp">
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@null"
-                android:hint="Search apps..."
-                android:textColorHint="@color/text_secondary"
-                android:textColor="@color/text"
-                android:padding="12dp"
-                android:textSize="14sp"
-                android:maxLines="1"
-                android:inputType="text"/>
-        </LinearLayout>
-
-        <!-- Summary Cards -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none"
-            android:layout_marginBottom="16dp">
-            <LinearLayout
-                android:id="@+id/summary_cards_container"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                
-                <!-- Total Apps Card -->
+                android:layout_marginEnd="6dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#26FFFFFF"
+                app:cardCornerRadius="20dp">
                 <LinearLayout
-                    android:layout_width="140dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="@drawable/rounded_background"
                     android:padding="16dp"
-                    android:layout_marginEnd="12dp">
+                    android:gravity="center">
                     <TextView
                         android:id="@+id/stat_total_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textColor="@color/text"
-                        android:textSize="24sp"
-                        android:textStyle="bold"/>
+                        android:textColor="@color/white"
+                        android:textSize="22sp"
+                        android:fontFamily="sans-serif-black"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Total Apps"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"/>
+                        android:text="Apps"
+                        android:textColor="@color/white"
+                        android:alpha="0.5"
+                        android:textSize="11sp"/>
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <!-- Critical Apps Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="3dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#26FFFFFF"
+                app:cardCornerRadius="20dp">
                 <LinearLayout
-                    android:layout_width="140dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="@drawable/rounded_background"
                     android:padding="16dp"
-                    android:layout_marginEnd="12dp">
+                    android:gravity="center">
                     <TextView
                         android:id="@+id/stat_critical_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textColor="#FFFF4444"
-                        android:textSize="24sp"
-                        android:textStyle="bold"/>
+                        android:textColor="#FF6B6B"
+                        android:textSize="22sp"
+                        android:fontFamily="sans-serif-black"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Critical Access"
-                        android:textColor="#A0FF4444"
-                        android:textSize="12sp"/>
+                        android:text="Critical"
+                        android:textColor="#FF6B6B"
+                        android:alpha="0.6"
+                        android:textSize="11sp"/>
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <!-- Sideloaded Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#26FFFFFF"
+                app:cardCornerRadius="20dp">
                 <LinearLayout
-                    android:layout_width="140dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="@drawable/rounded_background"
                     android:padding="16dp"
-                    android:layout_marginEnd="12dp">
+                    android:gravity="center">
                     <TextView
                         android:id="@+id/stat_sideloaded_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textColor="#FFFFBB33"
-                        android:textSize="24sp"
-                        android:textStyle="bold"/>
+                        android:textColor="#FFCC00"
+                        android:textSize="22sp"
+                        android:fontFamily="sans-serif-black"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Sideloaded"
-                        android:textColor="#A0FFBB33"
-                        android:textSize="12sp"/>
+                        android:text="External"
+                        android:textColor="#FFCC00"
+                        android:alpha="0.6"
+                        android:textSize="11sp"/>
                 </LinearLayout>
-            </LinearLayout>
-        </HorizontalScrollView>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
-        <!-- Filter Chips -->
-        <HorizontalScrollView
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:scrollbars="none"
-            android:layout_marginBottom="16dp">
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/filter_chip_group"
-                android:layout_width="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#26FFFFFF"
+            app:cardCornerRadius="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:singleSelection="true"
-                app:selectionRequired="false">
-                
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_all"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="All"
-                    android:textColor="@color/text"
-                    android:checked="true"/>
+                android:orientation="vertical"
+                android:padding="12dp">
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_camera"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Camera"
-                    android:textColor="@color/text"/>
+                <EditText
+                    android:id="@+id/search_box"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/settings_card_background"
+                    android:hint="Filter applications..."
+                    android:textColorHint="#66FFFFFF"
+                    android:textColor="@color/white"
+                    android:paddingHorizontal="16dp"
+                    android:textSize="14sp"
+                    android:maxLines="1"
+                    android:inputType="text"
+                    android:drawableStart="@android:drawable/ic_menu_search"
+                    android:drawablePadding="12dp"
+                    app:drawableTint="#66FFFFFF"/>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_microphone"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
-                    android:layout_width="wrap_content"
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Microphone"
-                    android:textColor="@color/text"/>
+                    android:scrollbars="none"
+                    android:layout_marginTop="12dp">
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/filter_chip_group"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="false">
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_all"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="All"
+                            android:checked="true"
+                            app:chipBackgroundColor="#33FFFFFF"
+                            android:textColor="@color/white"
+                            app:chipStrokeWidth="0dp"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_camera"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Camera"
+                            app:chipBackgroundColor="#33FFFFFF"
+                            android:textColor="@color/white"
+                            app:chipStrokeWidth="0dp"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_microphone"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Microphone"
+                            app:chipBackgroundColor="#33FFFFFF"
+                            android:textColor="@color/white"
+                            app:chipStrokeWidth="0dp"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_location"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Location"
+                            app:chipBackgroundColor="#33FFFFFF"
+                            android:textColor="@color/white"
+                            app:chipStrokeWidth="0dp"/>
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_sideloaded"
+                            style="@style/Widget.MaterialComponents.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sideloaded"
+                            app:chipBackgroundColor="#33FFFFFF"
+                            android:textColor="@color/white"
+                            app:chipStrokeWidth="0dp"/>
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_location"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Location"
-                    android:textColor="@color/text"/>
-                    
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_sideloaded"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Sideloaded"
-                    android:textColor="@color/text"/>
-            </com.google.android.material.chip.ChipGroup>
-        </HorizontalScrollView>
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/privacy_apps_list"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:clipToPadding="false"
-            android:paddingBottom="16dp"/>
+            android:layout_marginBottom="32dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#26FFFFFF"
+            app:cardCornerRadius="24dp">
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/privacy_apps_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:padding="8dp"
+                android:overScrollMode="never"/>
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
-
 </FrameLayout>

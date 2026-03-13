@@ -385,8 +385,7 @@ class FeatureTutorialManager(
     private fun scrollToView(targetView: View) {
         targetView.post {
             val scrollView = findVerticalScrollParent(targetView) ?: run {
-                val rect = Rect()
-                targetView.getHitRect(rect)
+                val rect = Rect(0, 0, targetView.width, targetView.height)
                 val rootHeight = activity.findViewById<ViewGroup>(android.R.id.content)?.height ?: 0
                 val centerOffset = (rootHeight / 2) - (targetView.height / 2)
                 rect.top -= centerOffset

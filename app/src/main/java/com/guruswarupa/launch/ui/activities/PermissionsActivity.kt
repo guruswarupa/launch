@@ -7,7 +7,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -15,454 +14,116 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
-import android.view.WindowInsetsController
-import android.view.WindowManager
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.activity.ComponentActivity
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
-import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.guruswarupa.launch.R
-import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class PermissionsActivity : ComponentActivity() {
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
-    private var hasRequestedUsageStats = false
-    private var hasRequestedOverlay = false
     private lateinit var permissionsList: LinearLayout
-    private val permissionToggles = mutableMapOf<String, SwitchCompat>()
 
     companion object {
-        private const val PERMISSION_REQUEST_CODE = 1001
+        private const val REQ_CODE = 1001
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Make status bar and navigation bar transparent BEFORE setContentView
-        
-        window.decorView.systemUiVisibility = 
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        
         setContentView(R.layout.activity_permissions)
-        
-        setupTheme()
+        applyContentInsets()
+        window.decorView.post { makeSystemBarsTransparent() }
 
         permissionsList = findViewById(R.id.permissions_list)
-        findViewById<Button>(R.id.done_button).setOnClickListener {
-            finish()
-        }
-
+        WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
+        
+        findViewById<Button>(R.id.done_button).setOnClickListener { finish() }
         setupPermissionsList()
-    }
-    
-    private fun setupTheme() {
-        val overlay = findViewById<View>(R.id.settings_overlay)
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
-        
-        setupWallpaper()
-        
-        window.decorView.post {
-            makeSystemBarsTransparent(isDarkMode)
-        }
-    }
-    
-    private fun setupWallpaper() {
-        val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        
-        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
-    }
-    
-    private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
     }
 
     private fun setupPermissionsList() {
         permissionsList.removeAllViews()
-        permissionToggles.clear()
+        val items = getPermissionItems()
 
-        data class PermissionItem(
-            val permission: String?,
-            val name: String,
-            val description: String,
-            val isGranted: Boolean,
-            val isSpecial: Boolean = false,
-            val isLauncher: Boolean = false,
-            val isOverlay: Boolean = false,
-            val specialType: String? = null
-        )
-
-        val allPermissions = mutableListOf<PermissionItem>()
-
-        val contactsGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            permission = Manifest.permission.READ_CONTACTS,
-            name = "Contacts",
-            description = "Access your contacts to search and call them",
-            isGranted = contactsGranted
-        ))
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val storageGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                permission = Manifest.permission.READ_MEDIA_IMAGES,
-                name = "Storage (Images)",
-                description = "Access images to set custom wallpapers",
-                isGranted = storageGranted
-            ))
-        } else {
-            val storageGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                permission = Manifest.permission.READ_EXTERNAL_STORAGE,
-                name = "Storage",
-                description = "Access storage to set custom wallpapers",
-                isGranted = storageGranted
-            ))
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val notificationGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                permission = Manifest.permission.POST_NOTIFICATIONS,
-                name = "Notifications",
-                description = "Show notifications in the notifications widget",
-                isGranted = notificationGranted
-            ))
-        }
-
-        val recordAudioGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-        allPermissions.add(PermissionItem(
-            permission = Manifest.permission.RECORD_AUDIO,
-            name = "Microphone",
-            description = "Record audio for voice search functionality",
-            isGranted = recordAudioGranted
-        ))
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val activityRecognitionGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
-            allPermissions.add(PermissionItem(
-                permission = Manifest.permission.ACTIVITY_RECOGNITION,
-                name = "Physical Activity",
-                description = "Track your steps and distance walked",
-                isGranted = activityRecognitionGranted
-            ))
-        }
-
-        val usageStatsGranted = hasUsageStatsPermission()
-        allPermissions.add(PermissionItem(
-            permission = null,
-            name = "Usage Stats",
-            description = "Show app usage time and statistics",
-            isGranted = usageStatsGranted,
-            isSpecial = true,
-            specialType = "USAGE_STATS"
-        ))
-
-        val overlayGranted = Settings.canDrawOverlays(this)
-        allPermissions.add(PermissionItem(
-            permission = null,
-            name = "Display Over Other Apps",
-            description = "Required for Screen Dimmer feature",
-            isGranted = overlayGranted,
-            isOverlay = true
-        ))
-
-        val notificationPolicyGranted = hasNotificationPolicyPermission()
-        allPermissions.add(PermissionItem(
-            permission = null,
-            name = "Notification Policy Access",
-            description = "Manage Do Not Disturb features and notification settings",
-            isGranted = notificationPolicyGranted,
-            isSpecial = true,
-            specialType = "NOTIFICATION_POLICY"
-        ))
-
-        val accessibilityGranted = hasAccessibilityServicePermission()
-        allPermissions.add(PermissionItem(
-            permission = null,
-            name = "Accessibility Service",
-            description = "Enable advanced features like screen lock with double tap and screenshot functionality",
-            isGranted = accessibilityGranted,
-            isSpecial = true,
-            specialType = "ACCESSIBILITY_SERVICE"
-        ))
-
-        val notificationListenerGranted = hasNotificationListenerPermission()
-        allPermissions.add(PermissionItem(
-            permission = null,
-            name = "Notification Access",
-            description = "Read and manage notifications in the notification widget",
-            isGranted = notificationListenerGranted,
-            isSpecial = true,
-            specialType = "NOTIFICATION_LISTENER"
-        ))
-
-        val isDefaultLauncher = isDefaultLauncher()
-        allPermissions.add(PermissionItem(
-            permission = null,
-            name = "Default Launcher",
-            description = "Set this app as your default home launcher",
-            isGranted = isDefaultLauncher,
-            isSpecial = false,
-            isLauncher = true
-        ))
-
-        for (perm in allPermissions) {
-            val itemView = LayoutInflater.from(this).inflate(R.layout.item_permission, permissionsList, false)
-            val nameText = itemView.findViewById<TextView>(R.id.permission_name)
-            val descText = itemView.findViewById<TextView>(R.id.permission_description)
-            val toggle = itemView.findViewById<SwitchCompat>(R.id.permission_switch)
-
-            nameText.text = perm.name
-            descText.text = perm.description
-            toggle.isChecked = perm.isGranted
-            toggle.isEnabled = true
-
-            toggle.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked && !perm.isGranted) {
-                    when {
-                        perm.specialType == "USAGE_STATS" -> {
-                            requestUsageStatsPermission()
-                        }
-                        perm.specialType == "NOTIFICATION_POLICY" -> {
-                            requestNotificationPolicyPermission()
-                        }
-                        perm.specialType == "ACCESSIBILITY_SERVICE" -> {
-                            requestAccessibilityServicePermission()
-                        }
-                        perm.specialType == "NOTIFICATION_LISTENER" -> {
-                            requestNotificationListenerPermission()
-                        }
-                        perm.isLauncher -> {
-                            openDefaultLauncherSettings()
-                        }
-                        perm.isOverlay -> {
-                            requestOverlayPermission()
-                        }
-                        perm.permission != null -> {
-                            ActivityCompat.requestPermissions(
-                                this,
-                                arrayOf(perm.permission),
-                                PERMISSION_REQUEST_CODE
-                            )
-                        }
-                    }
-                } else if (!isChecked && perm.isGranted) {
-                    if (perm.isLauncher) {
-                        openDefaultLauncherSettings()
-                    } else {
-                        try {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.fromParts("package", packageName, null)
-                            }
-                            startActivity(intent)
-                            Toast.makeText(this, "Navigate to Permissions and disable ${perm.name}", Toast.LENGTH_LONG).show()
-                        } catch (_: Exception) {
-                            Toast.makeText(this, "Cannot revoke permissions. Please disable in system settings.", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    toggle.postDelayed({
-                        toggle.isChecked = true
-                    }, 500)
+        for (perm in items) {
+            val view = LayoutInflater.from(this).inflate(R.layout.item_permission, permissionsList, false)
+            view.findViewById<TextView>(R.id.permission_name).text = perm.name
+            view.findViewById<TextView>(R.id.permission_description).text = perm.description
+            val sw = view.findViewById<SwitchCompat>(R.id.permission_switch)
+            sw.isChecked = perm.granted
+            sw.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked && !perm.granted) handlePermissionGrant(perm)
+                else if (!isChecked && perm.granted) {
+                    Toast.makeText(this, "Revoke in system settings", Toast.LENGTH_SHORT).show()
+                    sw.postDelayed({ sw.isChecked = true }, 500)
                 }
             }
-
-            if (perm.permission != null) {
-                permissionToggles[perm.permission] = toggle
-            } else if (perm.specialType != null) {
-                permissionToggles[perm.specialType] = toggle
-            } else if (perm.isLauncher) {
-                permissionToggles["DEFAULT_LAUNCHER"] = toggle
-            } else if (perm.isOverlay) {
-                permissionToggles["OVERLAY"] = toggle
-            }
-
-            permissionsList.addView(itemView)
+            permissionsList.addView(view)
         }
     }
 
-    private fun hasUsageStatsPermission(): Boolean {
-        val appOps = getSystemService(APP_OPS_SERVICE) as AppOpsManager
-        val mode = appOps.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            android.os.Process.myUid(),
-            packageName
-        )
+    private fun getPermissionItems(): List<PermItem> {
+        val list = mutableListOf<PermItem>()
+        list.add(PermItem("Launcher", "Set as default home", isDefaultLauncher(), type = "DEFAULT"))
+        list.add(PermItem("Contacts", "Search & call contacts", check(Manifest.permission.READ_CONTACTS), Manifest.permission.READ_CONTACTS))
+        
+        val storage = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
+        list.add(PermItem("Storage", "Access wallpapers", check(storage), storage))
+        
+        if (Build.VERSION.SDK_INT >= 33) list.add(PermItem("Notifications", "Show widget alerts", check(Manifest.permission.POST_NOTIFICATIONS), Manifest.permission.POST_NOTIFICATIONS))
+        list.add(PermItem("Microphone", "Voice search access", check(Manifest.permission.RECORD_AUDIO), Manifest.permission.RECORD_AUDIO))
+        list.add(PermItem("Usage Stats", "App time tracking", hasUsageStats(), type = "USAGE"))
+        list.add(PermItem("Overlay", "Screen dimming tools", Settings.canDrawOverlays(this), type = "OVERLAY"))
+        list.add(PermItem("Accessibility", "Double tap lock", hasAccessibility(), type = "ACCESSIBILITY"))
+        return list
+    }
+
+    private fun handlePermissionGrant(perm: PermItem) {
+        when(perm.type) {
+            "DEFAULT" -> startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+            "USAGE" -> startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            "OVERLAY" -> startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()))
+            "ACCESSIBILITY" -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            else -> if (perm.perm != null) ActivityCompat.requestPermissions(this, arrayOf(perm.perm), REQ_CODE)
+        }
+    }
+
+    private fun check(p: String) = ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
+    private fun hasUsageStats(): Boolean {
+        val mode = (getSystemService(APP_OPS_SERVICE) as AppOpsManager).checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
         return mode == AppOpsManager.MODE_ALLOWED
     }
-
-    private fun hasNotificationPolicyPermission(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            return notificationManager.isNotificationPolicyAccessGranted
-        }
-        return false
+    private fun hasAccessibility(): Boolean {
+        val services = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+        return services.contains(packageName)
     }
-
-    private fun hasAccessibilityServicePermission(): Boolean {
-        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-            ?: return false
-        
-        val expectedComponentName = ComponentName(this, com.guruswarupa.launch.services.ScreenLockAccessibilityService::class.java)
-        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServices)
-        while (colonSplitter.hasNext()) {
-            val componentNameString = colonSplitter.next()
-            val enabledService = ComponentName.unflattenFromString(componentNameString)
-            if (enabledService != null && enabledService == expectedComponentName) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun hasNotificationListenerPermission(): Boolean {
-        val enabledServices = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-            ?: return false
-        
-        val expectedComponentName = ComponentName(this, com.guruswarupa.launch.services.LaunchNotificationListenerService::class.java)
-        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServices)
-        while (colonSplitter.hasNext()) {
-            val componentNameString = colonSplitter.next()
-            val enabledService = ComponentName.unflattenFromString(componentNameString)
-            if (enabledService != null && enabledService == expectedComponentName) {
-                return true
-            }
-        }
-        return false
-    }
-
-    private fun requestUsageStatsPermission() {
-        try {
-            hasRequestedUsageStats = true
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        } catch (_: Exception) {
-            Toast.makeText(this, "Could not open usage stats settings", Toast.LENGTH_SHORT).show()
-            hasRequestedUsageStats = false
-        }
-    }
-
-    private fun requestNotificationPolicyPermission() {
-        try {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-        } catch (_: Exception) {
-            Toast.makeText(this, "Could not open notification policy settings", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun requestAccessibilityServicePermission() {
-        try {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        } catch (_: Exception) {
-            Toast.makeText(this, "Could not open accessibility settings", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun requestNotificationListenerPermission() {
-        try {
-            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-        } catch (_: Exception) {
-            Toast.makeText(this, "Could not open notification listener settings", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun requestOverlayPermission() {
-        try {
-            hasRequestedOverlay = true
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri())
-            startActivity(intent)
-        } catch (_: Exception) {
-            Toast.makeText(this, "Could not open overlay settings", Toast.LENGTH_SHORT).show()
-            hasRequestedOverlay = false
-        }
-    }
-
     private fun isDefaultLauncher(): Boolean {
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
-        }
-        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        return resolveInfo?.activityInfo?.packageName == packageName
+        val resolve = packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolve?.activityInfo?.packageName == packageName
     }
 
-    private fun openDefaultLauncherSettings() {
-        try {
-            startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-        } catch (_: Exception) {
-            Toast.makeText(this, "Could not open launcher settings", Toast.LENGTH_SHORT).show()
+    private fun applyContentInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            findViewById<View>(R.id.main_layout).setPadding(0, bars.top, 0, bars.bottom)
+            insets
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        
-        if (hasRequestedUsageStats) {
-            hasRequestedUsageStats = false
-            if (hasUsageStatsPermission()) {
-                Toast.makeText(this, "Usage Stats permission granted", Toast.LENGTH_SHORT).show()
-            } else {
-                if (!prefs.getBoolean("usage_stats_permission_denied", false)) {
-                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                        .setTitle("Usage Stats Permission")
-                        .setMessage("Usage Stats permission is required to show app usage time. Would you like to try again?")
-                        .setPositiveButton("Try Again") { _, _ ->
-                            requestUsageStatsPermission()
-                        }
-                        .setNegativeButton("Skip") { _, _ ->
-                            prefs.edit { putBoolean("usage_stats_permission_denied", true) }
-                        }
-                        .show()
-                }
-            }
-        }
-
-        if (hasRequestedOverlay) {
-            hasRequestedOverlay = false
-            if (Settings.canDrawOverlays(this)) {
-                Toast.makeText(this, "Overlay permission granted", Toast.LENGTH_SHORT).show()
-            }
-        }
-        
-        setupPermissionsList()
-        setupWallpaper()
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            for (i in permissions.indices) {
-                val permission = permissions[i]
-                val granted = grantResults[i] == PackageManager.PERMISSION_GRANTED
-                
-                if (granted) {
-                    val permissionName = when (permission) {
-                        Manifest.permission.READ_CONTACTS -> "Contacts"
-                        Manifest.permission.CALL_PHONE -> "Phone Calls"
-                        Manifest.permission.SEND_SMS -> "SMS"
-                        Manifest.permission.READ_EXTERNAL_STORAGE -> "Storage"
-                        Manifest.permission.READ_MEDIA_IMAGES -> "Storage (Images)"
-                        Manifest.permission.POST_NOTIFICATIONS -> "Notifications"
-                        Manifest.permission.RECORD_AUDIO -> "Microphone"
-                        Manifest.permission.ACTIVITY_RECOGNITION -> "Physical Activity"
-                        else -> "Permission"
-                    }
-                    Toast.makeText(this, "$permissionName granted", Toast.LENGTH_SHORT).show()
-                }
-            }
-            setupPermissionsList()
+    private fun makeSystemBarsTransparent() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
         }
     }
+
+    override fun onResume() { super.onResume(); setupPermissionsList() }
+
+    data class PermItem(val name: String, val description: String, val granted: Boolean, val perm: String? = null, val type: String = "NORMAL")
 }
