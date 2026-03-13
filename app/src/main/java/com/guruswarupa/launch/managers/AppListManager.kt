@@ -173,6 +173,11 @@ class AppListManager(
             result.add(app)
         }
         
+        // If in grid mode, ensure each section fills its last row with empty items
+        // to maintain proper alignment if separators are used.
+        // However, the current request suggests "arrange the apps properly" which 
+        // usually means ensuring separators don't mess up the grid flow.
+        
         return result
     }
 

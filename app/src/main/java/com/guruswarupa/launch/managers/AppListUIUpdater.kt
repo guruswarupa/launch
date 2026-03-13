@@ -46,33 +46,25 @@ class AppListUIUpdater(
         appListLoader.onAdapterNeedsUpdate = { isGrid ->
             this.isGridMode = isGrid
             val columns = activity.getPreferredGridColumns()
-            if (recyclerView.layoutManager !is GridLayoutManager && isGrid) {
+            
+            val layoutManager = if (isGrid) {
                 val gridLayoutManager = GridLayoutManager(activity, columns)
                 gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
                     override fun getSpanSize(position: Int): Int {
-                        return if (adapter?.getItemViewType(position) == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                        val viewType = adapter?.getItemViewType(position)
+                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR) {
                             columns
                         } else {
                             1
                         }
                     }
                 }
-                recyclerView.layoutManager = gridLayoutManager
-            } else if (recyclerView.layoutManager !is LinearLayoutManager && !isGrid) {
-                recyclerView.layoutManager = LinearLayoutManager(activity)
-            } else if (recyclerView.layoutManager is GridLayoutManager && isGrid) {
-                val gm = recyclerView.layoutManager as GridLayoutManager
-                gm.spanCount = columns
-                gm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-                    override fun getSpanSize(position: Int): Int {
-                        return if (adapter?.getItemViewType(position) == AppAdapter.VIEW_TYPE_SEPARATOR) {
-                            columns
-                        } else {
-                            1
-                        }
-                    }
-                }
+                gridLayoutManager
+            } else {
+                LinearLayoutManager(activity)
             }
+            
+            recyclerView.layoutManager = layoutManager
             
             if (adapter != null) {
                 adapter?.updateViewMode(isGrid)

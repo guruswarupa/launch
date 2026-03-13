@@ -44,6 +44,7 @@ class FastScroller @JvmOverloads constructor(
     private var trackX = 0f
     private var letterSpacing = 0f
     private var selectedIndex = -1
+    private var scrollIndex = -1
     private var isSliding = false
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -99,6 +100,79 @@ class FastScroller @JvmOverloads constructor(
 
     fun setRecyclerView(rv: RecyclerView) {
         recyclerView = rv
+        rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (!isSliding) {
+                    updateScrollIndex()
+                }
+            }
+        })
+        
+        // Initial sync if the recycler view is already populated
+        rv.post { updateScrollIndex() }
+    }
+
+    private fun updateScrollIndex() {
+        val rv = recyclerView ?: return
+        val layoutManager = rv.layoutManager as? LinearLayoutManager ?: return
+        val firstVisiblePos = layoutManager.findFirstVisibleItemPosition()
+        if (firstVisiblePos == RecyclerView.NO_POSITION) return
+
+        val adapter = rv.adapter as? AppAdapter ?: return
+        val appList = adapter.appList
+        if (firstVisiblePos >= appList.size) return
+
+        val app = appList[firstVisiblePos]
+        val packageName = app.activityInfo.packageName
+        
+        var newIndex = -1
+        
+        // Find if we are in favorites section or past it
+        var favoritesSeparatorIndex = -1
+        for (i in appList.indices) {
+            if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
+                appList[i].activityInfo.name == "favorites_separator") {
+                favoritesSeparatorIndex = i
+                break
+            }
+        }
+
+        if (favoritesSeparatorIndex == -1 || firstVisiblePos < favoritesSeparatorIndex) {
+            // In favorites section or favorites not present
+            newIndex = 0 // "★"
+        } else {
+            // Past favorites, find the correct letter
+            // Scan backwards from firstVisiblePos to find the nearest letter separator
+            for (i in firstVisiblePos downTo favoritesSeparatorIndex + 1) {
+                val currentApp = appList[i]
+                if (currentApp.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
+                    val separatorId = currentApp.activityInfo.name ?: ""
+                    if (separatorId.startsWith("letter_separator_")) {
+                        val letter = separatorId.removePrefix("letter_separator_")
+                        newIndex = alphabet.indexOf(letter)
+                        break
+                    }
+                }
+            }
+            
+            // If no separator found above firstVisiblePos, use the label of the first visible app
+            if (newIndex == -1) {
+                val label = adapter.getAppLabel(firstVisiblePos)
+                if (label.isNotEmpty()) {
+                    val firstChar = label[0].uppercaseChar()
+                    newIndex = if (firstChar.isLetter()) {
+                        alphabet.indexOf(firstChar.toString())
+                    } else {
+                        alphabet.indexOf("#")
+                    }
+                }
+            }
+        }
+
+        if (newIndex != -1 && newIndex != scrollIndex) {
+            scrollIndex = newIndex
+            invalidate()
+        }
     }
 
     fun setTextColor(color: Int) {
@@ -203,15 +277,17 @@ class FastScroller @JvmOverloads constructor(
         for (i in alphabet.indices) {
             val y = trackTop + letterSpacing * i
             val isSelected = i == selectedIndex && isSliding
+            val isCurrentScroll = !isSliding && i == scrollIndex
             
-            val paintToUse = if (isSelected) selectedLetterPaint else letterPaint
+            val paintToUse = if (isSelected || isCurrentScroll) selectedLetterPaint else letterPaint
+            
+            val alpha = if (isSelected || isCurrentScroll) 255 else (fadeAlpha * 0.3f).toInt()
+            paintToUse.alpha = alpha
             
             if (alphabet[i] == "★") {
-                paintToUse.alpha = if (isSelected) 255 else (fadeAlpha * 0.8f).toInt()
-                paintToUse.textSize = (if (isSelected) 18f else 12f) * density
+                paintToUse.textSize = (if (isSelected || isCurrentScroll) 18f else 12f) * density
             } else {
-                paintToUse.alpha = if (isSelected) 255 else (fadeAlpha * 0.3f).toInt()
-                paintToUse.textSize = (if (isSelected) 14f else 9f) * density
+                paintToUse.textSize = (if (isSelected || isCurrentScroll) 14f else 9f) * density
             }
             
             if (isSelected) {
@@ -293,6 +369,7 @@ class FastScroller @JvmOverloads constructor(
                 isSliding = false
                 selectedIndex = -1
                 animateWaveProgress(0f)
+                updateScrollIndex() // Sync back to scroll position after touch
                 parent?.requestDisallowInterceptTouchEvent(false)
                 return true
             }
