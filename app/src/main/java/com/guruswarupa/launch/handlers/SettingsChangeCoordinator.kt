@@ -64,7 +64,18 @@ class SettingsChangeCoordinator(
         if (newIsGridMode != currentIsGridMode && adapter != null) {
             // Update layout manager
             views.recyclerView.layoutManager = if (newIsGridMode) {
-                GridLayoutManager(activity, desiredColumns)
+                val gridLayoutManager = GridLayoutManager(activity, desiredColumns)
+                gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        val viewType = adapter.getItemViewType(position)
+                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                            desiredColumns
+                        } else {
+                            1
+                        }
+                    }
+                }
+                gridLayoutManager
             } else {
                 LinearLayoutManager(activity)
             }
@@ -79,7 +90,22 @@ class SettingsChangeCoordinator(
             val layoutManager = views.recyclerView.layoutManager as? GridLayoutManager
             if (layoutManager != null && layoutManager.spanCount != desiredColumns) {
                 layoutManager.spanCount = desiredColumns
+                // Update span size lookup for the new column count
+                layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        val viewType = adapter?.getItemViewType(position)
+                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                            desiredColumns
+                        } else {
+                            1
+                        }
+                    }
+                }
                 layoutManager.requestLayout()
+                // Force a reload to ensure separators are correctly placed in the new grid
+                if (activity.isAppListLoaderInitialized()) {
+                    activity.appListLoader.loadApps(forceRefresh = false)
+                }
             }
         }
         
