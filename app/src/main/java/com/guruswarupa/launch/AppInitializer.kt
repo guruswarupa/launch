@@ -3,6 +3,8 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
@@ -27,6 +29,11 @@ class AppInitializer(private val activity: MainActivity) {
     fun initialize(savedInstanceState: Bundle?) {
         with(activity) {
             sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            
+            // Lock orientation to portrait for phones only
+            if (!isTablet()) {
+                requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
             
             setContentView(R.layout.activity_main)
             
@@ -298,5 +305,12 @@ class AppInitializer(private val activity: MainActivity) {
             )
             resultRegistry.setDependencies(deps)
         }
+    }
+
+    /**
+     * Checks if the device is a tablet based on screen size.
+     */
+    private fun isTablet(): Boolean {
+        return activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK >= Configuration.SCREENLAYOUT_SIZE_LARGE
     }
 }
