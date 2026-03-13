@@ -476,6 +476,13 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
     }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.updatePageWidth()
+        }
+    }
     
 
     
@@ -496,6 +503,7 @@ class MainActivity : FragmentActivity() {
         lifecycleManager.setGestureHandler(gestureHandler)
         lifecycleManager.setAppDockManager(appDockManager)
         lifecycleManager.setAdapter(adapter)
+        lifecycleManager.setAppList(appList)
         lifecycleManager.setAppList(appList)
         lifecycleManager.setAppListLoader(appListLoader)
         lifecycleManager.setWidgetManager(widgetManager)

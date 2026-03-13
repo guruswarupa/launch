@@ -18,6 +18,5 @@ daemon/
 native/
 wrapper/
 .tmp/
-android/
 kotlin-profile/
 jdks/

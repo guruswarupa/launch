@@ -7,6 +7,7 @@
     <dimen name="widget_elevation">4dp</dimen>
     <dimen name="dock_padding_horizontal">16dp</dimen>
     <dimen name="dock_padding_vertical">8dp</dimen>
+    <dimen name="min_drawer_width">320dp</dimen>
     <!-- Onboarding responsive dimensions -->
     <dimen name="onboarding_recycler_height">400dp</dimen>
     <dimen name="onboarding_recycler_min_height">300dp</dimen>

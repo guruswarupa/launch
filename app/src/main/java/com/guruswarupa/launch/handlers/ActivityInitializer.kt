@@ -123,7 +123,8 @@ class ActivityInitializer(
         val isGridMode = viewPreference == "grid"
 
         if (isGridMode) {
-            recyclerView.layoutManager = GridLayoutManager(activity, 4)
+            val columns = activity.resources.getInteger(R.integer.app_grid_columns)
+            recyclerView.layoutManager = GridLayoutManager(activity, columns)
         } else {
             recyclerView.layoutManager = LinearLayoutManager(activity)
         }
@@ -215,12 +216,15 @@ class ActivityInitializer(
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
+            
+            // Reverted: Each page should take full width as per user feedback
+            val targetWidth = drawerWidth
 
             // Left drawer
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
-                params.width = drawerWidth
+                params.width = targetWidth
                 it.layoutParams = params
 
                 val header = activity.findViewById<LinearLayout>(R.id.widget_settings_header)
@@ -253,7 +257,7 @@ class ActivityInitializer(
             val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
             rightDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
-                params.width = drawerWidth
+                params.width = targetWidth
                 it.layoutParams = params
             }
         }

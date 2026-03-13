@@ -234,7 +234,7 @@ class ScreenPagerManager(
         )
     }
 
-    private fun updatePageWidth() {
+    fun updatePageWidth() {
         val width = drawerLayout.width.takeIf { it > 0 } ?: activity.resources.displayMetrics.widthPixels
         if (width == pageWidth) return
 
