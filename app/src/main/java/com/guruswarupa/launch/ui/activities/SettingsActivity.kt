@@ -18,6 +18,8 @@ import android.text.method.LinkMovementMethod
 import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
@@ -85,10 +87,15 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Enable edge-to-edge for transparent system bars with white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
+        
         setContentView(R.layout.activity_settings)
         applyContentInsets()
-        
-        window.decorView.post { makeSystemBarsTransparent() }
 
         setupWallpaper()
         setupAppearanceSection()
@@ -121,17 +128,6 @@ class SettingsActivity : ComponentActivity() {
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
-        applyWallpaperBlur(wallpaperImageView)
-    }
-
-    private fun applyWallpaperBlur(imageView: ImageView) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
-            if (blurLevel > 0) {
-                val radius = (blurLevel / 2f).coerceAtLeast(1f)
-                imageView.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(radius, radius, android.graphics.Shader.TileMode.CLAMP))
-            } else imageView.setRenderEffect(null)
-        }
     }
 
     private fun setupAppearanceSection() {
@@ -243,7 +239,7 @@ class SettingsActivity : ComponentActivity() {
                 if (f) {
                     prefs.edit { putInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, p) }
                     notifySettingsChanged()
-                    applyWallpaperBlur(findViewById(R.id.wallpaper_background))
+                    WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
                 }
             }
             override fun onStartTrackingTouch(s: SeekBar?) {}
@@ -695,14 +691,6 @@ class SettingsActivity : ComponentActivity() {
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             findViewById<ScrollView>(R.id.settings_scroll_view).setPadding(0, bars.top, 0, bars.bottom)
             insets
-        }
-    }
-
-    private fun makeSystemBarsTransparent() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-            window.statusBarColor = Color.TRANSPARENT
-            window.navigationBarColor = Color.TRANSPARENT
         }
     }
 

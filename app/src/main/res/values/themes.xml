@@ -1,12 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Launch" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Make status bar and navigation bar transparent -->
+        <!-- Primary colors -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/surfaceColor</item>
+        <item name="colorOnSurface">@color/text</item>
+        <item name="colorOnBackground">@color/text</item>
+        
+        <!-- Text colors -->
+        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColor">@color/text</item>
+        
+        <!-- Status bar - always dark for light content -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        
         <!-- Enable edge-to-edge display -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowTranslucentStatus">false</item>
         <item name="android:windowTranslucentNavigation">false</item>
-        <!-- Show system wallpaper behind the window to avoid black flash during load -->
+        <!-- Show system wallpaper behind the window -->
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
@@ -20,10 +39,5 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowShowWallpaper">true</item>
-        <!-- Make status bar and navigation bar transparent from the start -->
-        <!-- Enable edge-to-edge display -->
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:windowTranslucentStatus">false</item>
-        <item name="android:windowTranslucentNavigation">false</item>
     </style>
 </resources>

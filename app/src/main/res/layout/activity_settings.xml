@@ -18,7 +18,7 @@
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#33000000"/>
+        android:background="#66000000"/>
 
     <!-- Content Container -->
     <ScrollView
@@ -100,10 +100,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -317,10 +317,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -431,10 +431,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -620,10 +620,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -696,10 +696,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -781,10 +781,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1046,13 +1046,27 @@
                             android:gravity="center_vertical"
                             android:paddingVertical="12dp">
 
-                            <TextView
+                            <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="Extra Screen Dimmer"
-                                android:textColor="@color/white"
-                                android:textSize="15sp"/>
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Extra Screen Dimmer"
+                                    android:textColor="@color/white"
+                                    android:textSize="15sp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="System level overlay"
+                                    android:textColor="@color/white"
+                                    android:alpha="0.5"
+                                    android:textSize="11sp"/>
+                            </LinearLayout>
 
                             <androidx.appcompat.widget.SwitchCompat
                                 android:id="@+id/screen_dimmer_switch"
@@ -1194,10 +1208,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1291,10 +1305,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1415,10 +1429,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -1593,10 +1607,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="32dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"

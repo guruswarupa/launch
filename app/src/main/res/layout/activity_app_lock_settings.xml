@@ -16,7 +16,7 @@
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#33000000"/>
+        android:background="#66000000"/>
 
     <ScrollView
         android:id="@+id/settings_scroll_view"
@@ -61,10 +61,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -88,7 +88,7 @@
                             android:layout_height="22dp"
                             android:src="@drawable/ic_vault_icon"
                             app:tint="@color/white"
-                            android:alpha="0.8"/>
+                            android:alpha="1.0"/>
 
                         <TextView
                             android:layout_width="0dp"
@@ -201,10 +201,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#26FFFFFF"
+                app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
                 app:strokeWidth="1dp"
-                app:strokeColor="#20FFFFFF">
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -228,7 +228,7 @@
                             android:layout_height="22dp"
                             android:src="@drawable/ic_apps_grid"
                             app:tint="@color/white"
-                            android:alpha="0.8"/>
+                            android:alpha="1.0"/>
 
                         <TextView
                             android:layout_width="0dp"

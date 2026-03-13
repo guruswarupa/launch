@@ -16,6 +16,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -36,9 +38,15 @@ class PermissionsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Enable edge-to-edge for transparent system bars with white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
+        
         setContentView(R.layout.activity_permissions)
         applyContentInsets()
-        window.decorView.post { makeSystemBarsTransparent() }
 
         permissionsList = findViewById(R.id.permissions_list)
         WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
@@ -111,15 +119,8 @@ class PermissionsActivity : ComponentActivity() {
     private fun applyContentInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            findViewById<View>(R.id.main_layout).setPadding(0, bars.top, 0, bars.bottom)
+            findViewById<View>(R.id.permissions_scroll_view)?.setPadding(0, bars.top, 0, bars.bottom)
             insets
-        }
-    }
-
-    private fun makeSystemBarsTransparent() {
-        if (Build.VERSION.SDK_INT >= 23) {
-            window.statusBarColor = Color.TRANSPARENT
-            window.navigationBarColor = Color.TRANSPARENT
         }
     }
 
