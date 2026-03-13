@@ -1,11 +1,14 @@
 package com.guruswarupa.launch.managers
 
+import android.annotation.SuppressLint
 import androidx.appcompat.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.SharedPreferences
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -23,9 +26,10 @@ import com.guruswarupa.launch.ui.activities.EncryptedVaultActivity
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 import java.util.Locale
+import kotlin.math.abs
 
 class AppDockManager(
-    activity: MainActivity,
+    private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout,
     packageManager: PackageManager,
@@ -284,6 +288,7 @@ class AppDockManager(
         }
     }
     
+    @SuppressLint("ClickableViewAccessibility")
     private fun ensureWorkspaceToggle() {
         if (appDock.findViewWithTag<ImageView>("workspace_toggle") == null) {
             val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
@@ -297,10 +302,51 @@ class AppDockManager(
                     marginStart = 8
                 }
                 setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { toggleWorkspace() }
-                setOnLongClickListener {
-                    showWorkspaceSettings()
-                    true
+                
+                // Add swipe gestures
+                val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onDown(e: MotionEvent): Boolean = true
+
+                    override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                        if (e1 == null) return false
+                        val diffY = e2.y - e1.y
+                        val diffX = e2.x - e1.x
+                        
+                        // Vertical swipe detection
+                        if (abs(diffY) > abs(diffX)) {
+                            if (abs(diffY) > 50 && abs(velocityY) > 100) {
+                                if (diffY < 0) {
+                                    // Swipe Up - Cycle workspace
+                                    cycleWorkspaces()
+                                } else {
+                                    // Swipe Down - Turn off workspace
+                                    turnOffWorkspace()
+                                }
+                                return true
+                            }
+                        }
+                        return false
+                    }
+
+                    override fun onSingleTapUp(e: MotionEvent): Boolean {
+                        toggleWorkspace()
+                        return true
+                    }
+
+                    override fun onLongPress(e: MotionEvent) {
+                        showWorkspaceSettings()
+                    }
+                })
+
+                setOnTouchListener { v, event ->
+                    if (gestureDetector.onTouchEvent(event)) {
+                        true
+                    } else {
+                        if (event.action == MotionEvent.ACTION_UP) {
+                            v.performClick()
+                        }
+                        false
+                    }
                 }
             }
             // Find the position after settings button
@@ -350,6 +396,7 @@ class AppDockManager(
                     workspaceManager.setActiveWorkspaceId(null)
                     updateWorkspaceIcon()
                     refreshAppsForWorkspace()
+                    scrollToTop()
                     Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
                 } else {
                     // Select a workspace
@@ -357,11 +404,53 @@ class AppDockManager(
                     workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
                     updateWorkspaceIcon()
                     refreshAppsForWorkspace()
+                    scrollToTop()
                     Toast.makeText(context, "Workspace \'${selectedWorkspace.name}\' activated", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun cycleWorkspaces() {
+        val workspaces = workspaceManager.getAllWorkspaces()
+        if (workspaces.isEmpty()) {
+            Toast.makeText(context, "No workspaces available. create one.", Toast.LENGTH_SHORT).show()
+            showWorkspaceSettings()
+            return
+        }
+        
+        val activeId = workspaceManager.getActiveWorkspaceId()
+        val currentIndex = workspaces.indexOfFirst { it.id == activeId }
+        
+        // Cycle to next workspace
+        val nextIndex = (currentIndex + 1) % workspaces.size
+        val selectedWorkspace = workspaces[nextIndex]
+        
+        workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
+        updateWorkspaceIcon()
+        refreshAppsForWorkspace()
+        scrollToTop()
+        Toast.makeText(context, "Workspace \'${selectedWorkspace.name}\' activated", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun turnOffWorkspace() {
+        if (workspaceManager.isWorkspaceModeActive()) {
+            workspaceManager.setActiveWorkspaceId(null)
+            updateWorkspaceIcon()
+            refreshAppsForWorkspace()
+            scrollToTop()
+            Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun scrollToTop() {
+        if (activity.views.isRecyclerViewInitialized()) {
+            // Use a slight delay to ensure list has started updating
+            activity.views.recyclerView.postDelayed({
+                activity.views.recyclerView.scrollToPosition(0)
+            }, 100)
+        }
     }
     
     private fun showWorkspaceSettings() {
@@ -377,7 +466,7 @@ class AppDockManager(
     }
     
     private fun refreshAppsForWorkspace() {
-        (context as? MainActivity)?.refreshAppsForWorkspace()
+        activity.refreshAppsForWorkspace()
     }
     
     fun isWorkspaceModeActive(): Boolean {
@@ -644,20 +733,20 @@ class AppDockManager(
     }
 
     private fun refreshAppsForFocusMode() {
-        (context as? MainActivity)?.refreshAppsForFocusMode()
+        activity.refreshAppsForFocusMode()
     }
     
     /**
      * Lock/unlock the left drawer for focus mode
      */
     fun lockDrawerForFocusMode(lock: Boolean) {
-        val mainActivity = context as? MainActivity
+        val mainActivity = activity
         
         if (lock) {
-            mainActivity?.setWidgetsPageLocked(true)
-            mainActivity?.openHomePage(animated = true)
+            mainActivity.setWidgetsPageLocked(true)
+            mainActivity.openHomePage(animated = true)
         } else {
-            mainActivity?.setWidgetsPageLocked(false)
+            mainActivity.setWidgetsPageLocked(false)
         }
     }
 
