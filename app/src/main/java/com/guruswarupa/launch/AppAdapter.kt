@@ -57,8 +57,11 @@ class AppAdapter(
     }
 
     companion object {
-        private const val VIEW_TYPE_LIST = 0
-        private const val VIEW_TYPE_GRID = 1
+        const val VIEW_TYPE_LIST = 0
+        const val VIEW_TYPE_GRID = 1
+        const val VIEW_TYPE_SEPARATOR = 2
+        const val SEPARATOR_PACKAGE = "com.guruswarupa.launch.SEPARATOR"
+        
         private val SPECIAL_PACKAGE_NAMES = setOf(
             "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result",
             "file_result", "settings_result", "system_settings_result"
@@ -160,6 +163,7 @@ class AppAdapter(
         if (position < 0 || position >= appList.size) return ""
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
+        if (packageName == SEPARATOR_PACKAGE) return ""
         if (packageName in SPECIAL_PACKAGE_NAMES) {
             return appInfo.activityInfo.name ?: ""
         }
@@ -167,7 +171,7 @@ class AppAdapter(
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val appIcon: com.google.android.material.imageview.ShapeableImageView = view.findViewById(R.id.app_icon)
+        val appIcon: com.google.android.material.imageview.ShapeableImageView? = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
         val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
         var lastClickTime = 0L
@@ -181,6 +185,7 @@ class AppAdapter(
             val metadataCache = activity.cacheManager.getMetadataCache()
             for (app in newItems) {
                 val packageName = app.activityInfo.packageName
+                if (packageName == SEPARATOR_PACKAGE) continue
                 val cachedMetadata = metadataCache[packageName]
                 if (cachedMetadata != null && !labelCache.containsKey(packageName)) {
                     labelCache[packageName] = cachedMetadata.label
@@ -198,7 +203,7 @@ class AppAdapter(
             
             if (isFirstLoad && newItems.isNotEmpty()) {
                 itemsRendered = newItems.size
-                executor.execute { preloadIcons(newItems) }
+                executor.execute { preloadIcons(newItems.filter { it.activityInfo.packageName != SEPARATOR_PACKAGE }) }
             }
         }
     }
@@ -210,7 +215,12 @@ class AppAdapter(
         override fun getOldListSize(): Int = oldList.size
         override fun getNewListSize(): Int = newList.size
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].activityInfo.packageName == newList[newItemPosition].activityInfo.packageName
+            val oldItem = oldList[oldItemPosition]
+            val newItem = newList[newItemPosition]
+            if (oldItem.activityInfo.packageName == SEPARATOR_PACKAGE && newItem.activityInfo.packageName == SEPARATOR_PACKAGE) {
+                return oldItem.activityInfo.name == newItem.activityInfo.name
+            }
+            return oldItem.activityInfo.packageName == newItem.activityInfo.packageName
         }
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
             val oldItem = oldList[oldItemPosition]
@@ -239,9 +249,10 @@ class AppAdapter(
     
     private fun submitIconLoadTask(app: ResolveInfo, priority: Int, holder: ViewHolder? = null, position: Int = -1) {
         val packageName = app.activityInfo.packageName
+        if (packageName == SEPARATOR_PACKAGE) return
         
         if (packageName in SPECIAL_PACKAGE_NAMES || iconCache.containsKey(packageName)) {
-            if (holder != null && iconCache.containsKey(packageName)) {
+            if (holder != null && holder.appIcon != null && iconCache.containsKey(packageName)) {
                 val icon = iconCache[packageName]
                 (context as? Activity)?.runOnUiThread {
                     if (holder.bindingAdapterPosition == position) {
@@ -259,7 +270,7 @@ class AppAdapter(
                     val icon = app.loadIcon(activity.packageManager)
                     iconCache[packageName] = icon
                     
-                    if (holder != null) {
+                    if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
                             if (holder.bindingAdapterPosition == position) {
                                 holder.appIcon.setImageDrawable(icon)
@@ -278,15 +289,24 @@ class AppAdapter(
         val appsToPreload = try {
             ArrayList(appList.subList(startPosition, minOf(endPosition, size)))
         } catch (_: Exception) { return }
-        for (app in appsToPreload) { submitIconLoadTask(app, PRIORITY_MEDIUM) }
+        for (app in appsToPreload) { 
+            if (app.activityInfo.packageName != SEPARATOR_PACKAGE) {
+                submitIconLoadTask(app, PRIORITY_MEDIUM) 
+            }
+        }
     }
 
     override fun getItemViewType(position: Int): Int {
+        if (appList[position].activityInfo.packageName == SEPARATOR_PACKAGE) return VIEW_TYPE_SEPARATOR
         return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val layoutId = if (viewType == VIEW_TYPE_GRID) R.layout.app_item_grid else R.layout.app_item
+        val layoutId = when (viewType) {
+            VIEW_TYPE_SEPARATOR -> R.layout.item_app_separator
+            VIEW_TYPE_GRID -> R.layout.app_item_grid
+            else -> R.layout.app_item
+        }
         val view = LayoutInflater.from(parent.context).inflate(layoutId, parent, false)
         TypographyManager.applyToView(view)
         return ViewHolder(view)
@@ -297,18 +317,24 @@ class AppAdapter(
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
 
+        if (packageName == SEPARATOR_PACKAGE) {
+            return
+        }
+
         // Apply icon shape style programmatically
-        holder.appIcon.shapeAppearanceModel = getShapeAppearanceModel()
+        holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
         
         // Apply icon size
         val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
-        val params = holder.appIcon.layoutParams
-        params.width = sizeInPx
-        params.height = sizeInPx
-        holder.appIcon.layoutParams = params
+        val params = holder.appIcon?.layoutParams
+        if (params != null) {
+            params.width = sizeInPx
+            params.height = sizeInPx
+            holder.appIcon.layoutParams = params
+        }
 
         holder.itemView.background = null
-        holder.appIcon.background = null
+        holder.appIcon?.background = null
         holder.itemView.elevation = 0f
 
         holder.appName?.visibility = View.VISIBLE
@@ -319,9 +345,9 @@ class AppAdapter(
                 val contactName = appInfo.activityInfo.name
                 val cachedPhoto = contactPhotoCache[contactName]
                 if (cachedPhoto != null) {
-                    holder.appIcon.setImageDrawable(cachedPhoto)
+                    holder.appIcon?.setImageDrawable(cachedPhoto)
                 } else {
-                    holder.appIcon.setImageResource(R.drawable.ic_person)
+                    holder.appIcon?.setImageResource(R.drawable.ic_person)
                     executor.execute {
                         try {
                             val photoUri = getPhotoUriForContact(contactName)
@@ -332,7 +358,7 @@ class AppAdapter(
                                 if (drawable != null) {
                                     contactPhotoCache[contactName] = drawable
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.bindingAdapterPosition == position) holder.appIcon.setImageDrawable(drawable)
+                                        if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(drawable)
                                     }
                                 }
                             }
@@ -349,15 +375,15 @@ class AppAdapter(
             "play_store_search" -> {
                 val cachedIcon = specialAppIconCache["com.android.vending"]
                 if (cachedIcon != null) {
-                    holder.appIcon.setImageDrawable(cachedIcon)
+                    holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
                     executor.execute {
                         try {
                             val icon = activity.packageManager.getApplicationIcon("com.android.vending")
                             specialAppIconCache["com.android.vending"] = icon
                             (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) holder.appIcon.setImageDrawable(icon)
+                                if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
                             }
                         } catch (_: Exception) {}
                     }
@@ -373,15 +399,15 @@ class AppAdapter(
             "maps_search" -> {
                 val cachedIcon = specialAppIconCache["com.google.android.apps.maps"]
                 if (cachedIcon != null) {
-                    holder.appIcon.setImageDrawable(cachedIcon)
+                    holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
                     executor.execute {
                         try {
                             val icon = activity.packageManager.getApplicationIcon("com.google.android.apps.maps")
                             specialAppIconCache["com.google.android.apps.maps"] = icon
                             (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) holder.appIcon.setImageDrawable(icon)
+                                if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
                             }
                         } catch (_: Exception) {}
                     }
@@ -406,23 +432,23 @@ class AppAdapter(
                 val cachedIcon = cachedRevanced ?: cachedYouTube
                 
                 if (cachedIcon != null) {
-                    holder.appIcon.setImageDrawable(cachedIcon)
+                    holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
                     executor.execute {
                         try {
                             try {
                                 val icon = activity.packageManager.getApplicationIcon("app.revanced.android.youtube")
                                 specialAppIconCache["app.revanced.android.youtube"] = icon
                                 (context as? Activity)?.runOnUiThread {
-                                    if (holder.bindingAdapterPosition == position) holder.appIcon.setImageDrawable(icon)
+                                    if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
                                 }
                             } catch (_: Exception) {
                                 try {
                                     val icon = activity.packageManager.getApplicationIcon("com.google.android.youtube")
                                     specialAppIconCache["com.google.android.youtube"] = icon
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.bindingAdapterPosition == position) holder.appIcon.setImageDrawable(icon)
+                                        if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
                                     }
                                 } catch (_: Exception) {}
                             }
@@ -454,7 +480,7 @@ class AppAdapter(
             }
 
             "browser_search" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_browser)
+                holder.appIcon?.setImageResource(R.drawable.ic_browser)
                 holder.appName?.text = activity.getString(R.string.search_in_browser, appInfo.activityInfo.name)
                 holder.itemView.setOnClickListener {
                     val engine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
@@ -474,7 +500,7 @@ class AppAdapter(
             }
 
             "settings_result" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_settings)
+                holder.appIcon?.setImageResource(R.drawable.ic_settings)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
@@ -485,7 +511,7 @@ class AppAdapter(
             }
             
             "system_settings_result" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_settings)
+                holder.appIcon?.setImageResource(R.drawable.ic_settings)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
@@ -496,7 +522,7 @@ class AppAdapter(
             }
 
             "file_result" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_file)
+                holder.appIcon?.setImageResource(R.drawable.ic_file)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val filePath = appInfo.activityInfo.nonLocalizedLabel.toString()
@@ -516,7 +542,7 @@ class AppAdapter(
             }
 
             "math_result" -> {
-                holder.appIcon.setImageResource(R.drawable.ic_calculator)
+                holder.appIcon?.setImageResource(R.drawable.ic_calculator)
                 holder.appName?.text = appInfo.activityInfo.name
             }
 
@@ -542,10 +568,10 @@ class AppAdapter(
 
                 val cachedIcon = iconCache[packageName]
                 if (cachedIcon != null) {
-                    holder.appIcon.setImageDrawable(cachedIcon)
-                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
+                    holder.appIcon?.setImageDrawable(cachedIcon)
+                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
                 } else {
-                    holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
                     submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
                 }
                 

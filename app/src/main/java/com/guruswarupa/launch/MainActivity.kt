@@ -94,7 +94,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var widgetLifecycleCoordinator: WidgetLifecycleCoordinator
     lateinit var favoriteAppManager: FavoriteAppManager
     internal lateinit var hiddenAppManager: HiddenAppManager
-    internal var isShowAllAppsMode = false
     internal lateinit var widgetManager: WidgetManager
     internal lateinit var resultRegistry: MainActivityResultRegistry
     internal lateinit var featureTutorialManager: FeatureTutorialManager
@@ -142,7 +141,6 @@ class MainActivity : FragmentActivity() {
         appTimerManager = AppTimerManager(this)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
-        isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
         featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
         
         // Initialize new modular managers
@@ -273,16 +271,15 @@ class MainActivity : FragmentActivity() {
                 if (query.isNotEmpty()) {
                     // Hide header and dock when there's any character in search
                     activityInitializer.setHeaderVisibility(false)
-                    views.fastScroller.visibility = View.GONE
                 } else {
                     // Show header and dock when search is empty
                     activityInitializer.setHeaderVisibility(true)
-                    updateFastScrollerVisibility()
                     // Scroll to top when search is cleared with a slight delay to ensure layout is ready
                     handler.postDelayed({
                         views.recyclerView.scrollToPosition(0)
                     }, 100)
                 }
+                updateFastScrollerVisibility()
             }
             
             override fun afterTextChanged(s: android.text.Editable?) {}
@@ -290,17 +287,13 @@ class MainActivity : FragmentActivity() {
     }
 
     /**
-     * Updates FastScroller visibility based on view mode and search query
+     * Updates FastScroller visibility. Now always visible if apps are present.
      */
     internal fun updateFastScrollerVisibility() {
         if (!::sharedPreferences.isInitialized || !views.isSearchBoxInitialized() || !::appList.isInitialized) return
         
-        val viewPreference = sharedPreferences.getString("view_preference", "list")
-        val isGridMode = viewPreference == "grid"
-        val query = views.searchBox.text.toString().trim()
-        
-        // Show fast scroller only in list mode when not searching
-        if (!isGridMode && query.isEmpty() && appList.isNotEmpty()) {
+        // Fast scroller is now requested to be always visible
+        if (appList.isNotEmpty()) {
             views.fastScroller.visibility = View.VISIBLE
         } else {
             views.fastScroller.visibility = View.GONE

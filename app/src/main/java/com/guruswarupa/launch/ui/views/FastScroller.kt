@@ -3,22 +3,18 @@ package com.guruswarupa.launch.ui.views
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.BlurMaskFilter
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.LinearGradient
-import android.graphics.Paint
-import android.graphics.Path
-import android.graphics.Shader
-import android.graphics.Typeface
+import android.graphics.*
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.OvershootInterpolator
 import androidx.core.graphics.ColorUtils
 import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.AppAdapter
+import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.models.Constants
 
@@ -28,21 +24,19 @@ class FastScroller @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".map { it.toString() }
+    private val alphabet = listOf("★") + ('A'..'Z').map { it.toString() } + "#"
     private var recyclerView: RecyclerView? = null
 
     private val density = resources.displayMetrics.density
-    private val trackStroke = 2f * density
+    private val trackStroke = 1f * density
     private val maxWaveDepth = 80f * density
-    private val maxWaveHeight = 180f * density
-    private val previewRadius = 74f * density
-    private val dotRadius = 3f * density
-    private val extraVerticalPadding = 12f * density
+    private val maxWaveHeight = 160f * density
+    private val previewRadius = 38f * density
+    private val extraVerticalPadding = 48f * density
     private var currentColor = Color.WHITE
 
-    private var currentAlpha = 0f
+    private var currentAlpha = 1f // Always visible
     private var waveProgress = 0f
-    private var alphaAnimator: ValueAnimator? = null
     private var waveAnimator: ValueAnimator? = null
 
     private var trackTop = 0f
@@ -53,7 +47,7 @@ class FastScroller @JvmOverloads constructor(
     private var isSliding = false
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ColorUtils.setAlphaComponent(currentColor, 230)
+        color = ColorUtils.setAlphaComponent(currentColor, 20)
         strokeWidth = trackStroke
         strokeCap = Paint.Cap.ROUND
     }
@@ -61,28 +55,23 @@ class FastScroller @JvmOverloads constructor(
     private val letterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = currentColor
         textAlign = Paint.Align.CENTER
-        textSize = 16f * density
+        textSize = 9f * density
     }
 
     private val selectedLetterPaint = Paint(letterPaint).apply {
-        textSize = 22f * density
+        textSize = 14f * density
         isFakeBoldText = true
     }
 
-    private val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = currentColor
-        style = Paint.Style.FILL
-    }
-
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ColorUtils.setAlphaComponent(currentColor, 80)
+        color = ColorUtils.setAlphaComponent(currentColor, 10)
         style = Paint.Style.STROKE
-        strokeWidth = trackStroke * 5
-        maskFilter = BlurMaskFilter(16f * density, BlurMaskFilter.Blur.NORMAL)
+        strokeWidth = trackStroke * 6
+        maskFilter = BlurMaskFilter(10f * density, BlurMaskFilter.Blur.NORMAL)
     }
 
     private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ColorUtils.setAlphaComponent(currentColor, 60)
+        color = ColorUtils.setAlphaComponent(currentColor, 40)
         style = Paint.Style.FILL
     }
 
@@ -92,14 +81,12 @@ class FastScroller @JvmOverloads constructor(
 
     private val previewPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = currentColor
-        alpha = 30
         style = Paint.Style.FILL
     }
 
     private val previewTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = currentColor
         textAlign = Paint.Align.CENTER
-        textSize = 72f * density
+        textSize = 30f * density
         isFakeBoldText = true
     }
 
@@ -116,15 +103,13 @@ class FastScroller @JvmOverloads constructor(
 
     fun setTextColor(color: Int) {
         currentColor = color
-        trackPaint.color = ColorUtils.setAlphaComponent(color, 230)
+        trackPaint.color = ColorUtils.setAlphaComponent(color, 20)
         letterPaint.color = color
         selectedLetterPaint.color = color
-        dotPaint.color = color
-        glowPaint.color = ColorUtils.setAlphaComponent(color, 80)
-        haloPaint.color = ColorUtils.setAlphaComponent(color, 60)
+        glowPaint.color = ColorUtils.setAlphaComponent(color, 10)
+        haloPaint.color = ColorUtils.setAlphaComponent(color, 40)
         previewPaint.color = color
-        previewPaint.alpha = 30
-        previewTextPaint.color = color
+        previewTextPaint.color = if (ColorUtils.calculateLuminance(color) > 0.5) Color.BLACK else Color.WHITE
         updateWaveShader()
         invalidate()
     }
@@ -166,22 +151,11 @@ class FastScroller @JvmOverloads constructor(
         }
     }
 
-    private fun animateAlpha(to: Float) {
-        alphaAnimator?.cancel()
-        alphaAnimator = ValueAnimator.ofFloat(currentAlpha, to).apply {
-            duration = 220
-            addUpdateListener {
-                currentAlpha = it.animatedValue as Float
-                invalidate()
-            }
-            start()
-        }
-    }
-
     private fun animateWaveProgress(to: Float) {
         waveAnimator?.cancel()
         waveAnimator = ValueAnimator.ofFloat(waveProgress, to).apply {
-            duration = 250
+            duration = 400
+            interpolator = OvershootInterpolator(1.6f)
             addUpdateListener {
                 waveProgress = it.animatedValue as Float
                 invalidate()
@@ -192,7 +166,7 @@ class FastScroller @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        trackX = width - paddingEnd - trackStroke - 4f * density
+        trackX = width - paddingEnd - 8f * density
         trackTop = paddingTop + extraVerticalPadding
         trackBottom = height - paddingBottom - extraVerticalPadding
         if (trackBottom <= trackTop) {
@@ -205,16 +179,11 @@ class FastScroller @JvmOverloads constructor(
 
     private fun updateWaveShader() {
         val startX = (trackX - maxWaveDepth).coerceAtLeast(0f)
-        val startColor = ColorUtils.setAlphaComponent(letterPaint.color, 220)
-        val endColor = ColorUtils.setAlphaComponent(letterPaint.color, 0)
+        val startColor = ColorUtils.setAlphaComponent(currentColor, 100)
+        val endColor = ColorUtils.setAlphaComponent(currentColor, 0)
         val shader = LinearGradient(
-            startX,
-            0f,
-            trackX,
-            0f,
-            startColor,
-            endColor,
-            Shader.TileMode.CLAMP
+            startX, 0f, trackX, 0f,
+            startColor, endColor, Shader.TileMode.CLAMP
         )
         wavePaint.shader = shader
     }
@@ -224,26 +193,34 @@ class FastScroller @JvmOverloads constructor(
         if (trackBottom <= trackTop || alphabet.isEmpty()) return
 
         val fadeAlpha = (currentAlpha * 255).toInt().coerceIn(0, 255)
-        glowPaint.alpha = (fadeAlpha * 0.45f).toInt().coerceIn(0, 255)
-        canvas.drawLine(trackX, trackTop, trackX, trackBottom, glowPaint)
-        trackPaint.alpha = (fadeAlpha * 0.75f).toInt()
+        
+        // Very subtle track line
         canvas.drawLine(trackX, trackTop, trackX, trackBottom, trackPaint)
 
-        dotPaint.alpha = (fadeAlpha * 0.45f).toInt()
         val baseOffset = (letterPaint.descent() + letterPaint.ascent()) / 2
+        val textX = trackX - 16f * density
+        
         for (i in alphabet.indices) {
             val y = trackTop + letterSpacing * i
-            canvas.drawCircle(trackX + trackStroke * 4, y, dotRadius, dotPaint)
-            if (i == selectedIndex && isSliding) {
-                haloPaint.alpha = (fadeAlpha * 0.4f).toInt().coerceIn(0, 255)
-                val haloRadius = 26f * density + (waveProgress * 12f * density)
-                canvas.drawCircle(trackX - trackStroke * 4, y, haloRadius, haloPaint)
+            val isSelected = i == selectedIndex && isSliding
+            
+            val paintToUse = if (isSelected) selectedLetterPaint else letterPaint
+            
+            if (alphabet[i] == "★") {
+                paintToUse.alpha = if (isSelected) 255 else (fadeAlpha * 0.8f).toInt()
+                paintToUse.textSize = (if (isSelected) 18f else 12f) * density
+            } else {
+                paintToUse.alpha = if (isSelected) 255 else (fadeAlpha * 0.3f).toInt()
+                paintToUse.textSize = (if (isSelected) 14f else 9f) * density
             }
-            val paintToUse = if (i == selectedIndex && isSliding) selectedLetterPaint else letterPaint
-            val letterAlphaFactor = if (i == selectedIndex && isSliding) 1f else 0.65f
-            paintToUse.alpha = (fadeAlpha * letterAlphaFactor).toInt().coerceIn(0, 255)
+            
+            if (isSelected) {
+                haloPaint.alpha = (fadeAlpha * 0.2f).toInt()
+                canvas.drawCircle(textX, y, 16f * density * waveProgress, haloPaint)
+            }
+            
             val letterY = y - baseOffset
-            canvas.drawText(alphabet[i], trackX - trackStroke * 4, letterY, paintToUse)
+            canvas.drawText(alphabet[i], textX, letterY, paintToUse)
         }
 
         drawWave(canvas, fadeAlpha)
@@ -255,17 +232,13 @@ class FastScroller @JvmOverloads constructor(
         val centerY = (trackTop + letterSpacing * selectedIndex).coerceIn(trackTop, trackBottom)
         val depth = maxWaveDepth * waveProgress
         val height = maxWaveHeight * waveProgress
-        wavePaint.alpha = (fadeAlpha * 0.7f).toInt().coerceIn(0, 255)
+        wavePaint.alpha = (fadeAlpha * 0.25f).toInt()
         wavePath.reset()
-        // Draw the smooth wave that stretches left from the track while dragging.
         wavePath.moveTo(trackX, centerY - height / 2f)
         wavePath.cubicTo(
-            trackX - depth,
-            centerY - height / 2f,
-            trackX - depth,
-            centerY + height / 2f,
-            trackX,
-            centerY + height / 2f
+            trackX - depth, centerY - height / 2f,
+            trackX - depth, centerY + height / 2f,
+            trackX, centerY + height / 2f
         )
         wavePath.lineTo(trackX, centerY - height / 2f)
         wavePath.close()
@@ -276,11 +249,19 @@ class FastScroller @JvmOverloads constructor(
         if (selectedIndex < 0 || waveProgress <= 0f) return
         val centerY = (trackTop + letterSpacing * selectedIndex).coerceIn(trackTop, trackBottom)
         val radius = previewRadius * waveProgress
-        val bubbleX = (trackX - maxWaveDepth - radius * 0.25f).coerceAtLeast(radius)
-        // Bubble preview follows the selected letter and grows with the drag intensity.
-        previewPaint.alpha = (fadeAlpha * 0.4f).toInt().coerceIn(0, 255)
+        val bubbleX = trackX - 115f * density * waveProgress
+        
+        // Soft shadow
+        val shadowPaint = Paint(previewPaint).apply {
+            maskFilter = BlurMaskFilter(16f * density, BlurMaskFilter.Blur.NORMAL)
+            alpha = (fadeAlpha * 0.1f).toInt()
+        }
+        canvas.drawCircle(bubbleX, centerY, radius + 4f * density, shadowPaint)
+        
+        previewPaint.alpha = 255
         canvas.drawCircle(bubbleX, centerY, radius, previewPaint)
-        previewTextPaint.alpha = fadeAlpha
+        
+        previewTextPaint.alpha = 255
         val textOffset = (previewTextPaint.descent() + previewTextPaint.ascent()) / 2
         canvas.drawText(alphabet[selectedIndex], bubbleX, centerY - textOffset, previewTextPaint)
     }
@@ -291,13 +272,12 @@ class FastScroller @JvmOverloads constructor(
         
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                // Only respond to touches on the rightmost part (track area) to avoid interfering with other views
-                val touchThreshold = width - 40f * density
+                val touchThreshold = width - 64f * density
                 if (x < touchThreshold) return false
                 
                 isSliding = true
-                animateAlpha(1f)
                 animateWaveProgress(1f)
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 parent?.requestDisallowInterceptTouchEvent(true)
                 handleTouch(y)
                 return true
@@ -312,7 +292,6 @@ class FastScroller @JvmOverloads constructor(
             MotionEvent.ACTION_CANCEL -> {
                 isSliding = false
                 selectedIndex = -1
-                animateAlpha(0f)
                 animateWaveProgress(0f)
                 parent?.requestDisallowInterceptTouchEvent(false)
                 return true
@@ -323,10 +302,11 @@ class FastScroller @JvmOverloads constructor(
 
     private fun handleTouch(y: Float) {
         if (trackBottom <= trackTop) return
-        var index = ((y - trackTop) / letterSpacing).toInt().coerceIn(0, alphabet.size - 1)
+        val index = ((y - trackTop) / letterSpacing).toInt().coerceIn(0, alphabet.size - 1)
         if (index != selectedIndex) {
             selectedIndex = index
             scrollToLetter(alphabet[index])
+            performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
         }
         invalidate()
     }
@@ -335,16 +315,48 @@ class FastScroller @JvmOverloads constructor(
         val adapter = recyclerView?.adapter as? AppAdapter ?: return
         val appList = adapter.appList
         var targetPosition = -1
-        for (i in appList.indices) {
-            val label = adapter.getAppLabel(i)
-            if (letter == "#") {
-                if (label.isNotEmpty() && !label[0].isLetter()) {
-                    targetPosition = i
+        
+        if (letter == "★") {
+            targetPosition = 0
+        } else {
+            // Find the start of the normal (non-favorite) list section.
+            // We search from after the 'favorites_separator'.
+            var searchStartIndex = 0
+            for (i in appList.indices) {
+                if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
+                    appList[i].activityInfo.name == "favorites_separator") {
+                    searchStartIndex = i + 1
                     break
                 }
-            } else if (label.startsWith(letter, ignoreCase = true)) {
-                targetPosition = i
-                break
+            }
+            
+            for (i in searchStartIndex until appList.size) {
+                val app = appList[i]
+                val packageName = app.activityInfo.packageName
+                
+                if (packageName == AppAdapter.SEPARATOR_PACKAGE) {
+                    val separatorId = app.activityInfo.name ?: ""
+                    if (letter == "#") {
+                        if (separatorId == "letter_separator_#") {
+                            targetPosition = i
+                            break
+                        }
+                    } else if (separatorId == "letter_separator_$letter") {
+                        targetPosition = i
+                        break
+                    }
+                } else {
+                    val label = adapter.getAppLabel(i)
+                    if (letter == "#") {
+                        if (label.isNotEmpty() && !label[0].isLetter()) {
+                            targetPosition = i
+                            break
+                        }
+                    } else if (label.startsWith(letter, ignoreCase = true)) {
+                        targetPosition = i
+                        break
+                    }
+                }
             }
         }
 

@@ -42,7 +42,6 @@ class AppDockManager(
     private lateinit var workspaceToggle: ImageView
     private lateinit var apkShareButton: ImageView
     private lateinit var vaultButton: ImageView
-    private lateinit var favoriteToggle: ImageView
     private val pomodoroManager: PomodoroManager
     private var isFocusMode: Boolean = false
     private val res = context.resources
@@ -186,11 +185,10 @@ class AppDockManager(
     private fun refreshDock() {
         appDock.removeAllViews()
         ensureSettingsButton()       // 1. Settings
-        ensureFavoriteToggle()      // 2. Favorite/All apps toggle (after settings)
-        ensureWorkspaceToggle()      // 3. Workspace toggle
-        ensureFocusModeToggle()      // 4. Focus mode
-        ensureApkShareButton()       // 5. Share APK icon
-        ensureVaultButton()          // 6. Encrypted Vault
+        ensureWorkspaceToggle()      // 2. Workspace toggle
+        ensureFocusModeToggle()      // 3. Focus mode
+        ensureApkShareButton()       // 4. Share APK icon
+        ensureVaultButton()          // 5. Encrypted Vault
         updateDockVisibility()
     }
     
@@ -201,9 +199,6 @@ class AppDockManager(
         }
         if (::workspaceToggle.isInitialized) {
             updateWorkspaceIcon()
-        }
-        if (::favoriteToggle.isInitialized) {
-            updateFavoriteToggleIcon()
         }
         if (::apkShareButton.isInitialized) {
             apkShareButton.setImageResource(R.drawable.ic_share)
@@ -220,9 +215,7 @@ class AppDockManager(
     }
 
     fun refreshFavoriteToggle() {
-        if (::favoriteToggle.isInitialized) {
-            updateFavoriteToggleIcon()
-        }
+        // No-op as favorite toggle is removed
     }
 
 
@@ -275,7 +268,7 @@ class AppDockManager(
             focusContainer.addView(focusTimerText)
 
             // Find the position after workspace toggle
-            var insertIndex = 3
+            var insertIndex = 2
             for (i in 0 until appDock.childCount) {
                 val child = appDock.getChildAt(i)
                 if (child.tag == "workspace_toggle") {
@@ -310,15 +303,13 @@ class AppDockManager(
                     true
                 }
             }
-            // Find the position after favorite toggle (or after settings if no favorite toggle)
-            var insertIndex = 2
+            // Find the position after settings button
+            var insertIndex = 1
             for (i in 0 until appDock.childCount) {
                 val child = appDock.getChildAt(i)
-                if (child.tag == "favorite_toggle") {
+                if (child.tag == "settings_button") {
                     insertIndex = i + 1
                     break
-                } else if (child.tag == "settings_button") {
-                    insertIndex = i + 1
                 }
             }
             appDock.addView(workspaceToggle, insertIndex)
@@ -383,8 +374,6 @@ class AppDockManager(
         workspaceToggle.setImageResource(
             if (isWorkspaceActive) R.drawable.ic_workspace_active else R.drawable.ic_workspace_inactive
         )
-        // Hide/show favorite toggle based on workspace mode
-        updateFavoriteToggleIcon()
     }
     
     private fun refreshAppsForWorkspace() {
@@ -425,85 +414,6 @@ class AppDockManager(
             // Add at the beginning (index 0)
             appDock.addView(settingsButton, 0)
         }
-    }
-
-    private fun ensureFavoriteToggle() {
-        if (appDock.findViewWithTag<ImageView>("favorite_toggle") == null) {
-            favoriteToggle = ImageView(context).apply {
-                tag = "favorite_toggle"
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    marginStart = 8
-                }
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { toggleFavoriteMode() }
-                setOnLongClickListener {
-                    val mode = if (favoriteAppManager.isShowAllAppsMode()) "All Apps" else "Favorites"
-                    Toast.makeText(context, "Show: $mode", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            updateFavoriteToggleIcon()
-            
-            // Find the index after settings button
-            var insertIndex = 2
-            for (i in 0 until appDock.childCount) {
-                val child = appDock.getChildAt(i)
-                if (child.tag == "settings_button") {
-                    insertIndex = i + 1
-                    break
-                }
-            }
-            appDock.addView(favoriteToggle, insertIndex)
-        }
-    }
-
-    private fun updateFavoriteToggleIcon() {
-        if (!::favoriteToggle.isInitialized) {
-            return
-        }
-        
-        // Hide favorite toggle if workspace mode is active
-        if (workspaceManager.isWorkspaceModeActive()) {
-            favoriteToggle.visibility = View.GONE
-            return
-        }
-        
-        // Show favorite toggle even if no favorites are set
-        favoriteToggle.visibility = View.VISIBLE
-        val isShowAllMode = favoriteAppManager.isShowAllAppsMode()
-        // Show star if favorites are shown (clicking will switch to all apps)
-        // Show grid if all apps are shown (clicking will switch to favorites)
-        favoriteToggle.setImageResource(
-            if (isShowAllMode) R.drawable.ic_apps_grid else R.drawable.ic_star
-        )
-    }
-
-    private fun toggleFavoriteMode() {
-        val favorites = favoriteAppManager.getFavoriteApps()
-        if (favorites.isEmpty()) {
-            Toast.makeText(context, "No favorite apps set", Toast.LENGTH_SHORT).show()
-            // Even if no favorites, we allow toggling to show empty state or handle the mode switch
-        }
-        
-        val currentMode = favoriteAppManager.isShowAllAppsMode()
-        val newMode = !currentMode
-        favoriteAppManager.setShowAllAppsMode(newMode)
-        
-        // Update MainActivity's isShowAllAppsMode variable
-        (context as? MainActivity)?.let { activity ->
-            activity.isShowAllAppsMode = newMode
-        }
-        
-        updateFavoriteToggleIcon()
-        
-        // Optimize: Filter existing list instead of reloading everything
-        (context as? MainActivity)?.filterAppsWithoutReload()
-        
-        val modeText = if (newMode) "All Apps" else "Favorites"
-        Toast.makeText(context, "Showing: $modeText", Toast.LENGTH_SHORT).show()
     }
 
     private fun saveFocusMode() {
@@ -758,9 +668,6 @@ class AppDockManager(
             when (child.tag) {
                 "focus_mode_container", "workspace_toggle" -> {
                     child.visibility = View.VISIBLE
-                }
-                "favorite_toggle" -> {
-                    updateFavoriteToggleIcon()
                 }
                 "add_icon", "apk_share_button", "vault_button" -> {
                     child.visibility = if (isFocusMode) View.GONE else View.VISIBLE

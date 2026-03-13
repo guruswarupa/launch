@@ -3,7 +3,6 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
@@ -151,7 +150,7 @@ class AppInitializer(private val activity: MainActivity) {
             appListUIUpdater = AppListUIUpdater(
                 activity, views.recyclerView, if (activity.isAdapterInitialized()) activity.adapter else null,
                 appList, fullAppList, appListLoader, appDockManager, appListManager,
-                handler, backgroundExecutor, views.searchBox
+                backgroundExecutor, views.searchBox
             )
             appListUIUpdater.setupCallbacks()
 

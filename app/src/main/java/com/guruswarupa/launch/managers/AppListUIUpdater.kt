@@ -1,7 +1,6 @@
 package com.guruswarupa.launch.managers
 
 import android.content.pm.ResolveInfo
-import android.os.Handler
 import android.util.Log
 import android.view.View
 import android.widget.AutoCompleteTextView
@@ -26,10 +25,10 @@ class AppListUIUpdater(
     private val appListLoader: AppListLoader,
     private val appDockManager: AppDockManager,
     private val appListManager: AppListManager,
-    private val handler: Handler,
     private val backgroundExecutor: Executor,
     private val searchBox: AutoCompleteTextView
 ) {
+    private var isGridMode: Boolean = false
 
     fun setAdapter(adapter: AppAdapter) {
         this.adapter = adapter
@@ -40,19 +39,45 @@ class AppListUIUpdater(
      */
     fun setupCallbacks() {
         appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
-            updateAppListUI(sortedList, filteredList, isFinal)
+            // Inject separators before updating UI.
+            val listWithSeparators = appListManager.addSeparators(sortedList, isGridMode)
+            updateAppListUI(listWithSeparators, filteredList, isFinal)
         }
-        appListLoader.onAdapterNeedsUpdate = { isGridMode ->
-            if (recyclerView.layoutManager !is GridLayoutManager && isGridMode) {
-                recyclerView.layoutManager = GridLayoutManager(activity, activity.getPreferredGridColumns())
-            } else if (recyclerView.layoutManager !is LinearLayoutManager && !isGridMode) {
+        appListLoader.onAdapterNeedsUpdate = { isGrid ->
+            this.isGridMode = isGrid
+            val columns = activity.getPreferredGridColumns()
+            if (recyclerView.layoutManager !is GridLayoutManager && isGrid) {
+                val gridLayoutManager = GridLayoutManager(activity, columns)
+                gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        return if (adapter?.getItemViewType(position) == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                            columns
+                        } else {
+                            1
+                        }
+                    }
+                }
+                recyclerView.layoutManager = gridLayoutManager
+            } else if (recyclerView.layoutManager !is LinearLayoutManager && !isGrid) {
                 recyclerView.layoutManager = LinearLayoutManager(activity)
+            } else if (recyclerView.layoutManager is GridLayoutManager && isGrid) {
+                val gm = recyclerView.layoutManager as GridLayoutManager
+                gm.spanCount = columns
+                gm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        return if (adapter?.getItemViewType(position) == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                            columns
+                        } else {
+                            1
+                        }
+                    }
+                }
             }
             
             if (adapter != null) {
-                adapter?.updateViewMode(isGridMode)
+                adapter?.updateViewMode(isGrid)
             } else {
-                val newAdapter = AppAdapter(activity, appList, searchBox, isGridMode, activity)
+                val newAdapter = AppAdapter(activity, appList, searchBox, isGrid, activity)
                 adapter = newAdapter
                 recyclerView.adapter = newAdapter
             }
@@ -77,19 +102,15 @@ class AppListUIUpdater(
         }
         
         // 2. Update the adapter with the new items.
-        // AppAdapter.updateAppList will handle the DiffUtil comparison and update 
-        // the shared 'appList' instance contents on the UI thread.
         adapter?.updateAppList(newAppList)
         
         recyclerView.visibility = View.VISIBLE
         
-        // Optimization #8: Only update fast scroller visibility on final load
         if (isFinal) {
             activity.updateFastScrollerVisibility()
         }
         
         // 3. Update AppSearchManager with new app data.
-        // Pass both lists to ensure search manager has correct data for all search modes.
         activity.updateAppSearchManager(newFullAppList, newAppList)
     }
 
@@ -97,7 +118,6 @@ class AppListUIUpdater(
      * Filters apps without reloading from package manager.
      */
     fun filterAppsWithoutReload() {
-        // Optimized: Filter existing list without reloading from package manager
         if (fullAppList.isEmpty()) {
             appListLoader.loadApps(forceRefresh = false, fullAppList, appList, adapter)
             return
@@ -109,18 +129,15 @@ class AppListUIUpdater(
                     val focusMode = appListManager.getFocusMode()
                     val workspaceMode = appListManager.getWorkspaceMode()
                     
-                    // Take a snapshot to avoid ConcurrentModificationException
                     val currentFullList = ArrayList(fullAppList)
-                    
-                    // Optimization #3: Combined single-pass filter
                     val filteredApps = appListManager.filterAndPrepareApps(currentFullList, focusMode, workspaceMode)
-                    
-                    // Finally sort
                     val sortedFinalList = appListManager.sortAppsAlphabetically(filteredApps)
                     
-                    // Update UI on main thread
+                    // Inject separators.
+                    val listWithSeparators = appListManager.addSeparators(sortedFinalList, isGridMode)
+                    
                     activity.runOnUiThread {
-                        updateAppListUI(sortedFinalList, currentFullList, isFinal = true)
+                        updateAppListUI(listWithSeparators, currentFullList, isFinal = true)
                         appDockManager.refreshFavoriteToggle()
                     }
                 } catch (e: Exception) {

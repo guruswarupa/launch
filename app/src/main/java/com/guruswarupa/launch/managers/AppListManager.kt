@@ -1,6 +1,7 @@
 package com.guruswarupa.launch.managers
 
 import android.content.pm.ResolveInfo
+import android.content.pm.ActivityInfo
 
 import com.guruswarupa.launch.managers.AppDockManager
 import com.guruswarupa.launch.managers.FavoriteAppManager
@@ -19,18 +20,14 @@ class AppListManager(
 ) {
     
     /**
-     * Combined single-pass filter that applies all filtering (mode, hidden, favorites) in one iteration.
-     * This avoids iterating the list multiple times.
+     * Combined single-pass filter that applies all filtering (mode, hidden) in one iteration.
+     * Favorites are no longer filtered out; they are shown at the top.
      */
     fun filterAndPrepareApps(
         apps: List<ResolveInfo>,
         focusMode: Boolean,
         workspaceMode: Boolean
     ): List<ResolveInfo> {
-        // Pre-compute favorites state once
-        val currentShowAllMode = if (!workspaceMode) favoriteAppManager.isShowAllAppsMode() else true
-        val favoriteApps = if (!workspaceMode && !currentShowAllMode) favoriteAppManager.getFavoriteApps() else null
-        
         return apps.filter { app ->
             val packageName = app.activityInfo.packageName
             val activityName = app.activityInfo.name
@@ -50,9 +47,6 @@ class AppListManager(
             
             // Workspace mode filter
             if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) return@filter false
-            
-            // Favorites filter (only when not in workspace mode and not showing all apps)
-            if (favoriteApps != null && !favoriteApps.contains(packageName)) return@filter false
             
             true
         }
@@ -90,33 +84,33 @@ class AppListManager(
     }
     
     /**
-     * Applies favorites filter if workspace mode is not active.
+     * Note: This is now a no-op as we show all apps.
      */
     fun applyFavoritesFilter(
         apps: List<ResolveInfo>,
         workspaceMode: Boolean
     ): List<ResolveInfo> {
-        return if (workspaceMode) {
-            // Show all workspace apps, ignore favorites
-            apps
-        } else {
-            // Always read fresh from manager to avoid stale state
-            val currentShowAllMode = favoriteAppManager.isShowAllAppsMode()
-            favoriteAppManager.filterApps(apps, currentShowAllMode)
-        }
+        return apps
     }
     
     /**
      * Sorts apps alphabetically by name using metadata cache when available.
-     * Apps starting with numbers or '#' are placed at the end.
+     * Favorites are placed at the very top.
+     * Apps starting with numbers or '#' are placed at the end of the alphabetical section.
      */
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
         val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
-        return apps.sortedBy {
-            val label = metadataCache[it.activityInfo.packageName]?.label?.lowercase() 
-                ?: it.activityInfo.packageName.lowercase()
+        val favorites = favoriteAppManager.getFavoriteApps()
+        
+        return apps.sortedWith(compareBy<ResolveInfo> { app ->
+            // First priority: Favorites (0 for favorite, 1 for rest)
+            if (favorites.contains(app.activityInfo.packageName)) 0 else 1
+        }.thenBy { app ->
+            // Second priority: Alphabetical/Numbers
+            val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
+                ?: app.activityInfo.packageName.lowercase()
             getSortKey(label)
-        }
+        })
     }
 
     /**
@@ -130,6 +124,64 @@ class AppListManager(
         } else {
             label
         }
+    }
+
+    /**
+     * Injects separator ResolveInfo objects into the list.
+     * Separates favorites from normal apps and normal apps by starting letter.
+     */
+    fun addSeparators(apps: List<ResolveInfo>, isGridMode: Boolean): List<ResolveInfo> {
+        if (apps.isEmpty()) return apps
+        
+        val favorites = favoriteAppManager.getFavoriteApps()
+        val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
+        val result = mutableListOf<ResolveInfo>()
+        
+        var hasFavorites = false
+        for (app in apps) {
+            if (favorites.contains(app.activityInfo.packageName)) {
+                hasFavorites = true
+                break
+            }
+        }
+        
+        var lastLetter: Char? = null
+        var isAfterFavorites = false
+        
+        for (app in apps) {
+            val packageName = app.activityInfo.packageName
+            val isFavorite = favorites.contains(packageName)
+            
+            // Transition from favorites to normal apps
+            if (hasFavorites && !isFavorite && !isAfterFavorites) {
+                result.add(createSeparatorInfo("favorites_separator"))
+                isAfterFavorites = true
+            }
+            
+            // Between normal apps with different starting letters
+            if (!isFavorite) {
+                val label = metadataCache[packageName]?.label ?: packageName
+                val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
+                val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
+                
+                if (lastLetter != null && lastLetter != effectiveLetter) {
+                    result.add(createSeparatorInfo("letter_separator_$effectiveLetter"))
+                }
+                lastLetter = effectiveLetter
+            }
+            
+            result.add(app)
+        }
+        
+        return result
+    }
+
+    private fun createSeparatorInfo(id: String): ResolveInfo {
+        val ri = ResolveInfo()
+        ri.activityInfo = ActivityInfo()
+        ri.activityInfo.packageName = "com.guruswarupa.launch.SEPARATOR"
+        ri.activityInfo.name = id
+        return ri
     }
     
     /**

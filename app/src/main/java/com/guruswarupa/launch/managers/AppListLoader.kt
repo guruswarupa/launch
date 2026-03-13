@@ -72,9 +72,6 @@ class AppListLoader(
     fun loadApps(forceRefresh: Boolean = false) {
         if (activity.isFinishing || activity.isDestroyed) return
         
-        // Sync isShowAllAppsMode with the manager to ensure consistency
-        activity.isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
-        
         val adapter = if (activity.isAdapterInitialized()) activity.adapter else null
         loadApps(forceRefresh, activity.fullAppList, activity.appList, adapter)
     }
@@ -222,11 +219,9 @@ class AppListLoader(
                     // STEP 2: Sort using cached metadata for instant sorted display
                     // This ensures all apps are shown, just sorted using cache (fast)
                     val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
-                    val initiallySorted = finalAppList.sortedBy { app ->
-                        val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
-                            ?: app.activityInfo.packageName.lowercase()
-                        appListManager.getSortKey(label)
-                    }
+                    
+                    // Use sorting with favorites at the top
+                    val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Show sorted list immediately (using cache for sorting)
                     handler.post {
@@ -262,12 +257,12 @@ class AppListLoader(
                             try {
                                 // Use cached metadata, load missing ones on-demand
                                 val labelCache = mutableMapOf<String, String>()
-                                val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
+                                val metadataCacheInner = cacheManager?.getMetadataCache() ?: emptyMap()
                                 
                                 // Load all labels (use cache when available)
                                 finalAppList.forEach { app ->
                                     val packageName = app.activityInfo.packageName
-                                    val cached = metadataCache[packageName]
+                                    val cached = metadataCacheInner[packageName]
                                     if (cached != null) {
                                         labelCache[packageName] = cached.label.lowercase()
                                     } else {
@@ -289,11 +284,8 @@ class AppListLoader(
                                     }
                                 }
                                 
-                                // Final sort with all labels loaded (more accurate than cache-only sort)
-                                val sortedApps = finalAppList.sortedBy { app ->
-                                    val label = labelCache[app.activityInfo.packageName] ?: app.activityInfo.packageName.lowercase()
-                                    appListManager.getSortKey(label)
-                                }
+                                // Final sort with all labels loaded
+                                val sortedApps = appListManager.sortAppsAlphabetically(finalAppList)
                                 
                                 // Save updated metadata cache
                                 cacheManager?.saveAppMetadataToCache(cacheManager.getMetadataCache())
