@@ -3,18 +3,15 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.WallpaperManager
-import android.app.admin.DevicePolicyManager
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 
 // Import moved managers
@@ -27,7 +24,6 @@ import com.guruswarupa.launch.core.ShareManager
 
 import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.handlers.*
-import com.guruswarupa.launch.services.*
 import com.guruswarupa.launch.models.MainActivityViews
 import com.guruswarupa.launch.models.Constants
 
@@ -59,7 +55,6 @@ class MainActivity : FragmentActivity() {
     // Modular managers
     internal lateinit var activityInitializer: ActivityInitializer
     val views: MainActivityViews get() = activityInitializer.views
-    val drawerLayout: DrawerLayout get() = views.drawerLayout
 
     internal lateinit var appList: MutableList<ResolveInfo>
     internal lateinit var adapter: AppAdapter
@@ -104,7 +99,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var resultRegistry: MainActivityResultRegistry
     internal lateinit var featureTutorialManager: FeatureTutorialManager
     internal var voiceCommandHandler: VoiceCommandHandler? = null
-    private var searchActive = false
 
     // New modular managers
     internal lateinit var appLauncher: AppLauncher
@@ -233,8 +227,7 @@ class MainActivity : FragmentActivity() {
         broadcastReceiverManager.registerReceivers()
     }
     
-
-    
+    @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
         try {
@@ -266,40 +259,6 @@ class MainActivity : FragmentActivity() {
 
         // Setup search box listener to show/hide top widget
         setupSearchBoxListener()
-    }
-    
-
-    
-    /**
-     * Attempts to turn off the screen. 
-     * Prioritizes Accessibility Service (Android P+) to allow biometric unlock.
-     * Falls back to Device Admin for older versions.
-     */
-    private fun lockScreen() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            if (permissionManager.isAccessibilityServiceEnabled()) {
-                val locked = ScreenLockAccessibilityService.instance?.lockScreen() ?: false
-                if (!locked) {
-                    Toast.makeText(this, "Failed to lock using accessibility service", Toast.LENGTH_SHORT).show()
-                }
-                return
-            } else {
-                permissionManager.requestAccessibilityPermission()
-                return
-            }
-        }
-
-        // Fallback for pre-Android P
-        if (permissionManager.isDeviceAdminActive()) {
-            val devicePolicyManager = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
-            try {
-                devicePolicyManager.lockNow()
-            } catch (e: Exception) {
-                Toast.makeText(this, "Error locking screen: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            permissionManager.requestDeviceAdminPermission()
-        }
     }
     
     /**
@@ -459,8 +418,6 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    // Gesture exclusion methods moved to GestureHandler
-
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -482,8 +439,6 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-
-    
     /**
      * Initializes LifecycleManager with all dependencies.
      * Only sets properties that are already initialized.
@@ -501,7 +456,6 @@ class MainActivity : FragmentActivity() {
         lifecycleManager.setGestureHandler(gestureHandler)
         lifecycleManager.setAppDockManager(appDockManager)
         lifecycleManager.setAdapter(adapter)
-        lifecycleManager.setAppList(appList)
         lifecycleManager.setAppList(appList)
         lifecycleManager.setAppListLoader(appListLoader)
         lifecycleManager.setWidgetManager(widgetManager)
@@ -581,16 +535,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    fun isWidgetsPageOpen(): Boolean {
-        return ::screenPagerManager.isInitialized &&
-            screenPagerManager.isPageOpen(ScreenPagerManager.Page.LEFT)
-    }
-
-    fun isWallpaperPageOpen(): Boolean {
-        return ::screenPagerManager.isInitialized &&
-            screenPagerManager.isPageOpen(ScreenPagerManager.Page.RIGHT)
-    }
-
     fun setWidgetsPageLocked(locked: Boolean) {
         if (::screenPagerManager.isInitialized) {
             screenPagerManager.setLeftPageLocked(locked)
@@ -609,8 +553,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    // Broadcast receivers moved to BroadcastReceiverManager
-    
     private fun handleSettingsUpdate() {
         if (::settingsChangeCoordinator.isInitialized) {
             settingsChangeCoordinator.handleSettingsUpdate()
@@ -652,20 +594,12 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-
-
     override fun onDestroy() {
         super.onDestroy()
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
         }
     }
-
-    // App launching methods - delegated to AppLauncher
-    internal fun launchAppWithLockCheck(packageName: String, appName: String) {
-        appLauncher.launchAppWithLockCheck(packageName, appName)
-    }
-
 
     // Usage stats refresh methods - delegated to UsageStatsRefreshManager
     private fun updateBatteryInBackground() {
@@ -705,16 +639,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-    }
-    
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-    }
-
-
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -732,7 +656,6 @@ class MainActivity : FragmentActivity() {
                         if (::appSearchManager.isInitialized) {
                             appSearchManager.updateContactsList()
                         } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
-                            // Initialize AppSearchManager if not already initialized
                             updateAppSearchManager()
                         }
                     }
@@ -752,33 +675,23 @@ class MainActivity : FragmentActivity() {
             if (::voiceSearchManager.isInitialized) {
                 voiceSearchManager.startVoiceSearch()
             }
-            // Also notify noise decibel widget if permission was granted
             if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isNoiseDecibelWidgetInitialized()) {
                 widgetLifecycleCoordinator.noiseDecibelWidget.onPermissionGranted()
             }
         }
         
-        // Handle physical activity permission
-        if (requestCode == 105 && 
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
-                widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
-            }
-        }
-        
-        // Handle calendar permission
-        if (requestCode == 101 && // CalendarEventsWidget.REQUEST_CODE_CALENDAR_PERMISSION is 101
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
-                widgetLifecycleCoordinator.calendarEventsWidget.onPermissionGranted()
-            }
-        }
-        
-        // Handle calendar permission for countdown widget
-        if (requestCode == 102 && // CountdownWidget.REQUEST_CODE_CALENDAR_PERMISSION is 102
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
-                widgetLifecycleCoordinator.countdownWidget.onPermissionGranted()
+        // Handle other permissions (physical activity, calendar, etc.)
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            when (requestCode) {
+                105 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
+                    widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
+                }
+                101 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
+                    widgetLifecycleCoordinator.calendarEventsWidget.onPermissionGranted()
+                }
+                102 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
+                    widgetLifecycleCoordinator.countdownWidget.onPermissionGranted()
+                }
             }
         }
     }
