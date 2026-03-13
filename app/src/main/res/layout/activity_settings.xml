@@ -191,11 +191,10 @@
 
                         <Spinner
                             android:id="@+id/icon_style_spinner"
+                            style="@style/TranslucentSpinnerStyle"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="16dp"
-                            android:padding="12dp"
-                            android:background="@drawable/rounded_background"
                             android:spinnerMode="dropdown"/>
 
                         <TextView
@@ -523,10 +522,9 @@
 
                         <Spinner
                             android:id="@+id/typography_style_spinner"
+                            style="@style/TranslucentSpinnerStyle"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/rounded_background"
-                            android:padding="8dp"/>
+                            android:layout_height="wrap_content"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -547,10 +545,9 @@
 
                         <Spinner
                             android:id="@+id/typography_intensity_spinner"
+                            style="@style/TranslucentSpinnerStyle"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/rounded_background"
-                            android:padding="8dp"/>
+                            android:layout_height="wrap_content"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -571,10 +568,9 @@
 
                         <Spinner
                             android:id="@+id/typography_color_spinner"
+                            style="@style/TranslucentSpinnerStyle"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/rounded_background"
-                            android:padding="8dp"/>
+                            android:layout_height="wrap_content"/>
                     </LinearLayout>
 
                 </LinearLayout>
@@ -718,10 +714,9 @@
 
                         <Spinner
                             android:id="@+id/search_engine_spinner"
+                            style="@style/TranslucentSpinnerStyle"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/rounded_background"
-                            android:padding="8dp"/>
+                            android:layout_height="wrap_content"/>
 
                     </LinearLayout>
 
@@ -1185,10 +1180,9 @@
 
                             <Spinner
                                 android:id="@+id/back_tap_double_action_spinner"
+                                style="@style/TranslucentSpinnerStyle"
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:background="@drawable/rounded_background"
-                                android:padding="8dp"/>
+                                android:layout_height="wrap_content"/>
 
                         </LinearLayout>
 
