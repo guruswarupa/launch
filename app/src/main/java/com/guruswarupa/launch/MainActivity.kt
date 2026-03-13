@@ -104,6 +104,7 @@ class MainActivity : FragmentActivity() {
     internal lateinit var resultRegistry: MainActivityResultRegistry
     internal lateinit var featureTutorialManager: FeatureTutorialManager
     internal var voiceCommandHandler: VoiceCommandHandler? = null
+    private var searchActive = false
 
     // New modular managers
     internal lateinit var appLauncher: AppLauncher
@@ -310,32 +311,18 @@ class MainActivity : FragmentActivity() {
             
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s?.toString()?.trim() ?: ""
-                if (query.isEmpty()) {
-                    // Show top widget when search is empty
-                    views.topWidgetContainer.visibility = View.VISIBLE
-                    // Reset margin when top widget is shown
-                    val layoutParams = views.searchContainer.layoutParams as ViewGroup.MarginLayoutParams
-                    layoutParams.setMargins(
-                        layoutParams.leftMargin,
-                        0, // Reset to default margin
-                        layoutParams.rightMargin,
-                        layoutParams.bottomMargin
-                    )
-                    views.searchContainer.layoutParams = layoutParams
-                    updateFastScrollerVisibility()
-                } else {
-                    // Hide top widget when searching
-                    views.topWidgetContainer.visibility = View.GONE
-                    // Add extra margin to compensate for hidden widget and prevent touching navbar
-                    val layoutParams = views.searchContainer.layoutParams as ViewGroup.MarginLayoutParams
-                    layoutParams.setMargins(
-                        layoutParams.leftMargin,
-                        resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden), // Add margin when widget is hidden
-                        layoutParams.rightMargin,
-                        layoutParams.bottomMargin
-                    )
-                    views.searchContainer.layoutParams = layoutParams
+                if (query.isNotEmpty()) {
+                    // Hide header and dock when there's any character in search
+                    activityInitializer.setHeaderVisibility(false)
                     views.fastScroller.visibility = View.GONE
+                } else {
+                    // Show header and dock when search is empty
+                    activityInitializer.setHeaderVisibility(true)
+                    updateFastScrollerVisibility()
+                    // Scroll to top when search is cleared with a slight delay to ensure layout is ready
+                    handler.postDelayed({
+                        views.recyclerView.scrollToPosition(0)
+                    }, 100)
                 }
             }
             
@@ -358,6 +345,17 @@ class MainActivity : FragmentActivity() {
             views.fastScroller.visibility = View.VISIBLE
         } else {
             views.fastScroller.visibility = View.GONE
+        }
+    }
+    
+    internal fun getPreferredGridColumns(): Int {
+        val minColumns = resources.getInteger(R.integer.grid_columns_min)
+        val maxColumns = resources.getInteger(R.integer.grid_columns_max)
+        val storedColumns = sharedPreferences.getInt(Constants.Prefs.GRID_COLUMNS, -1)
+        return if (storedColumns in minColumns..maxColumns) {
+            storedColumns
+        } else {
+            resources.getInteger(R.integer.app_grid_columns)
         }
     }
     

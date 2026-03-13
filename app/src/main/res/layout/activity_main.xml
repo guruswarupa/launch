@@ -18,191 +18,194 @@
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
 
-        <!-- Scrollable Content -->
+        <!-- Hidden scroll view kept for gesture handler padding/inset adjustments -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/main_scroll_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:fillViewport="true">
+            android:visibility="gone" />
 
+        <!-- Fixed UI Stack -->
+        <LinearLayout
+            android:id="@+id/main_content_stack"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/main_content_stack_top_padding"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="@dimen/main_content_stack_bottom_padding"
+            android:gravity="top">
+
+            <!-- Dummy focus holder -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true">
+                <requestFocus />
+            </View>
+
+            <!-- Combined Widget Section -->
             <LinearLayout
+                android:id="@+id/top_widget_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp"
-                android:gravity="top">
-                
-                <!-- Dummy view to take focus and prevent keyboard from opening by default -->
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:focusable="true"
-                    android:focusableInTouchMode="true">
-                    <requestFocus />
-                </View>
+                android:layout_marginTop="@dimen/widget_status_bar_clearance"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/widget_background">
 
-                <!-- Combined Widget Section -->
-                <LinearLayout
-                    android:id="@+id/top_widget_container"
+                <!-- Time Widget -->
+                <TextView
+                    android:id="@+id/time_widget"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp"
-                    android:layout_marginTop="0dp"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/widget_background">
+                    android:textSize="32sp"
+                    android:textColor="@color/widget_text"
+                    android:gravity="center"
+                    android:fontFamily="sans-serif-light"
+                    android:letterSpacing="0.05"
+                    android:paddingTop="8dp" />
 
-                    <!-- Time Widget -->
+                <!-- Date Widget -->
+                <TextView
+                    android:id="@+id/date_widget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="24sp"
+                    android:textColor="@color/widget_text"
+                    android:gravity="center"
+                    android:fontFamily="sans-serif-light"
+                    android:paddingTop="8dp" />
+
+                <!-- Weather Widget -->
+                <LinearLayout
+                    android:id="@+id/weather_widget"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:paddingTop="8dp">
+
+                    <ImageView
+                        android:id="@+id/weather_icon"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="8dp"
+                        android:contentDescription="Weather Icon"/>
+
                     <TextView
-                        android:id="@+id/time_widget"
-                        android:layout_width="match_parent"
+                        android:id="@+id/weather_text"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textSize="32sp"
+                        android:textSize="18sp"
                         android:textColor="@color/widget_text"
-                        android:gravity="center"
-                        android:fontFamily="sans-serif-light"
-                        android:letterSpacing="0.05"
-                        android:paddingTop="8dp" />
+                        android:fontFamily="sans-serif-light"/>
+                </LinearLayout>
 
-                    <!-- Date Widget -->
-                    <TextView
-                        android:id="@+id/date_widget"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="24sp"
-                        android:textColor="@color/widget_text"
-                        android:gravity="center"
-                        android:fontFamily="sans-serif-light"
-                        android:paddingTop="8dp" />
+                <!-- Battery Section -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingTop="12dp"
+                    android:gravity="center">
 
-                    <!-- Weather Widget -->
+                    <!-- Battery Widget -->
                     <LinearLayout
-                        android:id="@+id/weather_widget"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center"
-                        android:paddingTop="8dp">
-
-                        <ImageView
-                            android:id="@+id/weather_icon"
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:layout_marginEnd="8dp"
-                            android:contentDescription="Weather Icon"/>
+                        android:padding="8dp">
 
                         <TextView
-                            android:id="@+id/weather_text"
+                            android:id="@+id/battery_percentage"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textSize="18sp"
+                            android:text="Battery: 100%"
+                            android:textSize="14sp"
                             android:textColor="@color/widget_text"
                             android:fontFamily="sans-serif-light"/>
                     </LinearLayout>
-
-                    <!-- Battery Section -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:paddingTop="12dp"
-                        android:gravity="center">
-
-                        <!-- Battery Widget -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center"
-                            android:padding="8dp">
-
-                            <TextView
-                                android:id="@+id/battery_percentage"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Battery: 100%"
-                                android:textSize="14sp"
-                                android:textColor="@color/widget_text"
-                                android:fontFamily="sans-serif-light"/>
-                        </LinearLayout>
-                    </LinearLayout>
                 </LinearLayout>
-
-                <!-- Search Box -->
-                <LinearLayout
-                    android:id="@+id/search_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:background="@drawable/search_box_transparent_bg"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <ImageButton
-                        android:id="@+id/search_type_button"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_search"
-                        android:contentDescription="Search Type"
-                        android:padding="12dp"
-                        android:scaleType="fitCenter" />
-
-                    <AutoCompleteTextView
-                        android:id="@+id/search_box"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:hint="@string/search_text"
-                        android:textColor="@color/widget_text"
-                        android:textColorHint="@color/widget_text_secondary"
-                        android:padding="12dp"
-                        android:background="@null"
-                        android:textSize="16sp"
-                        android:singleLine="true"
-                        android:imeOptions="actionSearch"
-                        android:dropDownSelector="?android:attr/listChoiceBackgroundIndicator"
-                        android:popupBackground="@drawable/spinner_dropdown_background"
-                        android:dropDownWidth="wrap_content"
-                        android:dropDownHeight="wrap_content"
-                        android:dropDownVerticalOffset="0dp"
-                        android:dropDownHorizontalOffset="0dp"/>
-
-                    <ImageButton
-                        android:id="@+id/voice_search_button"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_mic"
-                        android:contentDescription="Voice Search" />
-                </LinearLayout>
-
-
-                <!-- App Dock -->
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:scrollbars="none"
-                    android:padding="8dp">
-
-                    <LinearLayout
-                        android:id="@+id/app_dock"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center"
-                        android:paddingEnd="16dp"
-                        android:layout_marginBottom="20px"/>
-                </HorizontalScrollView>
-
-                <!-- App List (RecyclerView) -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/app_list"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false"/>
             </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
+
+            <!-- Search Box -->
+            <LinearLayout
+                android:id="@+id/search_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="@dimen/search_container_bottom_margin"
+                android:background="@drawable/search_box_transparent_bg"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageButton
+                    android:id="@+id/search_type_button"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_search"
+                    android:contentDescription="Search Type"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter" />
+
+                <AutoCompleteTextView
+                    android:id="@+id/search_box"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/search_text"
+                    android:textColor="@color/widget_text"
+                    android:textColorHint="@color/widget_text_secondary"
+                    android:padding="12dp"
+                    android:background="@null"
+                    android:textSize="16sp"
+                    android:singleLine="true"
+                    android:imeOptions="actionSearch"
+                    android:dropDownSelector="?android:attr/listChoiceBackgroundIndicator"
+                    android:popupBackground="@drawable/spinner_dropdown_background"
+                    android:dropDownWidth="wrap_content"
+                    android:dropDownHeight="wrap_content"
+                    android:dropDownVerticalOffset="0dp"
+                    android:dropDownHorizontalOffset="0dp"/>
+
+                <ImageButton
+                    android:id="@+id/voice_search_button"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_mic"
+                    android:contentDescription="Voice Search" />
+            </LinearLayout>
+
+            <!-- App Dock -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:padding="8dp"
+                android:layout_marginBottom="20px">
+
+                <LinearLayout
+                    android:id="@+id/app_dock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:paddingEnd="16dp"/>
+            </HorizontalScrollView>
+            <!-- App List (RecyclerView) -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/app_list"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="0dp"/>
+        </LinearLayout>
 
         <!-- Fast Scroller: Positioned dynamically in ActivityInitializer to avoid mic button -->
         <!-- Increased width to provide a larger capture area -->

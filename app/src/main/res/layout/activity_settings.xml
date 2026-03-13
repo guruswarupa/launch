@@ -111,10 +111,10 @@
                         android:orientation="horizontal"
                         android:gravity="center">
 
-                        <Button
-                            android:id="@+id/grid_option"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                    <Button
+                        android:id="@+id/grid_option"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginEnd="8dp"
                             android:text="Grid View"
@@ -135,6 +135,40 @@
                             android:textColor="@android:color/white"
                             android:padding="16dp"/>
 
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/grid_columns_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/grid_columns_title"
+                            android:textSize="16sp"
+                            android:textColor="@color/text"
+                            android:textStyle="bold"
+                            android:alpha="0.9"/>
+
+                        <TextView
+                            android:id="@+id/grid_columns_value"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="14sp"
+                            android:textColor="@color/text"
+                            android:alpha="0.7"
+                            android:layout_marginTop="4dp"/>
+
+                        <SeekBar
+                            android:id="@+id/grid_columns_seekbar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:splitTrack="false"/>
                     </LinearLayout>
 
                     <View

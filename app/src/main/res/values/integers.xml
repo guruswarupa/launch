@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <integer name="app_grid_columns">4</integer>
+    <integer name="grid_columns_min">3</integer>
+    <integer name="grid_columns_max">6</integer>
 </resources>

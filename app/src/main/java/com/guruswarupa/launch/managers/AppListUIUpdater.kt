@@ -44,7 +44,7 @@ class AppListUIUpdater(
         }
         appListLoader.onAdapterNeedsUpdate = { isGridMode ->
             if (recyclerView.layoutManager !is GridLayoutManager && isGridMode) {
-                recyclerView.layoutManager = GridLayoutManager(activity, 4)
+                recyclerView.layoutManager = GridLayoutManager(activity, activity.getPreferredGridColumns())
             } else if (recyclerView.layoutManager !is LinearLayoutManager && !isGridMode) {
                 recyclerView.layoutManager = LinearLayoutManager(activity)
             }

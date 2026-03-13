@@ -208,23 +208,49 @@ class SettingsActivity : ComponentActivity() {
         val gridOption = findViewById<Button>(R.id.grid_option)
         val listOption = findViewById<Button>(R.id.list_option)
         val saveButton = findViewById<Button>(R.id.save_settings_button)
+        val gridColumnsSection = findViewById<LinearLayout>(R.id.grid_columns_section)
+        val gridColumnsValue = findViewById<TextView>(R.id.grid_columns_value)
+        val gridColumnsSeekBar = findViewById<SeekBar>(R.id.grid_columns_seekbar)
         
         // Track selected display style
+        val minGridColumns = resources.getInteger(R.integer.grid_columns_min)
+        val maxGridColumns = resources.getInteger(R.integer.grid_columns_max)
+        val defaultGridColumns = resources.getInteger(R.integer.app_grid_columns)
+        var selectedGridColumns = prefs.getInt(Constants.Prefs.GRID_COLUMNS, defaultGridColumns)
+            .coerceIn(minGridColumns, maxGridColumns)
+
         val currentStyle = prefs.getString("view_preference", "list") ?: "list"
         var selectedStyle = currentStyle
-        
+
+        gridColumnsSeekBar.max = maxGridColumns - minGridColumns
+        gridColumnsSeekBar.progress = selectedGridColumns - minGridColumns
+        gridColumnsValue.text = getString(R.string.apps_per_row_format, selectedGridColumns)
+        gridColumnsSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                selectedGridColumns = minGridColumns + progress
+                gridColumnsValue.text = getString(R.string.apps_per_row_format, selectedGridColumns)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
         // Update button states based on current preference
         updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
+        updateGridColumnsSection(selectedStyle, gridColumnsSection)
         
         // Set click listeners for display style buttons
         gridOption.setOnClickListener {
             selectedStyle = "grid"
             updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
+            updateGridColumnsSection(selectedStyle, gridColumnsSection)
         }
-        
+
         listOption.setOnClickListener {
             selectedStyle = "list"
             updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
+            updateGridColumnsSection(selectedStyle, gridColumnsSection)
         }
         val exportButton = findViewById<Button>(R.id.export_settings_button)
         val importButton = findViewById<Button>(R.id.import_settings_button)
@@ -238,7 +264,7 @@ class SettingsActivity : ComponentActivity() {
         val feedbackButton = findViewById<Button>(R.id.feedback_button)
 
         saveButton.setOnClickListener {
-            saveSettings(selectedStyle)
+            saveSettings(selectedStyle, selectedGridColumns)
         }
 
         exportButton.setOnClickListener {
@@ -1124,9 +1150,14 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun saveSettings(selectedDisplayStyle: String) {
+    private fun updateGridColumnsSection(selectedStyle: String, section: LinearLayout) {
+        section.isVisible = selectedStyle == "grid"
+    }
+
+    private fun saveSettings(selectedDisplayStyle: String, gridColumns: Int) {
         prefs.edit {
             putString("view_preference", selectedDisplayStyle)
+            putInt(Constants.Prefs.GRID_COLUMNS, gridColumns)
         }
 
         Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()

@@ -166,7 +166,7 @@ class AppListLoader(
             // Initialize adapter if needed
             if (adapter == null) {
                 recyclerView.layoutManager = if (isGridMode) {
-                    GridLayoutManager(activity, 4)
+                    GridLayoutManager(activity, activity.getPreferredGridColumns())
                 } else {
                     LinearLayoutManager(activity)
                 }

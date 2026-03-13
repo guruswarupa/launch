@@ -58,12 +58,13 @@ class SettingsChangeCoordinator(
         // Update display style if changed
         val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"
         val newIsGridMode = viewPreference == "grid"
+        val desiredColumns = activity.getPreferredGridColumns()
         val currentIsGridMode = if (views.isRecyclerViewInitialized()) views.recyclerView.layoutManager is GridLayoutManager else false
-        
+
         if (newIsGridMode != currentIsGridMode && adapter != null) {
             // Update layout manager
             views.recyclerView.layoutManager = if (newIsGridMode) {
-                GridLayoutManager(activity, 4)
+                GridLayoutManager(activity, desiredColumns)
             } else {
                 LinearLayoutManager(activity)
             }
@@ -74,6 +75,12 @@ class SettingsChangeCoordinator(
             // Only update AppSearchManager if data source significantly changed,
             // otherwise the shared metadata cache handles label updates.
             activity.updateAppSearchManager()
+        } else if (newIsGridMode && currentIsGridMode) {
+            val layoutManager = views.recyclerView.layoutManager as? GridLayoutManager
+            if (layoutManager != null && layoutManager.spanCount != desiredColumns) {
+                layoutManager.spanCount = desiredColumns
+                layoutManager.requestLayout()
+            }
         }
         
         // Update fast scroller visibility
