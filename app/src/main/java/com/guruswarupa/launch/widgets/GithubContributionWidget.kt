@@ -110,27 +110,32 @@ class GithubContributionWidget(
     }
 
     private fun loadAvailableYears(username: String, token: String) {
+        if (executor.isShutdown) return
         githubStatusText.text = "Loading available years..."
         
-        executor.execute {
-            try {
-                val years = githubApiService.getAvailableContributionYears(username, token)
-                handler.post {
-                    availableYears = years
-                    if (availableYears.isNotEmpty()) {
-                        currentYear = availableYears.first() // Set to most recent year with contributions
+        try {
+            executor.execute {
+                try {
+                    val years = githubApiService.getAvailableContributionYears(username, token)
+                    handler.post {
+                        availableYears = years
+                        if (availableYears.isNotEmpty()) {
+                            currentYear = availableYears.first() // Set to most recent year with contributions
+                        }
+                        setupYearSpinner()
+                        loadGithubData()
                     }
-                    setupYearSpinner()
-                    loadGithubData()
-                }
-            } catch (e: Exception) {
-                handler.post {
-                    // Fallback to current year if API fails
-                    availableYears = listOf(currentYear)
-                    setupYearSpinner()
-                    githubStatusText.text = "Error loading years: ${e.message}"
+                } catch (e: Exception) {
+                    handler.post {
+                        // Fallback to current year if API fails
+                        availableYears = listOf(currentYear)
+                        setupYearSpinner()
+                        githubStatusText.text = "Error loading years: ${e.message}"
+                    }
                 }
             }
+        } catch (e: java.util.concurrent.RejectedExecutionException) {
+            // Executor shut down
         }
     }
 
@@ -162,6 +167,8 @@ class GithubContributionWidget(
     }
 
     private fun loadGithubData() {
+        if (executor.isShutdown) return
+        
         val token = sharedPreferences.getString(PREF_GITHUB_TOKEN, "")
         val username = sharedPreferences.getString(PREF_GITHUB_USERNAME, "")
 
@@ -174,22 +181,26 @@ class GithubContributionWidget(
         githubStatsContainer.visibility = View.GONE
         githubGraphTitle.text = "Contribution Activity ($currentYear)"
 
-        executor.execute {
-            try {
-                val contributionData = githubApiService.fetchContributionData(username, token, currentYear)
-                
-                handler.post {
-                    updateContributionGraph(contributionData.contributions)
-                    updateStats(contributionData.totalContributions, contributionData.currentStreak, contributionData.longestStreak)
-                    githubStatusText.text = "Last updated: ${contributionData.lastUpdated}"
-                    githubStatsContainer.visibility = View.VISIBLE
-                }
-            } catch (e: Exception) {
-                handler.post {
-                    githubStatusText.text = "Error: ${e.message}"
-                    githubStatsContainer.visibility = View.GONE
+        try {
+            executor.execute {
+                try {
+                    val contributionData = githubApiService.fetchContributionData(username, token, currentYear)
+                    
+                    handler.post {
+                        updateContributionGraph(contributionData.contributions)
+                        updateStats(contributionData.totalContributions, contributionData.currentStreak, contributionData.longestStreak)
+                        githubStatusText.text = "Last updated: ${contributionData.lastUpdated}"
+                        githubStatsContainer.visibility = View.VISIBLE
+                    }
+                } catch (e: Exception) {
+                    handler.post {
+                        githubStatusText.text = "Error: ${e.message}"
+                        githubStatsContainer.visibility = View.GONE
+                    }
                 }
             }
+        } catch (e: java.util.concurrent.RejectedExecutionException) {
+            // Executor shut down
         }
     }
 
