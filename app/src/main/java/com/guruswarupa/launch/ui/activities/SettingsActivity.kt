@@ -252,6 +252,64 @@ class SettingsActivity : ComponentActivity() {
             updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
             updateGridColumnsSection(selectedStyle, gridColumnsSection)
         }
+
+        // Setup Icon Style Section
+        val iconStyleSection = findViewById<LinearLayout>(R.id.icon_style_section)
+        val iconStyleSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
+        val iconSizeSeekBar = findViewById<SeekBar>(R.id.icon_size_seekbar)
+        val iconSizeValueText = findViewById<TextView>(R.id.icon_size_value)
+        
+        val currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
+        val currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
+        
+        // Setup icon style spinner
+        val iconStyles = arrayOf("Round", "Squircle", "Squared", "Teardrop", "Vortex", "Overlay")
+        val iconStyleValues = arrayOf("round", "squircle", "squared", "teardrop", "vortex", "overlay")
+        
+        val iconStyleAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, iconStyles)
+        iconStyleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        iconStyleSpinner.adapter = iconStyleAdapter
+        
+        // Set current selection
+        val currentIndex = iconStyleValues.indexOf(currentIconStyle)
+        if (currentIndex >= 0) {
+            iconStyleSpinner.setSelection(currentIndex)
+        }
+        
+        iconStyleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                val selectedStyle = iconStyleValues[position]
+                prefs.edit { putString(Constants.Prefs.ICON_STYLE, selectedStyle) }
+                applyIconStyle(selectedStyle)
+            }
+            
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+        
+        // Setup icon size seekbar
+        // Range: 36dp to 96dp (max 60 + min 36 = 96)
+        val minIconSize = 36
+        val maxIconSize = 96
+        iconSizeSeekBar.max = maxIconSize - minIconSize
+        iconSizeSeekBar.progress = currentIconSize - minIconSize
+        iconSizeValueText.text = "${currentIconSize}dp"
+        
+        iconSizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val iconSize = minIconSize + progress
+                iconSizeValueText.text = "${iconSize}dp"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.ICON_SIZE, iconSize) }
+                    applyIconSize(iconSize)
+                }
+            }
+            
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+        
+        // Show/hide icon style section based on display style
+        updateIconStyleSection(selectedStyle, iconStyleSection)
         val exportButton = findViewById<Button>(R.id.export_settings_button)
         val importButton = findViewById<Button>(R.id.import_settings_button)
         val appLockButton = findViewById<Button>(R.id.app_lock_button)
@@ -1152,6 +1210,24 @@ class SettingsActivity : ComponentActivity() {
 
     private fun updateGridColumnsSection(selectedStyle: String, section: LinearLayout) {
         section.isVisible = selectedStyle == "grid"
+    }
+
+    private fun updateIconStyleSection(displayStyle: String, section: LinearLayout) {
+        section.isVisible = displayStyle == "grid" || displayStyle == "list"
+    }
+
+    private fun applyIconStyle(style: String) {
+        // Send broadcast to notify MainActivity about icon style change
+        val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+        intent.setPackage(packageName)
+        sendBroadcast(intent)
+    }
+
+    private fun applyIconSize(size: Int) {
+        // Send broadcast to notify MainActivity about icon size change
+        val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
+        intent.setPackage(packageName)
+        sendBroadcast(intent)
     }
 
     private fun saveSettings(selectedDisplayStyle: String, gridColumns: Int) {

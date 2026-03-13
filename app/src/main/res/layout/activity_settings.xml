@@ -171,6 +171,71 @@
                             android:splitTrack="false"/>
                     </LinearLayout>
 
+                    <!-- Icon Style Section -->
+                    <LinearLayout
+                        android:id="@+id/icon_style_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Icon Shape"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text"
+                            android:layout_marginBottom="8dp"/>
+
+                        <Spinner
+                            android:id="@+id/icon_style_spinner"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:padding="12dp"
+                            android:background="@drawable/rounded_background"
+                            android:spinnerMode="dropdown"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Icon Size"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text"
+                            android:layout_marginBottom="8dp"/>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/icon_size_value"
+                                android:layout_width="50dp"
+                                android:layout_height="wrap_content"
+                                android:text="48dp"
+                                android:textSize="14sp"
+                                android:textColor="@color/text"
+                                android:alpha="0.7"
+                                android:gravity="end"
+                                android:layout_marginEnd="8dp"/>
+
+                            <SeekBar
+                                android:id="@+id/icon_size_seekbar"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:splitTrack="false"
+                                android:max="40"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"

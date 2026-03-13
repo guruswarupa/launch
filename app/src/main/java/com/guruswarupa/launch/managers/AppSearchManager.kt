@@ -67,6 +67,8 @@ class AppSearchManager(
             // Update contacts list and clear search cache
             searchCache.clear()
         }
+        // Clear contact photo cache to refresh photos
+        adapter?.clearContactPhotoCache()
         // Contacts list is refreshed by the caller via updateData
     }
 
@@ -119,6 +121,8 @@ class AppSearchManager(
             contactsList = newContactsList
             searchCache.clear()
         }
+        // Clear contact photo cache to refresh photos when contacts are updated
+        adapter?.clearContactPhotoCache()
         refreshSearch()
     }
 

@@ -83,6 +83,14 @@ class SettingsChangeCoordinator(
             }
         }
         
+        // Update icon shape style if changed
+        val iconStyle = sharedPreferences.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
+        adapter?.updateIconStyle(iconStyle)
+        
+        // Update icon size if changed
+        val iconSize = sharedPreferences.getInt(Constants.Prefs.ICON_SIZE, 40)
+        adapter?.updateIconSize(iconSize)
+        
         // Update fast scroller visibility
         activity.updateFastScrollerVisibility()
 
