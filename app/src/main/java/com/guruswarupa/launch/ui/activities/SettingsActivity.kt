@@ -2,11 +2,15 @@ package com.guruswarupa.launch.ui.activities
 
 import android.app.AlertDialog
 import android.app.NotificationManager
+import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -15,7 +19,9 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.Html
 import android.text.method.LinkMovementMethod
+import android.util.TypedValue
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -28,6 +34,11 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
@@ -35,6 +46,7 @@ import com.guruswarupa.launch.managers.DownloadableFontManager
 import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.models.ThemeOption
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
 import com.guruswarupa.launch.services.ScreenDimmerService
@@ -56,6 +68,8 @@ class SettingsActivity : ComponentActivity() {
     private val vaultManager by lazy { EncryptedFolderManager(this) }
     private var settingsTutorialStepIndex = 0
     private var settingsTutorialActive = false
+    private var selectedThemeId: String = "system_default"
+    private var selectedThemeCategory: String? = null
 
     private data class SettingsTutorialStep(
         val title: String,
@@ -81,6 +95,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
         notifySettingsChanged()
         setupWallpaper()
     }
@@ -96,6 +111,8 @@ class SettingsActivity : ComponentActivity() {
         
         setContentView(R.layout.activity_settings)
         applyContentInsets()
+
+        selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default") ?: "system_default"
 
         setupWallpaper()
         setupAppearanceSection()
@@ -115,6 +132,52 @@ class SettingsActivity : ComponentActivity() {
         }
     }
     
+    private fun triggerWallpaperPicker(themeId: String) {
+        val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId } ?: return
+        
+        Toast.makeText(this, "Preparing wallpaper picker...", Toast.LENGTH_SHORT).show()
+        
+        Glide.with(this)
+            .asFile()
+            .load(theme.wallpaperUrl)
+            .into(object : CustomTarget<File>() {
+                override fun onResourceReady(resource: File, transition: Transition<in File>?) {
+                    try {
+                        val wallpaperFile = File(cacheDir, "theme_wallpaper.jpg")
+                        resource.copyTo(wallpaperFile, overwrite = true)
+                        
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            this@SettingsActivity, 
+                            "$packageName.fileprovider", 
+                            wallpaperFile
+                        )
+                        
+                        val wm = WallpaperManager.getInstance(this@SettingsActivity)
+                        try {
+                            // Try the direct crop-and-set intent
+                            val intent = wm.getCropAndSetWallpaperIntent(uri)
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback to ATTACH_DATA
+                            val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
+                                addCategory(Intent.CATEGORY_DEFAULT)
+                                setDataAndType(uri, "image/*")
+                                putExtra("mimeType", "image/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            startActivity(Intent.createChooser(intent, "Set System Wallpaper"))
+                        }
+                        
+                        Toast.makeText(this@SettingsActivity, "Use the system dialog to set your wallpaper.", Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(this@SettingsActivity, "Failed to prepare wallpaper: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onLoadCleared(placeholder: Drawable?) {}
+            })
+    }
+
     private fun setupVersionInfo() {
         try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
@@ -161,8 +224,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putInt(Constants.Prefs.GRID_COLUMNS, selectedCols) }
                     notifySettingsChanged()
                 }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
+            } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
@@ -216,8 +278,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putInt(Constants.Prefs.ICON_SIZE, size) }
                     notifySettingsChanged()
                 }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
+            } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
@@ -228,7 +289,7 @@ class SettingsActivity : ComponentActivity() {
         setupSectionToggle(wallHeader, wallContent, wallArrow)
         findViewById<View>(R.id.change_wallpaper_button).setOnClickListener { chooseWallpaper() }
 
-        // Blur controls removed - no blur effect
+        setupThemeSelection()
 
         // Typography
         val typoHeader = findViewById<LinearLayout>(R.id.typography_header)
@@ -244,7 +305,165 @@ class SettingsActivity : ComponentActivity() {
                 notifySettingsChanged()
             }
         }
+
+        findViewById<SwitchCompat>(R.id.app_name_scrim_switch).apply {
+            isChecked = prefs.getBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, false)
+            setOnCheckedChangeListener { _, isChecked ->
+                prefs.edit { putBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, isChecked) }
+                notifySettingsChanged()
+            }
+        }
     }
+
+    private fun setupThemeSelection() {
+        val container = findViewById<LinearLayout>(R.id.theme_options_container)
+        val applyBtn = findViewById<MaterialButton>(R.id.apply_theme_button)
+        container.removeAllViews()
+
+        if (selectedThemeCategory == null) {
+            // Show Category Cards
+            val categories = listOf("System", "Landscape", "City", "Abstract", "Minimal")
+            
+            val scrollContainer = HorizontalScrollView(this).apply {
+                isHorizontalScrollBarEnabled = false
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+            scrollContainer.addView(row)
+            container.addView(scrollContainer)
+
+            categories.forEach { category ->
+                val categoryView = layoutInflater.inflate(R.layout.item_theme_option, row, false)
+                val card = categoryView.findViewById<MaterialCardView>(R.id.theme_card)
+                val name = categoryView.findViewById<TextView>(R.id.theme_name)
+                val preview = categoryView.findViewById<ImageView>(R.id.theme_preview_image)
+                val indicator = categoryView.findViewById<View>(R.id.theme_color_indicator)
+
+                name.text = category
+                indicator.isVisible = false
+                
+                // Highlight if selected
+                val isSelected = if (category == "System") {
+                    selectedThemeId == "system_default"
+                } else {
+                    ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
+                }
+
+                if (isSelected) {
+                    card.strokeColor = ContextCompat.getColor(this, R.color.nord8)
+                    card.strokeWidth = 2.dpToPx()
+                } else {
+                    card.strokeColor = Color.TRANSPARENT
+                    card.strokeWidth = 0
+                }
+
+                // Find a preview image for the category
+                when (category) {
+                    "System" -> WallpaperDisplayHelper.applyThemePreview(preview, "system_default")
+                    else -> {
+                        val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
+                        if (firstThemeInCategory != null) {
+                            WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
+                        }
+                    }
+                }
+
+                card.setOnClickListener {
+                    if (category == "System") {
+                        selectedThemeId = "system_default"
+                        prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
+                        setupThemeSelection()
+                        setupWallpaper()
+                        notifySettingsChanged()
+                    } else {
+                        selectedThemeCategory = category
+                        setupThemeSelection()
+                    }
+                }
+                row.addView(categoryView)
+            }
+            applyBtn.isVisible = false
+        } else {
+            // Show Themes in Selected Category
+            val category = selectedThemeCategory!!
+            
+            val contentRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+            
+            val backBtn = ImageButton(this).apply {
+                setImageResource(R.drawable.ic_arrow_right) 
+                rotation = 180f
+                setBackgroundResource(android.R.color.transparent)
+                setColorFilter(ContextCompat.getColor(this@SettingsActivity, R.color.white))
+                setPadding(0, 0, 8, 0)
+                layoutParams = LinearLayout.LayoutParams(40.dpToPx(), ViewGroup.LayoutParams.WRAP_CONTENT)
+                setOnClickListener {
+                    selectedThemeCategory = null
+                    setupThemeSelection()
+                }
+            }
+            contentRow.addView(backBtn)
+
+            val scrollContainer = HorizontalScrollView(this).apply {
+                isHorizontalScrollBarEnabled = false
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
+            scrollContainer.addView(row)
+            contentRow.addView(scrollContainer)
+            container.addView(contentRow)
+
+            val themes = ThemeOption.PREDEFINED_THEMES.filter { it.category == category }
+
+            themes.forEach { theme ->
+                val themeView = layoutInflater.inflate(R.layout.item_theme_option, row, false)
+                val card = themeView.findViewById<MaterialCardView>(R.id.theme_card)
+                val name = themeView.findViewById<TextView>(R.id.theme_name)
+                val preview = themeView.findViewById<ImageView>(R.id.theme_preview_image)
+                val indicator = themeView.findViewById<View>(R.id.theme_color_indicator)
+
+                name.text = theme.name
+                WallpaperDisplayHelper.applyThemePreview(preview, theme.id)
+                (indicator.background as GradientDrawable).setColor(Color.parseColor(theme.primaryColor))
+
+                if (selectedThemeId == theme.id) {
+                    card.strokeColor = ContextCompat.getColor(this, R.color.nord8)
+                    card.strokeWidth = 2.dpToPx()
+                } else {
+                    card.strokeColor = Color.TRANSPARENT
+                    card.strokeWidth = 0
+                }
+
+                card.setOnClickListener {
+                    selectedThemeId = theme.id
+                    prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
+                    applyBtn.isVisible = theme.id != "system_default"
+                    setupThemeSelection()
+                    setupWallpaper()
+                    notifySettingsChanged()
+                }
+                row.addView(themeView)
+            }
+            
+            // Ensure button visibility is correct based on currently selected theme in this category
+            applyBtn.isVisible = selectedThemeId != "system_default" && themes.any { it.id == selectedThemeId }
+        }
+
+        // Re-set the listener since we re-calculate logic but keep the button reference
+        applyBtn.setOnClickListener {
+            if (selectedThemeId != "system_default") {
+                triggerWallpaperPicker(selectedThemeId)
+            }
+        }
+    }
+
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
     private fun setupActionsSection() {
         val wHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
@@ -292,8 +511,8 @@ class SettingsActivity : ComponentActivity() {
     private fun setupMaintenanceSection() {
         val bHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
         val bContent = findViewById<LinearLayout>(R.id.backup_restore_content)
-        val bArrow = findViewById<TextView>(R.id.backup_restore_arrow)
-        setupSectionToggle(bHeader, bContent, bArrow)
+        val a = findViewById<TextView>(R.id.backup_restore_arrow)
+        setupSectionToggle(bHeader, bContent, a)
 
         findViewById<View>(R.id.export_settings_button).setOnClickListener { exportSettings() }
         findViewById<View>(R.id.import_settings_button).setOnClickListener { importSettings() }
@@ -401,8 +620,7 @@ class SettingsActivity : ComponentActivity() {
             override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
                 prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, vals[pos]) }
                 notifySettingsChanged()
-            }
-            override fun onNothingSelected(p: AdapterView<*>) {}
+            } override fun onNothingSelected(p: AdapterView<*>) {}
         }
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
@@ -411,8 +629,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, p + 1) }
                     notifySettingsChanged()
                 }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
+            } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
     }
@@ -443,8 +660,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putInt(Constants.Prefs.SHAKE_SENSITIVITY, p + 1) }
                     notifySettingsChanged()
                 }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
+            } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
     }
@@ -478,8 +694,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, p) }
                     if (sw.isChecked) ScreenDimmerService.updateDimLevel(this@SettingsActivity, p)
                 }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
+            } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
     }
@@ -513,8 +728,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putInt(Constants.Prefs.NIGHT_MODE_INTENSITY, p) }
                     if (sw.isChecked) NightModeService.updateIntensity(this@SettingsActivity, p)
                 }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
+            } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
     }
@@ -548,8 +762,7 @@ class SettingsActivity : ComponentActivity() {
             override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
                 prefs.edit { putString(Constants.Prefs.SEARCH_ENGINE, engines[pos]) }
                 notifySettingsChanged()
-            }
-            override fun onNothingSelected(p: AdapterView<*>) {}
+            } override fun onNothingSelected(p: AdapterView<*>) {}
         }
     }
 
@@ -585,8 +798,7 @@ class SettingsActivity : ComponentActivity() {
                     TypographyManager.applyToActivity(this@SettingsActivity)
                     notifySettingsChanged()
                 }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
+            } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
@@ -609,8 +821,7 @@ class SettingsActivity : ComponentActivity() {
                 prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, baseStyV[pos]) }
                 TypographyManager.applyToActivity(this@SettingsActivity)
                 notifySettingsChanged()
-            }
-            override fun onNothingSelected(p: AdapterView<*>) {}
+            } override fun onNothingSelected(p: AdapterView<*>) {}
         }
 
         val intV = arrayOf("light", "regular", "bold", "extra_bold")
@@ -622,8 +833,7 @@ class SettingsActivity : ComponentActivity() {
                 prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, intV[pos]) }
                 TypographyManager.applyToActivity(this@SettingsActivity)
                 notifySettingsChanged()
-            }
-            override fun onNothingSelected(p: AdapterView<*>) {}
+            } override fun onNothingSelected(p: AdapterView<*>) {}
         }
 
         val colL = arrayOf("Default Adaptive", "Pure White", "Deep Ocean", "Electric Purple", "Neon Pink", "Solar Gold", "Emerald Mist", "Arctic Frost", "Midnight Teal", "Cyan Accent", "Nord Mint", "Lavender", "Orange Glow", "Slate Gray")
@@ -635,8 +845,7 @@ class SettingsActivity : ComponentActivity() {
                 prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, colV[pos]) }
                 TypographyManager.applyToActivity(this@SettingsActivity)
                 notifySettingsChanged()
-            }
-            override fun onNothingSelected(p: AdapterView<*>) {}
+            } override fun onNothingSelected(p: AdapterView<*>) {}
         }
         setupDownloadableFontsSection()
     }

@@ -14,6 +14,7 @@ import android.widget.ImageView
 import androidx.core.graphics.createBitmap
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 /**
  * Helper class for managing wallpaper display
@@ -35,6 +36,15 @@ class WallpaperManagerHelper(
     fun setWallpaperBackground(forceReload: Boolean = false) {
         // Apply blur based on preference
         applyBlurToViews()
+
+        val selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default") ?: "system_default"
+        
+        if (selectedThemeId != "system_default") {
+            // Apply custom theme wallpaper
+            WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
+            drawerWallpaperBackground?.let { WallpaperDisplayHelper.applySystemWallpaper(it) }
+            return
+        }
 
         val wallpaperManager = WallpaperManager.getInstance(activity)
         val wallpaperId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {

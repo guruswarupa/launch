@@ -16,6 +16,7 @@ biometric = "1.1.0"
 jsr305 = "3.0.2"
 google-http-client = "1.43.3"
 joda-time = "2.12.7"
+glide = "4.16.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,6 +44,7 @@ findbugs-jsr305 = { group = "com.google.code.findbugs", name = "jsr305", version
 google-http-client = { module = "com.google.http-client:google-http-client", version.ref = "google-http-client" }
 google-http-client-android = { module = "com.google.http-client:google-http-client-android", version.ref = "google-http-client" }
 joda-time = { module = "joda-time:joda-time", version.ref = "joda-time" }
+glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

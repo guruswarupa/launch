@@ -40,6 +40,7 @@ import com.guruswarupa.launch.utils.FinanceWidgetManager
 import com.guruswarupa.launch.utils.OnboardingHelper
 import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.utils.VoiceCommandHandler
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import java.util.concurrent.Executors
 
@@ -228,11 +229,17 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
-        try {
-            val drawable = WallpaperManager.getInstance(this).drawable
-            views.rightDrawerWallpaper.setImageDrawable(drawable)
-        } catch (_: Exception) {
-            // Ignore failures when the system wallpaper can't be loaded
+        
+        val selectedThemeId = sharedPreferences.getString(Constants.Prefs.SELECTED_THEME, "system_default")
+        if (selectedThemeId != "system_default") {
+            WallpaperDisplayHelper.applySystemWallpaper(views.rightDrawerWallpaper)
+        } else {
+            try {
+                val drawable = WallpaperManager.getInstance(this).drawable
+                views.rightDrawerWallpaper.setImageDrawable(drawable)
+            } catch (_: Exception) {
+                // Ignore failures when the system wallpaper can't be loaded
+            }
         }
     }
 

@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.cardview)
     implementation(libs.material)
     implementation(libs.exp4j)
+    implementation(libs.glide)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

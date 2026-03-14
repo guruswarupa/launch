@@ -86,6 +86,7 @@ class AppAdapter(
     private val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
     private var currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
+    private var isAppNameScrimEnabled = prefs.getBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, false)
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
         override fun run() = action.run()
@@ -114,6 +115,14 @@ class AppAdapter(
 
     fun updateIconSize(size: Int) {
         currentIconSize = size
+        (context as? Activity)?.runOnUiThread {
+            notifyDataSetChanged()
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun updateAppNameScrim(enabled: Boolean) {
+        isAppNameScrimEnabled = enabled
         (context as? Activity)?.runOnUiThread {
             notifyDataSetChanged()
         }
@@ -175,6 +184,7 @@ class AppAdapter(
         val appIcon: com.google.android.material.imageview.ShapeableImageView? = view.findViewById(R.id.app_icon)
         val appName: TextView? = view.findViewById(R.id.app_name)
         val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
+        val container: View? = view.findViewById(R.id.app_item_container)
         var lastClickTime = 0L
     }
 
@@ -334,7 +344,13 @@ class AppAdapter(
             holder.appIcon.layoutParams = params
         }
 
-        holder.itemView.background = null
+        // Apply background translucent scrim to the whole row/item container if enabled
+        if (isAppNameScrimEnabled) {
+            holder.container?.setBackgroundResource(R.drawable.app_name_scrim)
+        } else {
+            holder.container?.background = null
+        }
+
         holder.appIcon?.background = null
         holder.itemView.elevation = 0f
 
