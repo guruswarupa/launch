@@ -255,7 +255,8 @@ class AppInitializer(private val activity: MainActivity) {
             focusModeApplier = FocusModeApplier(
                 activity, backgroundExecutor, appListManager, appDockManager,
                 views.searchBox, views.voiceSearchButton, views.searchContainer, if (activity.isAdapterInitialized()) activity.adapter else null, fullAppList, appList,
-                onUpdateAppSearchManager = { updateAppSearchManager() }
+                onUpdateAppSearchManager = { updateAppSearchManager() },
+                onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() }
             )
             
             // Initialize service manager
