@@ -338,17 +338,17 @@ class AppDockManager(
         // Build workspace names list
         val workspaceNames = workspaces.map { it.name }.toMutableList()
         
-        // Add \"Turn Off\" option if a workspace is currently active
+        // Add "Turn Off" option if a workspace is currently active
         if (isWorkspaceActive) {
             workspaceNames.add("Turn Off")
         }
         
         val itemsArray = workspaceNames.toTypedArray()
         
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(if (isWorkspaceActive) "Switch Workspace" else "Select Workspace")
             .setItems(itemsArray) { _, which ->
-                // Check if \"Turn Off\" was selected (last item when workspace is active)
+                // Check if "Turn Off" was selected (last item when workspace is active)
                 if (isWorkspaceActive && which == itemsArray.size - 1) {
                     // Turn off workspace mode
                     workspaceManager.setActiveWorkspaceId(null)
@@ -363,11 +363,14 @@ class AppDockManager(
                     updateWorkspaceIcon()
                     refreshAppsForWorkspace()
                     scrollToTop()
-                    Toast.makeText(context, "Workspace \'${selectedWorkspace.name}\' activated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun cycleWorkspaces() {
@@ -389,7 +392,7 @@ class AppDockManager(
         updateWorkspaceIcon()
         refreshAppsForWorkspace()
         scrollToTop()
-        Toast.makeText(context, "Workspace \'${selectedWorkspace.name}\' activated", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
     }
 
     private fun turnOffWorkspace() {
@@ -484,14 +487,16 @@ class AppDockManager(
                 disableFocusMode()
             }
         } else if (pomodoroManager.isPomodoroActive()) {
-            AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
                 .setTitle(res.getString(R.string.pomodoro_stop_title))
                 .setMessage(res.getString(R.string.pomodoro_stop_message))
                 .setPositiveButton("Stop") { _, _ ->
                     pomodoroManager.stopPomodoro()
                 }
                 .setNegativeButton("Cancel", null)
-                .show()
+                .create()
+            DialogStyler.styleDialog(dialog)
+            dialog.show()
         } else {
             // Show duration picker dialog
             showFocusModeDurationPicker()
@@ -502,7 +507,7 @@ class AppDockManager(
         val durations = arrayOf(res.getString(R.string.pomodoro_mode), "15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Custom")
         val durationValues = arrayOf(-2, 15, 30, 60, 120, 240, -1) // -2 for Pomodoro, -1 for custom
 
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select Focus Mode Duration")
             .setItems(durations) { _, which ->
                 when (durationValues[which]) {
@@ -512,7 +517,10 @@ class AppDockManager(
                 }
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun showCustomDurationDialog() {
@@ -522,7 +530,7 @@ class AppDockManager(
             DialogStyler.styleInput(context, this)
         }
 
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Duration")
             .setMessage("Enter duration in minutes:")
             .setDialogInputView(context, input)
@@ -535,11 +543,14 @@ class AppDockManager(
                 }
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun promptForDnd(durationMinutes: Int) {
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enable Do Not Disturb?")
             .setMessage("Would you like to enable Do Not Disturb mode to mute notifications during this focus session?")
             .setPositiveButton("Yes") { _, _ ->
@@ -549,7 +560,10 @@ class AppDockManager(
                 enableFocusMode(durationMinutes, false)
             }
             .setNeutralButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun enableFocusMode(durationMinutes: Int, enableDnd: Boolean) {
@@ -606,14 +620,17 @@ class AppDockManager(
     }
 
     private fun showDndPermissionDialog() {
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("DND Access Required")
             .setMessage("Muting notifications requires Do Not Disturb access. Please grant it in the settings or start Focus Mode without DND.")
             .setPositiveButton("Grant Access") { _, _ ->
                 context.startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun updateDndState(enabled: Boolean) {

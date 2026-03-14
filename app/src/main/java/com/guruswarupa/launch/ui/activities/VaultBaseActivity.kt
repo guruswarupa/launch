@@ -9,11 +9,17 @@ import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.managers.EncryptedFolderManager
 
 abstract class VaultBaseActivity : AppCompatActivity() {
+    companion object {
+        private var activeVaultActivities = 0
+    }
+
     private var lastInteractionTime: Long = 0
     private val inactiveTimeoutRunnable = Runnable {
         // Auto-lock after inactivity timeout
+        EncryptedFolderManager(this).lock()
         finish()
     }
     private val handler = Handler(Looper.getMainLooper())
@@ -23,6 +29,7 @@ abstract class VaultBaseActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        activeVaultActivities++
         initializeAutoLock()
     }
     
@@ -33,6 +40,7 @@ abstract class VaultBaseActivity : AppCompatActivity() {
         screenOffReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                    EncryptedFolderManager(this@VaultBaseActivity).lock()
                     finish() // Lock vault when screen turns off
                 }
             }
@@ -73,6 +81,13 @@ abstract class VaultBaseActivity : AppCompatActivity() {
     
     override fun onDestroy() {
         super.onDestroy()
+        activeVaultActivities--
+        
+        // If this is the last vault activity and it's finishing (not rotating), lock the vault
+        if (activeVaultActivities <= 0 && isFinishing) {
+            EncryptedFolderManager(this).lock()
+        }
+        
         handler.removeCallbacks(inactiveTimeoutRunnable)
         screenOffReceiver?.let { unregisterReceiver(it) }
     }

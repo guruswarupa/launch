@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -17,6 +19,7 @@ import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
+import android.graphics.Color
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
@@ -32,12 +35,14 @@ class WorkspaceConfigActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_workspace_config)
         
-        // Make status bar and navigation bar transparent
-        window.decorView.post {
-            makeSystemBarsTransparent()
-        }
+        // Enable edge-to-edge for transparent system bars with white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
+        
+        setContentView(R.layout.activity_workspace_config)
         
         workspaceManager = WorkspaceManager(getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
         
@@ -63,31 +68,23 @@ class WorkspaceConfigActivity : ComponentActivity() {
         // Set system wallpaper
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
-        // Apply theme-based colors and backgrounds
-        val isNightMode = (resources.configuration.uiMode and 
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-            
-        themeOverlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
+        themeOverlay.setBackgroundColor(Color.parseColor("#66000000"))
         
-        val widgetBg = if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
-        workspacesContainer.setBackgroundResource(widgetBg)
+        workspacesContainer.setBackgroundResource(R.drawable.widget_background)
         
-        val textColor = ContextCompat.getColor(this, if (isNightMode) R.color.white else R.color.black)
-        val subTextColor = ContextCompat.getColor(this, if (isNightMode) R.color.gray_light else R.color.gray)
+        val textColor = ContextCompat.getColor(this, R.color.white)
+        val subTextColor = Color.parseColor("#B0B0B0")
         
         titleText.setTextColor(textColor)
         subtitleText.setTextColor(subTextColor)
         createWorkspaceButton.setTextColor(textColor)
         
-        // Button background is already set to ripple, but we can ensure it matches theme
-        createWorkspaceButton.setBackgroundResource(R.drawable.button_neutral_ripple)
+        createWorkspaceButton.setBackgroundResource(R.drawable.settings_card_background)
     }
     
     override fun onResume() {
         super.onResume()
         loadWorkspaces()
-        // Refresh wallpaper in case it changed
         applyThemeAndWallpaper()
     }
     
@@ -98,17 +95,12 @@ class WorkspaceConfigActivity : ComponentActivity() {
             "${it.name} ($appCount apps)"
         }.toTypedArray()
         
-        // Use a themed item layout for the list
+        // Use a themed item layout for the list - always white text
         val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, workspaceNames) {
             override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
                 val view = super.getView(position, convertView, parent)
                 val text = view.findViewById<TextView>(android.R.id.text1)
-                
-                val isNightMode = (context.resources.configuration.uiMode and 
-                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
-                    android.content.res.Configuration.UI_MODE_NIGHT_YES
-                
-                text.setTextColor(ContextCompat.getColor(context, if (isNightMode) R.color.white else R.color.black))
+                text.setTextColor(Color.WHITE)
                 return view
             }
         }
@@ -277,9 +269,6 @@ class WorkspaceConfigActivity : ComponentActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
-    }
-    
-    private fun makeSystemBarsTransparent() {
     }
     
     override fun onDestroy() {

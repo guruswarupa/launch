@@ -3,7 +3,7 @@
     <style name="CustomDialogTheme" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
         <item name="android:windowBackground">@drawable/alert_dialog_background</item>
         <item name="colorSurface">@android:color/transparent</item>
-        <item name="colorOnSurface">@color/dialog_text</item>
+        <item name="colorOnSurface">@color/white</item>
         <item name="colorPrimary">@color/nord7</item>
         <item name="colorAccent">@color/nord7</item>
         <item name="colorControlActivated">@color/nord7</item>
@@ -17,9 +17,16 @@
         <item name="android:editTextStyle">@style/DialogEditText</item>
         <item name="editTextStyle">@style/DialogEditText</item>
         
-        <item name="android:textColorPrimary">@color/dialog_text</item>
-        <item name="android:textColorSecondary">@color/dialog_text_secondary</item>
-        <item name="android:textColor">@color/dialog_text</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColor">@color/white</item>
+        <!-- Force list items to be white -->
+        <item name="android:textColorAlertDialogListItem">@color/white</item>
+        <item name="textColorAlertDialogListItem">@color/white</item>
+        
+        <!-- Additional text color overrides for various dialog components -->
+        <item name="android:textColorPrimaryDisableOnly">@color/white</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
     </style>
 
     <style name="ShapeAppearance.App.Dialog" parent="">
@@ -28,14 +35,14 @@
     </style>
     
     <style name="CustomDialogTitleStyle" parent="TextAppearance.MaterialComponents.Headline6">
-        <item name="android:textColor">@color/dialog_text</item>
+        <item name="android:textColor">@color/white</item>
         <item name="android:textSize">22sp</item>
         <item name="android:textStyle">bold</item>
         <item name="fontFamily">sans-serif-medium</item>
     </style>
     
     <style name="CustomDialogBodyStyle" parent="TextAppearance.MaterialComponents.Body1">
-        <item name="android:textColor">@color/dialog_text_secondary</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="android:textSize">16sp</item>
         <item name="android:lineSpacingExtra">4dp</item>
     </style>
@@ -49,20 +56,20 @@
     </style>
     
     <style name="CustomDialogNegativeButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textColor">@color/dialog_text_secondary</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="rippleColor">@color/dialog_button_background</item>
         <item name="android:textSize">14sp</item>
     </style>
     
     <style name="CustomDialogNeutralButton" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textColor">@color/dialog_text_secondary</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="rippleColor">@color/dialog_button_background</item>
         <item name="android:textSize">14sp</item>
     </style>
 
     <style name="DialogEditText" parent="Widget.AppCompat.EditText">
-        <item name="android:textColor">@color/dialog_text</item>
-        <item name="android:textColorHint">@color/dialog_text_secondary</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
         <item name="android:textCursorDrawable">@null</item>
         <item name="android:background">@drawable/dialog_input_background</item>
         <item name="android:minHeight">56dp</item>
@@ -81,7 +88,7 @@
     </style>
 
     <style name="DialogHelperText" parent="TextAppearance.AppCompat.Caption">
-        <item name="android:textColor">@color/dialog_text_secondary</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="android:textSize">12sp</item>
     </style>
 
@@ -93,61 +100,61 @@
         <item name="boxCornerRadiusBottomEnd">16dp</item>
         <item name="boxStrokeColor">@color/nord7</item>
         <item name="hintTextColor">@color/nord7</item>
-        <item name="android:textColorHint">@color/dialog_text_secondary</item>
-        <item name="helperTextTextColor">@color/dialog_text_secondary</item>
-        <item name="counterTextColor">@color/dialog_text_secondary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="helperTextTextColor">@color/text_secondary</item>
+        <item name="counterTextColor">@color/text_secondary</item>
         <item name="errorTextColor">@color/red</item>
     </style>
     
     <style name="TextAppearance.Dialog.Title" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="android:textSize">20sp</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">@color/white</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="PopupMenuStyle" parent="Widget.AppCompat.PopupMenu">
         <item name="android:popupBackground">@drawable/menu_background</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorPrimary">@color/white</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="android:textColorHint">@color/text_secondary</item>
         <item name="android:itemTextAppearance">@style/PopupMenuItemTextAppearance</item>
-        <item name="colorControlNormal">@color/text</item>
-        <item name="colorControlActivated">@color/text</item>
-        <item name="colorControlHighlight">@color/text</item>
+        <item name="colorControlNormal">@color/white</item>
+        <item name="colorControlActivated">@color/white</item>
+        <item name="colorControlHighlight">@color/white</item>
     </style>
     
     <style name="PopupMenuItemTextAppearance" parent="TextAppearance.AppCompat.Menu">
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textColorPrimary">@color/text</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorPrimary">@color/white</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
     </style>
 
 
     <style name="TextAppearance.Dialog.Item" parent="TextAppearance.MaterialComponents.Body1">
         <item name="android:textSize">16sp</item>
-        <item name="android:textColor">@color/text</item>
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="NoteEditor.HeaderTitle" parent="TextAppearance.MaterialComponents.Headline5">
-        <item name="android:textColor">@color/note_editor_title_text</item>
+        <item name="android:textColor">@color/white</item>
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="NoteEditor.Subtitle" parent="TextAppearance.MaterialComponents.Body1">
-        <item name="android:textColor">@color/note_editor_subtitle_text</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="android:textSize">14sp</item>
     </style>
 
     <style name="NoteEditor.Label" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textColor">@color/note_editor_label_text</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="android:textSize">12sp</item>
         <item name="android:letterSpacing">0.05</item>
     </style>
 
     <style name="NoteEditor.HelperText" parent="TextAppearance.MaterialComponents.Caption">
-        <item name="android:textColor">@color/note_editor_helper_text</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="android:textSize">12sp</item>
     </style>
 

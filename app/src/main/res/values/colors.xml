@@ -40,6 +40,12 @@
     <color name="red">#FF5252</color>
     <color name="icon_color">#FFFFFF</color>
     
+    <!-- Translucent Surface Colors -->
+    <color name="settings_overlay_color">#66000000</color>
+    <color name="button_glass_bg">#33FFFFFF</color>
+    <color name="button_glass_stroke">#20FFFFFF</color>
+    <color name="chip_glass_bg">#33000000</color>
+
     <!-- Dialog Colors -->
     <color name="dialog_background">#80000000</color>
     <color name="dialog_button_background">#33000000</color>
