@@ -228,23 +228,7 @@ class SettingsActivity : ComponentActivity() {
         setupSectionToggle(wallHeader, wallContent, wallArrow)
         findViewById<View>(R.id.change_wallpaper_button).setOnClickListener { chooseWallpaper() }
 
-        val blurSeek = findViewById<SeekBar>(R.id.wallpaper_blur_seekbar)
-        val blurVal = findViewById<TextView>(R.id.wallpaper_blur_value_text)
-        val level = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
-        blurSeek.progress = level
-        blurVal.text = "$level%"
-        blurSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
-                blurVal.text = "$p%"
-                if (f) {
-                    prefs.edit { putInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, p) }
-                    notifySettingsChanged()
-                    WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
-                }
-            }
-            override fun onStartTrackingTouch(s: SeekBar?) {}
-            override fun onStopTrackingTouch(s: SeekBar?) {}
-        })
+        // Blur controls removed - no blur effect
 
         // Typography
         val typoHeader = findViewById<LinearLayout>(R.id.typography_header)

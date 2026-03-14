@@ -30,19 +30,7 @@ object WallpaperDisplayHelper {
     }
 
     private fun applyBlurIfNeeded(target: ImageView, prefs: SharedPreferences) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            target.setRenderEffect(null)
-            return
-        }
-
-        val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
-
-        if (blurLevel > 0) {
-            val radius = blurLevel.toFloat().coerceAtLeast(1f)
-            val effect = RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP)
-            target.setRenderEffect(effect)
-        } else {
-            target.setRenderEffect(null)
-        }
+        // Blur removed - always disable blur effect
+        target.setRenderEffect(null)
     }
 }

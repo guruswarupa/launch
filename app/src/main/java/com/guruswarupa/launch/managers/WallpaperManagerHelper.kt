@@ -152,21 +152,12 @@ class WallpaperManagerHelper(
      * Applies or removes blur effect based on user preference
      */
     fun applyBlurToViews() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
-            val effect = if (blurLevel > 0) {
-                val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
-                RenderEffect.createBlurEffect(blurRadius, blurRadius, Shader.TileMode.CLAMP)
-            } else {
-                null
-            }
-            
-            wallpaperBackground.setRenderEffect(effect)
-            drawerWallpaperBackground?.setRenderEffect(effect)
-            
-            // Ensure right drawer wallpaper never has blur applied
-            activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.setRenderEffect(null)
-        }
+        // Blur removed - always set no blur effect
+        wallpaperBackground.setRenderEffect(null)
+        drawerWallpaperBackground?.setRenderEffect(null)
+        
+        // Ensure right drawer wallpaper never has blur applied
+        activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.setRenderEffect(null)
     }
     
     /**

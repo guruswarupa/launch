@@ -353,7 +353,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="16dp"
-                            android:text="Wallpaper &amp; Blur"
+                            android:text="Wallpaper"
                             android:textSize="16sp"
                             android:fontFamily="sans-serif-medium"
                             android:textColor="@color/white"/>
@@ -384,45 +384,7 @@
                             android:text="Change Background"
                             android:textAllCaps="false"
                             android:background="@drawable/settings_card_background"
-                            android:textColor="@color/white"
-                            android:layout_marginBottom="20dp"/>
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Blur Intensity"
-                            android:textSize="13sp"
-                            android:textColor="@color/white"
-                            android:alpha="0.6"
-                            android:layout_marginBottom="8dp"/>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <SeekBar
-                                android:id="@+id/wallpaper_blur_seekbar"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:paddingHorizontal="0dp"
-                                android:max="100"
-                                android:thumbTint="@color/nord8"
-                                android:progressTint="@color/nord8"
-                                android:progressBackgroundTint="#20FFFFFF"/>
-
-                            <TextView
-                                android:id="@+id/wallpaper_blur_value_text"
-                                android:layout_width="55dp"
-                                android:layout_height="wrap_content"
-                                android:text="50%"
-                                android:textSize="14sp"
-                                android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/nord8"
-                                android:gravity="end"/>
-                        </LinearLayout>
+                            android:textColor="@color/white"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

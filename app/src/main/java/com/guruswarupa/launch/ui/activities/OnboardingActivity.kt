@@ -274,9 +274,7 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun applyBlurEffects() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            BlurUtils.applyBlurToView(wallpaperBackground, 60f)
-        }
+        // Blur removed - no blur effect applied
     }
 
     private fun makeSystemBarsTransparent(isDarkMode: Boolean) {

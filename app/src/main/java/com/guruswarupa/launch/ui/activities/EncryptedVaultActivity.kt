@@ -273,15 +273,8 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     }
 
     private fun applyWallpaperBlur(imageView: ImageView) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
-            if (blurLevel > 0) {
-                val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
-                imageView.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP))
-            } else {
-                imageView.setRenderEffect(null)
-            }
-        }
+        // Blur removed - no blur effect applied
+        imageView.setRenderEffect(null)
     }
 
     private fun loadFiles() {
