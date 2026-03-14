@@ -174,7 +174,8 @@ class AppDockManager(
     private fun getGlassyBackground(): GradientDrawable {
         return GradientDrawable().apply {
             cornerRadius = 1000f
-            setColor(Color.parseColor("#26FFFFFF")) // Very translucent white
+            // Use same translucent black as widgets (#80000000)
+            setColor(Color.parseColor("#80000000"))
             setStroke(1, Color.parseColor("#40FFFFFF"))
         }
     }
@@ -419,8 +420,8 @@ class AppDockManager(
                 if (isWorkspaceActive) {
                     val bg = GradientDrawable().apply {
                         cornerRadius = 1000f
-                        setColor(Color.parseColor("#408FBCBB")) // Nord7 translucent
-                        setStroke(2, Color.parseColor("#8FBCBB"))
+                        setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
+                        setStroke(2, Color.parseColor("#8FBCBB")) // Keep Nord7 stroke
                     }
                     container.background = bg
                 } else {
@@ -582,7 +583,7 @@ class AppDockManager(
             val isWork = state == PomodoroManager.STATE_WORK
             val bg = GradientDrawable().apply {
                 cornerRadius = 1000f
-                setColor(if (isWork) Color.parseColor("#40BF616A") else Color.parseColor("#40A3BE8C"))
+                setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
                 setStroke(2, if (isWork) Color.parseColor("#BF616A") else Color.parseColor("#A3BE8C"))
             }
             container.background = bg
@@ -672,8 +673,8 @@ class AppDockManager(
             if (isFocusMode) {
                 val bg = GradientDrawable().apply {
                     cornerRadius = 1000f
-                    setColor(Color.parseColor("#405E81AC")) // Nord10 translucent
-                    setStroke(2, Color.parseColor("#5E81AC"))
+                    setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
+                    setStroke(2, Color.parseColor("#5E81AC")) // Keep Nord10 stroke
                 }
                 container.background = bg
             } else {

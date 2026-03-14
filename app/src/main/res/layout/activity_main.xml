@@ -35,7 +35,10 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:paddingBottom="@dimen/main_content_stack_bottom_padding"
-            android:gravity="top">
+            android:gravity="top"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:descendantFocusability="beforeDescendants">
 
             <!-- Dummy focus holder -->
             <View
