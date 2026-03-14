@@ -90,8 +90,11 @@ class AppListLoader(
             // Skip to background loading - no cache checks
         } else if (cacheManager != null && cacheManager.isCacheValid()) {
             // STEP 0: Check persistent cache (only if not forceRefresh)
-            val cachedApps = cacheManager.loadAppListFromCache()
-            if (cachedApps.isNotEmpty()) {
+            val cachedAppsRaw = cacheManager.loadAppListFromCache()
+            if (cachedAppsRaw.isNotEmpty()) {
+                // Deduplicate cached list
+                val cachedApps = cachedAppsRaw.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+                
                 // Load metadata cache (fast deserialization)
                 cacheManager.loadAppMetadataFromCache()
                 
@@ -181,7 +184,10 @@ class AppListLoader(
                     val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                         addCategory(Intent.CATEGORY_LAUNCHER)
                     }
-                    val list = packageManager.queryIntentActivities(mainIntent, 0)
+                    val rawList = packageManager.queryIntentActivities(mainIntent, 0)
+                    
+                    // Deduplicate results from PackageManager
+                    val list = rawList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
                     
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
