@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -11,65 +11,95 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay for better text visibility -->
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/settings_overlay"/>
+        android:background="#66000000"/>
 
-    <!-- Content Container -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="center_horizontal">
+        android:paddingHorizontal="16dp">
 
-        <!-- Title -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Hidden Apps"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="@color/text"
-            android:gravity="center"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="32dp"/>
-
-        <!-- Empty State -->
         <LinearLayout
-            android:id="@+id/empty_state_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="32dp"
-            android:visibility="gone">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="48dp"
+            android:layout_marginBottom="32dp"
+            android:paddingHorizontal="8dp">
 
             <TextView
-                android:id="@+id/empty_state_text"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="No hidden apps"
-                android:textSize="18sp"
-                android:textColor="@color/text"
-                android:gravity="center"
-                android:layout_marginTop="16dp"/>
-
+                android:layout_weight="1"
+                android:text="Hidden Apps"
+                android:textSize="38sp"
+                android:fontFamily="sans-serif-black"
+                android:textColor="@color/white"
+                android:shadowColor="#80000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="6"/>
         </LinearLayout>
 
-        <!-- Apps List -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/hidden_apps_recycler_view"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:clipToPadding="false"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"/>
+            android:layout_marginBottom="32dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:cardCornerRadius="24dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/outlineColor">
 
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="8dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/hidden_apps_recycler_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"/>
+
+                <LinearLayout
+                    android:id="@+id/empty_state_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:layout_gravity="center"
+                    android:padding="32dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:src="@drawable/ic_vault_icon"
+                        app:tint="@color/white"
+                        android:alpha="0.2"/>
+
+                    <TextView
+                        android:id="@+id/empty_state_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Privacy vault is empty"
+                        android:textSize="16sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/white"
+                        android:alpha="0.4"
+                        android:layout_marginTop="16dp"/>
+                </LinearLayout>
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
-
 </FrameLayout>

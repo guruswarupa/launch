@@ -1,156 +1,104 @@
 package com.guruswarupa.launch.ui.activities
 
-import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.HiddenAppManager
-import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class HiddenAppsSettingsActivity : ComponentActivity() {
 
     private lateinit var hiddenAppManager: HiddenAppManager
     private lateinit var appsRecyclerView: RecyclerView
-    private lateinit var emptyStateText: TextView
     private lateinit var emptyStateLayout: LinearLayout
     private var hiddenAppsList = mutableListOf<ResolveInfo>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Make status bar and navigation bar transparent BEFORE setContentView
-        
-        window.decorView.systemUiVisibility = 
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-        
         setContentView(R.layout.activity_hidden_apps_settings)
+        applyContentInsets()
         
-        setupTheme()
+        window.decorView.post { makeSystemBarsTransparent() }
 
         val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
         hiddenAppManager = HiddenAppManager(prefs)
 
-        // Initialize views
+        WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
         appsRecyclerView = findViewById(R.id.hidden_apps_recycler_view)
-        emptyStateText = findViewById(R.id.empty_state_text)
         emptyStateLayout = findViewById(R.id.empty_state_layout)
-
-        // Setup RecyclerView
         appsRecyclerView.layoutManager = LinearLayoutManager(this)
 
         recreateAppsList()
     }
-    
-    private fun setupTheme() {
-        val overlay = findViewById<View>(R.id.settings_overlay)
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
-        
-        setupWallpaper()
-        
-        window.decorView.post {
-            makeSystemBarsTransparent(isDarkMode)
-        }
-    }
-    
-    private fun setupWallpaper() {
-        val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        
-        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
-    }
-    
-    private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
-    }
 
     private fun recreateAppsList() {
-        val packageManager = packageManager
-        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-        
-        val allApps = packageManager.queryIntentActivities(mainIntent, 0)
+        val pm = packageManager
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+        val allApps = pm.queryIntentActivities(mainIntent, 0)
         val hiddenPackageNames = hiddenAppManager.getHiddenApps()
         
         hiddenAppsList = allApps.filter { 
             it.activityInfo.packageName != "com.guruswarupa.launch" &&
             hiddenPackageNames.contains(it.activityInfo.packageName)
-        }.sortedBy { 
-            it.loadLabel(packageManager).toString().lowercase() 
-        }.toMutableList()
+        }.sortedBy { it.loadLabel(pm).toString().lowercase() }.toMutableList()
 
         if (hiddenAppsList.isEmpty()) {
             appsRecyclerView.visibility = View.GONE
             emptyStateLayout.visibility = View.VISIBLE
-            emptyStateText.setText(R.string.no_hidden_apps)
         } else {
             appsRecyclerView.visibility = View.VISIBLE
             emptyStateLayout.visibility = View.GONE
-            
-            val adapter = HiddenAppsAdapter(hiddenAppsList) { packageName ->
-                hiddenAppManager.unhideApp(packageName)
-                Toast.makeText(this, "App unhidden", Toast.LENGTH_SHORT).show()
+            appsRecyclerView.adapter = HiddenAppsAdapter(hiddenAppsList) { pkg ->
+                hiddenAppManager.unhideApp(pkg)
+                Toast.makeText(this, "Application restored", Toast.LENGTH_SHORT).show()
                 recreateAppsList()
-                // Set result to indicate an app was unhidden
                 setResult(RESULT_OK)
             }
-            appsRecyclerView.adapter = adapter
         }
     }
 
-    private class HiddenAppsAdapter(
-        private val apps: List<ResolveInfo>,
-        private val onUnhide: (String) -> Unit
-    ) : RecyclerView.Adapter<HiddenAppsAdapter.ViewHolder>() {
-
-        class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val icon: ImageView = view.findViewById(R.id.app_icon)
-            val name: TextView = view.findViewById(R.id.app_name)
-            val unhideButton: Button = view.findViewById(R.id.unhide_button)
+    private fun applyContentInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            findViewById<View>(android.R.id.content).setPadding(0, 0, 0, bars.bottom)
+            insets
         }
+    }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_hidden_app, parent, false)
-            return ViewHolder(view)
+    private fun makeSystemBarsTransparent() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
         }
+    }
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val app = apps[position]
-            val packageName = app.activityInfo.packageName
-            val context = holder.itemView.context
-            val packageManager = context.packageManager
-
-            try {
-                holder.icon.setImageDrawable(app.loadIcon(packageManager))
-                holder.name.text = app.loadLabel(packageManager)
-            } catch (_: Exception) {
-                holder.icon.setImageResource(R.drawable.ic_default_app_icon)
-                holder.name.text = packageName
-            }
-
-            holder.unhideButton.setOnClickListener {
-                onUnhide(packageName)
-            }
+    private class HiddenAppsAdapter(private val apps: List<ResolveInfo>, private val onUnhide: (String) -> Unit) : RecyclerView.Adapter<HiddenAppsAdapter.ViewHolder>() {
+        class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+            val icon: ImageView = v.findViewById(R.id.app_icon)
+            val name: TextView = v.findViewById(R.id.app_name)
+            val btn: Button = v.findViewById(R.id.unhide_button)
         }
-
+        override fun onCreateViewHolder(p: ViewGroup, t: Int) = ViewHolder(LayoutInflater.from(p.context).inflate(R.layout.item_hidden_app, p, false))
         override fun getItemCount() = apps.size
+        override fun onBindViewHolder(h: ViewHolder, p: Int) {
+            val app = apps[p]
+            val pm = h.itemView.context.packageManager
+            h.icon.setImageDrawable(app.loadIcon(pm))
+            h.name.text = app.loadLabel(pm)
+            h.btn.setOnClickListener { onUnhide(app.activityInfo.packageName) }
+        }
     }
 }

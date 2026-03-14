@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
+import android.widget.Toast
 import androidx.core.provider.FontRequest
 import androidx.core.provider.FontsContractCompat
 import com.guruswarupa.launch.R
@@ -22,15 +23,31 @@ object DownloadableFontManager {
     )
 
     private val fontOptionsList = listOf(
-        FontOption("droid_sans_fallback", "Droid Sans Fallback", "Droid Sans"),
+        FontOption("inter", "Inter", "Inter"),
+        FontOption("roboto", "Roboto", "Roboto"),
+        FontOption("montserrat", "Montserrat", "Montserrat"),
+        FontOption("lato", "Lato", "Lato"),
+        FontOption("poppins", "Poppins", "Poppins"),
         FontOption("ubuntu_regular", "Ubuntu Regular", "Ubuntu"),
         FontOption("noto_sans", "Noto Sans", "Noto Sans"),
         FontOption("noto_serif", "Noto Serif", "Noto Serif"),
-        FontOption("noto_sans_display", "Noto Sans Display", "Noto Sans Display"),
-        FontOption("dejavu_sans", "DejaVu Sans", "DejaVu Sans"),
-        FontOption("dejavu_serif", "DejaVu Serif", "DejaVu Serif"),
-        FontOption("dejavu_mono", "DejaVu Mono", "DejaVu Mono"),
-        FontOption("fira_code", "Fira Code", "Fira Code")
+        FontOption("open_sans", "Open Sans", "Open Sans"),
+        FontOption("raleway", "Raleway", "Raleway"),
+        FontOption("oswald", "Oswald", "Oswald"),
+        FontOption("merriweather", "Merriweather", "Merriweather"),
+        FontOption("nunito", "Nunito", "Nunito"),
+        FontOption("rubik", "Rubik", "Rubik"),
+        FontOption("quicksand", "Quicksand", "Quicksand"),
+        FontOption("titillium_web", "Titillium Web", "Titillium Web"),
+        FontOption("playfair_display", "Playfair Display", "Playfair Display"),
+        FontOption("exo_2", "Exo 2", "Exo 2"),
+        FontOption("orbitron", "Orbitron", "Orbitron"),
+        FontOption("jetbrains_mono", "JetBrains Mono", "JetBrains Mono"),
+        FontOption("fira_code", "Fira Code", "Fira Code"),
+        FontOption("source_code_pro", "Source Code Pro", "Source Code Pro"),
+        FontOption("pacifico", "Pacifico", "Pacifico"),
+        FontOption("lobster", "Lobster", "Lobster"),
+        FontOption("caveat", "Caveat", "Caveat")
     )
 
     private val fontOptionsMap = fontOptionsList.associateBy { it.styleKey }
@@ -90,9 +107,19 @@ object DownloadableFontManager {
             }
 
             override fun onTypefaceRequestFailed(reason: Int) {
+                handler.post {
+                    Toast.makeText(context, "Failed to download font: ${option.displayName}", Toast.LENGTH_SHORT).show()
+                }
                 dispatch(styleKey, false)
             }
         }, handler)
+    }
+
+    fun preloadDownloadedFonts(context: Context) {
+        val downloaded = getDownloadedFonts(context)
+        downloaded.forEach { styleKey ->
+            requestFont(context, styleKey) { /* Initializing cache */ }
+        }
     }
 
     private fun markFontDownloaded(context: Context, styleKey: String) {

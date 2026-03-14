@@ -3,18 +3,15 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.app.WallpaperManager
-import android.app.admin.DevicePolicyManager
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
-import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 
 // Import moved managers
@@ -27,7 +24,6 @@ import com.guruswarupa.launch.core.ShareManager
 
 import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.handlers.*
-import com.guruswarupa.launch.services.*
 import com.guruswarupa.launch.models.MainActivityViews
 import com.guruswarupa.launch.models.Constants
 
@@ -59,7 +55,6 @@ class MainActivity : FragmentActivity() {
     // Modular managers
     internal lateinit var activityInitializer: ActivityInitializer
     val views: MainActivityViews get() = activityInitializer.views
-    val drawerLayout: DrawerLayout get() = views.drawerLayout
 
     internal lateinit var appList: MutableList<ResolveInfo>
     internal lateinit var adapter: AppAdapter
@@ -99,7 +94,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var widgetLifecycleCoordinator: WidgetLifecycleCoordinator
     lateinit var favoriteAppManager: FavoriteAppManager
     internal lateinit var hiddenAppManager: HiddenAppManager
-    internal var isShowAllAppsMode = false
     internal lateinit var widgetManager: WidgetManager
     internal lateinit var resultRegistry: MainActivityResultRegistry
     internal lateinit var featureTutorialManager: FeatureTutorialManager
@@ -147,7 +141,6 @@ class MainActivity : FragmentActivity() {
         appTimerManager = AppTimerManager(this)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
-        isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
         featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
         
         // Initialize new modular managers
@@ -232,8 +225,7 @@ class MainActivity : FragmentActivity() {
         broadcastReceiverManager.registerReceivers()
     }
     
-
-    
+    @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
         try {
@@ -267,40 +259,6 @@ class MainActivity : FragmentActivity() {
         setupSearchBoxListener()
     }
     
-
-    
-    /**
-     * Attempts to turn off the screen. 
-     * Prioritizes Accessibility Service (Android P+) to allow biometric unlock.
-     * Falls back to Device Admin for older versions.
-     */
-    private fun lockScreen() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            if (permissionManager.isAccessibilityServiceEnabled()) {
-                val locked = ScreenLockAccessibilityService.instance?.lockScreen() ?: false
-                if (!locked) {
-                    Toast.makeText(this, "Failed to lock using accessibility service", Toast.LENGTH_SHORT).show()
-                }
-                return
-            } else {
-                permissionManager.requestAccessibilityPermission()
-                return
-            }
-        }
-
-        // Fallback for pre-Android P
-        if (permissionManager.isDeviceAdminActive()) {
-            val devicePolicyManager = getSystemService(DEVICE_POLICY_SERVICE) as DevicePolicyManager
-            try {
-                devicePolicyManager.lockNow()
-            } catch (e: Exception) {
-                Toast.makeText(this, "Error locking screen: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            permissionManager.requestDeviceAdminPermission()
-        }
-    }
-    
     /**
      * Sets up the search box listener to show/hide the top widget based on search text.
      */
@@ -310,33 +268,18 @@ class MainActivity : FragmentActivity() {
             
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s?.toString()?.trim() ?: ""
-                if (query.isEmpty()) {
-                    // Show top widget when search is empty
-                    views.topWidgetContainer.visibility = View.VISIBLE
-                    // Reset margin when top widget is shown
-                    val layoutParams = views.searchContainer.layoutParams as ViewGroup.MarginLayoutParams
-                    layoutParams.setMargins(
-                        layoutParams.leftMargin,
-                        0, // Reset to default margin
-                        layoutParams.rightMargin,
-                        layoutParams.bottomMargin
-                    )
-                    views.searchContainer.layoutParams = layoutParams
-                    updateFastScrollerVisibility()
+                if (query.isNotEmpty()) {
+                    // Hide header and dock when there's any character in search
+                    activityInitializer.setHeaderVisibility(false)
                 } else {
-                    // Hide top widget when searching
-                    views.topWidgetContainer.visibility = View.GONE
-                    // Add extra margin to compensate for hidden widget and prevent touching navbar
-                    val layoutParams = views.searchContainer.layoutParams as ViewGroup.MarginLayoutParams
-                    layoutParams.setMargins(
-                        layoutParams.leftMargin,
-                        resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden), // Add margin when widget is hidden
-                        layoutParams.rightMargin,
-                        layoutParams.bottomMargin
-                    )
-                    views.searchContainer.layoutParams = layoutParams
-                    views.fastScroller.visibility = View.GONE
+                    // Show header and dock when search is empty
+                    activityInitializer.setHeaderVisibility(true)
+                    // Scroll to top when search is cleared with a slight delay to ensure layout is ready
+                    handler.postDelayed({
+                        views.recyclerView.scrollToPosition(0)
+                    }, 100)
                 }
+                updateFastScrollerVisibility()
             }
             
             override fun afterTextChanged(s: android.text.Editable?) {}
@@ -344,20 +287,27 @@ class MainActivity : FragmentActivity() {
     }
 
     /**
-     * Updates FastScroller visibility based on view mode and search query
+     * Updates FastScroller visibility. Now always visible if apps are present.
      */
     internal fun updateFastScrollerVisibility() {
         if (!::sharedPreferences.isInitialized || !views.isSearchBoxInitialized() || !::appList.isInitialized) return
         
-        val viewPreference = sharedPreferences.getString("view_preference", "list")
-        val isGridMode = viewPreference == "grid"
-        val query = views.searchBox.text.toString().trim()
-        
-        // Show fast scroller only in list mode when not searching
-        if (!isGridMode && query.isEmpty() && appList.isNotEmpty()) {
+        // Fast scroller is now requested to be always visible
+        if (appList.isNotEmpty()) {
             views.fastScroller.visibility = View.VISIBLE
         } else {
             views.fastScroller.visibility = View.GONE
+        }
+    }
+    
+    internal fun getPreferredGridColumns(): Int {
+        val minColumns = resources.getInteger(R.integer.grid_columns_min)
+        val maxColumns = resources.getInteger(R.integer.grid_columns_max)
+        val storedColumns = sharedPreferences.getInt(Constants.Prefs.GRID_COLUMNS, -1)
+        return if (storedColumns in minColumns..maxColumns) {
+            storedColumns
+        } else {
+            resources.getInteger(R.integer.app_grid_columns)
         }
     }
     
@@ -461,8 +411,6 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    // Gesture exclusion methods moved to GestureHandler
-
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -476,8 +424,13 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
     }
-    
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.updatePageWidth()
+        }
+    }
     
     /**
      * Initializes LifecycleManager with all dependencies.
@@ -575,16 +528,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    fun isWidgetsPageOpen(): Boolean {
-        return ::screenPagerManager.isInitialized &&
-            screenPagerManager.isPageOpen(ScreenPagerManager.Page.LEFT)
-    }
-
-    fun isWallpaperPageOpen(): Boolean {
-        return ::screenPagerManager.isInitialized &&
-            screenPagerManager.isPageOpen(ScreenPagerManager.Page.RIGHT)
-    }
-
     fun setWidgetsPageLocked(locked: Boolean) {
         if (::screenPagerManager.isInitialized) {
             screenPagerManager.setLeftPageLocked(locked)
@@ -603,8 +546,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    // Broadcast receivers moved to BroadcastReceiverManager
-    
     private fun handleSettingsUpdate() {
         if (::settingsChangeCoordinator.isInitialized) {
             settingsChangeCoordinator.handleSettingsUpdate()
@@ -646,20 +587,12 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-
-
     override fun onDestroy() {
         super.onDestroy()
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
         }
     }
-
-    // App launching methods - delegated to AppLauncher
-    internal fun launchAppWithLockCheck(packageName: String, appName: String) {
-        appLauncher.launchAppWithLockCheck(packageName, appName)
-    }
-
 
     // Usage stats refresh methods - delegated to UsageStatsRefreshManager
     private fun updateBatteryInBackground() {
@@ -699,16 +632,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-    }
-    
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-    }
-
-
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -726,7 +649,6 @@ class MainActivity : FragmentActivity() {
                         if (::appSearchManager.isInitialized) {
                             appSearchManager.updateContactsList()
                         } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
-                            // Initialize AppSearchManager if not already initialized
                             updateAppSearchManager()
                         }
                     }
@@ -746,33 +668,23 @@ class MainActivity : FragmentActivity() {
             if (::voiceSearchManager.isInitialized) {
                 voiceSearchManager.startVoiceSearch()
             }
-            // Also notify noise decibel widget if permission was granted
             if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isNoiseDecibelWidgetInitialized()) {
                 widgetLifecycleCoordinator.noiseDecibelWidget.onPermissionGranted()
             }
         }
         
-        // Handle physical activity permission
-        if (requestCode == 105 && 
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
-                widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
-            }
-        }
-        
-        // Handle calendar permission
-        if (requestCode == 101 && // CalendarEventsWidget.REQUEST_CODE_CALENDAR_PERMISSION is 101
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
-                widgetLifecycleCoordinator.calendarEventsWidget.onPermissionGranted()
-            }
-        }
-        
-        // Handle calendar permission for countdown widget
-        if (requestCode == 102 && // CountdownWidget.REQUEST_CODE_CALENDAR_PERMISSION is 102
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
-                widgetLifecycleCoordinator.countdownWidget.onPermissionGranted()
+        // Handle other permissions (physical activity, calendar, etc.)
+        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            when (requestCode) {
+                105 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
+                    widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
+                }
+                101 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
+                    widgetLifecycleCoordinator.calendarEventsWidget.onPermissionGranted()
+                }
+                102 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
+                    widgetLifecycleCoordinator.countdownWidget.onPermissionGranted()
+                }
             }
         }
     }

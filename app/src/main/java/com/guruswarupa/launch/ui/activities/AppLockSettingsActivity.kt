@@ -1,29 +1,27 @@
 package com.guruswarupa.launch.ui.activities
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppLockManager
-import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class AppLockSettingsActivity : ComponentActivity() {
@@ -32,273 +30,175 @@ class AppLockSettingsActivity : ComponentActivity() {
     private lateinit var appsRecyclerView: RecyclerView
     private lateinit var enableAppLockSwitch: SwitchCompat
     private lateinit var fingerprintSwitch: SwitchCompat
-    private lateinit var fingerprintLayout: LinearLayout
+    private lateinit var fingerprintLayout: View
     private lateinit var changePinButton: Button
     private lateinit var resetAppLockButton: Button
     private var isPinVerifiedForThisSession = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Enable edge-to-edge for transparent system bars with white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
         super.onCreate(savedInstanceState)
-        
-        // Make status bar and navigation bar transparent BEFORE setContentView
-        
         setContentView(R.layout.activity_app_lock_settings)
+        applyContentInsets()
         
-        setupTheme()
-
         appLockManager = AppLockManager(this)
+        setupViews()
+        setupExpandableSections()
+        setupListeners()
+        recreateAppsList()
+    }
 
-        // Initialize views
+    private fun setupViews() {
+        WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
         enableAppLockSwitch = findViewById(R.id.enable_app_lock_switch)
         fingerprintSwitch = findViewById(R.id.fingerprint_switch)
         fingerprintLayout = findViewById(R.id.fingerprint_layout)
         changePinButton = findViewById(R.id.change_pin_button)
         resetAppLockButton = findViewById(R.id.reset_app_lock_button)
         appsRecyclerView = findViewById(R.id.apps_recycler_view)
+        appsRecyclerView.layoutManager = LinearLayoutManager(this)
 
-        // Setup expandable sections
-        setupExpandableSections()
-
-        // Setup switches
         enableAppLockSwitch.isChecked = appLockManager.isAppLockEnabled()
-        enableAppLockSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked && !appLockManager.isPinSet()) {
-                // Enabling app lock - set up PIN
-                appLockManager.setupPin { success ->
-                    if (!success) {
-                        enableAppLockSwitch.isChecked = false
-                    } else {
-                        changePinButton.text = getString(R.string.change_pin)
-                    }
-                }
-            } else if (!isChecked && appLockManager.isPinSet()) {
-                // Disabling app lock - verify PIN first
-                appLockManager.verifyPin { isAuthenticated ->
-                    if (isAuthenticated) {
-                        appLockManager.setAppLockEnabled(false)
-                        Toast.makeText(this, "App Lock disabled", Toast.LENGTH_SHORT).show()
-                    } else {
-                        // Revert switch back to enabled state if PIN verification failed
-                        enableAppLockSwitch.isChecked = true
-                    }
-                }
-            } else {
-                // Direct enable/disable when no PIN is set
-                appLockManager.setAppLockEnabled(isChecked)
-            }
-        }
+        updatePinButtonText()
 
-        // Fingerprint authentication switch (only show if available)
         if (appLockManager.isFingerprintAvailable()) {
             fingerprintLayout.isVisible = true
             fingerprintSwitch.isChecked = appLockManager.isFingerprintEnabled()
-            fingerprintSwitch.setOnCheckedChangeListener { _, isChecked ->
-                if (appLockManager.isPinSet()) {
-                    appLockManager.setFingerprintEnabled(isChecked)
-                    Toast.makeText(
-                        this,
-                        if (isChecked) "Fingerprint enabled" else "Fingerprint disabled",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    fingerprintSwitch.isChecked = false
-                    Toast.makeText(this, "Please set up a PIN first", Toast.LENGTH_SHORT).show()
-                }
-            }
         } else {
             fingerprintLayout.isVisible = false
         }
+    }
 
-        // Change PIN button
-        changePinButton.text = if (appLockManager.isPinSet()) getString(R.string.change_pin) else getString(R.string.set_pin)
+    private fun updatePinButtonText() {
+        changePinButton.text = if (appLockManager.isPinSet()) getString(R.string.change_access_pin) else getString(R.string.set_access_pin)
+    }
+
+    private fun setupListeners() {
+        enableAppLockSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !appLockManager.isPinSet()) {
+                appLockManager.setupPin { success: Boolean ->
+                    if (!success) enableAppLockSwitch.isChecked = false
+                    else updatePinButtonText()
+                }
+            } else if (!isChecked && appLockManager.isPinSet()) {
+                appLockManager.verifyPin { auth: Boolean ->
+                    if (auth) appLockManager.setAppLockEnabled(false)
+                    else enableAppLockSwitch.isChecked = true
+                }
+            } else appLockManager.setAppLockEnabled(isChecked)
+        }
+
+        fingerprintSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (appLockManager.isPinSet()) appLockManager.setFingerprintEnabled(isChecked)
+            else {
+                fingerprintSwitch.isChecked = false
+                Toast.makeText(this, "Set PIN first", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         changePinButton.setOnClickListener {
             if (appLockManager.isPinSet()) {
-                appLockManager.changePin { success ->
-                    if (success) {
-                        changePinButton.text = getString(R.string.change_pin)
-                    }
+                appLockManager.changePin { success: Boolean -> 
+                    if (success) updatePinButtonText() 
                 }
             } else {
-                appLockManager.setupPin { success ->
+                appLockManager.setupPin { success: Boolean ->
                     if (success) {
-                        changePinButton.text = getString(R.string.change_pin)
+                        updatePinButtonText()
                         enableAppLockSwitch.isChecked = true
                     }
                 }
             }
         }
 
-        // Reset App Lock button
         resetAppLockButton.setOnClickListener {
-            androidx.appcompat.app.AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                .setTitle("Reset App Lock")
-                .setMessage("This will remove the PIN and unlock all apps. Are you sure?")
+            AlertDialog.Builder(this, R.style.CustomDialogTheme)
+                .setTitle("Reset Vault")
+                .setMessage("This will wipe the PIN and unlock everything. Continue?")
                 .setPositiveButton("Reset") { _, _ ->
-                    appLockManager.resetAppLock { success ->
+                    appLockManager.resetAppLock { success: Boolean ->
                         if (success) {
                             enableAppLockSwitch.isChecked = false
                             fingerprintSwitch.isChecked = false
-                            changePinButton.text = getString(R.string.set_pin)
+                            updatePinButtonText()
                             recreateAppsList()
                         }
                     }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+                }.setNegativeButton("Cancel", null).show()
         }
-
-        // Setup RecyclerView
-        appsRecyclerView.layoutManager = LinearLayoutManager(this)
-
-        recreateAppsList()
-    }
-    
-    private fun setupTheme() {
-        val overlay = findViewById<View>(R.id.settings_overlay)
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
-        
-        setupWallpaper()
-        
-        window.decorView.post {
-            makeSystemBarsTransparent(isDarkMode)
-        }
-    }
-    
-    private fun setupWallpaper() {
-        val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        
-        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
-    }
-    
-    private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
     }
 
     private fun setupExpandableSections() {
-        // App Lock Settings Section
-        val appLockSettingsHeader = findViewById<LinearLayout>(R.id.app_lock_settings_header)
-        val appLockSettingsContent = findViewById<LinearLayout>(R.id.app_lock_settings_content)
-        val appLockSettingsArrow = findViewById<TextView>(R.id.app_lock_settings_arrow)
-        setupSectionToggle(appLockSettingsHeader, appLockSettingsContent, appLockSettingsArrow)
-        
-        // Apps List Section
-        val appsListHeader = findViewById<LinearLayout>(R.id.apps_list_header)
-        val appsListContent = appsRecyclerView
-        val appsListArrow = findViewById<TextView>(R.id.apps_list_arrow)
-        setupSectionToggle(appsListHeader, appsListContent, appsListArrow)
+        setupSectionToggle(findViewById(R.id.app_lock_settings_header), findViewById(R.id.app_lock_settings_content), findViewById(R.id.app_lock_settings_arrow))
+        setupSectionToggle(findViewById(R.id.apps_list_header), appsRecyclerView, findViewById(R.id.apps_list_arrow))
     }
-    
-    private fun setupSectionToggle(header: LinearLayout, content: View, arrow: TextView) {
+
+    private fun setupSectionToggle(header: View, content: View, arrow: TextView) {
         header.setOnClickListener {
-            val isExpanded = content.isVisible
-            if (isExpanded) {
-                content.isVisible = false
-                arrow.text = "▼"
-            } else {
-                content.isVisible = true
-                arrow.text = "▲"
-            }
+            val vis = content.isVisible
+            content.isVisible = !vis
+            arrow.animate().rotation(if (vis) 0f else 180f).setDuration(250).start()
         }
     }
 
     private fun recreateAppsList() {
-        val installedApps = getInstalledApps()
-        val adapter = AppLockAdapter(
-            installedApps,
-            appLockManager,
-            onItemChanged = {},
-            requestPinAuthIfNeeded = { onSuccess ->
-                if (isPinVerifiedForThisSession) {
-                    onSuccess()
-                } else {
-                    appLockManager.verifyPin { success ->
-                        if (success) {
-                            isPinVerifiedForThisSession = true
-                            onSuccess()
-                        } else {
-                            Toast.makeText(this, "PIN verification failed", Toast.LENGTH_SHORT).show()
-                            recreateAppsList() // Reset UI toggle state if auth failed
-                        }
-                    }
+        appsRecyclerView.adapter = AppLockAdapter(
+            getInstalledApps(), appLockManager,
+            requestPinAuth = { onSuccess ->
+                if (isPinVerifiedForThisSession) onSuccess()
+                else appLockManager.verifyPin { success: Boolean -> 
+                    if (success) { isPinVerifiedForThisSession = true; onSuccess() }
+                    else recreateAppsList()
                 }
             }
         )
-        appsRecyclerView.adapter = adapter
     }
 
     @SuppressLint("QueryPermissionsNeeded")
     private fun getInstalledApps(): List<AppInfo> {
         val pm = packageManager
+        val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
+                   else pm.getInstalledApplications(PackageManager.GET_META_DATA)
         
-        val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
-        } else {
-            pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        }
-        
-        return apps.filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 } // Only user apps
-            .map { appInfo ->
-                AppInfo(
-                    packageName = appInfo.packageName,
-                    appName = appInfo.loadLabel(pm).toString(),
-                    icon = appInfo.loadIcon(pm)
-                )
-            }
+        return apps.filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
+            .map { AppInfo(it.packageName, it.loadLabel(pm).toString(), it.loadIcon(pm)) }
             .sortedBy { it.appName }
     }
 
-    data class AppInfo(
-        val packageName: String,
-        val appName: String,
-        val icon: android.graphics.drawable.Drawable
-    )
-
-    class AppLockAdapter(
-        private val apps: List<AppInfo>,
-        private val appLockManager: AppLockManager,
-        private val onItemChanged: () -> Unit,
-        private val requestPinAuthIfNeeded: (onSuccess: () -> Unit) -> Unit
-    ) : RecyclerView.Adapter<AppLockAdapter.ViewHolder>() {
-
-        class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            val icon: ImageView = view.findViewById(R.id.app_icon)
-            val name: TextView = view.findViewById(R.id.app_name)
-            val lockSwitch: SwitchCompat = view.findViewById(R.id.lock_switch)
+    private fun applyContentInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            findViewById<View>(R.id.settings_scroll_view).setPadding(0, bars.top, 0, bars.bottom)
+            insets
         }
+    }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_app_lock, parent, false)
-            return ViewHolder(view)
+    data class AppInfo(val packageName: String, val appName: String, val icon: android.graphics.drawable.Drawable)
+
+    class AppLockAdapter(private val apps: List<AppInfo>, private val manager: AppLockManager, private val requestPinAuth: (onSuccess: () -> Unit) -> Unit) : RecyclerView.Adapter<AppLockAdapter.ViewHolder>() {
+        class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
+            val icon: ImageView = v.findViewById(R.id.app_icon)
+            val name: TextView = v.findViewById(R.id.app_name)
+            val sw: SwitchCompat = v.findViewById(R.id.lock_switch)
         }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val app = apps[position]
-            holder.icon.setImageDrawable(app.icon)
-            holder.name.text = app.appName
-
-            // Clear listener first to prevent unwanted triggers
-            holder.lockSwitch.setOnCheckedChangeListener(null)
-            holder.lockSwitch.isChecked = appLockManager.isAppLocked(app.packageName)
-
-            // Set listener after setting the state
-            holder.lockSwitch.setOnCheckedChangeListener { _, isChecked ->
-                requestPinAuthIfNeeded {
-                    if (isChecked) {
-                        appLockManager.lockApp(app.packageName)
-                    } else {
-                        appLockManager.unlockApp(app.packageName)
-                    }
-                    onItemChanged()
+        override fun onCreateViewHolder(p: ViewGroup, t: Int) = ViewHolder(LayoutInflater.from(p.context).inflate(R.layout.item_app_lock, p, false))
+        override fun getItemCount() = apps.size
+        override fun onBindViewHolder(h: ViewHolder, p: Int) {
+            val app = apps[p]
+            h.icon.setImageDrawable(app.icon)
+            h.name.text = app.appName
+            h.sw.setOnCheckedChangeListener(null)
+            h.sw.isChecked = manager.isAppLocked(app.packageName)
+            h.sw.setOnCheckedChangeListener { _, isChecked ->
+                requestPinAuth {
+                    if (isChecked) manager.lockApp(app.packageName) else manager.unlockApp(app.packageName)
                 }
-
-                // Revert switch visually if user cancels or fails auth
-                if (!appLockManager.isPinSet()) {
-                    holder.lockSwitch.isChecked = false
-                }
+                if (!manager.isPinSet()) h.sw.isChecked = false
             }
         }
-
-        override fun getItemCount() = apps.size
     }
 }

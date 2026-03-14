@@ -17,6 +17,8 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.toColorInt
@@ -64,16 +66,15 @@ class PrivacyDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window.decorView.systemUiVisibility = 
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        // Enable edge-to-edge for transparent system bars with white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
 
         setContentView(R.layout.activity_privacy_dashboard)
         
         setupTheme()
-
-        findViewById<ImageButton>(R.id.back_button).setOnClickListener {
-            finish()
-        }
 
         recyclerView = findViewById(R.id.privacy_apps_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -103,23 +104,13 @@ class PrivacyDashboardActivity : ComponentActivity() {
     
     private fun setupTheme() {
         val overlay = findViewById<View>(R.id.settings_overlay)
-        val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
-        
         setupWallpaper()
-        
-        window.decorView.post {
-            makeSystemBarsTransparent(isDarkMode)
-        }
     }
     
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
-    }
-    
-    private fun makeSystemBarsTransparent(isDarkMode: Boolean) {
     }
 
     private fun loadApps() {

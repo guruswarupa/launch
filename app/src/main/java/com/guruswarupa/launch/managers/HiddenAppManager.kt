@@ -2,6 +2,7 @@ package com.guruswarupa.launch.managers
 
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import android.util.Log
 
 /**
  * Manages hidden apps - apps that are hidden from the main app list.
@@ -11,6 +12,7 @@ class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
     
     companion object {
         private const val HIDDEN_APPS_KEY = "hidden_apps"
+        private const val TAG = "HiddenAppManager"
     }
     
     // Cache hidden apps to avoid repeated SharedPreferences reads
@@ -19,7 +21,31 @@ class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
     
     private fun getHiddenAppsInternal(): Set<String> {
         if (!cacheValid || hiddenAppsCache == null) {
-            hiddenAppsCache = sharedPreferences.getStringSet(HIDDEN_APPS_KEY, emptySet()) ?: emptySet()
+            try {
+                hiddenAppsCache = sharedPreferences.getStringSet(HIDDEN_APPS_KEY, emptySet()) ?: emptySet()
+            } catch (e: ClassCastException) {
+                Log.e(TAG, "Data corruption: $HIDDEN_APPS_KEY is not a Set. Attempting recovery.", e)
+                val stringValue = try { sharedPreferences.getString(HIDDEN_APPS_KEY, null) } catch (_: Exception) { null }
+                val recoveredSet = if (stringValue != null) {
+                    if (stringValue.startsWith("[") && stringValue.endsWith("]")) {
+                        stringValue.substring(1, stringValue.length - 1)
+                            .split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                            .toSet()
+                    } else {
+                        setOf(stringValue)
+                    }
+                } else {
+                    emptySet()
+                }
+                
+                sharedPreferences.edit { 
+                    remove(HIDDEN_APPS_KEY)
+                    putStringSet(HIDDEN_APPS_KEY, recoveredSet)
+                }
+                hiddenAppsCache = recoveredSet
+            }
             cacheValid = true
         }
         return hiddenAppsCache ?: emptySet()

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -11,73 +11,89 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay -->
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/settings_overlay"/>
+        android:background="#66000000"/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="center_horizontal">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Customize Control Center"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="@color/text"
-            android:gravity="center"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Drag items to reorder them and toggle visibility with the switches."
-            android:textSize="14sp"
-            android:textColor="@color/text"
-            android:alpha="0.8"
-            android:gravity="center"
-            android:layout_marginBottom="16dp"/>
+        android:paddingHorizontal="16dp">
 
         <LinearLayout
-            android:id="@+id/shortcut_list_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="48dp"
+            android:layout_marginBottom="32dp"
+            android:paddingHorizontal="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Quick Panel"
+                android:textSize="38sp"
+                android:fontFamily="sans-serif-black"
+                android:textColor="@color/white"
+                android:shadowColor="#80000000"
+                android:shadowDx="0"
+                android:shadowDy="2"
+                android:shadowRadius="6"/>
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/widget_background"
-            android:padding="16dp"
-            android:clipToPadding="false"
-            android:clipChildren="false">
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:cardCornerRadius="24dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/outlineColor">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_shortcuts"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:overScrollMode="never"/>
-        </LinearLayout>
+                android:orientation="vertical"
+                android:padding="8dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Drag handles to reorder shortcuts. Toggle visibility to customize your control center panel."
+                    android:textSize="13sp"
+                    android:textColor="@color/white"
+                    android:alpha="0.5"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp"
+                    android:lineSpacingExtra="2dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_shortcuts"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <Button
             android:id="@+id/btn_save"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Save Changes"
+            android:layout_height="56dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="32dp"
+            android:text="Save Layout"
             android:textAllCaps="false"
-            android:background="@drawable/button_neutral_ripple"
-            android:textColor="@color/text"
-            android:padding="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="32dp"/>
-
+            android:fontFamily="sans-serif-black"
+            android:background="@drawable/settings_card_background"
+            android:textColor="@color/nord8"/>
     </LinearLayout>
-
 </FrameLayout>

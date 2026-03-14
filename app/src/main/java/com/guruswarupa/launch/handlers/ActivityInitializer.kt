@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.AlarmClock
 import android.provider.CalendarContract
+import android.animation.ValueAnimator
 import android.view.View
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
@@ -14,9 +15,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.view.ViewGroup
+import android.view.ViewGroup.MarginLayoutParams
 import android.view.Gravity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.core.net.toUri
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
@@ -24,6 +27,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.AppLauncher
+import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.MainActivityViews
@@ -46,11 +50,19 @@ class ActivityInitializer(
     }
 
     val views = MainActivityViews()
+    private var searchMarginAnimator: ValueAnimator? = null
+    private lateinit var searchMarginParams: MarginLayoutParams
+    private var defaultSearchTopMargin = 0
+    private var pinnedSearchTopMargin = 0
+    private var headerHidden = false
 
     fun initializeViews() {
         with(views) {
             searchBox = activity.findViewById(R.id.search_box)
             searchContainer = activity.findViewById(R.id.search_container)
+            searchMarginParams = searchContainer.layoutParams as MarginLayoutParams
+            defaultSearchTopMargin = searchMarginParams.topMargin
+            pinnedSearchTopMargin = activity.resources.getDimensionPixelSize(R.dimen.search_bar_top_margin_pinned)
             recyclerView = activity.findViewById(R.id.app_list)
             fastScroller = activity.findViewById(R.id.fast_scroller)
             fastScroller.setRecyclerView(recyclerView)
@@ -89,6 +101,7 @@ class ActivityInitializer(
 
             setupSearchBox(searchBox)
             setupLayoutManager(recyclerView)
+            setupHeaderVisibilityOnScroll(recyclerView)
             setupTimeDateListeners(timeTextView, dateTextView)
         }
     }
@@ -123,9 +136,84 @@ class ActivityInitializer(
         val isGridMode = viewPreference == "grid"
 
         if (isGridMode) {
-            recyclerView.layoutManager = GridLayoutManager(activity, 4)
+            val columns = (activity as? MainActivity)?.getPreferredGridColumns()
+                ?: activity.resources.getInteger(R.integer.app_grid_columns)
+            recyclerView.layoutManager = GridLayoutManager(activity, columns)
         } else {
             recyclerView.layoutManager = LinearLayoutManager(activity)
+        }
+    }
+
+    private fun setupHeaderVisibilityOnScroll(recyclerView: RecyclerView) {
+        val threshold = (activity.resources.displayMetrics.density * 8).toInt()
+
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                // Only auto-hide/show header based on scroll when search is empty
+                val searchBox = activity.findViewById<android.widget.AutoCompleteTextView>(R.id.search_box)
+                val isSearching = !searchBox?.text.toString().trim().isNullOrEmpty()
+                
+                if (!isSearching) {
+                    val scrolledDown = rv.computeVerticalScrollOffset() > threshold
+                    if (scrolledDown && !headerHidden) {
+                        setHeaderVisibility(false)
+                    } else if (!scrolledDown && headerHidden && dy <= 0) {
+                        setHeaderVisibility(true)
+                    }
+                }
+            }
+        })
+    }
+
+    /**
+     * Animate header and dock visibility; called from scroll or search events.
+     */
+    fun setHeaderVisibility(visible: Boolean) {
+        if (visible && !headerHidden) return
+        if (!visible && headerHidden) return
+        headerHidden = !visible
+        animateViewVisibility(views.topWidgetContainer, visible)
+        animateViewVisibility(views.appDock, visible)
+        val targetMargin = if (visible) defaultSearchTopMargin else pinnedSearchTopMargin
+        animateSearchBarMargin(targetMargin, views.searchContainer)
+    }
+
+    private fun animateViewVisibility(view: View, visible: Boolean) {
+        view.animate().cancel()
+        if (visible) {
+            view.isVisible = true
+            view.alpha = 0f
+            val offset = -(view.height.takeIf { it > 0 } ?: 20) / 4f
+            view.translationY = offset
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(220)
+                .withEndAction(null)
+        } else {
+            val offset = -(view.height.takeIf { it > 0 } ?: 20) / 4f
+            view.animate()
+                .alpha(0f)
+                .translationY(offset)
+                .setDuration(220)
+                .withEndAction { view.isVisible = false }
+        }
+    }
+
+    private fun animateSearchBarMargin(
+        target: Int,
+        searchContainer: LinearLayout
+    ) {
+        searchMarginAnimator?.cancel()
+        val start = searchMarginParams.topMargin
+        if (start == target) return
+        searchMarginAnimator = ValueAnimator.ofInt(start, target).apply {
+            duration = 220
+            addUpdateListener {
+                searchMarginParams.topMargin = it.animatedValue as Int
+                searchContainer.layoutParams = searchMarginParams
+            }
+            start()
         }
     }
 
@@ -215,12 +303,15 @@ class ActivityInitializer(
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
+            
+            // Reverted: Each page should take full width as per user feedback
+            val targetWidth = drawerWidth
 
             // Left drawer
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
-                params.width = drawerWidth
+                params.width = targetWidth
                 it.layoutParams = params
 
                 val header = activity.findViewById<LinearLayout>(R.id.widget_settings_header)
@@ -253,7 +344,7 @@ class ActivityInitializer(
             val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
             rightDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
-                params.width = drawerWidth
+                params.width = targetWidth
                 it.layoutParams = params
             }
         }

@@ -18,6 +18,6 @@ daemon/
 native/
 wrapper/
 .tmp/
-android/
 kotlin-profile/
 jdks/
+app/release/app-release

@@ -10,6 +10,8 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -38,12 +40,14 @@ class FocusModeConfigActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Enable edge-to-edge for transparent system bars with white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
+        
         setContentView(R.layout.activity_focus_mode_config)
-
-        // Make system bars transparent
-        window.decorView.post {
-            makeSystemBarsTransparent()
-        }
 
         focusModeManager = FocusModeManager(this, getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
 
@@ -91,23 +95,20 @@ class FocusModeConfigActivity : ComponentActivity() {
         // Set system wallpaper
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
-        // Apply theme-based colors and backgrounds
-        val isNightMode = (resources.configuration.uiMode and 
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-            
-        themeOverlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
+        themeOverlay.setBackgroundColor(Color.parseColor("#66000000"))
         
-        val widgetBg = if (isNightMode) R.drawable.widget_background_dark else R.drawable.widget_background
-        appsContainer.setBackgroundResource(widgetBg)
+        appsContainer.setBackgroundResource(R.drawable.widget_background)
         
-        val textColor = ContextCompat.getColor(this, if (isNightMode) R.color.white else R.color.black)
-        val subTextColor = ContextCompat.getColor(this, if (isNightMode) R.color.gray_light else R.color.gray)
+        val textColor = Color.WHITE
+        val subTextColor = Color.parseColor("#B0B0B0")
         
         titleText.setTextColor(textColor)
         subtitleText.setTextColor(subTextColor)
         saveButton.setTextColor(textColor)
         cancelButton.setTextColor(textColor)
+        
+        saveButton.setBackgroundResource(R.drawable.settings_card_background)
+        cancelButton.setBackgroundResource(R.drawable.settings_card_background)
     }
 
     private fun loadApps() {
@@ -120,9 +121,6 @@ class FocusModeConfigActivity : ComponentActivity() {
             .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
 
         appList = apps.toMutableList()
-    }
-
-    private fun makeSystemBarsTransparent() {
     }
 
     override fun onDestroy() {

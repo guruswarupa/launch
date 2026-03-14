@@ -68,8 +68,21 @@ object TypographyManager {
             val (scaleFactor, alphaFactor) = resolveIntensityVisuals(intensity)
             view.textScaleX = baseScaleX * scaleFactor
             view.alpha = baseAlpha * alphaFactor
+            
             val baseTextColor = resolveBaseTextColor(view)
-            view.setTextColor(fontColor ?: baseTextColor)
+            val baseHintColor = resolveBaseHintColor(view)
+            
+            if (fontColor != null) {
+                view.setTextColor(fontColor)
+                // Apply same color to hint with some transparency
+                val alpha = Color.alpha(fontColor)
+                val hintAlpha = (alpha * 0.6f).toInt()
+                val hintColor = Color.argb(hintAlpha, Color.red(fontColor), Color.green(fontColor), Color.blue(fontColor))
+                view.setHintTextColor(hintColor)
+            } else {
+                view.setTextColor(baseTextColor)
+                view.setHintTextColor(baseHintColor)
+            }
         }
 
         if (view is ViewGroup) {
@@ -83,6 +96,13 @@ object TypographyManager {
         return (textView.getTag(R.id.tag_typography_base_text_color) as? Int)
             ?: textView.currentTextColor.also {
                 textView.setTag(R.id.tag_typography_base_text_color, it)
+            }
+    }
+    
+    private fun resolveBaseHintColor(textView: TextView): Int {
+        return (textView.getTag(R.id.tag_typography_base_hint_color) as? Int)
+            ?: textView.currentHintTextColor.also {
+                textView.setTag(R.id.tag_typography_base_hint_color, it)
             }
     }
 
@@ -115,14 +135,10 @@ object TypographyManager {
     private fun resolveCustomTypeface(context: Context, style: String): Typeface? {
         DownloadableFontManager.getTypeface(style)?.let { return it }
         return when (style) {
-            "droid_sans_fallback" -> Typeface.create("Droid Sans", Typeface.NORMAL)
-            "ubuntu_regular" -> Typeface.create("Ubuntu", Typeface.NORMAL)
-            "noto_sans" -> Typeface.create("Noto Sans", Typeface.NORMAL)
-            "noto_serif" -> Typeface.create("Noto Serif", Typeface.NORMAL)
-            "noto_sans_display" -> Typeface.create("Noto Sans Display", Typeface.NORMAL)
-            "dejavu_sans" -> Typeface.create("sans-serif", Typeface.NORMAL)
-            "dejavu_serif" -> Typeface.create("serif", Typeface.NORMAL)
-            "dejavu_mono" -> Typeface.create("monospace", Typeface.NORMAL)
+            "inter" -> Typeface.create("sans-serif", Typeface.NORMAL)
+            "ubuntu_regular" -> Typeface.create("sans-serif", Typeface.NORMAL)
+            "noto_sans" -> Typeface.create("sans-serif", Typeface.NORMAL)
+            "noto_serif" -> Typeface.create("serif", Typeface.NORMAL)
             "fira_code" -> Typeface.create("monospace", Typeface.NORMAL)
             else -> null
         }
@@ -154,13 +170,6 @@ object TypographyManager {
             "casual" -> "casual"
             "cursive" -> "cursive"
             "sans_serif_light" -> "sans-serif-light"
-            "droid_sans_fallback" -> "Droid Sans"
-            "ubuntu_regular" -> "Ubuntu"
-            "droid_sans" -> "Droid Sans"
-            "droid_serif" -> "Droid Serif"
-            "noto_sans" -> "Noto Sans"
-            "noto_serif" -> "Noto Serif"
-            "noto_sans_display" -> "Noto Sans Display"
             else -> if (intensity == "light") "sans-serif-light" else "sans-serif"
         }
     }

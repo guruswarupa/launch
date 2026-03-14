@@ -1,12 +1,18 @@
 package com.guruswarupa.launch.managers
 
+import android.annotation.SuppressLint
 import androidx.appcompat.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.SharedPreferences
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.GestureDetector
+import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -15,7 +21,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
-import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.ui.activities.FocusModeConfigActivity
 import com.guruswarupa.launch.ui.activities.SettingsActivity
 import com.guruswarupa.launch.ui.activities.WorkspaceConfigActivity
@@ -23,16 +28,15 @@ import com.guruswarupa.launch.ui.activities.EncryptedVaultActivity
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 import java.util.Locale
+import kotlin.math.abs
 
 class AppDockManager(
-    activity: MainActivity,
+    private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
-    private val appDock: LinearLayout,
-    packageManager: PackageManager,
-    private val favoriteAppManager: FavoriteAppManager
+    private val appDock: LinearLayout
 ) {
     private val context: Context = activity
-    private val dockIconPaddingPx = (6 * context.resources.displayMetrics.density).toInt()
+    private val dockIconSizePx = (20 * context.resources.displayMetrics.density).toInt()
     private val focusModeKey = "focus_mode_enabled"
     private val focusModeAllowedAppsKey = "focus_mode_allowed_apps"
     private val focusModeEndTimeKey = "focus_mode_end_time"
@@ -40,9 +44,7 @@ class AppDockManager(
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
-    private lateinit var apkShareButton: ImageView
-    private lateinit var vaultButton: ImageView
-    private lateinit var favoriteToggle: ImageView
+    private lateinit var workspaceNameText: TextView
     private val pomodoroManager: PomodoroManager
     private var isFocusMode: Boolean = false
     private val res = context.resources
@@ -118,64 +120,8 @@ class AppDockManager(
         }
     }
 
-    private fun ensureApkShareButton() {
-        if (appDock.findViewWithTag<ImageView>("apk_share_button") == null) {
-            apkShareButton = ImageView(context).apply {
-                tag = "apk_share_button"
-                setImageResource(R.drawable.ic_share)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                )
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { showApkShareDialog() }
-                setOnLongClickListener {
-                    Toast.makeText(context, "Share Apps/Files", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            // Find the position after focus mode container
-            var insertIndex = appDock.childCount
-            for (i in 0 until appDock.childCount) {
-                val child = appDock.getChildAt(i)
-                if (child.tag == "focus_mode_container") {
-                    insertIndex = i + 1
-                    break
-                }
-            }
-            appDock.addView(apkShareButton, insertIndex)
-        }
-    }
-
     private fun ensureVaultButton() {
-        if (appDock.findViewWithTag<ImageView>("vault_button") == null) {
-            vaultButton = ImageView(context).apply {
-                tag = "vault_button"
-                setImageResource(R.drawable.ic_vault)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    marginStart = 8
-                }
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { openVault() }
-                setOnLongClickListener {
-                    Toast.makeText(context, "Encrypted Vault", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            
-            // Insert after APK share button
-            var insertIndex = appDock.childCount
-            for (i in 0 until appDock.childCount) {
-                if (appDock.getChildAt(i).tag == "apk_share_button") {
-                    insertIndex = i + 1
-                    break
-                }
-            }
-            appDock.addView(vaultButton, insertIndex)
-        }
+        // Vault is now an app in the drawer
     }
 
     private fun openVault() {
@@ -185,12 +131,8 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
-        ensureSettingsButton()       // 1. Settings
-        ensureFavoriteToggle()      // 2. Favorite/All apps toggle (after settings)
-        ensureWorkspaceToggle()      // 3. Workspace toggle
-        ensureFocusModeToggle()      // 4. Focus mode
-        ensureApkShareButton()       // 5. Share APK icon
-        ensureVaultButton()          // 6. Encrypted Vault
+        ensureWorkspaceToggle()      // 1. Workspace toggle
+        ensureFocusModeToggle()      // 2. Focus mode
         updateDockVisibility()
     }
     
@@ -202,15 +144,6 @@ class AppDockManager(
         if (::workspaceToggle.isInitialized) {
             updateWorkspaceIcon()
         }
-        if (::favoriteToggle.isInitialized) {
-            updateFavoriteToggleIcon()
-        }
-        if (::apkShareButton.isInitialized) {
-            apkShareButton.setImageResource(R.drawable.ic_share)
-        }
-        if (::vaultButton.isInitialized) {
-            vaultButton.setImageResource(R.drawable.ic_vault)
-        }
     }
     
     fun refreshWorkspaceToggle() {
@@ -219,66 +152,94 @@ class AppDockManager(
         }
     }
 
-    fun refreshFavoriteToggle() {
-        if (::favoriteToggle.isInitialized) {
-            updateFavoriteToggleIcon()
+    private fun createDockItemContainer(containerTag: String): LinearLayout {
+        val horizontalPadding = (28 * context.resources.displayMetrics.density).toInt()
+        return LinearLayout(context).apply {
+            tag = containerTag
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                (44 * context.resources.displayMetrics.density).toInt()
+            ).apply {
+                marginEnd = 16
+            }
+            background = getGlassyBackground()
+            setPadding(horizontalPadding, 0, horizontalPadding, 0)
+            isClickable = true
+            isFocusable = true
         }
     }
 
+    private fun getGlassyBackground(): GradientDrawable {
+        return GradientDrawable().apply {
+            cornerRadius = 1000f
+            // Use same translucent black as widgets (#80000000)
+            setColor(Color.parseColor("#80000000"))
+            setStroke(1, Color.parseColor("#40FFFFFF"))
+        }
+    }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun ensureFocusModeToggle() {
-        if (appDock.findViewWithTag<ImageView>("focus_mode_toggle") == null) {
-            // Create container for focus mode toggle and timer
-            val focusContainer = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                )
-                tag = "focus_mode_container"
-            }
+        if (appDock.findViewWithTag<View>("focus_mode_container") == null) {
+            val focusContainer = createDockItemContainer("focus_mode_container")
 
             focusModeToggle = ImageView(context).apply {
                 tag = "focus_mode_toggle"
                 setImageResource(if (isFocusMode) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                )
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { toggleFocusMode() }
-                setOnLongClickListener {
-                    if (!isFocusMode) {
-                        showFocusModeSettings()
-                    } else {
-                        Toast.makeText(context, "Focus mode settings unavailable during focus mode", Toast.LENGTH_SHORT).show()
-                    }
-                    true
-                }
+                layoutParams = LinearLayout.LayoutParams(dockIconSizePx, dockIconSizePx)
+                isClickable = false
+                isFocusable = false
             }
 
             focusTimerText = TextView(context).apply {
                 tag = "focus_timer_text"
-                textSize = 12f
-                setTextColor(ContextCompat.getColor(context, android.R.color.white))
+                textSize = 13f
+                setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT
+                    LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    marginStart = 8
+                    marginStart = 12
                 }
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                visibility = if (isFocusMode) View.VISIBLE else View.GONE
+                gravity = Gravity.CENTER
+                text = if (isFocusMode) "" else "Focus"
+                visibility = View.VISIBLE
+                isClickable = false
+                isFocusable = false
             }
 
             focusContainer.addView(focusModeToggle)
             focusContainer.addView(focusTimerText)
 
+            val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDown(e: MotionEvent): Boolean = true
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    toggleFocusMode()
+                    return true
+                }
+                override fun onLongPress(e: MotionEvent) {
+                    if (!isFocusMode) {
+                        showFocusModeSettings()
+                    } else {
+                        Toast.makeText(context, "Focus mode settings unavailable during focus mode", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            })
+
+            focusContainer.setOnTouchListener { v, event ->
+                if (gestureDetector.onTouchEvent(event)) true else {
+                    if (event.action == MotionEvent.ACTION_UP) v.performClick()
+                    false
+                }
+            }
+
             // Find the position after workspace toggle
-            var insertIndex = 3
+            var insertIndex = 1
             for (i in 0 until appDock.childCount) {
                 val child = appDock.getChildAt(i)
-                if (child.tag == "workspace_toggle") {
+                if (child.tag == "workspace_container") {
                     insertIndex = i + 1
                     break
                 }
@@ -291,42 +252,76 @@ class AppDockManager(
         }
     }
     
+    @SuppressLint("ClickableViewAccessibility")
     private fun ensureWorkspaceToggle() {
-        if (appDock.findViewWithTag<ImageView>("workspace_toggle") == null) {
+        if (appDock.findViewWithTag<View>("workspace_container") == null) {
             val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
+            val workspaceContainer = createDockItemContainer("workspace_container")
+
             workspaceToggle = ImageView(context).apply {
                 tag = "workspace_toggle"
-                setImageResource(if (isWorkspaceActive) R.drawable.ic_workspace_active else R.drawable.ic_workspace_inactive)
+                layoutParams = LinearLayout.LayoutParams(dockIconSizePx, dockIconSizePx)
+                isClickable = false
+                isFocusable = false
+            }
+
+            workspaceNameText = TextView(context).apply {
+                tag = "workspace_name_text"
+                textSize = 13f
+                setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    marginStart = 8
+                    marginStart = 12
                 }
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { toggleWorkspace() }
-                setOnLongClickListener {
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                text = if (isWorkspaceActive) (workspaceManager.getActiveWorkspace()?.name ?: "") else "Workspace"
+                visibility = View.VISIBLE
+                isClickable = false
+                isFocusable = false
+            }
+
+            workspaceContainer.addView(workspaceToggle)
+            workspaceContainer.addView(workspaceNameText)
+            
+            val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDown(e: MotionEvent): Boolean = true
+                override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                    if (e1 == null) return false
+                    val diffY = e2.y - e1.y
+                    val diffX = e2.x - e1.x
+                    if (abs(diffY) > abs(diffX)) {
+                        if (abs(diffY) > 50 && abs(velocityY) > 100) {
+                            if (diffY < 0) cycleWorkspaces() else turnOffWorkspace()
+                            return true
+                        }
+                    }
+                    return false
+                }
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    toggleWorkspace()
+                    return true
+                }
+                override fun onLongPress(e: MotionEvent) {
                     showWorkspaceSettings()
-                    true
+                }
+            })
+
+            workspaceContainer.setOnTouchListener { v, event ->
+                if (gestureDetector.onTouchEvent(event)) true else {
+                    if (event.action == MotionEvent.ACTION_UP) v.performClick()
+                    false
                 }
             }
-            // Find the position after favorite toggle (or after settings if no favorite toggle)
-            var insertIndex = 2
-            for (i in 0 until appDock.childCount) {
-                val child = appDock.getChildAt(i)
-                if (child.tag == "favorite_toggle") {
-                    insertIndex = i + 1
-                    break
-                } else if (child.tag == "settings_button") {
-                    insertIndex = i + 1
-                }
-            }
-            appDock.addView(workspaceToggle, insertIndex)
+            
+            appDock.addView(workspaceContainer, 0)
+            updateWorkspaceIcon()
         }
     }
     
     private fun toggleWorkspace() {
-        // Always show workspace selector to allow switching or turning off
         showWorkspaceSelector()
     }
     
@@ -339,56 +334,105 @@ class AppDockManager(
         }
         
         val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
-        
-        // Build workspace names list
         val workspaceNames = workspaces.map { it.name }.toMutableList()
-        
-        // Add \"Turn Off\" option if a workspace is currently active
-        if (isWorkspaceActive) {
-            workspaceNames.add("Turn Off")
-        }
+        if (isWorkspaceActive) workspaceNames.add("Turn Off")
         
         val itemsArray = workspaceNames.toTypedArray()
-        
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(if (isWorkspaceActive) "Switch Workspace" else "Select Workspace")
             .setItems(itemsArray) { _, which ->
-                // Check if \"Turn Off\" was selected (last item when workspace is active)
                 if (isWorkspaceActive && which == itemsArray.size - 1) {
-                    // Turn off workspace mode
                     workspaceManager.setActiveWorkspaceId(null)
-                    updateWorkspaceIcon()
-                    refreshAppsForWorkspace()
                     Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
                 } else {
-                    // Select a workspace
                     val selectedWorkspace = workspaces[which]
                     workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
-                    updateWorkspaceIcon()
-                    refreshAppsForWorkspace()
-                    Toast.makeText(context, "Workspace \'${selectedWorkspace.name}\' activated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
                 }
+                updateWorkspaceIcon()
+                refreshAppsForWorkspace()
+                scrollToTop()
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
+    }
+
+    private fun cycleWorkspaces() {
+        val workspaces = workspaceManager.getAllWorkspaces()
+        if (workspaces.isEmpty()) {
+            showWorkspaceSettings()
+            return
+        }
+        
+        val activeId = workspaceManager.getActiveWorkspaceId()
+        val currentIndex = workspaces.indexOfFirst { it.id == activeId }
+        val nextIndex = (currentIndex + 1) % workspaces.size
+        val selectedWorkspace = workspaces[nextIndex]
+        
+        workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
+        updateWorkspaceIcon()
+        refreshAppsForWorkspace()
+        scrollToTop()
+        Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun turnOffWorkspace() {
+        if (workspaceManager.isWorkspaceModeActive()) {
+            workspaceManager.setActiveWorkspaceId(null)
+            updateWorkspaceIcon()
+            refreshAppsForWorkspace()
+            scrollToTop()
+            Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun scrollToTop() {
+        if (activity.views.isRecyclerViewInitialized()) {
+            activity.views.recyclerView.postDelayed({
+                activity.views.recyclerView.scrollToPosition(0)
+            }, 100)
+        }
     }
     
     private fun showWorkspaceSettings() {
         val intent = Intent(context, WorkspaceConfigActivity::class.java)
         context.startActivity(intent)
     }
-    
+
     private fun updateWorkspaceIcon() {
+        if (!::workspaceToggle.isInitialized) return
+        
         val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
         workspaceToggle.setImageResource(
             if (isWorkspaceActive) R.drawable.ic_workspace_active else R.drawable.ic_workspace_inactive
         )
-        // Hide/show favorite toggle based on workspace mode
-        updateFavoriteToggleIcon()
+        
+        if (::workspaceNameText.isInitialized) {
+            val activeWorkspace = workspaceManager.getActiveWorkspace()
+            val newName = if (isWorkspaceActive) (activeWorkspace?.name ?: "") else "Workspace"
+            workspaceNameText.text = newName
+
+            val container = appDock.findViewWithTag<LinearLayout>("workspace_container")
+            if (container != null) {
+                if (isWorkspaceActive) {
+                    val bg = GradientDrawable().apply {
+                        cornerRadius = 1000f
+                        setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
+                        setStroke(2, Color.parseColor("#8FBCBB")) // Keep Nord7 stroke
+                    }
+                    container.background = bg
+                } else {
+                    container.background = getGlassyBackground()
+                }
+            }
+        }
     }
     
     private fun refreshAppsForWorkspace() {
-        (context as? MainActivity)?.refreshAppsForWorkspace()
+        activity.refreshAppsForWorkspace()
     }
     
     fun isWorkspaceModeActive(): Boolean {
@@ -402,108 +446,6 @@ class AppDockManager(
 
 
     private fun ensureSettingsButton() {
-        if (appDock.findViewWithTag<ImageView>("settings_button") == null) {
-            val settingsButton = ImageView(context).apply {
-                tag = "settings_button"
-                setImageResource(R.drawable.ic_settings)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    marginStart = 8
-                }
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener {
-                    val intent = Intent(context, SettingsActivity::class.java)
-                    context.startActivity(intent)
-                }
-                setOnLongClickListener {
-                    Toast.makeText(context, "Settings", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            // Add at the beginning (index 0)
-            appDock.addView(settingsButton, 0)
-        }
-    }
-
-    private fun ensureFavoriteToggle() {
-        if (appDock.findViewWithTag<ImageView>("favorite_toggle") == null) {
-            favoriteToggle = ImageView(context).apply {
-                tag = "favorite_toggle"
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    marginStart = 8
-                }
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener { toggleFavoriteMode() }
-                setOnLongClickListener {
-                    val mode = if (favoriteAppManager.isShowAllAppsMode()) "All Apps" else "Favorites"
-                    Toast.makeText(context, "Show: $mode", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            updateFavoriteToggleIcon()
-            
-            // Find the index after settings button
-            var insertIndex = 2
-            for (i in 0 until appDock.childCount) {
-                val child = appDock.getChildAt(i)
-                if (child.tag == "settings_button") {
-                    insertIndex = i + 1
-                    break
-                }
-            }
-            appDock.addView(favoriteToggle, insertIndex)
-        }
-    }
-
-    private fun updateFavoriteToggleIcon() {
-        if (!::favoriteToggle.isInitialized) {
-            return
-        }
-        
-        // Hide favorite toggle if workspace mode is active
-        if (workspaceManager.isWorkspaceModeActive()) {
-            favoriteToggle.visibility = View.GONE
-            return
-        }
-        
-        // Show favorite toggle even if no favorites are set
-        favoriteToggle.visibility = View.VISIBLE
-        val isShowAllMode = favoriteAppManager.isShowAllAppsMode()
-        // Show star if favorites are shown (clicking will switch to all apps)
-        // Show grid if all apps are shown (clicking will switch to favorites)
-        favoriteToggle.setImageResource(
-            if (isShowAllMode) R.drawable.ic_apps_grid else R.drawable.ic_star
-        )
-    }
-
-    private fun toggleFavoriteMode() {
-        val favorites = favoriteAppManager.getFavoriteApps()
-        if (favorites.isEmpty()) {
-            Toast.makeText(context, "No favorite apps set", Toast.LENGTH_SHORT).show()
-            // Even if no favorites, we allow toggling to show empty state or handle the mode switch
-        }
-        
-        val currentMode = favoriteAppManager.isShowAllAppsMode()
-        val newMode = !currentMode
-        favoriteAppManager.setShowAllAppsMode(newMode)
-        
-        // Update MainActivity's isShowAllAppsMode variable
-        (context as? MainActivity)?.let { activity ->
-            activity.isShowAllAppsMode = newMode
-        }
-        
-        updateFavoriteToggleIcon()
-        
-        // Optimize: Filter existing list instead of reloading everything
-        (context as? MainActivity)?.filterAppsWithoutReload()
-        
-        val modeText = if (newMode) "All Apps" else "Favorites"
-        Toast.makeText(context, "Showing: $modeText", Toast.LENGTH_SHORT).show()
     }
 
     private fun saveFocusMode() {
@@ -512,7 +454,6 @@ class AppDockManager(
 
     private fun toggleFocusMode() {
         if (isFocusMode) {
-            // Check if timer has expired
             val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
             val currentTime = System.currentTimeMillis()
 
@@ -523,29 +464,29 @@ class AppDockManager(
                 val state = pomodoroManager.getCurrentState()
                 Toast.makeText(context, "Pomodoro $state session active", Toast.LENGTH_SHORT).show()
             } else {
-                // Timer expired, allow switching to normal mode
                 disableFocusMode()
             }
         } else if (pomodoroManager.isPomodoroActive()) {
-            AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
                 .setTitle(res.getString(R.string.pomodoro_stop_title))
                 .setMessage(res.getString(R.string.pomodoro_stop_message))
                 .setPositiveButton("Stop") { _, _ ->
                     pomodoroManager.stopPomodoro()
                 }
                 .setNegativeButton("Cancel", null)
-                .show()
+                .create()
+            DialogStyler.styleDialog(dialog)
+            dialog.show()
         } else {
-            // Show duration picker dialog
             showFocusModeDurationPicker()
         }
     }
 
     private fun showFocusModeDurationPicker() {
         val durations = arrayOf(res.getString(R.string.pomodoro_mode), "15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Custom")
-        val durationValues = arrayOf(-2, 15, 30, 60, 120, 240, -1) // -2 for Pomodoro, -1 for custom
+        val durationValues = arrayOf(-2, 15, 30, 60, 120, 240, -1)
 
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select Focus Mode Duration")
             .setItems(durations) { _, which ->
                 when (durationValues[which]) {
@@ -555,7 +496,10 @@ class AppDockManager(
                 }
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun showCustomDurationDialog() {
@@ -565,7 +509,7 @@ class AppDockManager(
             DialogStyler.styleInput(context, this)
         }
 
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Custom Duration")
             .setMessage("Enter duration in minutes:")
             .setDialogInputView(context, input)
@@ -574,15 +518,18 @@ class AppDockManager(
                 if (minutes != null && minutes in 1..480) {
                     promptForDnd(minutes)
                 } else {
-                    Toast.makeText(context, "Please enter a valid duration (1-480 minutes)", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Please enter a duration between 1-480 min", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun promptForDnd(durationMinutes: Int) {
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enable Do Not Disturb?")
             .setMessage("Would you like to enable Do Not Disturb mode to mute notifications during this focus session?")
             .setPositiveButton("Yes") { _, _ ->
@@ -592,7 +539,10 @@ class AppDockManager(
                 enableFocusMode(durationMinutes, false)
             }
             .setNeutralButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun enableFocusMode(durationMinutes: Int, enableDnd: Boolean) {
@@ -610,32 +560,35 @@ class AppDockManager(
             putBoolean(focusModeDndEnabledKey, enableDnd)
         }
 
-        // Use FocusModeManager to set focus mode and notify accessibility service
         val focusModeManager = FocusModeManager(context, sharedPreferences)
         focusModeManager.setFocusModeEnabled(true)
 
         updateFocusModeIcon()
         updateDockVisibility()
-        
-        // Lock drawer immediately when focus mode is enabled
         lockDrawerForFocusMode(true)
-        
         refreshAppsForFocusMode()
         startTimerDisplay()
         
-        if (enableDnd) {
-            updateDndState(true)
-        }
+        if (enableDnd) updateDndState(true)
 
         Toast.makeText(context, "Focus mode enabled for $durationMinutes minutes", Toast.LENGTH_LONG).show()
-
-        // Start timer to automatically disable focus mode
         startFocusModeTimer(endTime)
     }
 
     private fun updatePomodoroTimerDisplay(remainingMillis: Long, state: String) {
         if (!::focusTimerText.isInitialized) return
         
+        val container = appDock.findViewWithTag<LinearLayout>("focus_mode_container")
+        if (container != null) {
+            val isWork = state == PomodoroManager.STATE_WORK
+            val bg = GradientDrawable().apply {
+                cornerRadius = 1000f
+                setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
+                setStroke(2, if (isWork) Color.parseColor("#BF616A") else Color.parseColor("#A3BE8C"))
+            }
+            container.background = bg
+        }
+
         focusTimerText.visibility = View.VISIBLE
         val minutes = (remainingMillis / (1000 * 60)).toInt()
         val seconds = ((remainingMillis % (1000 * 60)) / 1000).toInt()
@@ -643,35 +596,29 @@ class AppDockManager(
         val stateLabel = if (state == PomodoroManager.STATE_WORK) res.getString(R.string.pomodoro_work) else res.getString(R.string.pomodoro_break)
         focusTimerText.text = String.format(Locale.getDefault(), "%s %02d:%02d", stateLabel, minutes, seconds)
         
-        // Update focus mode icon based on state
-        val isWork = state == PomodoroManager.STATE_WORK
-        focusModeToggle.setImageResource(if (isWork) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
+        val isWorkFocus = state == PomodoroManager.STATE_WORK
+        focusModeToggle.setImageResource(if (isWorkFocus) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
     }
 
     private fun showDndPermissionDialog() {
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("DND Access Required")
             .setMessage("Muting notifications requires Do Not Disturb access. Please grant it in the settings or start Focus Mode without DND.")
             .setPositiveButton("Grant Access") { _, _ ->
                 context.startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
             }
             .setNegativeButton("Cancel", null)
-            .show()
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
     }
 
     private fun updateDndState(enabled: Boolean) {
         if (!notificationManager.isNotificationPolicyAccessGranted) return
-
-        val filter = if (enabled) {
-            NotificationManager.INTERRUPTION_FILTER_PRIORITY
-        } else {
-            NotificationManager.INTERRUPTION_FILTER_ALL
-        }
-
+        val filter = if (enabled) NotificationManager.INTERRUPTION_FILTER_PRIORITY else NotificationManager.INTERRUPTION_FILTER_ALL
         if (notificationManager.currentInterruptionFilter != filter) {
-            try {
-                notificationManager.setInterruptionFilter(filter)
-            } catch (_: Exception) {}
+            try { notificationManager.setInterruptionFilter(filter) } catch (_: Exception) {}
         }
     }
 
@@ -685,22 +632,16 @@ class AppDockManager(
             remove(focusModeDndEnabledKey)
         }
 
-        // Use FocusModeManager to disable focus mode and notify accessibility service
         val focusModeManager = FocusModeManager(context, sharedPreferences)
         focusModeManager.setFocusModeEnabled(false)
 
         updateFocusModeIcon()
         updateDockVisibility()
-        
-        // Unlock drawer when focus mode is disabled
         lockDrawerForFocusMode(false)
-        
         refreshAppsForFocusMode()
         stopTimerDisplay()
         
-        if (dndWasEnabled) {
-            updateDndState(false)
-        }
+        if (dndWasEnabled) updateDndState(false)
 
         Toast.makeText(context, "Focus mode disabled", Toast.LENGTH_SHORT).show()
     }
@@ -712,14 +653,12 @@ class AppDockManager(
                 if (isFocusMode && System.currentTimeMillis() >= endTime) {
                     disableFocusMode()
                 } else if (isFocusMode) {
-                    // Force DND if user enabled it and then disabled it manually
                     val shouldHaveDnd = sharedPreferences.getBoolean(focusModeDndEnabledKey, false)
                     if (shouldHaveDnd && notificationManager.isNotificationPolicyAccessGranted && 
                         notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
                         updateDndState(true)
-                        Toast.makeText(context, "DND re-enabled (Focus Mode active)", Toast.LENGTH_SHORT).show()
                     }
-                    handler.postDelayed(this, 30000) // Check every 30 seconds
+                    handler.postDelayed(this, 30000)
                 }
             }
         }
@@ -727,69 +666,63 @@ class AppDockManager(
     }
 
     private fun updateFocusModeIcon() {
-        focusModeToggle.setImageResource(
-            if (isFocusMode) R.drawable.ic_focus_mode
-            else R.drawable.ic_normal_mode
-        )
-    }
-
-    private fun refreshAppsForFocusMode() {
-        (context as? MainActivity)?.refreshAppsForFocusMode()
-    }
-    
-    /**
-     * Lock/unlock the left drawer for focus mode
-     */
-    fun lockDrawerForFocusMode(lock: Boolean) {
-        val mainActivity = context as? MainActivity
+        focusModeToggle.setImageResource(if (isFocusMode) R.drawable.ic_focus_mode else R.drawable.ic_normal_mode)
         
-        if (lock) {
-            mainActivity?.setWidgetsPageLocked(true)
-            mainActivity?.openHomePage(animated = true)
-        } else {
-            mainActivity?.setWidgetsPageLocked(false)
-        }
-    }
-
-    private fun updateDockVisibility() {
-        // Hide/show all dock items except the focus mode container, workspace toggle and restart button
-        for (i in 0 until appDock.childCount) {
-            val child = appDock.getChildAt(i)
-            when (child.tag) {
-                "focus_mode_container", "workspace_toggle" -> {
-                    child.visibility = View.VISIBLE
+        val container = appDock.findViewWithTag<LinearLayout>("focus_mode_container")
+        if (container != null) {
+            if (isFocusMode) {
+                val bg = GradientDrawable().apply {
+                    cornerRadius = 1000f
+                    setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
+                    setStroke(2, Color.parseColor("#5E81AC")) // Keep Nord10 stroke
                 }
-                "favorite_toggle" -> {
-                    updateFavoriteToggleIcon()
-                }
-                "add_icon", "apk_share_button", "vault_button" -> {
-                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
-                }
-                else -> {
-                    // Hide other dock items when in focus mode including settings button
-                    child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+                container.background = bg
+            } else {
+                container.background = getGlassyBackground()
+                if (::focusTimerText.isInitialized) {
+                    focusTimerText.text = "Focus"
                 }
             }
         }
     }
 
-    private fun startTimerDisplay() {
-        stopTimerDisplay() // Stop any existing timer
+    private fun refreshAppsForFocusMode() {
+        activity.refreshAppsForFocusMode()
+    }
+    
+    fun lockDrawerForFocusMode(lock: Boolean) {
+        val mainActivity = activity
+        if (lock) {
+            mainActivity.setWidgetsPageLocked(true)
+            mainActivity.openHomePage(animated = true)
+        } else {
+            mainActivity.setWidgetsPageLocked(false)
+        }
+    }
 
+    private fun updateDockVisibility() {
+        for (i in 0 until appDock.childCount) {
+            val child = appDock.getChildAt(i)
+            when (child.tag) {
+                "focus_mode_container", "workspace_container" -> child.visibility = View.VISIBLE
+                else -> child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+            }
+        }
+    }
+
+    private fun startTimerDisplay() {
+        stopTimerDisplay()
         focusTimerText.visibility = View.VISIBLE
         timerHandler = android.os.Handler(android.os.Looper.getMainLooper())
-
         timerRunnable = object : Runnable {
             override fun run() {
                 if (isFocusMode) {
                     val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
                     val currentTime = System.currentTimeMillis()
-
                     if (endTime > currentTime) {
                         val remainingTime = endTime - currentTime
                         val minutes = (remainingTime / (1000 * 60)).toInt()
                         val seconds = ((remainingTime % (1000 * 60)) / 1000).toInt()
-
                         focusTimerText.text = String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
                         timerHandler?.postDelayed(this, 1000)
                     } else {
@@ -798,7 +731,6 @@ class AppDockManager(
                 }
             }
         }
-
         timerHandler?.post(timerRunnable!!)
     }
 
@@ -807,7 +739,9 @@ class AppDockManager(
         timerHandler = null
         timerRunnable = null
         if (!pomodoroManager.isPomodoroActive()) {
-            focusTimerText.visibility = View.GONE
+            if (::focusTimerText.isInitialized) {
+                focusTimerText.text = "Focus"
+            }
         }
     }
 
@@ -821,21 +755,10 @@ class AppDockManager(
     }
 
     fun isAppHiddenInFocusMode(packageName: String): Boolean {
-        return if (isFocusMode) {
-            !getAllowedAppsInFocusMode().contains(packageName)
-        } else {
-            false
-        }
+        return if (isFocusMode) !getAllowedAppsInFocusMode().contains(packageName) else false
     }
 
     fun getCurrentMode(): Boolean {
         return isFocusMode
-    }
-
-    // APK sharing functionality moved to ApkShareManager
-    private val shareManager = ShareManager(context)
-
-    private fun showApkShareDialog() {
-        shareManager.showApkSharingDialog()
     }
 }

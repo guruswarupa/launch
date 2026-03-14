@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -16,7 +17,7 @@
         android:id="@+id/theme_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/settings_overlay"/>
+        android:background="#66000000"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -32,7 +33,7 @@
             android:text="Focus Mode"
             android:textSize="32sp"
             android:textStyle="bold"
-            android:textColor="@color/text"
+            android:textColor="@color/white"
             android:layout_marginTop="32dp"
             android:layout_marginBottom="16dp"/>
 
@@ -53,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:text="Select apps allowed in Focus Mode"
                 android:textSize="14sp"
-                android:textColor="@color/text_secondary"
+                android:textColor="#B0B0B0"
                 android:alpha="0.7"
                 android:layout_marginBottom="12dp" />
 
@@ -79,8 +80,8 @@
                 android:layout_weight="1"
                 android:text="Cancel"
                 android:textAllCaps="false"
-                android:background="@drawable/button_neutral_ripple"
-                android:textColor="@color/text"
+                android:background="@drawable/settings_card_background"
+                android:textColor="@color/white"
                 android:padding="16dp"
                 android:layout_marginEnd="8dp"/>
 
@@ -91,8 +92,8 @@
                 android:layout_weight="1"
                 android:text="Save"
                 android:textAllCaps="false"
-                android:background="@drawable/button_neutral_ripple"
-                android:textColor="@color/text"
+                android:background="@drawable/settings_card_background"
+                android:textColor="@color/white"
                 android:padding="16dp"
                 android:layout_marginStart="8dp"/>
 

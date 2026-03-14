@@ -1,5 +1,8 @@
 package com.guruswarupa.launch.managers
 
+import android.content.Intent
+import android.provider.Settings
+import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.VelocityTracker
@@ -7,9 +10,11 @@ import android.view.ViewGroup
 import android.view.ViewConfiguration
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 
 /**
  * Hosts the left widgets screen, the launcher home screen, and the right wallpaper screen
@@ -63,6 +68,8 @@ class ScreenPagerManager(
 
         pages.forEach { page ->
             (page.parent as? ViewGroup)?.removeView(page)
+            setupDoubleTapToLock(page)
+            
             pageStrip.addView(
                 page,
                 LinearLayout.LayoutParams(
@@ -142,6 +149,35 @@ class ScreenPagerManager(
             scrollToPage(Page.CENTER, animated = false)
             notifyPageChanged(Page.CENTER, force = true)
             pagerScrollView.visibility = View.VISIBLE
+        }
+    }
+
+    private fun setupDoubleTapToLock(view: View) {
+        val gestureDetector = GestureDetector(activity, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                val service = ScreenLockAccessibilityService.instance
+                if (service != null) {
+                    return service.lockScreen()
+                } else {
+                    Toast.makeText(
+                        activity,
+                        "Enable Accessibility Service to lock screen",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    try {
+                        activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    } catch (_: Exception) {}
+                }
+                return true
+            }
+        })
+
+        view.setOnTouchListener { v, event ->
+            if (event.action == MotionEvent.ACTION_UP) {
+                v.performClick()
+            }
+            gestureDetector.onTouchEvent(event)
+            true // Consume touches on wallpaper page to enable double tap detection
         }
     }
 
@@ -234,14 +270,14 @@ class ScreenPagerManager(
         )
     }
 
-    private fun updatePageWidth() {
+    fun updatePageWidth() {
         val width = drawerLayout.width.takeIf { it > 0 } ?: activity.resources.displayMetrics.widthPixels
         if (width == pageWidth) return
 
         pageWidth = width
         val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
         for (index in 0 until pageStrip.childCount) {
-            val child = pageStrip.getChildAt(index)
+            val child = pageStrip.childCount.let { pageStrip.getChildAt(index) } ?: continue
             val params = child.layoutParams as LinearLayout.LayoutParams
             if (params.width != pageWidth) {
                 params.width = pageWidth

@@ -32,6 +32,9 @@ object Constants {
         const val TYPOGRAPHY_FONT_INTENSITY = "typography_font_intensity"
         const val TYPOGRAPHY_FONT_COLOR = "typography_font_color"
         const val CLOCK_24_HOUR_FORMAT = "clock_24_hour_format"
+        const val GRID_COLUMNS = "grid_columns"
+        const val ICON_STYLE = "icon_style"
+        const val ICON_SIZE = "icon_size"
         
         // Vault Prefs (Simplified)
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"

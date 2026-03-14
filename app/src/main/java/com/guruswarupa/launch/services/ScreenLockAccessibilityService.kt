@@ -160,7 +160,8 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                         val dx = abs(event.rawX - initialTouchX)
                         val dy = abs(event.rawY - initialTouchY)
                         
-                        if (dx > 20 || dy > 20 || !isMoving) {
+                        // Only trigger menu if it wasn't a significant move
+                        if (!isMoving) {
                             toggleMenu()
                         }
                         
@@ -332,7 +333,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             volumeMediaSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
-                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
+                        safeSetVolume(AudioManager.STREAM_MUSIC, progress)
                         if (progress == 0) {
                             imgVolumeMedia?.setImageResource(R.drawable.ic_muted_stat)
                         } else {
@@ -357,7 +358,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             volumeRingSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
-                        audioManager.setStreamVolume(AudioManager.STREAM_RING, progress, 0)
+                        safeSetVolume(AudioManager.STREAM_RING, progress)
                         if (progress == 0) {
                             imgVolumeRing?.setImageResource(R.drawable.ic_muted_stat)
                         } else {
@@ -382,7 +383,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             volumeAlarmSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
-                        audioManager.setStreamVolume(AudioManager.STREAM_ALARM, progress, 0)
+                        safeSetVolume(AudioManager.STREAM_ALARM, progress)
                         if (progress == 0) {
                             imgVolumeAlarm?.setImageResource(R.drawable.ic_muted_stat)
                         } else {
@@ -436,10 +437,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 "data" -> {
                     icon.setImageResource(R.drawable.ic_mobile_data_stat)
                     label.text = "Data"
-                    shortcutView.setOnClickListener { 
-                        startActivity(Intent(Settings.ACTION_DATA_ROAMING_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                        hideMenu()
-                    }
+                    shortcutView.setOnClickListener { toggleMobileData() }
                 }
                 "rotation" -> {
                     icon.setImageResource(R.drawable.ic_rotation_stat)
@@ -450,22 +448,26 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 "sound" -> {
                     updateSoundIcon(icon, label)
                     shortcutView.setOnClickListener {
-                        val nextMode = when (audioManager.ringerMode) {
-                            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
-                            AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
-                            else -> AudioManager.RINGER_MODE_NORMAL
+                        try {
+                            val nextMode = when (audioManager.ringerMode) {
+                                AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+                                AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
+                                else -> AudioManager.RINGER_MODE_NORMAL
+                            }
+                            audioManager.ringerMode = nextMode
+                            updateSoundIcon(icon, label)
+                            volumeMediaSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                            volumeRingSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+                            volumeAlarmSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+                        } catch (e: SecurityException) {
+                            requestDndPermission()
                         }
-                        audioManager.ringerMode = nextMode
-                        updateSoundIcon(icon, label)
-                        volumeMediaSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                        volumeRingSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_RING)
-                        volumeAlarmSeekBar?.progress = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
                     }
                 }
                 "dnd" -> {
                     icon.setImageResource(R.drawable.ic_focus_mode_icon)
                     updateDndIcon(icon, label)
-                    shortcutView.setOnClickListener { toggleDnd(); updateDndIcon(icon, label) }
+                    shortcutView.setOnClickListener { toggleDnd(icon, label) }
                 }
                 "location" -> {
                     icon.setImageResource(android.R.drawable.ic_menu_mylocation)
@@ -522,7 +524,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     icon.setImageResource(R.drawable.ic_wifi_stat)
                     label.text = "Hotspot"
                     updateHotspotIcon(icon)
-                    shortcutView.setOnClickListener { toggleHotspot(); hideMenu() }
+                    shortcutView.setOnClickListener { toggleHotspot() }
                 }
                 "screen_timeout" -> {
                     icon.setImageResource(R.drawable.ic_settings_icon)
@@ -532,6 +534,25 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 else -> continue
             }
             grid?.addView(shortcutView)
+        }
+    }
+
+    private fun safeSetVolume(streamType: Int, progress: Int) {
+        try {
+            audioManager.setStreamVolume(streamType, progress, 0)
+        } catch (e: SecurityException) {
+            requestDndPermission()
+        }
+    }
+
+    private fun requestDndPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!notificationManager.isNotificationPolicyAccessGranted) {
+                Toast.makeText(this, "DND Access required to change volume", Toast.LENGTH_SHORT).show()
+                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+            }
         }
     }
 
@@ -677,16 +698,22 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         }
     }
 
-    private fun toggleDnd() {
+    private fun toggleDnd(icon: ImageView?, label: TextView?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (notificationManager.isNotificationPolicyAccessGranted) {
                 val currentFilter = notificationManager.currentInterruptionFilter
-                val newFilter = if (currentFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
-                    NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                } else {
-                    NotificationManager.INTERRUPTION_FILTER_ALL
-                }
+                val isOff = currentFilter == NotificationManager.INTERRUPTION_FILTER_ALL || 
+                            currentFilter == NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+                
+                val newFilter = if (isOff) NotificationManager.INTERRUPTION_FILTER_PRIORITY 
+                                else NotificationManager.INTERRUPTION_FILTER_ALL
+                
                 notificationManager.setInterruptionFilter(newFilter)
+                
+                // Immediately update UI to reflect intended state
+                val enabled = isOff // If it was off, we are turning it on
+                icon?.alpha = if (enabled) 1.0f else 0.4f
+                label?.text = if (enabled) "DND On" else "DND Off"
             } else {
                 startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
@@ -695,36 +722,64 @@ class ScreenLockAccessibilityService : AccessibilityService() {
 
     private fun updateDndIcon(imageView: ImageView?, textView: TextView?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val enabled = notificationManager.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+            val filter = notificationManager.currentInterruptionFilter
+            val enabled = filter != NotificationManager.INTERRUPTION_FILTER_ALL && 
+                         filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+            
             imageView?.setImageResource(R.drawable.ic_focus_mode_icon)
             imageView?.alpha = if (enabled) 1.0f else 0.4f
             textView?.text = if (enabled) "DND On" else "DND Off"
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.O)
-    private fun toggleHotspot() {
+    private fun toggleMobileData() {
+        val intent = Intent().apply {
+            action = "android.settings.NETWORK_OPERATOR_SETTINGS"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         try {
-            val wifiManager = getSystemService(Context.WIFI_SERVICE) as WifiManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // For Android 8.0+, use LocalOnlyHotspot
-                wifiManager.startLocalOnlyHotspot(object : LocalOnlyHotspotCallback() {
-                    override fun onStarted(reservation: LocalOnlyHotspotReservation?) {
-                        super.onStarted(reservation)
-                        Toast.makeText(this@ScreenLockAccessibilityService, "Hotspot started", Toast.LENGTH_SHORT).show()
-                    }
-                    
-                    override fun onFailed(errorCode: Int) {
-                        super.onFailed(errorCode)
-                        Toast.makeText(this@ScreenLockAccessibilityService, "Failed to start hotspot", Toast.LENGTH_SHORT).show()
-                    }
-                }, null)
-            } else {
-                // For older versions, use reflection or settings
-                startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+            startActivity(intent)
+            hideMenu()
         } catch (e: Exception) {
-            startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            try {
+                intent.action = Settings.ACTION_DATA_ROAMING_SETTINGS
+                startActivity(intent)
+                hideMenu()
+            } catch (e2: Exception) {
+                try {
+                    intent.action = "android.settings.DATA_USAGE_SETTINGS"
+                    startActivity(intent)
+                    hideMenu()
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Mobile data settings not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun toggleHotspot() {
+        val intent = Intent().apply {
+            action = "android.settings.TETHER_SETTINGS"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            startActivity(intent)
+            hideMenu()
+        } catch (e: Exception) {
+            try {
+                // Fallback for some devices
+                intent.action = "android.settings.WIFI_TETHER_SETTINGS"
+                startActivity(intent)
+                hideMenu()
+            } catch (e2: Exception) {
+                try {
+                    intent.action = Settings.ACTION_WIRELESS_SETTINGS
+                    startActivity(intent)
+                    hideMenu()
+                } catch (_: Exception) {
+                    Toast.makeText(this, "Hotspot settings not found", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 

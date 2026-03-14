@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -10,65 +12,89 @@
         android:contentDescription="Background"
         android:scaleType="centerCrop" />
 
+    <!-- Semi-transparent overlay for better text visibility -->
     <View
+        android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/widget_config_screen_overlay" />
+        android:background="#66000000" />
 
     <LinearLayout
         android:id="@+id/main_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:paddingStart="18dp"
-        android:paddingTop="16dp"
-        android:paddingEnd="18dp"
+        android:paddingHorizontal="16dp"
         android:paddingBottom="16dp">
 
+        <!-- Title & Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:layout_marginTop="48dp"
+            android:layout_marginBottom="32dp"
+            android:paddingHorizontal="8dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Configure Widgets"
-                    android:textColor="@color/widget_config_text_primary"
-                    android:textSize="25sp"
-                    android:textStyle="bold" />
+                    android:text="Widgets"
+                    android:textSize="38sp"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/white"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="6"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Organize your drawer layout"
-                    android:textColor="@color/widget_config_text_secondary"
+                    android:text="Drawer layout"
+                    android:textColor="@color/white"
+                    android:alpha="0.6"
                     android:textSize="13sp" />
             </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/save_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="22dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#33FFFFFF"
+                app:strokeWidth="1dp"
+                app:strokeColor="#20FFFFFF"
+                android:clickable="true"
+                android:focusable="true">
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SAVE"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-black"
+                    android:paddingHorizontal="24dp"
+                    android:paddingVertical="12dp"/>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="12dp"
-            android:text="Drag to reorder. Tap a card to preview and enable or disable it."
-            android:textColor="@color/widget_config_text_secondary"
-            android:textSize="14sp" />
-
+        <!-- Search Bar Section (No outer card) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:background="@drawable/widget_config_search_background"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/settings_card_background"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
@@ -80,7 +106,8 @@
                 android:contentDescription="Search"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:tint="@color/widget_config_text_secondary" />
+                app:tint="@color/white"
+                android:alpha="0.6" />
 
             <EditText
                 android:id="@+id/search_widget_input"
@@ -93,70 +120,59 @@
                 android:inputType="text"
                 android:paddingStart="4dp"
                 android:paddingEnd="14dp"
-                android:textColor="@color/widget_config_text_primary"
-                android:textColorHint="@color/widget_config_text_hint"
+                android:textColor="@color/white"
+                android:textColorHint="#66FFFFFF"
                 android:textCursorDrawable="@null"
                 android:textSize="16sp" />
 
         </LinearLayout>
 
+        <!-- Category Label -->
         <TextView
             android:id="@+id/widgets_header"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:text="ENABLED WIDGETS"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/nord8"
+            android:letterSpacing="0.15"
             android:layout_marginBottom="8dp"
-            android:text="Available Widgets"
-            android:textColor="@color/widget_config_text_primary"
-            android:textSize="17sp"
-            android:textStyle="bold" />
+            android:layout_marginStart="12dp"/>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/widgets_recycler_view"
+        <!-- Instruction Text (Moved below enabled widgets text) -->
+        <TextView
+            android:id="@+id/instruction_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_marginStart="12dp"
+            android:text="Drag handles to reorder. Tap a card to toggle."
+            android:textColor="@color/white"
+            android:alpha="0.5"
+            android:textSize="13sp"
+            android:lineSpacingExtra="2dp" />
+
+        <!-- Widgets List Card -->
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:clipToPadding="false"
-            android:overScrollMode="always"
-            android:paddingBottom="10dp"
-            android:scrollbars="vertical" />
+            android:layout_marginBottom="32dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:cardCornerRadius="24dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/outlineColor">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:orientation="horizontal">
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/cancel_button"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="6dp"
-                android:background="@drawable/widget_config_secondary_button"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
-                android:text="Cancel"
-                android:textAllCaps="false"
-                android:textColor="@color/widget_config_secondary_button_text"
-                android:textSize="15sp" />
-
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/save_button"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginStart="6dp"
-                android:background="@drawable/widget_config_secondary_button"
-                android:minHeight="0dp"
-                android:minWidth="0dp"
-                android:text="Save"
-                android:textAllCaps="false"
-                android:textColor="@color/widget_config_secondary_button_text"
-                android:textSize="15sp"
-                android:textStyle="bold" />
-
-        </LinearLayout>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/widgets_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:overScrollMode="never"
+                android:padding="8dp" />
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 

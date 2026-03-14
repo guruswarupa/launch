@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -12,217 +12,257 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay for better text visibility -->
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/settings_overlay"/>
+        android:background="#66000000"/>
 
-    <!-- Content Container -->
     <ScrollView
+        android:id="@+id/settings_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp"
-            android:gravity="center_horizontal">
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="48dp">
 
-            <!-- Title -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="App Lock"
-                android:textSize="32sp"
-                android:textStyle="bold"
-                android:textColor="@color/text"
-                android:gravity="center"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="32dp"/>
-
-            <!-- App Lock Settings Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="48dp"
+                android:layout_marginBottom="32dp"
+                android:paddingHorizontal="8dp">
 
-                <LinearLayout
-                    android:id="@+id/app_lock_settings_header"
-                    android:layout_width="match_parent"
+                <TextView
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
+                    android:layout_weight="1"
+                    android:text="App Lock"
+                    android:textSize="38sp"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/white"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="6"/>
+            </LinearLayout>
 
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="App Lock Settings"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text"/>
-
-                    <TextView
-                        android:id="@+id/app_lock_settings_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@color/text"
-                        android:alpha="0.7"/>
-
-                </LinearLayout>
+            <!-- Protection Config Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
-                    android:id="@+id/app_lock_settings_content"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp">
+                    android:padding="6dp">
 
-                    <!-- Enable App Lock -->
                     <LinearLayout
+                        android:id="@+id/app_lock_settings_header"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="64dp"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:layout_marginBottom="16dp">
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="16dp"
+                        android:background="?attr/selectableItemBackgroundBorderless">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_vault_icon"
+                            app:tint="@color/white"
+                            android:alpha="1.0"/>
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Enable App Lock"
+                            android:layout_marginStart="16dp"
+                            android:text="Protection Status"
                             android:textSize="16sp"
-                            android:textColor="@color/text"
-                            android:layout_marginEnd="16dp"/>
-
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/enable_app_lock_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:thumbTint="@color/text"
-                            android:trackTint="@color/text"/>
-
-                    </LinearLayout>
-
-                    <!-- Enable Fingerprint (if available) -->
-                    <LinearLayout
-                        android:id="@+id/fingerprint_layout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="16dp"
-                        android:visibility="gone">
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/white"/>
 
                         <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Enable Fingerprint"
-                            android:textSize="16sp"
-                            android:textColor="@color/text"
-                            android:layout_marginEnd="16dp"/>
-
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/fingerprint_switch"
+                            android:id="@+id/app_lock_settings_arrow"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:thumbTint="@color/text"
-                            android:trackTint="@color/text"/>
-
+                            android:text="▼"
+                            android:textSize="10sp"
+                            android:textColor="@color/white"
+                            android:alpha="0.4"/>
                     </LinearLayout>
 
-                    <!-- Change PIN Button -->
-                    <Button
-                        android:id="@+id/change_pin_button"
+                    <LinearLayout
+                        android:id="@+id/app_lock_settings_content"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Set PIN"
-                        android:textAllCaps="false"
-                        android:background="@drawable/button_background"
-                        android:textColor="@android:color/white"
-                        android:padding="16dp"
-                        android:layout_marginBottom="12dp"/>
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:paddingHorizontal="16dp"
+                        android:paddingBottom="16dp">
 
-                    <!-- Reset App Lock Button -->
-                    <Button
-                        android:id="@+id/reset_app_lock_button"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Reset App Lock"
-                        android:textAllCaps="false"
-                        android:background="@drawable/button_background"
-                        android:textColor="@android:color/white"
-                        android:padding="16dp"/>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="12dp">
 
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Master Lock"
+                                android:textColor="@color/white"
+                                android:textSize="15sp"/>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/enable_app_lock_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:alpha="0.05"
+                            android:background="@color/white" />
+
+                        <LinearLayout
+                            android:id="@+id/fingerprint_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="12dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Biometric Unlock"
+                                android:textColor="@color/white"
+                                android:textSize="15sp"/>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/fingerprint_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/change_pin_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="16dp"
+                            android:text="Set Access PIN"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:layout_marginBottom="8dp"/>
+
+                        <Button
+                            android:id="@+id/reset_app_lock_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Factory Reset Vault"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="#FF6B6B"/>
+                    </LinearLayout>
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-            </LinearLayout>
-
-            <!-- Apps List Section -->
-            <LinearLayout
+            <!-- Application Selection Card -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_marginBottom="32dp"
-                android:background="@drawable/rounded_background"
-                android:padding="16dp">
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
 
                 <LinearLayout
-                    android:id="@+id/apps_list_header"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
+                    android:orientation="vertical"
+                    android:padding="6dp">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:id="@+id/apps_list_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="16dp"
+                        android:background="?attr/selectableItemBackgroundBorderless">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_apps_grid"
+                            app:tint="@color/white"
+                            android:alpha="1.0"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:text="Locked Applications"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            android:id="@+id/apps_list_arrow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▼"
+                            android:textSize="10sp"
+                            android:textColor="@color/white"
+                            android:alpha="0.4"/>
+                    </LinearLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/apps_recycler_view"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Select Apps to Lock"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text"/>
-
-                    <TextView
-                        android:id="@+id/apps_list_arrow"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="▼"
-                        android:textSize="14sp"
-                        android:textColor="@color/text"
-                        android:alpha="0.7"/>
-
+                        android:maxHeight="500dp"
+                        android:visibility="gone"
+                        android:paddingHorizontal="8dp"
+                        android:paddingBottom="12dp"
+                        android:clipToPadding="false"
+                        android:overScrollMode="never"/>
                 </LinearLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/apps_recycler_view"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:maxHeight="600dp"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp"/>
-
-            </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
-
     </ScrollView>
-
 </FrameLayout>

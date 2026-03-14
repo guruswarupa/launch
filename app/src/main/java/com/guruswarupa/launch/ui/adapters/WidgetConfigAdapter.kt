@@ -113,7 +113,6 @@ class WidgetConfigAdapter(
             "countdown_widget_container" -> "Countdown timer"
             "physical_activity_widget_container" -> "Step counter"
             "pressure_widget_container" -> "Pressure monitor"
-            "proximity_widget_container" -> "Proximity sensor"
             "temperature_widget_container" -> "Temperature sensor"
             "noise_decibel_widget_container" -> "Sound level meter"
             "workout_widget_container" -> "Workout tracker"

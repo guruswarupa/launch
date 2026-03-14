@@ -27,7 +27,6 @@ class WidgetConfigurationManager(
             WidgetInfo("physical_activity_widget_container", "Physical Activity", false),
             WidgetInfo("compass_widget_container", "Compass", false),
             WidgetInfo("pressure_widget_container", "Pressure", false),
-            WidgetInfo("proximity_widget_container", "Proximity", false),
             WidgetInfo("temperature_widget_container", "Temperature", false),
             WidgetInfo("noise_decibel_widget_container", "Noise Decibel Analyzer", false),
             WidgetInfo("workout_widget_container", "Workout Tracker", false),
@@ -177,6 +176,10 @@ class WidgetConfigurationManager(
                 val appWidgetId = json.getInt("appWidgetId")
                 val packageName = json.optString("providerPackage", "")
                 val className = json.optString("providerClass", "")
+                
+                // Skip proximity-related system widgets
+                if (packageName.contains("proximity", ignoreCase = true) || 
+                    className.contains("proximity", ignoreCase = true)) continue
                 
                 // Verify widget still exists
                 val info = appWidgetManager.getAppWidgetInfo(appWidgetId)

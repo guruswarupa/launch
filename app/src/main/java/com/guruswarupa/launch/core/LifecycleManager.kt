@@ -104,6 +104,8 @@ class LifecycleManager(
 
         if (shouldStartTutorial) {
             mainActivity?.openHomePage(animated = false)
+            // Ensure we are at the top of the center page
+            mainActivity?.views?.recyclerView?.scrollToPosition(0)
         }
 
         // Ensure system bars stay transparent

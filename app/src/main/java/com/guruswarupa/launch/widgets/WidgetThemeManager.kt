@@ -24,20 +24,8 @@ class WidgetThemeManager(
         searchTypeButton: ImageButton? = null,
         appDockManager: AppDockManager? = null
     ) {
-        // Check if we're in night mode (dark theme)
-        val isNightMode = (activity.resources.configuration.uiMode and 
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        
-        // Save current UI mode to detect changes
-        currentUiMode = activity.resources.configuration.uiMode
-        
-        // Select appropriate background drawables
-        val widgetBackground = if (isNightMode) {
-            R.drawable.widget_background_dark
-        } else {
-            R.drawable.widget_background
-        }
+        // Select appropriate background drawables - always use the "dark" (glass) look now
+        val widgetBackground = R.drawable.widget_background
         val emptyStateBackground = R.drawable.drawer_widgets_empty_state_bg
         
         // Apply backgrounds to all widget containers
@@ -50,7 +38,6 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.physical_activity_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.compass_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.pressure_widget_container)?.setBackgroundResource(widgetBackground)
-        activity.findViewById<View>(R.id.proximity_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.temperature_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.network_stats_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.device_info_widget_container)?.setBackgroundResource(widgetBackground)
@@ -69,15 +56,11 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.widget_config_button)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(emptyStateBackground)
         
-        // Apply theme to search box
+        // Apply theme to search box - always use white text and icons
         searchBox?.let { sb ->
-            val searchBg = if (isNightMode) {
-                R.drawable.search_box_transparent_bg
-            } else {
-                R.drawable.search_box_light_bg
-            }
-            val textColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
-            val hintColor = ContextCompat.getColor(activity, if (isNightMode) R.color.white else R.color.black)
+            val searchBg = R.drawable.search_box_transparent_bg
+            val textColor = android.graphics.Color.WHITE
+            val hintColor = android.graphics.Color.WHITE
             
             // Apply background to search container if initialized, otherwise to searchBox
             searchContainer?.let { sc ->
@@ -88,24 +71,20 @@ class WidgetThemeManager(
             }
             
             sb.setTextColor(textColor)
-            val configuredFontColor = TypographyManager.getConfiguredFontColor(sb.context)
-            if (configuredFontColor != null) {
-                sb.setHintTextColor(configuredFontColor)
-            } else {
-                sb.setHintTextColor(hintColor)
-            }
+            sb.setHintTextColor(hintColor)
             TypographyManager.applyToView(sb)
             
-            // Tint search icons
-            val iconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+            // Tint search icons - always white
+            val iconColor = android.graphics.Color.WHITE
             sb.compoundDrawablesRelative[0]?.setTint(iconColor)
             voiceSearchButton?.setColorFilter(iconColor)
             searchTypeButton?.setColorFilter(iconColor)
         }
-        val weatherIconColor = if (isNightMode) android.graphics.Color.WHITE else android.graphics.Color.BLACK
-        activity.findViewById<ImageView>(R.id.weather_icon)?.setColorFilter(weatherIconColor)
         
-        // Update dock icons to match current theme
+        // Weather icon - always white
+        activity.findViewById<ImageView>(R.id.weather_icon)?.setColorFilter(android.graphics.Color.WHITE)
+        
+        // Update dock icons
         appDockManager?.updateDockIcons()
     }
     
@@ -120,18 +99,15 @@ class WidgetThemeManager(
         voiceSearchButton: ImageButton? = null,
         searchTypeButton: ImageButton? = null
     ) {
-        val newUiMode = activity.resources.configuration.uiMode
-        if (newUiMode != currentUiMode) {
-            currentUiMode = newUiMode
-            apply(
-                searchBox = searchBox,
-                searchContainer = searchContainer,
-                voiceSearchButton = voiceSearchButton,
-                searchTypeButton = searchTypeButton,
-                appDockManager = appDockManager
-            )
-            // Notify todo manager of theme change
-            todoManager?.onThemeChanged()
-        }
+        // Even if UI mode changes, we re-apply the same single theme to ensure everything stays consistent
+        apply(
+            searchBox = searchBox,
+            searchContainer = searchContainer,
+            voiceSearchButton = voiceSearchButton,
+            searchTypeButton = searchTypeButton,
+            appDockManager = appDockManager
+        )
+        // Notify todo manager of theme change
+        todoManager?.onThemeChanged()
     }
 }

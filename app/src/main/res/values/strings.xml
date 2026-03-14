@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Launch</string>
     <string name="settings_app_name">Launch Settings</string>
+    <string name="vault_app_name">Vault</string>
+    <string name="grid_columns_title">Apps per row</string>
+    <string name="apps_per_row_format">%1$d apps per row</string>
     <string name="search_text"> Search...</string>
     
     <!-- Accessibility Strings -->
@@ -51,6 +54,7 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="google_maps_not_installed">Google Maps not installed.</string>
     <string name="youtube_not_installed_opening_browser">YouTube app not installed. Opening in browser.</string>
     <string name="cannot_launch_app">Cannot launch app</string>
+    <string name="cannot_open_vault">Cannot open vault: App not found</string>
     <string name="hidden_apps_feature_not_available">Hidden apps feature not available</string>
     
     <!-- Search Mode Selector -->
@@ -77,6 +81,8 @@ No personal data is collected, stored, or shared with third parties.</string>
     <!-- App Lock Strings -->
     <string name="set_pin">Set PIN</string>
     <string name="change_pin">Change PIN</string>
+    <string name="set_access_pin">Set Access PIN</string>
+    <string name="change_access_pin">Change Access PIN</string>
 
     <!-- Share Manager strings -->
     <string name="share_dialog_title">What would you like to share?</string>
@@ -178,9 +184,6 @@ No personal data is collected, stored, or shared with third parties.</string>
     <!-- Pressure Widget Strings -->
     <string name="disable">Disable</string>
     <string name="enable">Enable</string>
-    <string name="proximity_sensor_not_available">Proximity sensor not available on this device</string>
-    <string name="proximity_distance_near">Near</string>
-    <string name="proximity_distance_far">Far</string>
     <string name="pressure_sensor_not_available">Pressure sensor not available on this device</string>
     <string name="pressure_format">%1$s hPa</string>
     <string name="altitude_format">Altitude: %1$s m</string>
@@ -222,11 +225,6 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="desc_photos">Allows the app to specifically access your photos.</string>
     <string name="desc_videos">Allows the app to specifically access your videos.</string>
     <string name="desc_audio">Allows the app to specifically access your audio files.</string>
-
-    <!-- Proximity Widget Strings -->
-    <string name="distance_cm_format">%1$s cm</string>
-    <string name="status_near">Status: Near</string>
-    <string name="status_far">Status: Far</string>
 
     <!-- Temperature Widget Strings -->
     <string name="temperature_sensor_not_available">Temperature sensor not available on this device</string>

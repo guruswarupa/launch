@@ -11,7 +11,6 @@ class WidgetLifecycleCoordinator {
     lateinit var physicalActivityWidget: PhysicalActivityWidget
     lateinit var compassWidget: CompassWidget
     lateinit var pressureWidget: PressureWidget
-    lateinit var proximityWidget: ProximityWidget
     lateinit var temperatureWidget: TemperatureWidget
     lateinit var noiseDecibelWidget: NoiseDecibelWidget
     lateinit var calendarEventsWidget: CalendarEventsWidget
@@ -26,7 +25,6 @@ class WidgetLifecycleCoordinator {
     fun isPhysicalActivityWidgetInitialized() = ::physicalActivityWidget.isInitialized
     fun isCompassWidgetInitialized() = ::compassWidget.isInitialized
     fun isPressureWidgetInitialized() = ::pressureWidget.isInitialized
-    fun isProximityWidgetInitialized() = ::proximityWidget.isInitialized
     fun isTemperatureWidgetInitialized() = ::temperatureWidget.isInitialized
     fun isNoiseDecibelWidgetInitialized() = ::noiseDecibelWidget.isInitialized
     fun isCalendarEventsWidgetInitialized() = ::calendarEventsWidget.isInitialized
@@ -83,7 +81,6 @@ class WidgetLifecycleCoordinator {
         register({ ::physicalActivityWidget.isInitialized }, { physicalActivityWidget.onResume() }, { physicalActivityWidget.onPause() }, { physicalActivityWidget.cleanup() })
         register({ ::compassWidget.isInitialized }, { compassWidget.onResume() }, { compassWidget.onPause() }, { compassWidget.onPause() })
         register({ ::pressureWidget.isInitialized }, { pressureWidget.onResume() }, { pressureWidget.onPause() }, { pressureWidget.cleanup() })
-        register({ ::proximityWidget.isInitialized }, { proximityWidget.onResume() }, { proximityWidget.onPause() }, { proximityWidget.cleanup() })
         register({ ::temperatureWidget.isInitialized }, { temperatureWidget.onResume() }, { temperatureWidget.onPause() }, { temperatureWidget.cleanup() })
         register({ ::noiseDecibelWidget.isInitialized }, { noiseDecibelWidget.onResume() }, { noiseDecibelWidget.onPause() }, { noiseDecibelWidget.cleanup() })
         register({ ::calendarEventsWidget.isInitialized }, { calendarEventsWidget.onResume() }, { calendarEventsWidget.onPause() }, { calendarEventsWidget.cleanup() })

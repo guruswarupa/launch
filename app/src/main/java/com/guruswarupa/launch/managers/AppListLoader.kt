@@ -28,7 +28,6 @@ class AppListLoader(
     private val packageManager: PackageManager,
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
-    private val favoriteAppManager: FavoriteAppManager,
     private val cacheManager: CacheManager?,
     private val backgroundExecutor: Executor,
     private val handler: Handler,
@@ -72,9 +71,6 @@ class AppListLoader(
     fun loadApps(forceRefresh: Boolean = false) {
         if (activity.isFinishing || activity.isDestroyed) return
         
-        // Sync isShowAllAppsMode with the manager to ensure consistency
-        activity.isShowAllAppsMode = favoriteAppManager.isShowAllAppsMode()
-        
         val adapter = if (activity.isAdapterInitialized()) activity.adapter else null
         loadApps(forceRefresh, activity.fullAppList, activity.appList, adapter)
     }
@@ -94,8 +90,11 @@ class AppListLoader(
             // Skip to background loading - no cache checks
         } else if (cacheManager != null && cacheManager.isCacheValid()) {
             // STEP 0: Check persistent cache (only if not forceRefresh)
-            val cachedApps = cacheManager.loadAppListFromCache()
-            if (cachedApps.isNotEmpty()) {
+            val cachedAppsRaw = cacheManager.loadAppListFromCache()
+            if (cachedAppsRaw.isNotEmpty()) {
+                // Deduplicate cached list
+                val cachedApps = cachedAppsRaw.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+                
                 // Load metadata cache (fast deserialization)
                 cacheManager.loadAppMetadataFromCache()
                 
@@ -166,7 +165,7 @@ class AppListLoader(
             // Initialize adapter if needed
             if (adapter == null) {
                 recyclerView.layoutManager = if (isGridMode) {
-                    GridLayoutManager(activity, 4)
+                    GridLayoutManager(activity, activity.getPreferredGridColumns())
                 } else {
                     LinearLayoutManager(activity)
                 }
@@ -185,7 +184,10 @@ class AppListLoader(
                     val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                         addCategory(Intent.CATEGORY_LAUNCHER)
                     }
-                    val list = packageManager.queryIntentActivities(mainIntent, 0)
+                    val rawList = packageManager.queryIntentActivities(mainIntent, 0)
+                    
+                    // Deduplicate results from PackageManager
+                    val list = rawList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
                     
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
@@ -222,11 +224,9 @@ class AppListLoader(
                     // STEP 2: Sort using cached metadata for instant sorted display
                     // This ensures all apps are shown, just sorted using cache (fast)
                     val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
-                    val initiallySorted = finalAppList.sortedBy { app ->
-                        val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
-                            ?: app.activityInfo.packageName.lowercase()
-                        appListManager.getSortKey(label)
-                    }
+                    
+                    // Use sorting with favorites at the top
+                    val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Show sorted list immediately (using cache for sorting)
                     handler.post {
@@ -245,16 +245,6 @@ class AppListLoader(
                         }
                     }
                     
-                    // Dock toggle refresh (use post instead of postDelayed to avoid artificial latency)
-                    handler.post {
-                        if (activity.isFinishing || activity.isDestroyed) {
-                            return@post
-                        }
-                        
-                        // Update dock toggle icon (non-critical)
-                        appDockManager.refreshFavoriteToggle()
-                    }
-                    
                     // STEP 3: Refine sorting in background with fresh labels (after UI is shown)
                     // Reduced delay from 200ms to 100ms to improve responsiveness
                     handler.postDelayed({
@@ -262,12 +252,12 @@ class AppListLoader(
                             try {
                                 // Use cached metadata, load missing ones on-demand
                                 val labelCache = mutableMapOf<String, String>()
-                                val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
+                                val metadataCacheInner = cacheManager?.getMetadataCache() ?: emptyMap()
                                 
                                 // Load all labels (use cache when available)
                                 finalAppList.forEach { app ->
                                     val packageName = app.activityInfo.packageName
-                                    val cached = metadataCache[packageName]
+                                    val cached = metadataCacheInner[packageName]
                                     if (cached != null) {
                                         labelCache[packageName] = cached.label.lowercase()
                                     } else {
@@ -289,11 +279,8 @@ class AppListLoader(
                                     }
                                 }
                                 
-                                // Final sort with all labels loaded (more accurate than cache-only sort)
-                                val sortedApps = finalAppList.sortedBy { app ->
-                                    val label = labelCache[app.activityInfo.packageName] ?: app.activityInfo.packageName.lowercase()
-                                    appListManager.getSortKey(label)
-                                }
+                                // Final sort with all labels loaded
+                                val sortedApps = appListManager.sortAppsAlphabetically(finalAppList)
                                 
                                 // Save updated metadata cache
                                 cacheManager?.saveAppMetadataToCache(cacheManager.getMetadataCache())

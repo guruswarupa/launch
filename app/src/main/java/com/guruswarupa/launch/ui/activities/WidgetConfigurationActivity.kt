@@ -10,10 +10,10 @@ import android.text.Editable
 import android.text.TextPaint
 import android.text.TextWatcher
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -32,7 +32,6 @@ import com.guruswarupa.launch.utils.WidgetPreviewManager
 import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.handlers.ActivityResultHandler
-import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.managers.TypographyManager
 
 class WidgetConfigurationActivity : AppCompatActivity() {
@@ -57,7 +56,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val systemBarManager = SystemBarManager(this)
         window.decorView.post {
             systemBarManager.makeSystemBarsTransparent()
-            // Keep white status bar icons in both light and dark app themes.
+            // Keep white status bar icons
             WindowCompat.getInsetsController(window, window.decorView)?.let { controller ->
                 controller.isAppearanceLightStatusBars = false
                 controller.isAppearanceLightNavigationBars = false
@@ -97,14 +96,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         widgetsRecyclerView = findViewById(R.id.widgets_recycler_view)
         widgetSectionDecoration = WidgetSectionDecoration(this)
         widgetsRecyclerView.addItemDecoration(widgetSectionDecoration)
-        val cancelButton = findViewById<Button>(R.id.cancel_button)
-        val saveButton = findViewById<Button>(R.id.save_button)
+        
+        val saveButton = findViewById<View>(R.id.save_button)
         val searchInput = findViewById<EditText>(R.id.search_widget_input)
 
         val configuredFontColor = TypographyManager.getConfiguredFontColor(this)
         if (configuredFontColor != null) {
-            searchInput.setTextColor(configuredFontColor)
-            searchInput.setHintTextColor(configuredFontColor)
+            searchInput?.setTextColor(configuredFontColor)
+            searchInput?.setHintTextColor(configuredFontColor)
         }
         TypographyManager.applyToView(searchInput)
 
@@ -162,19 +161,14 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         })
         itemTouchHelper.attachToRecyclerView(widgetsRecyclerView)
 
-        // Setup button listeners
-        cancelButton.setOnClickListener {
-            finish()
-        }
-
-        saveButton.setOnClickListener {
+        saveButton?.setOnClickListener {
             widgetConfigManager.saveWidgetOrder(allWidgets)
             setResult(RESULT_OK)
             finish()
         }
         
         // Setup search functionality
-        searchInput.addTextChangedListener(object : TextWatcher {
+        searchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -206,10 +200,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
 
         refreshSectionHeaders()
-
-        // Update header visibility
-        val header = findViewById<TextView>(R.id.widgets_header)
-        header.visibility = if (filteredWidgets.isNotEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
@@ -232,8 +222,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                     }
                 }
                 ActivityResultHandler.REQUEST_BIND_WIDGET -> {
-                    // This is usually handled by WidgetManager if we pass it, 
-                    // but here we just need to reload to see the newly bound widget instance
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         loadWidgets()
                     }, 500)
@@ -258,7 +246,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     }
     
     fun updateWidgetState(widgetId: String, enabled: Boolean) {
-        // Update both lists when called from adapter
         val filteredPosition = filteredWidgets.indexOfFirst { it.id == widgetId }
         val originalPosition = allWidgets.indexOfFirst { it.id == widgetId }
         
@@ -274,7 +261,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val widget = allWidgets.find { it.id == widgetId }
         if (widget != null) {
             val action = if (enabled) "enabled" else "disabled"
-            android.widget.Toast.makeText(this, "${widget.name} $action!", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "${widget.name} $action!", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -298,14 +285,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         adapter?.notifyDataSetChanged()
 
         refreshSectionHeaders()
-
-        findViewById<TextView>(R.id.widgets_header).visibility = 
-            if (filteredWidgets.isNotEmpty()) View.VISIBLE else View.GONE
     }
     
     private fun updateOriginalListOrder() {
-        // Update allWidgets to match the current order of filteredWidgets
-        // This preserves the order even when filtering is active
         val orderedIds = filteredWidgets.map { it.id }
         allWidgets.sortBy { widget ->
             val index = orderedIds.indexOf(widget.id)
@@ -344,7 +326,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             "countdown_widget_container" -> "Countdown timers for important events"
             "physical_activity_widget_container" -> "Track steps and physical activity"
             "pressure_widget_container" -> "Atmospheric pressure monitoring"
-            "proximity_widget_container" -> "Proximity sensor readings"
             "temperature_widget_container" -> "Temperature monitoring and alerts"
             "noise_decibel_widget_container" -> "Sound level measurement in decibels"
             "workout_widget_container" -> "Workout tracking and fitness metrics"
@@ -363,7 +344,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         SYSTEM_DISABLED(R.string.widget_section_system_disabled)
     }
 
-    private class WidgetSectionDecoration(context: Context) : RecyclerView.ItemDecoration() {
+    private class WidgetSectionDecoration(private val context: Context) : RecyclerView.ItemDecoration() {
         data class SectionInfo(val position: Int, val title: String)
 
         private val headerHeightPx = (context.resources.displayMetrics.density * 36f).toInt().coerceAtLeast(1)

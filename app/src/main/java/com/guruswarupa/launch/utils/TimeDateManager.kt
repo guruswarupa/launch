@@ -80,12 +80,12 @@ class TimeDateManager(
     }
 
     private fun createMainTimeFormat(use24Hour: Boolean): SimpleDateFormat {
-        val pattern = if (use24Hour) "HH:mm:ss" else "hh:mm:ss a"
+        val pattern = if (use24Hour) "HH:mm:ss" else "hh:mm:ss"
         return SimpleDateFormat(pattern, Locale.getDefault())
     }
 
     private fun createDrawerTimeFormat(use24Hour: Boolean): SimpleDateFormat {
-        val pattern = if (use24Hour) "HH:mm" else "hh:mm a"
+        val pattern = if (use24Hour) "HH:mm" else "hh:mm"
         return SimpleDateFormat(pattern, Locale.getDefault())
     }
 }

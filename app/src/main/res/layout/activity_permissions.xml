@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -12,71 +12,103 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay for better text visibility -->
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/settings_overlay"/>
+        android:background="#66000000"/>
 
-    <!-- Content Container -->
     <ScrollView
+        android:id="@+id/permissions_scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp"
-            android:gravity="center_horizontal">
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="48dp">
 
-            <!-- Title -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Permissions"
-                android:textSize="32sp"
-                android:textStyle="bold"
-                android:textColor="@color/text"
-                android:gravity="center"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="32dp"/>
-
-            <!-- Description -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Enable permissions to unlock all features of the launcher. Some permissions are required for core functionality."
-                android:textSize="14sp"
-                android:textColor="@color/text"
-                android:alpha="0.8"
-                android:gravity="center"
-                android:layout_marginBottom="24dp"/>
-
-            <!-- Permissions List Container -->
             <LinearLayout
-                android:id="@+id/permissions_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="48dp"
+                android:layout_marginBottom="32dp"
+                android:paddingHorizontal="8dp">
 
-            <!-- Apply Button (Optional, usually toggles take effect immediately) -->
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="System Access"
+                    android:textSize="38sp"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/white"
+                    android:shadowColor="#80000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="6"/>
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Feature Enablement"
+                        android:textSize="18sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/white"
+                        android:layout_marginBottom="12dp"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Review and grant system level permissions required for advanced gestures, screen dimming, and deep automation features."
+                        android:textSize="14sp"
+                        android:textColor="@color/white"
+                        android:alpha="0.6"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginBottom="24dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/permissions_list"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <Button
                 android:id="@+id/done_button"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Done"
+                android:layout_height="56dp"
+                android:text="Finish Setup"
                 android:textAllCaps="false"
-                android:background="@drawable/button_background"
-                android:textColor="@android:color/white"
-                android:padding="16dp"
-                android:layout_marginTop="24dp"
+                android:fontFamily="sans-serif-black"
+                android:background="@drawable/settings_card_background"
+                android:textColor="@color/nord8"
                 android:layout_marginBottom="32dp"/>
 
         </LinearLayout>
-
     </ScrollView>
-
 </FrameLayout>

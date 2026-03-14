@@ -3,6 +3,7 @@ package com.guruswarupa.launch
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
@@ -27,6 +28,11 @@ class AppInitializer(private val activity: MainActivity) {
     fun initialize(savedInstanceState: Bundle?) {
         with(activity) {
             sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            
+            // Lock orientation to portrait for phones only
+            if (!isTablet()) {
+                requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
             
             setContentView(R.layout.activity_main)
             
@@ -98,7 +104,7 @@ class AppInitializer(private val activity: MainActivity) {
                 initializeDeferredWidgets()
             }, 30) // Reduced from 100ms
 
-            appDockManager = AppDockManager(activity, sharedPreferences, views.appDock, packageManager, favoriteAppManager)
+            appDockManager = AppDockManager(activity, sharedPreferences, views.appDock)
             
             // Initialize widget theme manager
             widgetThemeManager = WidgetThemeManager(activity) { resources.configuration.uiMode }
@@ -136,7 +142,7 @@ class AppInitializer(private val activity: MainActivity) {
             
             // Initialize app list loader
             appListLoader = AppListLoader(
-                activity, packageManager, appListManager, appDockManager, favoriteAppManager,
+                activity, packageManager, appListManager, appDockManager,
                 cacheManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
             )
             
@@ -144,7 +150,7 @@ class AppInitializer(private val activity: MainActivity) {
             appListUIUpdater = AppListUIUpdater(
                 activity, views.recyclerView, if (activity.isAdapterInitialized()) activity.adapter else null,
                 appList, fullAppList, appListLoader, appDockManager, appListManager,
-                handler, backgroundExecutor, views.searchBox
+                backgroundExecutor, views.searchBox
             )
             appListUIUpdater.setupCallbacks()
 
@@ -249,7 +255,8 @@ class AppInitializer(private val activity: MainActivity) {
             focusModeApplier = FocusModeApplier(
                 activity, backgroundExecutor, appListManager, appDockManager,
                 views.searchBox, views.voiceSearchButton, views.searchContainer, if (activity.isAdapterInitialized()) activity.adapter else null, fullAppList, appList,
-                onUpdateAppSearchManager = { updateAppSearchManager() }
+                onUpdateAppSearchManager = { updateAppSearchManager() },
+                onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() }
             )
             
             // Initialize service manager
@@ -298,5 +305,12 @@ class AppInitializer(private val activity: MainActivity) {
             )
             resultRegistry.setDependencies(deps)
         }
+    }
+
+    /**
+     * Checks if the device is a tablet based on screen size.
+     */
+    private fun isTablet(): Boolean {
+        return activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK >= Configuration.SCREENLAYOUT_SIZE_LARGE
     }
 }

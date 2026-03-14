@@ -1,39 +1,29 @@
 package com.guruswarupa.launch.ui.activities
 
-import android.Manifest
 import android.app.AlertDialog
 import android.app.NotificationManager
-import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
-import android.graphics.Rect
-import android.view.View
-import android.view.ViewGroup
-import android.view.LayoutInflater
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.text.Html
 import android.text.method.LinkMovementMethod
-import android.util.Base64
-import android.widget.FrameLayout
+import android.view.View
 import android.widget.*
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -43,7 +33,6 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.managers.DownloadableFontManager
 import com.guruswarupa.launch.managers.TypographyManager
-import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
@@ -53,14 +42,9 @@ import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-
-import android.os.Handler
-import android.os.Looper
 
 class SettingsActivity : ComponentActivity() {
     companion object {
@@ -71,9 +55,7 @@ class SettingsActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val vaultManager by lazy { EncryptedFolderManager(this) }
     private var settingsTutorialStepIndex = 0
-    private var settingsTutorialOverlay: View? = null
     private var settingsTutorialActive = false
-    private var settingsTutorialRenderToken = 0
 
     private data class SettingsTutorialStep(
         val title: String,
@@ -82,2048 +64,790 @@ class SettingsActivity : ComponentActivity() {
     )
 
     private val settingsTutorialSteps = listOf(
-        SettingsTutorialStep(
-            title = "Display Style",
-            description = "Choose how apps are shown and toggle the clock format used across the launcher.",
-            targetViewId = R.id.display_style_header
-        ),
-        SettingsTutorialStep(
-            title = "Wallpaper",
-            description = "Change the wallpaper, adjust blur, and enable the readability mode for clearer visuals.",
-            targetViewId = R.id.wallpaper_header
-        ),
-        SettingsTutorialStep(
-            title = "Typography",
-            description = "Control text size, font family, and weight to match your preferred reading style.",
-            targetViewId = R.id.typography_header
-        ),
-        SettingsTutorialStep(
-            title = "Widgets",
-            description = "Open widget configuration to decide which widgets appear on the launcher.",
-            targetViewId = R.id.widgets_settings_header
-        ),
-        SettingsTutorialStep(
-            title = "Search Engine",
-            description = "Pick the web search provider used when the launcher sends a search to the browser.",
-            targetViewId = R.id.search_engine_header
-        ),
-        SettingsTutorialStep(
-            title = "Quick Actions",
-            description = "Configure gesture-driven and utility shortcuts like torch, dimmer, control center, and back tap actions.",
-            targetViewId = R.id.quick_actions_header
-        ),
-        SettingsTutorialStep(
-            title = "App Lock",
-            description = "Manage protected apps, the encrypted vault, and related security controls from here.",
-            targetViewId = R.id.app_lock_header
-        ),
-        SettingsTutorialStep(
-            title = "Backup and Restore",
-            description = "Export your setup or restore it later when moving to a new device or recovering state.",
-            targetViewId = R.id.backup_restore_header
-        ),
-        SettingsTutorialStep(
-            title = "Permissions",
-            description = "Review the Android permissions and system access that power launcher features.",
-            targetViewId = R.id.permissions_header
-        ),
-        SettingsTutorialStep(
-            title = "Tutorials",
-            description = "Restart the guided tour at any time from this section.",
-            targetViewId = R.id.tutorial_header
-        ),
-        SettingsTutorialStep(
-            title = "Launcher Controls",
-            description = "Use launcher maintenance actions like restart, cache cleanup, or data reset carefully.",
-            targetViewId = R.id.launcher_header
-        ),
-        SettingsTutorialStep(
-            title = "Support",
-            description = "Find project links, support options, and feedback actions in the final section.",
-            targetViewId = R.id.support_header
-        )
+        SettingsTutorialStep("Interface", "Customize layouts, grid sizes, and icon shapes.", R.id.display_style_header),
+        SettingsTutorialStep("Wallpaper", "Adjust background blur for a modern look.", R.id.wallpaper_header),
+        SettingsTutorialStep("Typography", "Change fonts and text styling.", R.id.typography_header),
+        SettingsTutorialStep("Gestures", "Enable Back Tap and Shake shortcuts.", R.id.quick_actions_header),
+        SettingsTutorialStep("Security", "Manage App Lock and your Encrypted Vault.", R.id.app_lock_header),
+        SettingsTutorialStep("System", "Backup, Restore, and Launcher maintenance.", R.id.backup_restore_header)
     )
     
-    private val securePrefs by lazy {
-        val masterKey = MasterKey.Builder(this)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        
-        EncryptedSharedPreferences.create(
-            this,
-            "vault_secure_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    }
-
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            result.data?.data?.let { uri ->
-                exportSettingsToFile(uri)
-            }
-        }
+        if (result.resultCode == RESULT_OK) result.data?.data?.let { exportSettingsToFile(it) }
     }
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            result.data?.data?.let { uri ->
-                importSettingsFromFile(uri)
-            }
-        }
-    }
-
-    private val hiddenAppsLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-            intent.setPackage(packageName)
-            sendBroadcast(intent)
-        }
+        if (result.resultCode == RESULT_OK) result.data?.data?.let { importSettingsFromFile(it) }
     }
 
     private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-        intent.setPackage(packageName)
-        sendBroadcast(intent)
+        notifySettingsChanged()
         setupWallpaper()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Make status bar and navigation bar transparent before setContentView
+        // Enable edge-to-edge for transparent system bars with white icons
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+        )
         
         setContentView(R.layout.activity_settings)
         applyContentInsets()
-        
-        // Ensure system bars are fully configured after view is created
-        window.decorView.post {
-            makeSystemBarsTransparent()
-        }
 
-        // Setup Wallpaper
         setupWallpaper()
+        setupAppearanceSection()
+        setupActionsSection()
+        setupSecuritySection()
+        setupMaintenanceSection()
+        setupSupportSection()
+        setupVersionInfo()
 
-        val gridOption = findViewById<Button>(R.id.grid_option)
-        val listOption = findViewById<Button>(R.id.list_option)
-        val saveButton = findViewById<Button>(R.id.save_settings_button)
-        
-        // Track selected display style
-        val currentStyle = prefs.getString("view_preference", "list") ?: "list"
-        var selectedStyle = currentStyle
-        
-        // Update button states based on current preference
-        updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
-        
-        // Set click listeners for display style buttons
-        gridOption.setOnClickListener {
-            selectedStyle = "grid"
-            updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
+        findViewById<View>(R.id.save_settings_button).setOnClickListener {
+            Toast.makeText(this, "Settings applied", Toast.LENGTH_SHORT).show()
+            finish()
         }
-        
-        listOption.setOnClickListener {
-            selectedStyle = "list"
-            updateDisplayStyleButtons(gridOption, listOption, selectedStyle)
-        }
-        val exportButton = findViewById<Button>(R.id.export_settings_button)
-        val importButton = findViewById<Button>(R.id.import_settings_button)
-        val appLockButton = findViewById<Button>(R.id.app_lock_button)
-        val checkPermissionsButton = findViewById<Button>(R.id.check_permissions_button)
-        val showTutorialButton = findViewById<Button>(R.id.show_tutorial_button)
-        val restartLauncherButton = findViewById<Button>(R.id.restart_launcher_button)
-        val clearCacheButton = findViewById<Button>(R.id.clear_cache_button)
-        val clearDataButton = findViewById<Button>(R.id.clear_data_button)
-        val changeWallpaperButton = findViewById<Button>(R.id.change_wallpaper_button)
-        val feedbackButton = findViewById<Button>(R.id.feedback_button)
-
-        saveButton.setOnClickListener {
-            saveSettings(selectedStyle)
-        }
-
-        exportButton.setOnClickListener {
-            exportSettings()
-        }
-
-        importButton.setOnClickListener {
-            importSettings()
-        }
-
-        appLockButton.setOnClickListener {
-            startActivity(Intent(this, AppLockSettingsActivity::class.java))
-        }
-        
-        val hiddenAppsButton = findViewById<Button>(R.id.hidden_apps_button)
-        hiddenAppsButton.setOnClickListener {
-            hiddenAppsLauncher.launch(Intent(this, HiddenAppsSettingsActivity::class.java))
-        }
-        
-        checkPermissionsButton.setOnClickListener {
-            startActivity(Intent(this, PermissionsActivity::class.java))
-        }
-        
-        val privacyDashboardButton = findViewById<Button>(R.id.privacy_dashboard_button)
-        privacyDashboardButton.setOnClickListener {
-            startActivity(Intent(this, PrivacyDashboardActivity::class.java))
-        }
-        
-        showTutorialButton.setOnClickListener {
-            showTutorial()
-        }
-        
-        restartLauncherButton.setOnClickListener {
-            restartLauncher()
-        }
-        
-        clearCacheButton.setOnClickListener {
-            clearCache()
-        }
-        
-        clearDataButton.setOnClickListener {
-            clearData()
-        }
-        
-        changeWallpaperButton.setOnClickListener {
-            chooseWallpaper()
-        }
-
-        feedbackButton.setOnClickListener {
-            sendFeedback()
-        }
-        
-        // Setup expandable sections
-        setupExpandableSections()
 
         if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
             window.decorView.post { startSettingsTutorial() }
         }
     }
     
+    private fun setupVersionInfo() {
+        try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            val version = pInfo.versionName
+            findViewById<TextView>(R.id.version_text)?.text = "v$version"
+        } catch (_: Exception) {
+            findViewById<TextView>(R.id.version_text)?.text = "v1.0"
+        }
+    }
+
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        val overlay = findViewById<View>(R.id.settings_overlay)
-        
-        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
-
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
-        applyWallpaperBlur(wallpaperImageView)
     }
 
-    private fun applyWallpaperBlur(imageView: ImageView) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
-            if (blurLevel > 0) {
-                val blurRadius = blurLevel.toFloat().coerceAtLeast(1f)
-                imageView.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(
-                        blurRadius, blurRadius, android.graphics.Shader.TileMode.CLAMP
-                    )
-                )
-            } else {
-                imageView.setRenderEffect(null)
-            }
-        }
-    }
+    private fun setupAppearanceSection() {
+        val displayHeader = findViewById<LinearLayout>(R.id.display_style_header)
+        val displayContent = findViewById<LinearLayout>(R.id.display_style_content)
+        val displayArrow = findViewById<TextView>(R.id.display_style_arrow)
+        setupSectionToggle(displayHeader, displayContent, displayArrow)
 
-    private fun sendFeedback() {
-        val deviceInfo = """
-            
-            
-            --- Device Info ---
-            Device: ${Build.MANUFACTURER} ${Build.MODEL}
-            Android Version: ${Build.VERSION.RELEASE}
-            SDK: ${Build.VERSION.SDK_INT}
-            App Version: ${getAppVersion()}
-        """.trimIndent()
-
-        val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = "mailto:".toUri()
-            putExtra(Intent.EXTRA_EMAIL, arrayOf("msgswarupa@gmail.com"))
-            putExtra(Intent.EXTRA_SUBJECT, "Launch App Feedback")
-            putExtra(Intent.EXTRA_TEXT, deviceInfo)
-        }
-
-        try {
-            startActivity(Intent.createChooser(intent, "Send Feedback"))
-        } catch (_: Exception) {
-            Toast.makeText(this, "No mail app found", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun getAppVersion(): String {
-        return try {
-            val pInfo = packageManager.getPackageInfo(packageName, 0)
-            val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pInfo.longVersionCode else @Suppress("DEPRECATION") pInfo.versionCode
-            "${pInfo.versionName} ($versionCode)"
-        } catch (_: Exception) {
-            "Unknown"
-        }
-    }
-
-    private fun setupExpandableSections() {
-        // Display Style Header
-        val displayStyleHeader = findViewById<LinearLayout>(R.id.display_style_header)
-        val displayStyleContent = findViewById<LinearLayout>(R.id.display_style_content)
-        val displayStyleArrow = findViewById<TextView>(R.id.display_style_arrow)
-        setupSectionToggle(displayStyleHeader, displayStyleContent, displayStyleArrow)
+        val gridBtn = findViewById<Button>(R.id.grid_option)
+        val listBtn = findViewById<Button>(R.id.list_option)
+        val gridSection = findViewById<LinearLayout>(R.id.grid_columns_section)
+        val gridValue = findViewById<TextView>(R.id.grid_columns_value)
+        val gridSeek = findViewById<SeekBar>(R.id.grid_columns_seekbar)
         
-        // Wallpaper Header
-        val wallpaperHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
-        val wallpaperContent = findViewById<LinearLayout>(R.id.wallpaper_content)
-        val wallpaperArrow = findViewById<TextView>(R.id.wallpaper_arrow)
-        setupSectionToggle(wallpaperHeader, wallpaperContent, wallpaperArrow)
+        val minCols = resources.getInteger(R.integer.grid_columns_min)
+        val maxCols = resources.getInteger(R.integer.grid_columns_max)
+        var selectedCols = prefs.getInt(Constants.Prefs.GRID_COLUMNS, resources.getInteger(R.integer.app_grid_columns))
+            .coerceIn(minCols, maxCols)
 
-        // Typography Header
-        val typographyHeader = findViewById<LinearLayout>(R.id.typography_header)
-        val typographyContent = findViewById<LinearLayout>(R.id.typography_content)
-        val typographyArrow = findViewById<TextView>(R.id.typography_arrow)
-        setupSectionToggle(typographyHeader, typographyContent, typographyArrow)
-        setupTypographySpinner()
-        setupTypographySettings()
+        var selectedStyle = prefs.getString("view_preference", "list") ?: "list"
+
+        gridSeek.max = maxCols - minCols
+        gridSeek.progress = selectedCols - minCols
+        gridValue.text = getString(R.string.apps_per_row_format, selectedCols)
         
-        // Setup wallpaper blur slider
-        val wallpaperBlurSeekBar = findViewById<SeekBar>(R.id.wallpaper_blur_seekbar)
-        val wallpaperBlurValueText = findViewById<TextView>(R.id.wallpaper_blur_value_text)
-        
-        val blurLevel = prefs.getInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, 50)
-        
-        wallpaperBlurSeekBar.progress = blurLevel
-        wallpaperBlurValueText.text = "$blurLevel%"
-        
-        wallpaperBlurSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                wallpaperBlurValueText.text = "$progress%"
-                if (fromUser) {
-                    prefs.edit { putInt(Constants.Prefs.WALLPAPER_BLUR_LEVEL, progress) }
-                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                    intent.setPackage(packageName)
-                    sendBroadcast(intent)
-                    applyWallpaperBlur(findViewById(R.id.wallpaper_background))
+        gridSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                selectedCols = minCols + p
+                gridValue.text = getString(R.string.apps_per_row_format, selectedCols)
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.GRID_COLUMNS, selectedCols) }
+                    notifySettingsChanged()
                 }
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
-        val clock24HourSwitch = findViewById<SwitchCompat>(R.id.clock_24_hour_switch)
-        clock24HourSwitch.isChecked = prefs.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
-        clock24HourSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, isChecked) }
-            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-            intent.setPackage(packageName)
-            sendBroadcast(intent)
+        updateDisplayStyleButtons(gridBtn, listBtn, selectedStyle)
+        gridSection.isVisible = selectedStyle == "grid"
+        
+        gridBtn.setOnClickListener {
+            selectedStyle = "grid"
+            updateDisplayStyleButtons(gridBtn, listBtn, "grid")
+            gridSection.isVisible = true
+            prefs.edit { putString("view_preference", "grid") }
+            notifySettingsChanged()
         }
 
-        // Widgets Header
-        val widgetsHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
-        val widgetsContent = findViewById<LinearLayout>(R.id.widgets_settings_content)
-        val widgetsArrow = findViewById<TextView>(R.id.widgets_settings_arrow)
-        setupSectionToggle(widgetsHeader, widgetsContent, widgetsArrow)
+        listBtn.setOnClickListener {
+            selectedStyle = "list"
+            updateDisplayStyleButtons(gridBtn, listBtn, "list")
+            gridSection.isVisible = false
+            prefs.edit { putString("view_preference", "list") }
+            notifySettingsChanged()
+        }
+
+        // Icons
+        val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
+        val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
+        val iconVal = findViewById<TextView>(R.id.icon_size_value)
         
-        findViewById<Button>(R.id.configure_widgets_button)?.setOnClickListener {
+        val shapes = arrayOf("Round", "Squircle", "Squared", "Teardrop", "Vortex", "Overlay")
+        val values = arrayOf("round", "squircle", "squared", "teardrop", "vortex", "overlay")
+        iconSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, shapes).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        iconSpinner.setSelection(values.indexOf(prefs.getString(Constants.Prefs.ICON_STYLE, "squircle")).coerceAtLeast(0))
+        iconSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putString(Constants.Prefs.ICON_STYLE, values[pos]) }
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
+        }
+        
+        val currentSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
+        iconSeek.max = 60 // 36 to 96
+        iconSeek.progress = currentSize - 36
+        iconVal.text = "${currentSize}dp"
+        iconSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                val size = p + 36
+                iconVal.text = "${size}dp"
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.ICON_SIZE, size) }
+                    notifySettingsChanged()
+                }
+            }
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
+        })
+
+        // Wallpaper Blur Section
+        val wallHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
+        val wallContent = findViewById<LinearLayout>(R.id.wallpaper_content)
+        val wallArrow = findViewById<TextView>(R.id.wallpaper_arrow)
+        setupSectionToggle(wallHeader, wallContent, wallArrow)
+        findViewById<View>(R.id.change_wallpaper_button).setOnClickListener { chooseWallpaper() }
+
+        // Blur controls removed - no blur effect
+
+        // Typography
+        val typoHeader = findViewById<LinearLayout>(R.id.typography_header)
+        val typoContent = findViewById<LinearLayout>(R.id.typography_content)
+        val typoArrow = findViewById<TextView>(R.id.typography_arrow)
+        setupSectionToggle(typoHeader, typoContent, typoArrow)
+        setupTypographySettings()
+
+        findViewById<SwitchCompat>(R.id.clock_24_hour_switch).apply {
+            isChecked = prefs.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
+            setOnCheckedChangeListener { _, isChecked ->
+                prefs.edit { putBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, isChecked) }
+                notifySettingsChanged()
+            }
+        }
+    }
+
+    private fun setupActionsSection() {
+        val wHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
+        val wContent = findViewById<LinearLayout>(R.id.widgets_settings_content)
+        val wArrow = findViewById<TextView>(R.id.widgets_settings_arrow)
+        setupSectionToggle(wHeader, wContent, wArrow)
+        findViewById<View>(R.id.configure_widgets_button).setOnClickListener {
             startActivity(Intent(this, WidgetConfigurationActivity::class.java))
         }
 
-        // Search Engine Header
-        val searchEngineHeader = findViewById<LinearLayout>(R.id.search_engine_header)
-        val searchEngineContent = findViewById<LinearLayout>(R.id.search_engine_content)
-        val searchEngineArrow = findViewById<TextView>(R.id.search_engine_arrow)
-        setupSectionToggle(searchEngineHeader, searchEngineContent, searchEngineArrow)
+        val sHeader = findViewById<LinearLayout>(R.id.search_engine_header)
+        val sContent = findViewById<LinearLayout>(R.id.search_engine_content)
+        val sArrow = findViewById<TextView>(R.id.search_engine_arrow)
+        setupSectionToggle(sHeader, sContent, sArrow)
         setupSearchEngine()
 
-        // Backup Header
-        val backupHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
-        val backupContent = findViewById<LinearLayout>(R.id.backup_restore_content)
-        val backupArrow = findViewById<TextView>(R.id.backup_restore_arrow)
-        setupSectionToggle(backupHeader, backupContent, backupArrow)
-        
-        // Security Header
-        val appLockHeader = findViewById<LinearLayout>(R.id.app_lock_header)
-        val appLockContent = findViewById<LinearLayout>(R.id.app_lock_content)
-        val appLockArrow = findViewById<TextView>(R.id.app_lock_arrow)
-        setupSectionToggle(appLockHeader, appLockContent, appLockArrow)
-        
-        // Permissions Header
-        val permissionsHeader = findViewById<LinearLayout>(R.id.permissions_header)
-        val permissionsContent = findViewById<LinearLayout>(R.id.permissions_content)
-        val permissionsArrow = findViewById<TextView>(R.id.permissions_arrow)
-        setupSectionToggle(permissionsHeader, permissionsContent, permissionsArrow)
+        val qHeader = findViewById<LinearLayout>(R.id.quick_actions_header)
+        val qContent = findViewById<LinearLayout>(R.id.quick_actions_content)
+        val qArrow = findViewById<TextView>(R.id.quick_actions_arrow)
+        setupSectionToggle(qHeader, qContent, qArrow)
 
-        // Tutorial Header
-        val tutorialHeader = findViewById<LinearLayout>(R.id.tutorial_header)
-        val tutorialContent = findViewById<LinearLayout>(R.id.tutorial_content)
-        val tutorialArrow = findViewById<TextView>(R.id.tutorial_arrow)
-        setupSectionToggle(tutorialHeader, tutorialContent, tutorialArrow)
-        
-        // Quick Actions Header
-        val quickActionsHeader = findViewById<LinearLayout>(R.id.quick_actions_header)
-        val quickActionsContent = findViewById<LinearLayout>(R.id.quick_actions_content)
-        val quickActionsArrow = findViewById<TextView>(R.id.quick_actions_arrow)
-        setupSectionToggle(quickActionsHeader, quickActionsContent, quickActionsArrow)
-        
-        // Setup accessibility shortcut switch
-        val accessibilityShortcutSwitch = findViewById<SwitchCompat>(R.id.accessibility_shortcut_switch)
-        val isShortcutEnabled = prefs.getBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, false)
-        accessibilityShortcutSwitch.isChecked = isShortcutEnabled
-        
-        accessibilityShortcutSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked && !hasAccessibilityServicePermission()) {
-                accessibilityShortcutSwitch.isChecked = false
-                AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                    .setTitle("Permission Required")
-                    .setMessage("Accessibility Service is required for the floating shortcut. Please enable 'Launch' in Accessibility settings.")
-                    .setPositiveButton("Go to Settings") { _, _ ->
-                        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            } else {
-                prefs.edit { putBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, isChecked) }
-                val intent = Intent(this, ScreenLockAccessibilityService::class.java).apply {
-                    action = "TOGGLE_SHORTCUT"
-                    putExtra("enabled", isChecked)
-                }
-                startService(intent)
-            }
-        }
+        setupAccessibilityShortcut()
+        setupBackTap()
+        setupShakeTorch()
+        setupExtraDimmer()
+        setupNightMode()
+        setupFlipToDnd()
 
-        // Setup Control Center Config Button
-        findViewById<Button>(R.id.config_control_center_button)?.setOnClickListener {
+        findViewById<View>(R.id.config_control_center_button).setOnClickListener {
             startActivity(Intent(this, ControlCenterConfigActivity::class.java))
         }
-
-        // Setup torch toggle switch
-        val shakeTorchSwitch = findViewById<SwitchCompat>(R.id.shake_torch_switch)
-        val isTorchEnabled = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
-        shakeTorchSwitch.isChecked = isTorchEnabled
-        
-        shakeTorchSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked) }
-            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-            intent.setPackage(packageName)
-            sendBroadcast(intent)
-            
-            // Show/hide sensitivity container
-            findViewById<View>(R.id.shake_sensitivity_container).isVisible = isChecked
-        }
-        
-        // Setup sensitivity seekbar
-        val sensitivitySeekBar = findViewById<SeekBar>(R.id.shake_sensitivity_seekbar)
-        val sensitivityValueText = findViewById<TextView>(R.id.sensitivity_value_text)
-        val currentSensitivity = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5)
-        
-        sensitivitySeekBar.progress = currentSensitivity - 1
-        sensitivityValueText.text = currentSensitivity.toString()
-        findViewById<View>(R.id.shake_sensitivity_container).isVisible = isTorchEnabled
-        
-        sensitivitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val sensitivity = progress + 1
-                sensitivityValueText.text = sensitivity.toString()
-                if (fromUser) {
-                    prefs.edit { putInt(Constants.Prefs.SHAKE_SENSITIVITY, sensitivity) }
-                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                    intent.setPackage(packageName)
-                    sendBroadcast(intent)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        // Setup screen dimmer
-        setupScreenDimmer()
-        
-        // Setup night mode
-        setupNightMode()
-        
-        // Setup flip to dnd
-        setupFlipToDnd()
-        
-        // Setup back tap gestures
-        setupBackTap()
-
-        // Support Header
-        val supportHeader = findViewById<LinearLayout>(R.id.support_header)
-        val supportContent = findViewById<LinearLayout>(R.id.support_content)
-        val supportArrow = findViewById<TextView>(R.id.support_arrow)
-        setupSectionToggle(supportHeader, supportContent, supportArrow)
-        
-        // Set up movement method for GitHub links
-        val githubLinksText = findViewById<TextView>(R.id.github_links_text)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
-        } else {
-            githubLinksText.text = Html.fromHtml(getString(R.string.github_project_links))
-        }
-        githubLinksText.movementMethod = LinkMovementMethod.getInstance()
-        // Ensure links are visible with proper styling
-        githubLinksText.isClickable = true
-        githubLinksText.isFocusable = true
-        
-        // Support links
-        val sponsorGithubLink = findViewById<TextView>(R.id.sponsor_github_link)
-        val buyMeACoffeeLink = findViewById<TextView>(R.id.buy_me_a_coffee_link)
-        
-        listOf(sponsorGithubLink, buyMeACoffeeLink).forEach { textView ->
-            if (textView != null) {
-                textView.movementMethod = LinkMovementMethod.getInstance()
-                textView.isClickable = true
-                textView.isFocusable = true
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    textView.text = Html.fromHtml(textView.text.toString(), Html.FROM_HTML_MODE_COMPACT)
-                } else {
-                    textView.text = Html.fromHtml(textView.text.toString())
-                }
-            }
-        }
-        
-        // Launcher Header
-        val launcherHeader = findViewById<LinearLayout>(R.id.launcher_header)
-        val launcherContent = findViewById<LinearLayout>(R.id.launcher_content)
-        val launcherArrow = findViewById<TextView>(R.id.launcher_arrow)
-        setupSectionToggle(launcherHeader, launcherContent, launcherArrow)
-        
-    }
-    
-    private fun hasAccessibilityServicePermission(): Boolean {
-        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-            ?: return false
-        
-        val expectedComponentName = ComponentName(this, ScreenLockAccessibilityService::class.java)
-        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServices)
-        while (colonSplitter.hasNext()) {
-            val componentNameString = colonSplitter.next()
-            val enabledService = ComponentName.unflattenFromString(componentNameString)
-            if (enabledService != null && enabledService == expectedComponentName) {
-                return true
-            }
-        }
-        return false
     }
 
-    private fun setupSearchEngine() {
-        val searchEngineSpinner = findViewById<Spinner>(R.id.search_engine_spinner)
-        val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
-        val spinnerAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, engines)
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        searchEngineSpinner.adapter = spinnerAdapter
+    private fun setupSecuritySection() {
+        val h = findViewById<LinearLayout>(R.id.app_lock_header)
+        val c = findViewById<LinearLayout>(R.id.app_lock_content)
+        val a = findViewById<TextView>(R.id.app_lock_arrow)
+        setupSectionToggle(h, c, a)
 
-        val currentEngine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
-        val index = engines.indexOf(currentEngine)
-        if (index >= 0) {
-            searchEngineSpinner.setSelection(index)
+        findViewById<View>(R.id.app_lock_button).setOnClickListener { startActivity(Intent(this, AppLockSettingsActivity::class.java)) }
+        findViewById<View>(R.id.hidden_apps_button).setOnClickListener { startActivity(Intent(this, HiddenAppsSettingsActivity::class.java)) }
+        findViewById<View>(R.id.privacy_dashboard_button).setOnClickListener { startActivity(Intent(this, PrivacyDashboardActivity::class.java)) }
+    }
+
+    private fun setupMaintenanceSection() {
+        val bHeader = findViewById<LinearLayout>(R.id.backup_restore_header)
+        val bContent = findViewById<LinearLayout>(R.id.backup_restore_content)
+        val bArrow = findViewById<TextView>(R.id.backup_restore_arrow)
+        setupSectionToggle(bHeader, bContent, bArrow)
+
+        findViewById<View>(R.id.export_settings_button).setOnClickListener { exportSettings() }
+        findViewById<View>(R.id.import_settings_button).setOnClickListener { importSettings() }
+
+        val lHeader = findViewById<LinearLayout>(R.id.launcher_header)
+        val lContent = findViewById<LinearLayout>(R.id.launcher_content)
+        val lArrow = findViewById<TextView>(R.id.launcher_arrow)
+        setupSectionToggle(lHeader, lContent, lArrow)
+
+        findViewById<View>(R.id.restart_launcher_button).setOnClickListener { restartLauncher() }
+        findViewById<View>(R.id.clear_cache_button).setOnClickListener { clearCache() }
+        findViewById<View>(R.id.clear_data_button).setOnClickListener { clearData() }
+
+        val pHeader = findViewById<LinearLayout>(R.id.permissions_header)
+        val pContent = findViewById<LinearLayout>(R.id.permissions_content)
+        val pArrow = findViewById<TextView>(R.id.permissions_arrow)
+        setupSectionToggle(pHeader, pContent, pArrow)
+
+        findViewById<View>(R.id.check_permissions_button).setOnClickListener { startActivity(Intent(this, PermissionsActivity::class.java)) }
+        findViewById<View>(R.id.show_tutorial_button).setOnClickListener { showTutorial() }
+    }
+
+    private fun setupSupportSection() {
+        val h = findViewById<LinearLayout>(R.id.support_header)
+        val c = findViewById<LinearLayout>(R.id.support_content)
+        val a = findViewById<TextView>(R.id.support_arrow)
+        setupSectionToggle(h, c, a)
+        findViewById<View>(R.id.feedback_button).setOnClickListener { sendFeedback() }
+        findViewById<TextView>(R.id.github_links_text).apply {
+            movementMethod = LinkMovementMethod.getInstance()
+            text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
         }
-
-        searchEngineSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                val selectedEngine = engines[position]
-                prefs.edit { putString(Constants.Prefs.SEARCH_ENGINE, selectedEngine) }
-                
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                intent.setPackage(packageName)
-                sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
+        findViewById<TextView>(R.id.sponsor_github_link).apply {
+            movementMethod = LinkMovementMethod.getInstance()
+            text = Html.fromHtml(getString(R.string.sponsor_github_link), Html.FROM_HTML_MODE_COMPACT)
+        }
+        findViewById<TextView>(R.id.buy_me_a_coffee_link).apply {
+            movementMethod = LinkMovementMethod.getInstance()
+            text = Html.fromHtml(getString(R.string.buy_me_a_coffee_link), Html.FROM_HTML_MODE_COMPACT)
         }
     }
 
-    private fun setupTypographySpinner() {
-        val styleSpinner = findViewById<Spinner>(R.id.typography_style_spinner)
-        
-        val styleValues = arrayOf(
-            "default",
-            "serif",
-            "monospace",
-            "condensed",
-            "rounded",
-            "condensed_light",
-            "condensed_medium",
-            "serif_monospace",
-            "display",
-            "thin",
-            "medium",
-            "black",
-            "smallcaps",
-            "casual",
-            "cursive",
-            "sans_serif_light",
-            "droid_sans_fallback",
-            "ubuntu_regular",
-            "noto_sans",
-            "noto_serif",
-            "noto_sans_display",
-            "dejavu_sans",
-            "dejavu_serif",
-            "dejavu_mono",
-            "fira_code"
-        )
-        val styleLabels = arrayOf(
-            "Default",
-            "Serif",
-            "Monospace",
-            "Condensed",
-            "Rounded",
-            "Condensed Light",
-            "Condensed Medium",
-            "Serif Monospace",
-            "Display",
-            "Thin",
-            "Medium",
-            "Black",
-            "Small Caps",
-            "Casual",
-            "Cursive",
-            "Sans Serif Light",
-            "Droid Sans Fallback",
-            "Ubuntu Regular",
-            "Noto Sans",
-            "Noto Serif",
-            "Noto Sans Display",
-            "DejaVu Sans",
-            "DejaVu Serif",
-            "DejaVu Mono",
-            "Fira Code"
-        )
-        
-        // Filter to only show available (installed) fonts
-        val availableFontIndices = styleValues.indices.filter { index ->
-            val styleValue = styleValues[index]
-            // Always include default and built-in system fonts
-            if (index <= 15) return@filter true
-            // For downloadable fonts, only show if installed
-            DownloadableFontManager.isDownloaded(this, styleValue)
-        }
-        
-        val filteredStyleValues = availableFontIndices.map { styleValues[it] }.toTypedArray()
-        val filteredStyleLabels = availableFontIndices.map { styleLabels[it] }.toTypedArray()
-        
-        val styleAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, filteredStyleLabels)
-        styleAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        styleSpinner.adapter = styleAdapter
-
-        val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
-        
-        // Check if current style is available (for downloadable fonts)
-        val effectiveCurrentStyle = if (currentStyle in filteredStyleValues) {
-            currentStyle
-        } else {
-            // If not available, fall back to default and update preference
-            prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
-            "default"
-        }
-        
-        styleSpinner.setSelection(filteredStyleValues.indexOf(effectiveCurrentStyle).coerceAtLeast(0), false)
-        
-        var styleInitialized = false
-        styleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                if (!styleInitialized) {
-                    styleInitialized = true
-                    return
-                }
-                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, filteredStyleValues[position]) }
-                TypographyManager.applyToActivity(this@SettingsActivity)
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                intent.setPackage(packageName)
-                sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
-    }
-
-    private fun setupTypographySettings() {
-        val sizeSeekBar = findViewById<SeekBar>(R.id.typography_size_seekbar)
-        val sizeValueText = findViewById<TextView>(R.id.typography_size_value_text)
-        val intensitySpinner = findViewById<Spinner>(R.id.typography_intensity_spinner)
-
-        val currentScalePercent = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
-        sizeSeekBar.progress = currentScalePercent - 80
-        sizeValueText.text = "$currentScalePercent%"
-
-        val intensityValues = arrayOf("light", "regular", "bold", "extra_bold")
-        val intensityLabels = arrayOf("Light", "Regular", "Bold", "Extra Bold")
-        val intensityAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, intensityLabels)
-        intensityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        intensitySpinner.adapter = intensityAdapter
-
-        val currentIntensity = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
-        intensitySpinner.setSelection(intensityValues.indexOf(currentIntensity).coerceAtLeast(0), false)
-
-        sizeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val scalePercent = progress + 80
-                sizeValueText.text = "$scalePercent%"
-                if (fromUser) {
-                    prefs.edit { putInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, scalePercent) }
-                    TypographyManager.applyToActivity(this@SettingsActivity)
-                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                    intent.setPackage(packageName)
-                    sendBroadcast(intent)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        var intensityInitialized = false
-        intensitySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                if (!intensityInitialized) {
-                    intensityInitialized = true
-                    return
-                }
-                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, intensityValues[position]) }
-                TypographyManager.applyToActivity(this@SettingsActivity)
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                intent.setPackage(packageName)
-                sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-        }
-
-        setupDownloadableFontsSection()
-
-        val colorSpinner = findViewById<Spinner>(R.id.typography_color_spinner)
-        val colorLabelList = arrayOf(
-            "Default",
-            "Black",
-            "White",
-            "Accent Teal",
-            "Nord Mint",
-            "Nord Lavender",
-            "Nord Orange",
-            "Deep Purple",
-            "Electric Blue",
-            "Soft Pink",
-            "Olive",
-            "Sandstone",
-            "Slate Gray",
-            "Forest Green",
-            "Sunset Orange",
-            "Royal Purple",
-            "Amber Glow",
-            "Solar Yellow",
-            "Sky Blue",
-            "Midnight Cyan",
-            "Fiery Coral",
-            "Soft Mint",
-            "Forest Shadow",
-            "Chrome"
-        )
-        val colorValueList = arrayOf(
-            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT,
-            "#FF000000", // Black
-            "#FFFFFFFF", // White
-            "#FF03DAC5", // Accent Teal
-            "#FF8FBCBB", // Nord Mint
-            "#FFB48EAD", // Nord Lavender
-            "#FFD08770", // Nord Orange
-            "#FF6200EE", // Deep Purple
-            "#FF2196F3", // Electric Blue
-            "#FFF48FB1", // Soft Pink
-            "#FF7B8D42", // Olive
-            "#FFC6AA7F", // Sandstone
-            "#FF4A5568", // Slate Gray
-            "#FF1B5E20", // Forest Green
-            "#FFFF7043", // Sunset Orange
-            "#FF6A1B9A", // Royal Purple
-            "#FFFFAB00", // Amber Glow
-            "#FFFFD600", // Solar Yellow
-            "#FF56CCF2", // Sky Blue
-            "#FF00838F", // Midnight Cyan
-            "#FFFF6B6B", // Fiery Coral
-            "#FFB8F2E6", // Soft Mint
-            "#FF0D1B2A", // Forest Shadow
-            "#FFF1F3F4"  // Chrome
-        )
-        val colorAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, colorLabelList)
-        colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        colorSpinner.adapter = colorAdapter
-
-        val currentColorValue = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)
-            ?: Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT
-        colorSpinner.setSelection(colorValueList.indexOf(currentColorValue).coerceAtLeast(0), false)
-
-        var colorInitialized = false
-        colorSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                if (!colorInitialized) {
-                    colorInitialized = true
-                    return
-                }
-                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, colorValueList[position]) }
-                TypographyManager.applyToActivity(this@SettingsActivity)
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                intent.setPackage(packageName)
-                sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-        }
-    }
-
-    private fun setupDownloadableFontsSection() {
-        val header = findViewById<View>(R.id.downloadable_fonts_header)
-        val arrow = findViewById<ImageView>(R.id.downloadable_fonts_arrow)
-        val container = findViewById<LinearLayout>(R.id.downloadable_fonts_container)
-        
-        // Toggle collapsible section
+    private fun setupSectionToggle(header: View, content: View, arrow: TextView) {
         header.setOnClickListener {
-            if (container.visibility == View.VISIBLE) {
-                container.visibility = View.GONE
-                arrow.rotation = 0f
-            } else {
-                container.visibility = View.VISIBLE
-                arrow.rotation = 90f
-            }
+            val visible = content.visibility == View.VISIBLE
+            content.visibility = if (visible) View.GONE else View.VISIBLE
+            arrow.animate().rotation(if (visible) 0f else 180f).setDuration(250).start()
         }
-        
-        // Show all fonts with install/uninstall buttons
-        updateDownloadableFontsList(container, arrow)
     }
-    
-    private fun updateDownloadableFontsList(container: LinearLayout, arrow: ImageView) {
-        container.removeAllViews()
-        val allFonts = DownloadableFontManager.getFontOptions()
-        
-        if (allFonts.isEmpty()) {
-            // Show "no fonts available" message
-            val emptyView = layoutInflater.inflate(R.layout.item_empty_fonts, null)
-            container.addView(emptyView)
-            arrow.rotation = 0f
-        } else {
-            // Show all fonts with install/uninstall buttons
-            allFonts.forEach { option ->
-                val itemView = layoutInflater.inflate(R.layout.item_downloadable_font_option, null)
-                val label = itemView.findViewById<TextView>(R.id.downloadable_font_label)
-                val button = itemView.findViewById<Button>(R.id.downloadable_font_button)
-                label.text = option.displayName
-                
-                val isInstalled = DownloadableFontManager.isDownloaded(this, option.styleKey)
-                
-                if (isInstalled) {
-                    // Show Uninstall button in red
-                    button.text = getString(R.string.font_remove)
-                    button.isEnabled = true
-                    button.setTextColor(Color.parseColor("#FF0000"))
-                    button.setOnClickListener {
-                        button.isEnabled = false
-                        button.text = getString(R.string.font_removing)
-                        handler.post {
-                            val wasCurrentFont = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == option.styleKey
-                            DownloadableFontManager.uninstallFont(this, option.styleKey)
-                            Toast.makeText(this, getString(R.string.font_removed_message, option.displayName), Toast.LENGTH_SHORT).show()
-                            TypographyManager.applyToActivity(this)
-                            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                            intent.setPackage(packageName)
-                            sendBroadcast(intent)
-                            
-                            // If the uninstalled font was currently selected, switch to default
-                            if (wasCurrentFont) {
-                                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
-                                runOnUiThread {
-                                    setupTypographySpinner() // Refresh the spinner with available fonts
-                                }
-                            }
-                            
-                            // Refresh the list
-                            updateDownloadableFontsList(container, arrow)
-                        }
-                    }
-                } else {
-                    // Show Install button in green
-                    button.text = getString(R.string.font_install)
-                    button.isEnabled = true
-                    button.setTextColor(Color.parseColor("#008000"))
-                    button.setOnClickListener {
-                        button.isEnabled = false
-                        button.text = getString(R.string.font_downloading)
-                        DownloadableFontManager.requestFont(this, option.styleKey) { success ->
-                            handler.post {
-                                if (success) {
-                                    Toast.makeText(this, getString(R.string.font_downloaded_message, option.displayName), Toast.LENGTH_SHORT).show()
-                                    TypographyManager.applyToActivity(this)
-                                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                                    intent.setPackage(packageName)
-                                    sendBroadcast(intent)
-                                    // Refresh the list and spinner
-                                    runOnUiThread {
-                                        setupTypographySpinner() // Refresh the font style spinner
-                                    }
-                                    updateDownloadableFontsList(container, arrow)
-                                } else {
-                                    Toast.makeText(this, getString(R.string.font_download_failed, option.displayName), Toast.LENGTH_LONG).show()
-                                    button.isEnabled = true
-                                    button.text = getString(R.string.font_install)
-                                }
-                            }
-                        }
-                    }
+
+    private fun updateDisplayStyleButtons(grid: Button, list: Button, style: String) {
+        val isGrid = style == "grid"
+        grid.alpha = if (isGrid) 1.0f else 0.4f
+        grid.setBackgroundResource(if (isGrid) R.drawable.settings_card_background else 0)
+        list.alpha = if (!isGrid) 1.0f else 0.4f
+        list.setBackgroundResource(if (!isGrid) R.drawable.settings_card_background else 0)
+    }
+
+    private fun setupAccessibilityShortcut() {
+        val sw = findViewById<SwitchCompat>(R.id.accessibility_shortcut_switch)
+        sw.isChecked = prefs.getBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, false)
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !hasAccessibilityServicePermission()) {
+                sw.isChecked = false
+                showPermissionDialog("Accessibility Required", "Enable Launch in Accessibility settings.") {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 }
-                container.addView(itemView)
+            } else {
+                prefs.edit { putBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, isChecked) }
+                startService(Intent(this, ScreenLockAccessibilityService::class.java).apply {
+                    action = "TOGGLE_SHORTCUT"
+                    putExtra("enabled", isChecked)
+                })
             }
         }
     }
 
-    private fun setupScreenDimmer() {
-        val screenDimmerSwitch = findViewById<SwitchCompat>(R.id.screen_dimmer_switch)
-        val dimmerSeekBar = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
-        val dimmerValueText = findViewById<TextView>(R.id.dimmer_value_text)
-        val dimmerContainer = findViewById<View>(R.id.screen_dimmer_container)
-        
-        val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
-        val currentDimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 10)
-        
-        screenDimmerSwitch.isChecked = isDimmerEnabled
-        dimmerSeekBar.progress = currentDimLevel
-        dimmerValueText.text = "$currentDimLevel%"
-        dimmerContainer.isVisible = isDimmerEnabled
-        
-        screenDimmerSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                if (!Settings.canDrawOverlays(this)) {
-                    screenDimmerSwitch.isChecked = false
-                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                        .setTitle("Permission Required")
-                        .setMessage("Screen Dimmer requires 'Display over other apps' permission to work. Please grant it in the Permissions section.")
-                        .setPositiveButton("Go to Permissions") { _, _ ->
-                            startActivity(Intent(this, PermissionsActivity::class.java))
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
-                } else {
-                    prefs.edit { putBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, true) }
-                    dimmerContainer.isVisible = true
-                    ScreenDimmerService.startService(this, dimmerSeekBar.progress)
+    private fun setupBackTap() {
+        val sw = findViewById<SwitchCompat>(R.id.back_tap_switch)
+        val cont = findViewById<View>(R.id.back_tap_settings_container)
+        val spin = findViewById<Spinner>(R.id.back_tap_double_action_spinner)
+        val seek = findViewById<SeekBar>(R.id.back_tap_sensitivity_seekbar)
+        val valT = findViewById<TextView>(R.id.back_tap_sensitivity_value)
+
+        val en = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
+        sw.isChecked = en
+        cont.isVisible = en
+
+        val acts = arrayOf("None", "Torch", "Screenshot", "Notifications", "Screen Off", "Sound")
+        val vals = arrayOf(BackTapService.ACTION_NONE, BackTapService.ACTION_TORCH_TOGGLE, BackTapService.ACTION_SCREENSHOT, BackTapService.ACTION_NOTIFICATIONS, BackTapService.ACTION_SCREEN_OFF, BackTapService.ACTION_SOUND_TOGGLE)
+        spin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, acts).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        spin.setSelection(vals.indexOf(prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)).coerceAtLeast(0))
+
+        val cur = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7).coerceIn(1, 10)
+        seek.max = 9
+        seek.progress = cur - 1
+        valT.text = cur.toString()
+
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.BACK_TAP_ENABLED, isChecked) }
+            cont.isVisible = isChecked
+            notifySettingsChanged()
+        }
+        spin.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, vals[pos]) }
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
+        }
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                valT.text = (p + 1).toString()
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, p + 1) }
+                    notifySettingsChanged()
                 }
+            }
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
+        })
+    }
+
+    private fun setupShakeTorch() {
+        val sw = findViewById<SwitchCompat>(R.id.shake_torch_switch)
+        val cont = findViewById<View>(R.id.shake_sensitivity_container)
+        val seek = findViewById<SeekBar>(R.id.shake_sensitivity_seekbar)
+        val valT = findViewById<TextView>(R.id.sensitivity_value_text)
+
+        val en = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
+        sw.isChecked = en
+        cont.isVisible = en
+        val cur = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5).coerceIn(1, 10)
+        seek.max = 9
+        seek.progress = cur - 1
+        valT.text = cur.toString()
+
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, isChecked) }
+            cont.isVisible = isChecked
+            notifySettingsChanged()
+        }
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                valT.text = (p + 1).toString()
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.SHAKE_SENSITIVITY, p + 1) }
+                    notifySettingsChanged()
+                }
+            }
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
+        })
+    }
+
+    private fun setupExtraDimmer() {
+        val sw = findViewById<SwitchCompat>(R.id.screen_dimmer_switch)
+        val seek = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
+        val valT = findViewById<TextView>(R.id.dimmer_value_text)
+        val cont = findViewById<View>(R.id.screen_dimmer_container)
+        
+        val en = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
+        sw.isChecked = en
+        seek.progress = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 10)
+        valT.text = "${seek.progress}%"
+        cont.isVisible = en
+
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !Settings.canDrawOverlays(this)) {
+                sw.isChecked = false
+                showPermissionDialog("Overlay Permission", "Enable Display over other apps.") { startActivity(Intent(this, PermissionsActivity::class.java)) }
             } else {
-                prefs.edit { putBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false) }
-                dimmerContainer.isVisible = false
-                ScreenDimmerService.stopService(this)
+                prefs.edit { putBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, isChecked) }
+                cont.isVisible = isChecked
+                if (isChecked) ScreenDimmerService.startService(this, seek.progress) else ScreenDimmerService.stopService(this)
             }
         }
-        
-        dimmerSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                dimmerValueText.text = "$progress%"
-                if (fromUser) {
-                    prefs.edit { putInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, progress) }
-                    if (screenDimmerSwitch.isChecked) {
-                        ScreenDimmerService.updateDimLevel(this@SettingsActivity, progress)
-                    }
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                valT.text = "$p%"
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, p) }
+                    if (sw.isChecked) ScreenDimmerService.updateDimLevel(this@SettingsActivity, p)
                 }
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
         })
     }
 
     private fun setupNightMode() {
-        val nightModeSwitch = findViewById<SwitchCompat>(R.id.night_mode_switch)
-        val nightModeSeekBar = findViewById<SeekBar>(R.id.night_mode_intensity_seekbar)
-        val nightModeValueText = findViewById<TextView>(R.id.night_mode_value_text)
-        val nightModeContainer = findViewById<View>(R.id.night_mode_container)
+        val sw = findViewById<SwitchCompat>(R.id.night_mode_switch)
+        val seek = findViewById<SeekBar>(R.id.night_mode_intensity_seekbar)
+        val valT = findViewById<TextView>(R.id.night_mode_value_text)
+        val cont = findViewById<View>(R.id.night_mode_container)
         
-        val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
-        val currentIntensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
-        
-        nightModeSwitch.isChecked = isNightModeEnabled
-        nightModeSeekBar.progress = currentIntensity
-        nightModeValueText.text = "$currentIntensity%"
-        nightModeContainer.isVisible = isNightModeEnabled
-        
-        nightModeSwitch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                if (!Settings.canDrawOverlays(this)) {
-                    nightModeSwitch.isChecked = false
-                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                        .setTitle("Permission Required")
-                        .setMessage("Night Mode requires 'Display over other apps' permission to work. Please grant it in the Permissions section.")
-                        .setPositiveButton("Go to Permissions") { _, _ ->
-                            startActivity(Intent(this, PermissionsActivity::class.java))
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
-                } else {
-                    prefs.edit { putBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, true) }
-                    nightModeContainer.isVisible = true
-                    NightModeService.startService(this, nightModeSeekBar.progress)
-                }
+        val en = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
+        sw.isChecked = en
+        seek.progress = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
+        valT.text = "${seek.progress}%"
+        cont.isVisible = en
+
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !Settings.canDrawOverlays(this)) {
+                sw.isChecked = false
+                showPermissionDialog("Overlay Permission", "Enable Display over other apps.") { startActivity(Intent(this, PermissionsActivity::class.java)) }
             } else {
-                prefs.edit { putBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false) }
-                nightModeContainer.isVisible = false
-                NightModeService.stopService(this)
+                prefs.edit { putBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, isChecked) }
+                cont.isVisible = isChecked
+                if (isChecked) NightModeService.startService(this, seek.progress) else NightModeService.stopService(this)
             }
         }
-        
-        nightModeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                nightModeValueText.text = "$progress%"
-                if (fromUser) {
-                    prefs.edit { putInt(Constants.Prefs.NIGHT_MODE_INTENSITY, progress) }
-                    if (nightModeSwitch.isChecked) {
-                        NightModeService.updateIntensity(this@SettingsActivity, progress)
-                    }
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                valT.text = "$p%"
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.NIGHT_MODE_INTENSITY, p) }
+                    if (sw.isChecked) NightModeService.updateIntensity(this@SettingsActivity, p)
                 }
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
         })
     }
 
     private fun setupFlipToDnd() {
-        val flipDndSwitch = findViewById<SwitchCompat>(R.id.flip_dnd_switch)
-        val isFlipEnabled = prefs.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
-        
-        flipDndSwitch.isChecked = isFlipEnabled
-        
-        flipDndSwitch.setOnCheckedChangeListener { _, isChecked ->
+        val sw = findViewById<SwitchCompat>(R.id.flip_dnd_switch)
+        sw.isChecked = prefs.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
+        sw.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                if (!notificationManager.isNotificationPolicyAccessGranted) {
-                    flipDndSwitch.isChecked = false
-                    AlertDialog.Builder(this, R.style.CustomDialogTheme)
-                        .setTitle("DND Access Required")
-                        .setMessage("Flip to DND requires Do Not Disturb access to change the DND state. Please grant it in the settings.")
-                        .setPositiveButton("Grant Access") { _, _ ->
-                            startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                if (!nm.isNotificationPolicyAccessGranted) {
+                    sw.isChecked = false
+                    showPermissionDialog("DND Permission", "Grant DND access to use this feature.") { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
                 } else {
                     prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, true) }
-                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                    intent.setPackage(packageName)
-                    sendBroadcast(intent)
+                    notifySettingsChanged()
                 }
             } else {
                 prefs.edit { putBoolean(Constants.Prefs.FLIP_DND_ENABLED, false) }
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                intent.setPackage(packageName)
-                sendBroadcast(intent)
+                notifySettingsChanged()
             }
         }
     }
-    
-    private fun setupSectionToggle(header: LinearLayout, content: LinearLayout, arrow: TextView) {
-        header.setOnClickListener {
-            val isExpanded = content.isVisible
-            content.isVisible = !isExpanded
-            arrow.text = if (!isExpanded) "▲" else "▼"
+
+    private fun setupSearchEngine() {
+        val s = findViewById<Spinner>(R.id.search_engine_spinner)
+        val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
+        s.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, engines).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        s.setSelection(engines.indexOf(prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")).coerceAtLeast(0))
+        s.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putString(Constants.Prefs.SEARCH_ENGINE, engines[pos]) }
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
         }
     }
-    
-    private fun updateDisplayStyleButtons(gridOption: Button, listOption: Button, selectedStyle: String) {
-        if (selectedStyle == "grid") {
-            gridOption.alpha = 1.0f
-            listOption.alpha = 0.5f
+
+    private fun setupTypographySettings() {
+        val seek = findViewById<SeekBar>(R.id.typography_size_seekbar)
+        val valT = findViewById<TextView>(R.id.typography_size_value_text)
+        val styS = findViewById<Spinner>(R.id.typography_style_spinner)
+        val intS = findViewById<Spinner>(R.id.typography_intensity_spinner)
+        val colS = findViewById<Spinner>(R.id.typography_color_spinner)
+
+        val scale = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
+        
+        // Prepare font style lists including downloaded fonts
+        val baseStyV = mutableListOf("default", "serif", "monospace", "condensed", "rounded", "casual", "cursive")
+        val baseStyL = mutableListOf("Modern Sans", "Classic Serif", "Dev Mono", "Clean Condensed", "Soft Rounded", "Casual Hand", "Creative Script")
+        
+        // Add downloaded fonts to the dropdown lists
+        DownloadableFontManager.getFontOptions().forEach { font ->
+            if (DownloadableFontManager.isDownloaded(this, font.styleKey)) {
+                baseStyV.add(font.styleKey)
+                baseStyL.add(font.displayName)
+            }
+        }
+
+        seek.max = 60
+        seek.progress = scale - 80
+        valT.text = "$scale%"
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                valT.text = "${p + 80}%"
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, p + 80) }
+                    TypographyManager.applyToActivity(this@SettingsActivity)
+                    notifySettingsChanged()
+                }
+            }
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
+        })
+
+        styS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, baseStyL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        
+        val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        val selectedIndex = baseStyV.indexOf(currentStyle)
+        if (selectedIndex >= 0) {
+            styS.setSelection(selectedIndex)
         } else {
-            gridOption.alpha = 0.5f
-            listOption.alpha = 1.0f
+            // Font was uninstalled, reset to default
+            prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
+            styS.setSelection(0)
+            TypographyManager.applyToActivity(this)
+            notifySettingsChanged()
+        }
+
+        styS.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, baseStyV[pos]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
+        }
+
+        val intV = arrayOf("light", "regular", "bold", "extra_bold")
+        val intL = arrayOf("Light weight", "Regular weight", "Bold weight", "Heavy weight")
+        intS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, intL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        intS.setSelection(intV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular")).coerceAtLeast(0))
+        intS.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, intV[pos]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
+        }
+
+        val colL = arrayOf("Default Adaptive", "Pure White", "Deep Ocean", "Electric Purple", "Neon Pink", "Solar Gold", "Emerald Mist", "Arctic Frost", "Midnight Teal", "Cyan Accent", "Nord Mint", "Lavender", "Orange Glow", "Slate Gray")
+        val colV = arrayOf(Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, "#FFFFFFFF", "#FF1E3A8A", "#FF7C3AED", "#FFEC4899", "#FFF59E0B", "#FF10B981", "#FF93C5FD", "#FF0F766E", "#FF03DAC5", "#FF8FBCBB", "#FFB48EAD", "#FFD08770", "#FF4A5568")
+        colS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, colL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        colS.setSelection(colV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)).coerceAtLeast(0))
+        colS.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, colV[pos]) }
+                TypographyManager.applyToActivity(this@SettingsActivity)
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
+        }
+        setupDownloadableFontsSection()
+    }
+
+    private fun setupDownloadableFontsSection() {
+        val h = findViewById<View>(R.id.downloadable_fonts_header)
+        val a = findViewById<ImageView>(R.id.downloadable_fonts_arrow)
+        val c = findViewById<LinearLayout>(R.id.downloadable_fonts_container)
+        h.setOnClickListener {
+            val vis = c.isVisible
+            c.visibility = if (vis) View.GONE else View.VISIBLE
+            a.animate().rotation(if (vis) 0f else 90f).start()
+            if (!vis) updateDownloadableFontsList(c)
         }
     }
 
-    private fun saveSettings(selectedDisplayStyle: String) {
-        prefs.edit {
-            putString("view_preference", selectedDisplayStyle)
-        }
-
-        Toast.makeText(this, "Settings saved successfully", Toast.LENGTH_SHORT).show()
-
-        val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-        intent.setPackage(packageName)
-        sendBroadcast(intent)
-
-        finish()
-    }
-
-    private fun exportSettings() {
-        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/zip"
-            putExtra(Intent.EXTRA_TITLE, "launch_backup_${System.currentTimeMillis()}.zip")
-        }
-        exportLauncher.launch(intent)
-    }
-
-    private fun importSettings() {
-        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-            addCategory(Intent.CATEGORY_OPENABLE)
-            type = "application/zip"
-        }
-        importLauncher.launch(intent)
-    }
-
-    private val sensitiveMainKeys = setOf(
-        "weather_api_key"
-    )
-
-    private val sensitiveAppLockKeys = setOf(
-        "pin_hash",
-        "pin_salt",
-        "last_auth_time",
-        "fingerprint_enabled"
-    )
-
-    private val githubWidgetKeys = setOf(
-        "github_token",
-        "github_username"
-    )
-
-    private fun exportSettingsToFile(uri: Uri) {
-        try {
-            contentResolver.openOutputStream(uri)?.use { outputStream ->
-                ZipOutputStream(outputStream).use { zipOut ->
-                    // 1. Export JSON settings
-                    val settingsJson = JSONObject()
-
-                    val mainPrefs = prefs.all
-                    val mainPrefsJson = JSONObject()
-                    for ((key, value) in mainPrefs) {
-                        // Include weather_api_key and weather_stored_city_name even though they might be in sensitiveMainKeys
-                        if (key == "weather_api_key" || key == "weather_stored_city_name") {
-                            mainPrefsJson.put(key, value)
-                            continue
-                        }
-                        if (key in sensitiveMainKeys) continue
-                        when (value) {
-                            is String -> mainPrefsJson.put(key, value)
-                            is Boolean -> mainPrefsJson.put(key, value)
-                            is Int -> mainPrefsJson.put(key, value)
-                            is Long -> mainPrefsJson.put(key, value)
-                            is Float -> mainPrefsJson.put(key, value)
-                            is Set<*> -> {
-                                val jsonArray = JSONArray()
-                                value.forEach { jsonArray.put(it) }
-                                mainPrefsJson.put(key, jsonArray)
-                            }
-                        }
+    private fun updateDownloadableFontsList(cont: LinearLayout) {
+        cont.removeAllViews()
+        DownloadableFontManager.getFontOptions().forEach { opt ->
+            val view = layoutInflater.inflate(R.layout.item_downloadable_font_option, cont, false)
+            val lbl = view.findViewById<TextView>(R.id.downloadable_font_label)
+            val btn = view.findViewById<Button>(R.id.downloadable_font_button)
+            lbl.text = opt.displayName
+            val inst = DownloadableFontManager.isDownloaded(this, opt.styleKey)
+            btn.text = if (inst) "Remove" else "Install"
+            btn.setTextColor(if (inst) Color.RED else Color.GREEN)
+            btn.setOnClickListener {
+                btn.isEnabled = false
+                if (inst) {
+                    DownloadableFontManager.uninstallFont(this, opt.styleKey)
+                    if (prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == opt.styleKey) {
+                        prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
                     }
-                    settingsJson.put("main_preferences", mainPrefsJson)
-                    
-                    val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
-                    val appTimerAll = appTimerPrefs.all
-                    if (appTimerAll.isNotEmpty()) {
-                        val appTimerJson = JSONObject()
-                        for ((key, value) in appTimerAll) {
-                            when (value) {
-                                is String -> appTimerJson.put(key, value)
-                                is Boolean -> appTimerJson.put(key, value)
-                                is Int -> appTimerJson.put(key, value)
-                                is Long -> appTimerJson.put(key, value)
-                                is Float -> appTimerJson.put(key, value)
-                                is Set<*> -> {
-                                    val jsonArray = JSONArray()
-                                    value.forEach { jsonArray.put(it) }
-                                    appTimerJson.put(key, jsonArray)
-                                }
-                            }
+                    // Refresh the typography settings UI to update the spinner
+                    setupTypographySettings()
+                    updateDownloadableFontsList(cont)
+                } else {
+                    btn.text = "Fetching…"
+                    DownloadableFontManager.requestFont(this, opt.styleKey) { success ->
+                        handler.post {
+                            // Refresh the typography settings UI to update the spinner
+                            setupTypographySettings()
+                            updateDownloadableFontsList(cont)
                         }
-                        settingsJson.put("app_timer_prefs", appTimerJson)
-                    }
-                    
-                    val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
-                    val appLockAll = appLockPrefs.all
-                    if (appLockAll.isNotEmpty()) {
-                        val appLockJson = JSONObject()
-                        for ((key, value) in appLockAll) {
-                            if (key in sensitiveAppLockKeys) continue
-                            when (value) {
-                                is String -> appLockJson.put(key, value)
-                                is Boolean -> appLockJson.put(key, value)
-                                is Int -> appLockJson.put(key, value)
-                                is Long -> appLockJson.put(key, value)
-                                is Float -> appLockJson.put(key, value)
-                                is Set<*> -> {
-                                    val jsonArray = JSONArray()
-                                    value.forEach { jsonArray.put(it) }
-                                    appLockJson.put(key, jsonArray)
-                                }
-                            }
-                        }
-                        settingsJson.put("app_lock_prefs", appLockJson)
-                    }
-                    
-                    exportPhysicalActivityData(settingsJson)
-                    exportWorkoutData(settingsJson)
-                    exportTodoData(settingsJson)
-                    exportFinanceData(settingsJson)
-                    exportGithubWidgetData(settingsJson)
-
-                    // 1. Export JSON settings
-                    zipOut.putNextEntry(ZipEntry("settings.json"))
-                    zipOut.write(settingsJson.toString(2).toByteArray(Charsets.UTF_8))
-                    zipOut.closeEntry()
-
-                    // 2. Export Vault Files (Encrypted)
-                    val vaultFolder = vaultManager.getEncryptedFolder()
-                    val thumbFolder = vaultManager.getThumbnailFolder()
-
-                    vaultFolder.listFiles()?.forEach { file ->
-                        zipOut.putNextEntry(ZipEntry("data/${file.name}"))
-                        file.inputStream().use { it.copyTo(zipOut) }
-                        zipOut.closeEntry()
-                    }
-
-                    thumbFolder.listFiles()?.forEach { file ->
-                        zipOut.putNextEntry(ZipEntry("thumbs/${file.name}"))
-                        file.inputStream().use { it.copyTo(zipOut) }
-                        zipOut.closeEntry()
                     }
                 }
             }
-            Toast.makeText(this, "Backup created successfully", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Backup failed: ${e.message}", Toast.LENGTH_LONG).show()
+            cont.addView(view)
         }
+    }
+
+    private fun notifySettingsChanged() {
+        sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply { setPackage(packageName) })
+    }
+
+    private fun hasAccessibilityServicePermission(): Boolean {
+        val s = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: ""
+        return s.contains(ComponentName(this, ScreenLockAccessibilityService::class.java).flattenToString())
+    }
+
+    private fun showPermissionDialog(t: String, m: String, onP: () -> Unit) {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle(t).setMessage(m).setPositiveButton("Settings") { _, _ -> onP() }.setNegativeButton("Cancel", null).show()
+    }
+
+    private fun chooseWallpaper() { wallpaperLauncher.launch(Intent(Intent.ACTION_SET_WALLPAPER)) }
+
+    private fun showTutorial() {
+        prefs.edit { putBoolean("feature_tutorial_shown", false); putInt("feature_tutorial_current_step", 0) }
+        startActivity(Intent(this, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP; putExtra("start_tutorial", true) })
+        finish()
+    }
+
+    private fun applyContentInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            findViewById<ScrollView>(R.id.settings_scroll_view).setPadding(0, bars.top, 0, bars.bottom)
+            insets
+        }
+    }
+
+    private fun makeSystemBarsTransparent() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
+        }
+    }
+
+    private fun restartLauncher() {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Restart Launcher")
+            .setMessage("Are you sure you want to restart the launcher?")
+            .setPositiveButton("Restart") { _, _ ->
+                packageManager.getLaunchIntentForPackage(packageName)?.let { 
+                    startActivity(Intent.makeRestartActivityTask(it.component!!))
+                    Runtime.getRuntime().exit(0) 
+                }
+            }
+            .setNegativeButton("Later", null)
+            .show()
+    }
+
+    private fun clearCache() {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Clear Temporary Cache")
+            .setMessage("This will remove temporary app data and cached icons. Your settings and organization will remain intact. Proceed?")
+            .setPositiveButton("Clear") { _, _ ->
+                cacheDir.deleteRecursively()
+                externalCacheDir?.deleteRecursively()
+                Toast.makeText(this, "Cache cleared successfully", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun clearData() {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Factory Reset Launcher")
+            .setMessage("WARNING: This will permanently delete all your settings, custom workspaces, and configuration. The app will return to its initial state. Are you absolutely sure?")
+            .setPositiveButton("Reset Everything") { _, _ ->
+                (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).clearApplicationUserData()
+            }
+            .setNegativeButton("Keep Data", null)
+            .show()
+    }
+
+    private fun sendFeedback() {
+        try { startActivity(Intent.createChooser(Intent(Intent.ACTION_SENDTO).apply { data = "mailto:".toUri(); putExtra(Intent.EXTRA_EMAIL, arrayOf("msgswarupa@gmail.com")); putExtra(Intent.EXTRA_SUBJECT, "Launch Feedback") }, "Feedback")) } catch (_: Exception) {}
+    }
+
+    private fun exportSettings() { exportLauncher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "application/zip"; putExtra(Intent.EXTRA_TITLE, "launch_backup.zip") }) }
+    private fun importSettings() { importLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply { addCategory(Intent.CATEGORY_OPENABLE); type = "application/zip" }) }
+
+    private fun exportSettingsToFile(uri: Uri) {
+        try {
+            contentResolver.openOutputStream(uri)?.use { os ->
+                ZipOutputStream(os).use { zos ->
+                    val j = JSONObject(); val p = JSONObject()
+                    prefs.all.forEach { (k, v) -> p.put(k, v) }
+                    j.put("main_preferences", p)
+                    zos.putNextEntry(ZipEntry("settings.json")); zos.write(j.toString(2).toByteArray()); zos.closeEntry()
+                }
+            }
+            Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) { Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show() }
     }
 
     private fun importSettingsFromFile(uri: Uri) {
         try {
-            contentResolver.openInputStream(uri)?.use { inputStream ->
-                ZipInputStream(inputStream).use { zipIn ->
-                    var entry = zipIn.nextEntry
+            contentResolver.openInputStream(uri)?.use { ins ->
+                ZipInputStream(ins).use { zis ->
+                    var entry = zis.nextEntry
                     while (entry != null) {
-                        when {
-                            entry.name == "settings.json" -> {
-                                val jsonString = zipIn.bufferedReader().readText()
-                                importJsonSettings(JSONObject(jsonString))
-                            }
-                            entry.name.startsWith("data/") || entry.name.startsWith("thumbs/") -> {
-                                handleVaultEntry(entry.name, zipIn, vaultManager)
-                            }
-                        }
-                        zipIn.closeEntry()
-                        entry = zipIn.nextEntry
-                    }
-                }
-            }
-            Toast.makeText(this, "Settings and vault data restored.", Toast.LENGTH_LONG).show()
-            restartLauncher()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun handleVaultEntry(entryName: String, zipIn: ZipInputStream, vaultManager: EncryptedFolderManager) {
-        val parentDir: File? = when {
-            entryName.startsWith("data/") -> vaultManager.getEncryptedFolder()
-            entryName.startsWith("thumbs/") -> vaultManager.getThumbnailFolder()
-            else -> null
-        }
-        
-        val childPath = when {
-            entryName.startsWith("data/") -> entryName.substringAfter("data/")
-            entryName.startsWith("thumbs/") -> entryName.substringAfter("thumbs/")
-            else -> null
-        }
-
-        if (parentDir != null && childPath != null) {
-            val destFile = File(parentDir, childPath)
-            destFile.parentFile?.mkdirs()
-            destFile.outputStream().use { fos ->
-                zipIn.copyTo(fos)
-            }
-        }
-    }
-
-    private fun importJsonSettings(settingsJson: JSONObject) {
-        val isNewFormat = settingsJson.has("main_preferences")
-        if (isNewFormat) {
-            if (settingsJson.has("main_preferences")) {
-                val mainPrefsJson = settingsJson.getJSONObject("main_preferences")
-                prefs.edit { importPreferences(mainPrefsJson, this) }
-            }
-            if (settingsJson.has("app_timer_prefs")) {
-                val appTimerPrefs = getSharedPreferences("app_timer_prefs", MODE_PRIVATE)
-                val appTimerJson = settingsJson.getJSONObject("app_timer_prefs")
-                appTimerPrefs.edit { importPreferences(appTimerJson, this) }
-            }
-            if (settingsJson.has("app_lock_prefs")) {
-                val appLockPrefs = getSharedPreferences("app_lock_prefs", MODE_PRIVATE)
-                val appLockJson = settingsJson.getJSONObject("app_lock_prefs")
-                appLockPrefs.edit { importPreferences(appLockJson, this) }
-            }
-            if (settingsJson.has("physical_activity_data")) importPhysicalActivityData(settingsJson.getJSONObject("physical_activity_data"))
-            if (settingsJson.has("workout_data")) importWorkoutData(settingsJson.getJSONObject("workout_data"))
-            if (settingsJson.has("todo_data")) importTodoData(settingsJson.getJSONObject("todo_data"))
-            if (settingsJson.has("finance_data")) importFinanceData(settingsJson.getJSONObject("finance_data"))
-            if (settingsJson.has("github_widget_data")) importGithubWidgetData(settingsJson.getJSONObject("github_widget_data"))
-        } else {
-            prefs.edit { importPreferences(settingsJson, this) }
-        }
-    }
-
-    private fun importPreferences(prefsJson: JSONObject, editor: SharedPreferences.Editor) {
-        val keys = prefsJson.keys()
-        while (keys.hasNext()) {
-            val key = keys.next()
-            when (val value = prefsJson.get(key)) {
-                is String -> editor.putString(key, value)
-                is Boolean -> editor.putBoolean(key, value)
-                is Int -> editor.putInt(key, value)
-                is Long -> editor.putLong(key, value)
-                is Double -> editor.putFloat(key, value.toFloat())
-                is Float -> editor.putFloat(key, value)
-                is JSONArray -> {
-                    val stringSet = mutableSetOf<String>()
-                    for (i in 0 until value.length()) {
-                        stringSet.add(value.getString(i))
-                    }
-                    editor.putStringSet(key, stringSet)
-                }
-            }
-        }
-    }
-
-    
-    private fun showTutorial() {
-        prefs.edit {
-            putBoolean("feature_tutorial_shown", false)
-            putInt("feature_tutorial_current_step", 0)
-        }
-        
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("start_tutorial", true)
-        }
-        startActivity(intent)
-        finish()
-    }
-
-    private fun startSettingsTutorial() {
-        removeSettingsTutorialOverlay()
-        settingsTutorialStepIndex = 0
-        settingsTutorialActive = true
-        showCurrentSettingsTutorialStep()
-    }
-
-    private fun showCurrentSettingsTutorialStep() {
-        if (!settingsTutorialActive) return
-        if (settingsTutorialStepIndex >= settingsTutorialSteps.size) {
-            finishSettingsTutorial()
-            return
-        }
-
-        val step = settingsTutorialSteps[settingsTutorialStepIndex]
-        val scrollView = findViewById<ScrollView>(R.id.settings_scroll_view) ?: return
-        val overlayRoot = findViewById<ViewGroup>(android.R.id.content) ?: return
-        val targetView = findViewById<View>(step.targetViewId)
-        if (targetView == null) {
-            settingsTutorialStepIndex++
-            showCurrentSettingsTutorialStep()
-            return
-        }
-
-        val token = ++settingsTutorialRenderToken
-        scrollSettingsTutorialToView(scrollView, targetView)
-        scrollView.postDelayed({
-            if (!settingsTutorialActive || token != settingsTutorialRenderToken) return@postDelayed
-            showSettingsTutorialOverlay(step, overlayRoot, targetView)
-        }, 320L)
-    }
-
-    private fun scrollSettingsTutorialToView(scrollView: ScrollView, targetView: View) {
-        targetView.post {
-            val rect = Rect()
-            targetView.getDrawingRect(rect)
-            scrollView.offsetDescendantRectToMyCoords(targetView, rect)
-            val targetScrollY =
-                (rect.top - (scrollView.height / 2) + (targetView.height / 2)).coerceAtLeast(0)
-            val maxScrollY =
-                (scrollView.getChildAt(0)?.height?.minus(scrollView.height) ?: 0).coerceAtLeast(0)
-            scrollView.smoothScrollTo(0, targetScrollY.coerceAtMost(maxScrollY))
-        }
-    }
-
-    private fun showSettingsTutorialOverlay(
-        step: SettingsTutorialStep,
-        parentView: ViewGroup,
-        targetView: View
-    ) {
-        removeSettingsTutorialOverlay()
-
-        settingsTutorialOverlay = LayoutInflater.from(this).inflate(R.layout.tutorial_overlay, null)
-        parentView.addView(settingsTutorialOverlay)
-
-        settingsTutorialOverlay?.setOnTouchListener { view, _ ->
-            view.performClick()
-            false
-        }
-        settingsTutorialOverlay?.bringToFront()
-
-        settingsTutorialOverlay?.findViewById<TextView>(R.id.tutorial_title)?.text = step.title
-        settingsTutorialOverlay?.findViewById<TextView>(R.id.tutorial_description)?.text = step.description
-
-        val isLastStep = settingsTutorialStepIndex == settingsTutorialSteps.lastIndex
-        settingsTutorialOverlay?.findViewById<View>(R.id.tutorial_buttons_container)?.visibility =
-            if (isLastStep) View.GONE else View.VISIBLE
-        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_next)?.visibility =
-            if (isLastStep) View.GONE else View.VISIBLE
-        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)?.visibility =
-            if (isLastStep) View.VISIBLE else View.GONE
-
-        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_skip)?.setOnClickListener {
-            finishSettingsTutorial()
-        }
-        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_next)?.setOnClickListener {
-            settingsTutorialStepIndex++
-            showCurrentSettingsTutorialStep()
-        }
-        settingsTutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)?.setOnClickListener {
-            finishSettingsTutorial()
-        }
-
-        settingsTutorialOverlay?.post {
-            positionSettingsTutorialOverlay(parentView, targetView)
-        }
-    }
-
-    private fun positionSettingsTutorialOverlay(parentView: ViewGroup, targetView: View) {
-        val overlay = settingsTutorialOverlay ?: return
-        val highlightView = overlay.findViewById<View>(R.id.tutorial_highlight)
-        val textContainer = overlay.findViewById<View>(R.id.tutorial_text_container)
-
-        val targetLocation = IntArray(2)
-        targetView.getLocationOnScreen(targetLocation)
-        val rootLocation = IntArray(2)
-        parentView.getLocationOnScreen(rootLocation)
-
-        val targetX = targetLocation[0] - rootLocation[0]
-        val targetY = targetLocation[1] - rootLocation[1]
-        val targetWidth = targetView.width.takeIf { it > 0 } ?: targetView.measuredWidth
-        val targetHeight = targetView.height.takeIf { it > 0 } ?: targetView.measuredHeight
-
-        val highlightParams = (highlightView.layoutParams as? FrameLayout.LayoutParams)
-            ?: FrameLayout.LayoutParams(targetWidth + 40, targetHeight + 40)
-        highlightParams.leftMargin = (targetX - 20).coerceAtLeast(0)
-        highlightParams.topMargin = (targetY - 20).coerceAtLeast(0)
-        highlightParams.width = targetWidth + 40
-        highlightParams.height = targetHeight + 40
-        highlightView.layoutParams = highlightParams
-
-        val textParams = (textContainer.layoutParams as? FrameLayout.LayoutParams)
-            ?: FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            )
-
-        val screenWidth = parentView.width
-        val screenHeight = parentView.height
-        val padding = 40
-
-        textContainer.measure(
-            View.MeasureSpec.makeMeasureSpec(screenWidth - padding * 2, View.MeasureSpec.AT_MOST),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        val textHeight = textContainer.measuredHeight
-        val preferredTop = targetY + targetHeight + padding
-        val maxTop = screenHeight - textHeight - padding
-        textParams.topMargin = if (preferredTop <= maxTop) {
-            preferredTop
-        } else {
-            (targetY - textHeight - padding).coerceAtLeast(padding)
-        }
-        textParams.leftMargin = padding
-        textParams.rightMargin = padding
-        textContainer.layoutParams = textParams
-    }
-
-    private fun finishSettingsTutorial() {
-        removeSettingsTutorialOverlay()
-        settingsTutorialActive = false
-        settingsTutorialRenderToken++
-
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("start_tutorial", true)
-        }
-        startActivity(intent)
-        finish()
-    }
-
-    private fun removeSettingsTutorialOverlay() {
-        settingsTutorialOverlay?.let { overlay ->
-            (overlay.parent as? ViewGroup)?.removeView(overlay)
-        }
-        settingsTutorialOverlay = null
-    }
-    
-    private fun restartLauncher() {
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Restart Launcher")
-            .setMessage("This will restart the launcher. Continue?")
-            .setPositiveButton("Restart") { _, _ ->
-                try {
-                    val intent = packageManager.getLaunchIntentForPackage(packageName)
-                    val componentName = intent?.component
-                    if (componentName != null) {
-                        val mainIntent = Intent.makeRestartActivityTask(componentName)
-                        startActivity(mainIntent)
-                        Runtime.getRuntime().exit(0)
-                    } else {
-                        Toast.makeText(this, "Failed to restart launcher", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Failed to restart launcher: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-        
-        fixDialogTextColors(dialog)
-    }
-    
-    private fun clearCache() {
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Clear Cache")
-            .setMessage("This will clear the launcher's cache files. This may free up storage space but won't affect your settings or data. Continue?")
-            .setPositiveButton("Clear Cache") { _, _ ->
-                try {
-                    var deletedCount = 0
-                    var totalSize = 0L
-                    
-                    fun getDirectorySize(dir: File): Long {
-                        var size = 0L
-                        if (dir.isDirectory) {
-                            dir.listFiles()?.forEach { file ->
-                                size += if (file.isDirectory) {
-                                    getDirectorySize(file)
-                                } else {
-                                    file.length()
-                                }
-                            }
-                        } else {
-                            size = dir.length()
-                        }
-                        return size
-                    }
-                    
-                    if (cacheDir.exists() && cacheDir.isDirectory) {
-                        val files = cacheDir.listFiles()
-                        files?.forEach { file ->
-                            try {
-                                val size = getDirectorySize(file)
-                                if (file.deleteRecursively()) {
-                                    deletedCount++
-                                    totalSize += size
-                                }
-                            } catch (_: Exception) {
-                            }
-                        }
-                    }
-                    
-                    externalCacheDir?.let { extCacheDir ->
-                        if (extCacheDir.exists() && extCacheDir.isDirectory) {
-                            val files = extCacheDir.listFiles()
-                            files?.forEach { file ->
-                                try {
-                                    val size = getDirectorySize(file)
-                                    if (file.deleteRecursively()) {
-                                        deletedCount++
-                                        totalSize += size
+                        if (entry.name == "settings.json") {
+                            val p = JSONObject(zis.bufferedReader().readText()).optJSONObject("main_preferences")
+                            if (p != null) {
+                                prefs.edit {
+                                    val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
+                                    p.keys().forEach { k ->
+                                        val v = p.get(k)
+                                        
+                                        // Fix for corrupted data format: if it should be a set but is a string like "[a, b]"
+                                        if (k in stringSetKeys) {
+                                            val set = when (v) {
+                                                is JSONArray -> {
+                                                    val s = mutableSetOf<String>()
+                                                    for (i in 0 until v.length()) s.add(v.getString(i))
+                                                    s
+                                                }
+                                                is String -> {
+                                                    if (v.startsWith("[") && v.endsWith("]")) {
+                                                        v.substring(1, v.length - 1)
+                                                            .split(",")
+                                                            .map { it.trim() }
+                                                            .filter { it.isNotEmpty() }
+                                                            .toSet()
+                                                    } else {
+                                                        setOf(v)
+                                                    }
+                                                }
+                                                else -> emptySet<String>()
+                                            }
+                                            putStringSet(k, set)
+                                        } else {
+                                            when (v) {
+                                                is String -> putString(k, v)
+                                                is Boolean -> putBoolean(k, v)
+                                                is Int -> putInt(k, v)
+                                                is Long -> putLong(k, v)
+                                                is Double -> putFloat(k, v.toFloat())
+                                                is JSONArray -> {
+                                                    putString(k, v.toString())
+                                                }
+                                            }
+                                        }
                                     }
-                                } catch (_: Exception) {
                                 }
                             }
                         }
+                        zis.closeEntry(); entry = zis.nextEntry
                     }
-                    
-                    val sizeInMB = if (totalSize > 0) totalSize / (1024 * 1024) else 0L
-                    val message = if (deletedCount > 0) {
-                        "Cache cleared successfully. Freed ${sizeInMB}MB from $deletedCount items."
-                    } else {
-                        "Cache cleared successfully."
-                    }
-                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Failed to clear cache: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
-        
-        fixDialogTextColors(dialog)
-    }
-    
-    private fun clearData() {
-        val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Clear Data")
-            .setMessage("WARNING: This will delete ALL launcher data including:\n\n• All settings and preferences\n• Favorite apps\n• Workspaces\n• App locks and timers\n• Todo items\n• Workout data\n• Finance data\n• Physical activity data\n• Widget configurations\n• All other app data\n\nThis action CANNOT be undone. The launcher will restart after clearing data.\n\nAre you absolutely sure?")
-            .setPositiveButton("Clear All Data") { _, _ ->
-                try {
-                    val allPrefs = listOf(
-                        "com.guruswarupa.launch.PREFS",
-                        "app_timer_prefs",
-                        "app_lock_prefs"
-                    )
-                    
-                    allPrefs.forEach { prefName ->
-                        try {
-                            getSharedPreferences(prefName, MODE_PRIVATE).edit { clear() }
-                        } catch (_: Exception) {
-                        }
-                    }
-                    
-                    try {
-                        if (cacheDir.exists() && cacheDir.isDirectory) {
-                            cacheDir.listFiles()?.forEach { it.deleteRecursively() }
-                        }
-                        externalCacheDir?.let { extCacheDir ->
-                            if (extCacheDir.exists() && extCacheDir.isDirectory) {
-                                extCacheDir.listFiles()?.forEach { it.deleteRecursively() }
-                            }
-                        }
-                    } catch (_: Exception) {
-                    }
-                    
-                    try {
-                        val databasesDir = File(filesDir.parent, "databases")
-                        if (databasesDir.exists() && databasesDir.isDirectory) {
-                            databasesDir.listFiles()?.forEach { file ->
-                                if (file.name.startsWith(packageName.replace(".", "_"))) {
-                                    file.delete()
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                    }
-                    
-                    try {
-                        if (filesDir.exists() && filesDir.isDirectory) {
-                            filesDir.listFiles()?.forEach { file ->
-                                if (!file.name.startsWith(".") && file.name != "shared_prefs") {
-                                    file.deleteRecursively()
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                    }
-                    
-                    Toast.makeText(this, "All data cleared. Launcher will restart.", Toast.LENGTH_LONG).show()
-                    
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        try {
-                            val intent = packageManager.getLaunchIntentForPackage(packageName)
-                            val componentName = intent?.component
-                            if (componentName != null) {
-                                val mainIntent = Intent.makeRestartActivityTask(componentName)
-                                startActivity(mainIntent)
-                                Runtime.getRuntime().exit(0)
-                            } else {
-                                finish()
-                            }
-                        } catch (_: Exception) {
-                            finish()
-                        }
-                    }, 1000)
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Failed to clear data: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-        
-        fixDialogTextColors(dialog)
-    }
-    
-    private fun fixDialogTextColors(dialog: AlertDialog) {
-        try {
-            val textColor = ContextCompat.getColor(this, R.color.text)
-            dialog.findViewById<TextView>(android.R.id.title)?.setTextColor(textColor)
-            dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(textColor)
-        } catch (_: Exception) {}
-    }
-    
-    private fun chooseWallpaper() {
-        val intent = Intent(Intent.ACTION_SET_WALLPAPER)
-        wallpaperLauncher.launch(intent)
+            restartLauncher()
+        } catch (e: Exception) { Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show() }
     }
 
-    private fun applyContentInsets() {
-        val contentRoot = findViewById<View>(android.R.id.content)
-        val scrollView = findViewById<ScrollView>(R.id.settings_scroll_view)
-        val initialLeft = scrollView.paddingLeft
-        val initialTop = scrollView.paddingTop
-        val initialRight = scrollView.paddingRight
-        val initialBottom = scrollView.paddingBottom
-
-        ViewCompat.setOnApplyWindowInsetsListener(contentRoot) { _, insets ->
-            val topInset = insets.getInsets(
-                WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout()
-            ).top
-            scrollView.setPadding(
-                initialLeft,
-                initialTop + topInset,
-                initialRight,
-                initialBottom
-            )
-            insets
-        }
-        ViewCompat.requestApplyInsets(contentRoot)
-    }
-    
-    private fun makeSystemBarsTransparent() {
-    }
-    
-    /**
-     * Export physical activity data including steps, distance, and historical data
-     */
-    private fun exportPhysicalActivityData(settingsJson: JSONObject) {
-        try {
-            val activityPrefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
-            val activityAll = activityPrefs.all
-            if (activityAll.isNotEmpty()) {
-                val activityJson = JSONObject()
-                for ((key, value) in activityAll) {
-                    when (value) {
-                        is String -> activityJson.put(key, value)
-                        is Boolean -> activityJson.put(key, value)
-                        is Int -> activityJson.put(key, value)
-                        is Long -> activityJson.put(key, value)
-                        is Float -> activityJson.put(key, value)
-                        is Set<*> -> {
-                            val jsonArray = JSONArray()
-                            value.forEach { jsonArray.put(it) }
-                            activityJson.put(key, jsonArray)
-                        }
-                    }
-                }
-                settingsJson.put("physical_activity_data", activityJson)
-            }
-        } catch (_: Exception) {
-            // Silently fail if physical activity data is not available
-        }
-    }
-    
-    /**
-     * Export workout tracker data including exercises and workout history
-     */
-    private fun exportWorkoutData(settingsJson: JSONObject) {
-        try {
-            val workoutPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            val exercisesString = workoutPrefs.getString("workout_exercises", null)
-            val lastResetDate = workoutPrefs.getString("workout_last_reset_date", null)
-            val streak = workoutPrefs.getInt("workout_streak", 0)
-            val lastStreakDate = workoutPrefs.getString("workout_last_streak_date", null)
-            
-            if (exercisesString != null) {
-                val workoutJson = JSONObject()
-                workoutJson.put("exercises", exercisesString)
-                if (lastResetDate != null) {
-                    workoutJson.put("last_reset_date", lastResetDate)
-                }
-                workoutJson.put("streak", streak)
-                if (lastStreakDate != null) {
-                    workoutJson.put("last_streak_date", lastStreakDate)
-                }
-                settingsJson.put("workout_data", workoutJson)
-            }
-        } catch (_: Exception) {
-            // Silently fail if workout data is not available
-        }
-    }
-    
-    /**
-     * Export todo list data including tasks and their status
-     */
-    private fun exportTodoData(settingsJson: JSONObject) {
-        try {
-            val todoPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            val todoItemsString = todoPrefs.getString("todo_items", null)
-            
-            if (todoItemsString != null) {
-                val todoJson = JSONObject()
-                todoJson.put("todo_items", todoItemsString)
-                settingsJson.put("todo_data", todoJson)
-            }
-        } catch (_: Exception) {
-            // Silently fail if todo data is not available
-        }
-    }
-    
-    /**
-     * Export finance tracker data including transactions and balance
-     */
-    private fun exportFinanceData(settingsJson: JSONObject) {
-        try {
-            val financePrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            val financeJson = JSONObject()
-            
-            // Export balance and currency
-            val balance = financePrefs.getFloat("finance_balance", 0.0f)
-            val currency = financePrefs.getString("finance_currency", "USD")
-            financeJson.put("balance", balance.toDouble())
-            if (currency != null) {
-                financeJson.put("currency", currency)
-            }
-            
-            // Export monthly income/expense data
-            val allPrefs = financePrefs.all
-            val monthlyData = JSONObject()
-            allPrefs.keys.filter { it.startsWith("finance_income_") || it.startsWith("finance_expenses_") }
-                .forEach { key ->
-                    val value = allPrefs[key]
-                    if (value is Float) {
-                        monthlyData.put(key, value.toDouble())
-                    }
-                }
-            if (monthlyData.length() > 0) {
-                financeJson.put("monthly_data", monthlyData)
-            }
-            
-            // Export transaction history
-            val transactions = JSONArray()
-            allPrefs.keys.filter { it.startsWith("transaction_") }
-                .forEach { key ->
-                    val transactionData = financePrefs.getString(key, null)
-                    if (transactionData != null) {
-                        transactions.put(transactionData)
-                    }
-                }
-            if (transactions.length() > 0) {
-                financeJson.put("transactions", transactions)
-            }
-            
-            if (financeJson.length() > 0) {
-                settingsJson.put("finance_data", financeJson)
-            }
-        } catch (_: Exception) {
-            // Silently fail if finance data is not available
-        }
-    }
-    
-    /**
-     * Import physical activity data
-     */
-    private fun importPhysicalActivityData(activityJson: JSONObject) {
-        try {
-            val activity_prefs = getSharedPreferences("physical_activity_prefs", MODE_PRIVATE)
-            activity_prefs.edit {
-                importPreferences(activityJson, this)
-            }
-        } catch (_: Exception) {
-            // Silently fail if import fails
-        }
-    }
-    
-    /**
-     * Import workout tracker data
-     */
-    private fun importWorkoutData(workoutJson: JSONObject) {
-        try {
-            val workoutPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            workoutPrefs.edit {
-                if (workoutJson.has("exercises")) {
-                    putString("workout_exercises", workoutJson.getString("exercises"))
-                }
-                if (workoutJson.has("last_reset_date")) {
-                    putString("workout_last_reset_date", workoutJson.getString("last_reset_date"))
-                }
-                if (workoutJson.has("streak")) {
-                    putInt("workout_streak", workoutJson.getInt("streak"))
-                }
-                if (workoutJson.has("last_streak_date")) {
-                    putString("workout_last_streak_date", workoutJson.getString("last_streak_date"))
-                }
-            }
-        } catch (_: Exception) {
-            // Silently fail if import fails
-        }
-    }
-    
-    /**
-     * Import todo list data
-     */
-    private fun importTodoData(todoJson: JSONObject) {
-        try {
-            val todoPrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            todoPrefs.edit {
-                if (todoJson.has("todo_items")) {
-                    putString("todo_items", todoJson.getString("todo_items"))
-                }
-            }
-        } catch (_: Exception) {
-            // Silently fail if import fails
-        }
-    }
-    
-    /**
-     * Import finance tracker data
-     */
-    private fun importFinanceData(financeJson: JSONObject) {
-        try {
-            val financePrefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
-            financePrefs.edit {
-                // Import balance and currency
-                if (financeJson.has("balance")) {
-                    putFloat("finance_balance", financeJson.getDouble("balance").toFloat())
-                }
-                if (financeJson.has("currency")) {
-                    putString("finance_currency", financeJson.getString("currency"))
-                }
-                
-                // Import monthly data
-                if (financeJson.has("monthly_data")) {
-                    val monthlyData = financeJson.getJSONObject("monthly_data")
-                    val keys = monthlyData.keys()
-                    while (keys.hasNext()) {
-                        val key = keys.next()
-                        putFloat(key, monthlyData.getDouble(key).toFloat())
-                    }
-                }
-                
-                // Import transactions
-                if (financeJson.has("transactions")) {
-                    val transactions = financeJson.getJSONArray("transactions")
-                    for (i in 0 until transactions.length()) {
-                        val transactionData = transactions.getString(i)
-                        // Generate a unique key for each transaction
-                        val timestamp = System.currentTimeMillis() + i
-                        putString("transaction_$timestamp", transactionData)
-                    }
-                }
-            }
-        } catch (_: Exception) {
-            // Silently fail if import fails
-        }
-    }
-    
-    /**
-     * Setup back tap gesture settings
-     */
-    private fun setupBackTap() {
-        val backTapSwitch = findViewById<SwitchCompat>(R.id.back_tap_switch)
-        val backTapSettingsContainer = findViewById<View>(R.id.back_tap_settings_container)
-        val doubleActionSpinner = findViewById<android.widget.Spinner>(R.id.back_tap_double_action_spinner)
-        val sensitivitySeekBar = findViewById<SeekBar>(R.id.back_tap_sensitivity_seekbar)
-        val sensitivityValueText = findViewById<TextView>(R.id.back_tap_sensitivity_value)
-        
-        // Set default values if not set
-        if (!prefs.contains(Constants.Prefs.BACK_TAP_ENABLED)) {
-            prefs.edit { 
-                putBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
-                putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)
-                putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7) // More sensitive by default
-            }
-        }
-        
-        val isBackTapEnabled = prefs.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
-        val currentDoubleAction = prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)
-            ?: BackTapService.ACTION_SOUND_TOGGLE
-        val currentSensitivity = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7)
-        
-        backTapSwitch.isChecked = isBackTapEnabled
-        backTapSettingsContainer.isVisible = isBackTapEnabled
-        sensitivitySeekBar.progress = currentSensitivity - 1
-        sensitivityValueText.text = currentSensitivity.toString()
-        
-        // Setup actions
-        val actions = arrayOf(
-            "None",
-            "Toggle Torch",
-            "Take Screenshot",
-            "Toggle Notifications",
-            "Turn Screen Off",
-            "Toggle Sound"
-        )
-        val actionValues = arrayOf(
-            BackTapService.ACTION_NONE,
-            BackTapService.ACTION_TORCH_TOGGLE,
-            BackTapService.ACTION_SCREENSHOT,
-            BackTapService.ACTION_NOTIFICATIONS,
-            BackTapService.ACTION_SCREEN_OFF,
-            BackTapService.ACTION_SOUND_TOGGLE
-        )
-        
-        val actionAdapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, actions)
-        actionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        
-        doubleActionSpinner.adapter = actionAdapter
-        
-        // Set current action selections
-        val doubleActionIndex = actionValues.indexOf(currentDoubleAction)
-        if (doubleActionIndex >= 0) {
-            doubleActionSpinner.setSelection(doubleActionIndex)
-        }
-        
-        // Setup switch listener
-        backTapSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(Constants.Prefs.BACK_TAP_ENABLED, isChecked) }
-            backTapSettingsContainer.isVisible = isChecked
-            
-            val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-            intent.setPackage(packageName)
-            sendBroadcast(intent)
-        }
-        
-        // Setup action spinner listeners
-        doubleActionSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: View?, position: Int, id: Long) {
-                val selectedAction = actionValues[position]
-                prefs.edit { putString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, selectedAction) }
-                val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                intent.setPackage(packageName)
-                sendBroadcast(intent)
-            }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>) {}
-        }
-        
-        // Setup sensitivity seekbar
-        sensitivitySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val sensitivity = progress + 1
-                sensitivityValueText.text = sensitivity.toString()
-                if (fromUser) {
-                    prefs.edit { putInt(Constants.Prefs.BACK_TAP_SENSITIVITY, sensitivity) }
-                    val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
-                    intent.setPackage(packageName)
-                    sendBroadcast(intent)
-                }
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-    }
-    
-    private fun exportGithubWidgetData(settingsJson: JSONObject) {
-        try {
-            val githubJson = JSONObject()
-            
-            // Export GitHub token and username
-            for (key in githubWidgetKeys) {
-                val value = prefs.getString(key, null)
-                if (value != null) {
-                    githubJson.put(key, value)
-                }
-            }
-            
-            if (githubJson.length() > 0) {
-                settingsJson.put("github_widget_data", githubJson)
-            }
-        } catch (e: Exception) {
-            // Log error but don't fail the entire export
-            android.util.Log.e("SettingsActivity", "Failed to export GitHub widget data", e)
-        }
-    }
-    
-    private fun importGithubWidgetData(githubJson: JSONObject) {
-        try {
-            prefs.edit {
-                val keys = githubJson.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    if (key in githubWidgetKeys) {
-                        val value = githubJson.getString(key)
-                        putString(key, value)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            // Log error but don't fail the entire import
-            android.util.Log.e("SettingsActivity", "Failed to import GitHub widget data", e)
-        }
+    private fun startSettingsTutorial() { settingsTutorialStepIndex = 0; settingsTutorialActive = true; showCurrentSettingsTutorialStep() }
+    private fun showCurrentSettingsTutorialStep() {
+        if (settingsTutorialStepIndex >= settingsTutorialSteps.size) { settingsTutorialActive = false; return }
+        val step = settingsTutorialSteps[settingsTutorialStepIndex]
+        AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle(step.title).setMessage(step.description).setPositiveButton(if (settingsTutorialStepIndex == settingsTutorialSteps.size - 1) "Finish" else "Next") { _, _ -> settingsTutorialStepIndex++; showCurrentSettingsTutorialStep() }.setNegativeButton("Skip") { _, _ -> settingsTutorialActive = false }.show()
     }
 }

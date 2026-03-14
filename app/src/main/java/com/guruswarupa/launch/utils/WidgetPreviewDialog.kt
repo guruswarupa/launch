@@ -96,7 +96,6 @@ class WidgetPreviewDialog(
             "countdown_widget_container" -> "Countdown timers for important events"
             "physical_activity_widget_container" -> "Track steps and physical activity"
             "pressure_widget_container" -> "Atmospheric pressure monitoring"
-            "proximity_widget_container" -> "Proximity sensor readings"
             "temperature_widget_container" -> "Temperature monitoring and alerts"
             "noise_decibel_widget_container" -> "Sound level measurement in decibels"
             "workout_widget_container" -> "Workout tracking and fitness metrics"

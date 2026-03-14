@@ -45,9 +45,6 @@ class WidgetVisibilityManager(
         activity.findViewById<View>(com.guruswarupa.launch.R.id.pressure_widget_container)?.visibility = 
             if (widgetMap["pressure_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.proximity_widget_container)?.visibility =
-            if (widgetMap["proximity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
         activity.findViewById<View>(com.guruswarupa.launch.R.id.temperature_widget_container)?.visibility = 
             if (widgetMap["temperature_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
@@ -110,7 +107,6 @@ class WidgetVisibilityManager(
                         "physical_activity_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.physical_activity_widget_container)
                         "compass_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.compass_widget_container)
                         "pressure_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.pressure_widget_container)
-                        "proximity_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.proximity_widget_container)
                         "temperature_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.temperature_widget_container)
                         "noise_decibel_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.noise_decibel_widget_container)
                         "workout_widget_container" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.workout_widget_container)?.parent as? View

@@ -25,7 +25,8 @@ class FocusModeApplier(
     private var adapter: AppAdapter?,
     private val fullAppList: MutableList<android.content.pm.ResolveInfo>,
     private val appList: MutableList<android.content.pm.ResolveInfo>,
-    private val onUpdateAppSearchManager: () -> Unit
+    private val onUpdateAppSearchManager: () -> Unit,
+    private val onUpdateFastScrollerVisibility: () -> Unit
 ) {
     /**
      * Safely execute a task on the background executor.
@@ -70,6 +71,10 @@ class FocusModeApplier(
 
                 val finalFilteredApps = appListManager.applyFavoritesFilter(filteredOrSortedApps, workspaceMode)
                 val sortedFinalList = appListManager.sortAppsAlphabetically(finalFilteredApps)
+                
+                // Inject separators to keep list consistent with main loader
+                val isGridMode = sharedPreferences?.getString("view_preference", "list") == "grid"
+                val listWithSeparators = appListManager.addSeparators(sortedFinalList, isGridMode)
 
                 // Update UI on main thread
                 activity.runOnUiThread {
@@ -77,7 +82,7 @@ class FocusModeApplier(
 
                     // Update shared appList instance contents
                     appList.clear()
-                    appList.addAll(sortedFinalList)
+                    appList.addAll(listWithSeparators)
 
                     searchContainer.visibility = View.VISIBLE
 
@@ -85,11 +90,12 @@ class FocusModeApplier(
                     appDockManager.lockDrawerForFocusMode(isFocusMode)
 
                     // Update adapter with new list
-                    adapter?.updateAppList(sortedFinalList)
+                    adapter?.updateAppList(listWithSeparators)
 
                     // Update search manager with new app list
                     if (!activity.isFinishing) {
                         onUpdateAppSearchManager()
+                        onUpdateFastScrollerVisibility()
                     }
                 }
             } catch (e: Exception) {
@@ -102,5 +108,9 @@ class FocusModeApplier(
                 }
             }
         }
+    }
+    
+    private val sharedPreferences by lazy {
+        activity.getSharedPreferences("com.guruswarupa.launch.PREFS", android.content.Context.MODE_PRIVATE)
     }
 }

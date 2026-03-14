@@ -58,12 +58,24 @@ class SettingsChangeCoordinator(
         // Update display style if changed
         val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"
         val newIsGridMode = viewPreference == "grid"
+        val desiredColumns = activity.getPreferredGridColumns()
         val currentIsGridMode = if (views.isRecyclerViewInitialized()) views.recyclerView.layoutManager is GridLayoutManager else false
-        
+
         if (newIsGridMode != currentIsGridMode && adapter != null) {
             // Update layout manager
             views.recyclerView.layoutManager = if (newIsGridMode) {
-                GridLayoutManager(activity, 4)
+                val gridLayoutManager = GridLayoutManager(activity, desiredColumns)
+                gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        val viewType = adapter.getItemViewType(position)
+                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                            desiredColumns
+                        } else {
+                            1
+                        }
+                    }
+                }
+                gridLayoutManager
             } else {
                 LinearLayoutManager(activity)
             }
@@ -74,7 +86,36 @@ class SettingsChangeCoordinator(
             // Only update AppSearchManager if data source significantly changed,
             // otherwise the shared metadata cache handles label updates.
             activity.updateAppSearchManager()
+        } else if (newIsGridMode && currentIsGridMode) {
+            val layoutManager = views.recyclerView.layoutManager as? GridLayoutManager
+            if (layoutManager != null && layoutManager.spanCount != desiredColumns) {
+                layoutManager.spanCount = desiredColumns
+                // Update span size lookup for the new column count
+                layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        val viewType = adapter?.getItemViewType(position)
+                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                            desiredColumns
+                        } else {
+                            1
+                        }
+                    }
+                }
+                layoutManager.requestLayout()
+                // Force a reload to ensure separators are correctly placed in the new grid
+                if (activity.isAppListLoaderInitialized()) {
+                    activity.appListLoader.loadApps(forceRefresh = false)
+                }
+            }
         }
+        
+        // Update icon shape style if changed
+        val iconStyle = sharedPreferences.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
+        adapter?.updateIconStyle(iconStyle)
+        
+        // Update icon size if changed
+        val iconSize = sharedPreferences.getInt(Constants.Prefs.ICON_SIZE, 40)
+        adapter?.updateIconSize(iconSize)
         
         // Update fast scroller visibility
         activity.updateFastScrollerVisibility()
