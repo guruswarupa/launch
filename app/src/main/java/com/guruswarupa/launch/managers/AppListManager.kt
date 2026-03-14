@@ -40,7 +40,11 @@ class AppListManager(
             if (isLauncherApp && !isAllowedInternalActivity) return@filter false
             
             // If it's a settings or vault activity, we ALWAYS show it (bypass focus/workspace/hidden filters)
-            if (isAllowedInternalActivity) return@filter true
+            // EXCEPT in focus mode, where we hide settings to minimize distractions
+            if (isAllowedInternalActivity) {
+                if (focusMode && activityName.contains("SettingsActivity")) return@filter false
+                return@filter true
+            }
             
             // Filter out hidden apps
             if (hiddenAppManager?.isAppHidden(packageName) == true) return@filter false
@@ -75,7 +79,11 @@ class AppListManager(
             if (isLauncherApp && !isAllowedInternalActivity) return@filter false
             
             // If it's a settings or vault activity, we ALWAYS show it
-            if (isAllowedInternalActivity) return@filter true
+            // EXCEPT in focus mode, where we hide settings
+            if (isAllowedInternalActivity) {
+                if (focusMode && activityName.contains("SettingsActivity")) return@filter false
+                return@filter true
+            }
             
             // Filter out hidden apps (unless in workspace mode, where we might want to show them)
             !(hiddenAppManager?.isAppHidden(packageName) ?: false) &&
