@@ -554,12 +554,22 @@ class AppAdapter(
                     when {
                         activityName.contains("SettingsActivity") -> {
                             holder.appName?.text = activity.getString(R.string.settings_app_name)
+                            holder.appIcon?.setImageResource(R.mipmap.ic_launcher)
                         }
                         activityName.contains("EncryptedVaultActivity") -> {
                             holder.appName?.text = activity.getString(R.string.vault_app_name)
+                            holder.appIcon?.setImageResource(R.drawable.ic_vault_icon)
                         }
                         else -> {
                             holder.appName?.text = labelCache[packageName] ?: appInfo.loadLabel(activity.packageManager).toString()
+                            val cachedIcon = iconCache[packageName]
+                            if (cachedIcon != null) {
+                                holder.appIcon?.setImageDrawable(cachedIcon)
+                                activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
+                            } else {
+                                holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                                submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
+                            }
                         }
                     }
                 } else {
@@ -581,15 +591,15 @@ class AppAdapter(
                             loadLabelAsync(holder, position, appInfo, packageName)
                         }
                     }
-                }
 
-                val cachedIcon = iconCache[packageName]
-                if (cachedIcon != null) {
-                    holder.appIcon?.setImageDrawable(cachedIcon)
-                    activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
-                } else {
-                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
-                    submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
+                    val cachedIcon = iconCache[packageName]
+                    if (cachedIcon != null) {
+                        holder.appIcon?.setImageDrawable(cachedIcon)
+                        activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
+                    } else {
+                        holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                        submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
+                    }
                 }
                 
                 if (position < appList.size - 1 && position % 5 == 0) {
