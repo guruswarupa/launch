@@ -13,7 +13,7 @@
         android:padding="24dp"
         android:gravity="center"
         android:background="@drawable/rounded_background"
-        android:backgroundTint="#FF1A1B26"
+        android:backgroundTint="@color/card_background"
         android:elevation="16dp">
 
         <TextView
@@ -50,7 +50,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#1AFFFFFF"
+                        android:background="#33000000"
                         android:padding="10dp"
                         android:layout_marginBottom="8dp">
                         <ImageView
@@ -76,7 +76,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#1AFFFFFF"
+                        android:background="#33000000"
                         android:padding="10dp"
                         android:layout_marginBottom="8dp">
                         <ImageView
@@ -102,7 +102,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#1AFFFFFF"
+                        android:background="#33000000"
                         android:padding="10dp"
                         android:layout_marginBottom="8dp">
                         <ImageView
@@ -128,7 +128,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#1AFFFFFF"
+                        android:background="#33000000"
                         android:padding="10dp"
                         android:layout_marginBottom="12dp">
                         <ImageView
