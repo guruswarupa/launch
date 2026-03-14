@@ -184,9 +184,6 @@ No personal data is collected, stored, or shared with third parties.</string>
     <!-- Pressure Widget Strings -->
     <string name="disable">Disable</string>
     <string name="enable">Enable</string>
-    <string name="proximity_sensor_not_available">Proximity sensor not available on this device</string>
-    <string name="proximity_distance_near">Near</string>
-    <string name="proximity_distance_far">Far</string>
     <string name="pressure_sensor_not_available">Pressure sensor not available on this device</string>
     <string name="pressure_format">%1$s hPa</string>
     <string name="altitude_format">Altitude: %1$s m</string>
@@ -228,11 +225,6 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="desc_photos">Allows the app to specifically access your photos.</string>
     <string name="desc_videos">Allows the app to specifically access your videos.</string>
     <string name="desc_audio">Allows the app to specifically access your audio files.</string>
-
-    <!-- Proximity Widget Strings -->
-    <string name="distance_cm_format">%1$s cm</string>
-    <string name="status_near">Status: Near</string>
-    <string name="status_far">Status: Far</string>
 
     <!-- Temperature Widget Strings -->
     <string name="temperature_sensor_not_available">Temperature sensor not available on this device</string>

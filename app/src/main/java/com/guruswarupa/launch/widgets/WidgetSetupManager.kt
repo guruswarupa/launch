@@ -91,13 +91,6 @@ class WidgetSetupManager(
         return pressureWidget
     }
     
-    fun setupProximityWidget(sharedPreferences: android.content.SharedPreferences): ProximityWidget {
-        val proximityContainer = activity.findViewById<android.widget.LinearLayout>(R.id.proximity_widget_container)
-        val proximityWidget = ProximityWidget(activity, proximityContainer, sharedPreferences)
-        proximityWidget.initialize()
-        return proximityWidget
-    }
-    
     fun setupTemperatureWidget(sharedPreferences: android.content.SharedPreferences): TemperatureWidget {
         val temperatureContainer = activity.findViewById<android.widget.LinearLayout>(R.id.temperature_widget_container)
         val temperatureWidget = TemperatureWidget(activity, temperatureContainer, sharedPreferences)
