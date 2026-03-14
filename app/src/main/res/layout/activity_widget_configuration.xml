@@ -70,8 +70,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="22dp"
-                app:cardElevation="6dp"
-                app:cardBackgroundColor="@color/nord8"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#33FFFFFF"
+                app:strokeWidth="1dp"
+                app:strokeColor="#20FFFFFF"
                 android:clickable="true"
                 android:focusable="true">
                 
@@ -79,7 +81,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="SAVE"
-                    android:textColor="@color/nord0"
+                    android:textColor="@color/white"
                     android:textSize="13sp"
                     android:fontFamily="sans-serif-black"
                     android:paddingHorizontal="24dp"
@@ -87,7 +89,7 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Search Bar Section (Directly in layout, no outer card) -->
+        <!-- Search Bar Section (No outer card) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -124,8 +126,21 @@
                 android:textSize="16sp" />
 
         </LinearLayout>
-        
-        <!-- Instruction Text (Moved below label) -->
+
+        <!-- Category Label -->
+        <TextView
+            android:id="@+id/widgets_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ENABLED WIDGETS"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/nord8"
+            android:letterSpacing="0.15"
+            android:layout_marginBottom="8dp"
+            android:layout_marginStart="12dp"/>
+
+        <!-- Instruction Text (Moved below enabled widgets text) -->
         <TextView
             android:id="@+id/instruction_text"
             android:layout_width="match_parent"

@@ -65,8 +65,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:cardCornerRadius="22dp"
-                    app:cardElevation="6dp"
-                    app:cardBackgroundColor="@color/nord8"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="#33FFFFFF"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#20FFFFFF"
                     android:clickable="true"
                     android:focusable="true">
                     
@@ -74,7 +76,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="APPLY"
-                        android:textColor="@color/nord0"
+                        android:textColor="@color/white"
                         android:textSize="13sp"
                         android:fontFamily="sans-serif-black"
                         android:paddingHorizontal="24dp"
@@ -296,7 +298,7 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="24-Hour Format"
+                                android:text="24 Hour Format"
                                 android:textColor="@color/white"
                                 android:textSize="15sp"/>
 

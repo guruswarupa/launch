@@ -403,7 +403,8 @@ class SettingsActivity : ComponentActivity() {
         spin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, acts).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         spin.setSelection(vals.indexOf(prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)).coerceAtLeast(0))
 
-        val cur = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7)
+        val cur = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7).coerceIn(1, 10)
+        seek.max = 9
         seek.progress = cur - 1
         valT.text = cur.toString()
 
@@ -441,7 +442,8 @@ class SettingsActivity : ComponentActivity() {
         val en = prefs.getBoolean(Constants.Prefs.SHAKE_TORCH_ENABLED, false)
         sw.isChecked = en
         cont.isVisible = en
-        val cur = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5)
+        val cur = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5).coerceIn(1, 10)
+        seek.max = 9
         seek.progress = cur - 1
         valT.text = cur.toString()
 
@@ -575,6 +577,20 @@ class SettingsActivity : ComponentActivity() {
         val colS = findViewById<Spinner>(R.id.typography_color_spinner)
 
         val scale = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
+        
+        // Prepare font style lists including downloaded fonts
+        val baseStyV = mutableListOf("default", "serif", "monospace", "condensed", "rounded", "casual", "cursive")
+        val baseStyL = mutableListOf("Modern Sans", "Classic Serif", "Dev Mono", "Clean Condensed", "Soft Rounded", "Casual Hand", "Creative Script")
+        
+        // Add downloaded fonts to the dropdown lists
+        DownloadableFontManager.getFontOptions().forEach { font ->
+            if (DownloadableFontManager.isDownloaded(this, font.styleKey)) {
+                baseStyV.add(font.styleKey)
+                baseStyL.add(font.displayName)
+            }
+        }
+
+        seek.max = 60
         seek.progress = scale - 80
         valT.text = "$scale%"
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -590,13 +606,23 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
-        val styV = arrayOf("default", "serif", "monospace", "condensed", "rounded", "casual", "cursive")
-        val styL = arrayOf("Modern Sans", "Classic Serif", "Dev Mono", "Clean Condensed", "Soft Rounded", "Casual Hand", "Creative Script")
-        styS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, styL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        styS.setSelection(styV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default")).coerceAtLeast(0))
+        styS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, baseStyL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        
+        val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
+        val selectedIndex = baseStyV.indexOf(currentStyle)
+        if (selectedIndex >= 0) {
+            styS.setSelection(selectedIndex)
+        } else {
+            // Font was uninstalled, reset to default
+            prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
+            styS.setSelection(0)
+            TypographyManager.applyToActivity(this)
+            notifySettingsChanged()
+        }
+
         styS.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
-                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, styV[pos]) }
+                prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, baseStyV[pos]) }
                 TypographyManager.applyToActivity(this@SettingsActivity)
                 notifySettingsChanged()
             }
@@ -616,8 +642,8 @@ class SettingsActivity : ComponentActivity() {
             override fun onNothingSelected(p: AdapterView<*>) {}
         }
 
-        val colL = arrayOf("Default Adaptive", "Pitch Black", "Pure White", "Cyan Accent", "Nord Mint", "Lavender", "Orange Glow", "Slate Gray")
-        val colV = arrayOf(Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, "#FF000000", "#FFFFFFFF", "#FF03DAC5", "#FF8FBCBB", "#FFB48EAD", "#FFD08770", "#FF4A5568")
+        val colL = arrayOf("Default Adaptive", "Pure White", "Deep Ocean", "Electric Purple", "Neon Pink", "Solar Gold", "Emerald Mist", "Arctic Frost", "Midnight Teal", "Cyan Accent", "Nord Mint", "Lavender", "Orange Glow", "Slate Gray")
+        val colV = arrayOf(Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, "#FFFFFFFF", "#FF1E3A8A", "#FF7C3AED", "#FFEC4899", "#FFF59E0B", "#FF10B981", "#FF93C5FD", "#FF0F766E", "#FF03DAC5", "#FF8FBCBB", "#FFB48EAD", "#FFD08770", "#FF4A5568")
         colS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, colL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         colS.setSelection(colV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)).coerceAtLeast(0))
         colS.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -657,9 +683,22 @@ class SettingsActivity : ComponentActivity() {
                 btn.isEnabled = false
                 if (inst) {
                     DownloadableFontManager.uninstallFont(this, opt.styleKey)
-                    if (prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == opt.styleKey) prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
+                    if (prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == opt.styleKey) {
+                        prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
+                    }
+                    // Refresh the typography settings UI to update the spinner
+                    setupTypographySettings()
                     updateDownloadableFontsList(cont)
-                } else DownloadableFontManager.requestFont(this, opt.styleKey) { success -> handler.post { updateDownloadableFontsList(cont) } }
+                } else {
+                    btn.text = "Fetching…"
+                    DownloadableFontManager.requestFont(this, opt.styleKey) { success ->
+                        handler.post {
+                            // Refresh the typography settings UI to update the spinner
+                            setupTypographySettings()
+                            updateDownloadableFontsList(cont)
+                        }
+                    }
+                }
             }
             cont.addView(view)
         }
@@ -694,22 +733,50 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
+    private fun makeSystemBarsTransparent() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
+        }
+    }
+
     private fun restartLauncher() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle("Restart").setMessage("Apply deep changes?").setPositiveButton("Restart") { _, _ ->
-            packageManager.getLaunchIntentForPackage(packageName)?.let { startActivity(Intent.makeRestartActivityTask(it.component!!)); Runtime.getRuntime().exit(0) }
-        }.setNegativeButton("Cancel", null).show()
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Restart Launcher")
+            .setMessage("Are you sure you want to restart the launcher?")
+            .setPositiveButton("Restart") { _, _ ->
+                packageManager.getLaunchIntentForPackage(packageName)?.let { 
+                    startActivity(Intent.makeRestartActivityTask(it.component!!))
+                    Runtime.getRuntime().exit(0) 
+                }
+            }
+            .setNegativeButton("Later", null)
+            .show()
     }
 
     private fun clearCache() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle("Clear Cache").setMessage("Remove temp files?").setPositiveButton("Clear") { _, _ ->
-            cacheDir.deleteRecursively(); externalCacheDir?.deleteRecursively(); Toast.makeText(this, "Cleared", Toast.LENGTH_SHORT).show()
-        }.setNegativeButton("Cancel", null).show()
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Clear Temporary Cache")
+            .setMessage("This will remove temporary app data and cached icons. Your settings and organization will remain intact. Proceed?")
+            .setPositiveButton("Clear") { _, _ ->
+                cacheDir.deleteRecursively()
+                externalCacheDir?.deleteRecursively()
+                Toast.makeText(this, "Cache cleared successfully", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun clearData() {
-        AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle("Reset").setMessage("Delete ALL data permanently?").setPositiveButton("Reset") { _, _ ->
-            (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).clearApplicationUserData()
-        }.setNegativeButton("Cancel", null).show()
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Factory Reset Launcher")
+            .setMessage("WARNING: This will permanently delete all your settings, custom workspaces, and configuration. The app will return to its initial state. Are you absolutely sure?")
+            .setPositiveButton("Reset Everything") { _, _ ->
+                (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).clearApplicationUserData()
+            }
+            .setNegativeButton("Keep Data", null)
+            .show()
     }
 
     private fun sendFeedback() {
