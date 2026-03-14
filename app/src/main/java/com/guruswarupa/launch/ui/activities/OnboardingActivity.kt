@@ -1171,8 +1171,8 @@ class OnboardingActivity : ComponentActivity() {
     
     private fun fixDialogTextColors(dialog: AlertDialog) {
         try {
-            val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            val textColor = ContextCompat.getColor(this, if (isDarkMode) R.color.white else R.color.black)
+            // Force text to white for onboarding dialogs regardless of system mode to ensure visibility on blurred background
+            val textColor = Color.WHITE
             val accentColor = ContextCompat.getColor(this, R.color.onboarding_step_indicator_active)
             
             dialog.findViewById<TextView>(android.R.id.title)?.setTextColor(textColor)
@@ -1300,21 +1300,43 @@ class OnboardingActivity : ComponentActivity() {
 
     private fun importPreferences(prefsJson: JSONObject, editor: SharedPreferences.Editor) {
         val keys = prefsJson.keys()
+        val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
         while (keys.hasNext()) {
             val key = keys.next()
-            when (val value = prefsJson.get(key)) {
-                is String -> editor.putString(key, value)
-                is Boolean -> editor.putBoolean(key, value)
-                is Int -> editor.putInt(key, value)
-                is Long -> editor.putLong(key, value)
-                is Double -> editor.putFloat(key, value.toFloat())
-                is Float -> editor.putFloat(key, value)
-                is JSONArray -> {
-                    val stringSet = mutableSetOf<String>()
-                    for (i in 0 until value.length()) {
-                        stringSet.add(value.getString(i))
+            val value = prefsJson.get(key)
+            
+            if (key in stringSetKeys) {
+                val set = when (value) {
+                    is JSONArray -> {
+                        val s = mutableSetOf<String>()
+                        for (i in 0 until value.length()) s.add(value.getString(i))
+                        s
                     }
-                    editor.putStringSet(key, stringSet)
+                    is String -> {
+                        if (value.startsWith("[") && value.endsWith("]")) {
+                            value.substring(1, value.length - 1)
+                                .split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() }
+                                .toSet()
+                        } else {
+                            setOf(value)
+                        }
+                    }
+                    else -> emptySet<String>()
+                }
+                editor.putStringSet(key, set)
+            } else {
+                when (value) {
+                    is String -> editor.putString(key, value)
+                    is Boolean -> editor.putBoolean(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Double -> editor.putFloat(key, value.toFloat())
+                    is Float -> editor.putFloat(key, value)
+                    is JSONArray -> {
+                        editor.putString(key, value.toString())
+                    }
                 }
             }
         }

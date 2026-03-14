@@ -808,7 +808,49 @@ class SettingsActivity : ComponentActivity() {
                     while (entry != null) {
                         if (entry.name == "settings.json") {
                             val p = JSONObject(zis.bufferedReader().readText()).optJSONObject("main_preferences")
-                            if (p != null) prefs.edit { p.keys().forEach { k -> val v = p.get(k); when (v) { is String -> putString(k, v); is Boolean -> putBoolean(k, v); is Int -> putInt(k, v); is Long -> putLong(k, v); is Double -> putFloat(k, v.toFloat()) } } }
+                            if (p != null) {
+                                prefs.edit {
+                                    val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
+                                    p.keys().forEach { k ->
+                                        val v = p.get(k)
+                                        
+                                        // Fix for corrupted data format: if it should be a set but is a string like "[a, b]"
+                                        if (k in stringSetKeys) {
+                                            val set = when (v) {
+                                                is JSONArray -> {
+                                                    val s = mutableSetOf<String>()
+                                                    for (i in 0 until v.length()) s.add(v.getString(i))
+                                                    s
+                                                }
+                                                is String -> {
+                                                    if (v.startsWith("[") && v.endsWith("]")) {
+                                                        v.substring(1, v.length - 1)
+                                                            .split(",")
+                                                            .map { it.trim() }
+                                                            .filter { it.isNotEmpty() }
+                                                            .toSet()
+                                                    } else {
+                                                        setOf(v)
+                                                    }
+                                                }
+                                                else -> emptySet<String>()
+                                            }
+                                            putStringSet(k, set)
+                                        } else {
+                                            when (v) {
+                                                is String -> putString(k, v)
+                                                is Boolean -> putBoolean(k, v)
+                                                is Int -> putInt(k, v)
+                                                is Long -> putLong(k, v)
+                                                is Double -> putFloat(k, v.toFloat())
+                                                is JSONArray -> {
+                                                    putString(k, v.toString())
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         zis.closeEntry(); entry = zis.nextEntry
                     }

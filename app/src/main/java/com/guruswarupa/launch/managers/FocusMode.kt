@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import android.util.Log
 
 class FocusModeManager(private val context: Context, private val sharedPreferences: SharedPreferences) {
 
@@ -13,6 +14,7 @@ class FocusModeManager(private val context: Context, private val sharedPreferenc
     companion object {
         private const val FOCUS_MODE_ENABLED = "focus_mode_enabled"
         private const val FOCUS_MODE_ALLOWED_APPS = "focus_mode_allowed_apps"
+        private const val TAG = "FocusModeManager"
     }
 
     fun isFocusModeEnabled(): Boolean {
@@ -46,7 +48,31 @@ class FocusModeManager(private val context: Context, private val sharedPreferenc
     }
 
     fun getAllowedApps(): Set<String> {
-        return sharedPreferences.getStringSet(FOCUS_MODE_ALLOWED_APPS, emptySet()) ?: emptySet()
+        return try {
+            sharedPreferences.getStringSet(FOCUS_MODE_ALLOWED_APPS, emptySet()) ?: emptySet()
+        } catch (e: ClassCastException) {
+            Log.e(TAG, "Data corruption: $FOCUS_MODE_ALLOWED_APPS is not a Set. Attempting recovery.", e)
+            val stringValue = try { sharedPreferences.getString(FOCUS_MODE_ALLOWED_APPS, null) } catch (_: Exception) { null }
+            val recoveredSet = if (stringValue != null) {
+                if (stringValue.startsWith("[") && stringValue.endsWith("]")) {
+                    stringValue.substring(1, stringValue.length - 1)
+                        .split(",")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .toSet()
+                } else {
+                    setOf(stringValue)
+                }
+            } else {
+                emptySet()
+            }
+            
+            sharedPreferences.edit { 
+                remove(FOCUS_MODE_ALLOWED_APPS)
+                putStringSet(FOCUS_MODE_ALLOWED_APPS, recoveredSet)
+            }
+            recoveredSet
+        }
     }
 
     fun updateAllowedApps(packageNames: Set<String>) {

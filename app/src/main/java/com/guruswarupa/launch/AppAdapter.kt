@@ -29,6 +29,7 @@ import androidx.recyclerview.widget.DiffUtil
 import java.io.File
 import java.util.concurrent.*
 import androidx.core.content.FileProvider
+import android.content.ComponentName
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.managers.TypographyManager
@@ -591,7 +592,18 @@ class AppAdapter(
                         return@setOnClickListener
                     }
                     
-                    val intent = activity.packageManager.getLaunchIntentForPackage(packageName)
+                    // Handle internal launcher activities specifically (like SettingsActivity)
+                    val intent = if (packageName == activity.packageName) {
+                        Intent().apply {
+                            component = ComponentName(packageName, appInfo.activityInfo.name)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            // Remove FLAG_ACTIVITY_CLEAR_TOP and others that might cause restart
+                            // Only use NEW_TASK for independent launch
+                        }
+                    } else {
+                        activity.packageManager.getLaunchIntentForPackage(packageName)
+                    }
+                    
                     if (intent != null) {
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit { putInt("usage_$packageName", currentCount + 1) }

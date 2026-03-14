@@ -155,10 +155,9 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
-        ensureSettingsButton()       // 1. Settings
-        ensureWorkspaceToggle()      // 2. Workspace toggle
-        ensureFocusModeToggle()      // 3. Focus mode
-        ensureVaultButton()          // 4. Encrypted Vault
+        ensureWorkspaceToggle()      // 1. Workspace toggle
+        ensureFocusModeToggle()      // 2. Focus mode
+        ensureVaultButton()          // 3. Encrypted Vault
         updateDockVisibility()
     }
     
@@ -230,7 +229,7 @@ class AppDockManager(
             focusContainer.addView(focusTimerText)
 
             // Find the position after workspace toggle
-            var insertIndex = 2
+            var insertIndex = 1
             for (i in 0 until appDock.childCount) {
                 val child = appDock.getChildAt(i)
                 if (child.tag == "workspace_toggle") {
@@ -307,16 +306,8 @@ class AppDockManager(
                     }
                 }
             }
-            // Find the position after settings button
-            var insertIndex = 1
-            for (i in 0 until appDock.childCount) {
-                val child = appDock.getChildAt(i)
-                if (child.tag == "settings_button") {
-                    insertIndex = i + 1
-                    break
-                }
-            }
-            appDock.addView(workspaceToggle, insertIndex)
+            // Add at the beginning (index 0)
+            appDock.addView(workspaceToggle, 0)
         }
     }
     
@@ -441,29 +432,7 @@ class AppDockManager(
 
 
     private fun ensureSettingsButton() {
-        if (appDock.findViewWithTag<ImageView>("settings_button") == null) {
-            val settingsButton = ImageView(context).apply {
-                tag = "settings_button"
-                setImageResource(R.drawable.ic_settings)
-                layoutParams = LinearLayout.LayoutParams(
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size),
-                    context.resources.getDimensionPixelSize(R.dimen.squircle_size)
-                ).apply {
-                    marginStart = 8
-                }
-                setPadding(dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx, dockIconPaddingPx)
-                setOnClickListener {
-                    val intent = Intent(context, SettingsActivity::class.java)
-                    context.startActivity(intent)
-                }
-                setOnLongClickListener {
-                    Toast.makeText(context, "Settings", Toast.LENGTH_SHORT).show()
-                    true
-                }
-            }
-            // Add at the beginning (index 0)
-            appDock.addView(settingsButton, 0)
-        }
+        // Method kept for compatibility but no longer adds button to dock
     }
 
     private fun saveFocusMode() {
