@@ -96,7 +96,7 @@ class FeatureTutorialManager(
         APP_DOCK(
             page = TutorialPage.HOME,
             title = "Dock Shortcuts",
-            description = "The dock holds your quick actions like settings, favorites, workspace switching, focus mode and encrypted vault.",
+            description = "The dock holds your quick actions like workspace switching and focus mode.",
             targetViewId = R.id.app_dock
         ),
         WORKSPACE_TOGGLE(
@@ -104,7 +104,7 @@ class FeatureTutorialManager(
             title = "Workspaces",
             description = "Long press this icon to create and manage workspaces. Tap it to enable a saved workspace, switch workspaces, or turn workspace mode off.",
             targetViewId = R.id.app_dock,
-            targetViewTag = "workspace_toggle"
+            targetViewTag = "workspace_container"
         ),
         FOCUS_MODE(
             page = TutorialPage.HOME,
@@ -112,20 +112,6 @@ class FeatureTutorialManager(
             description = "Long press here to build your focus app list. Tap it to start a focus session, pick a duration, and optionally enable Do Not Disturb.",
             targetViewId = R.id.app_dock,
             targetViewTag = "focus_mode_container"
-        ),
-        VAULT_BUTTON(
-            page = TutorialPage.HOME,
-            title = "Encrypted Vault",
-            description = "This opens the encrypted vault where you can keep private files protected inside the launcher.",
-            targetViewId = R.id.app_dock,
-            targetViewTag = "vault_button"
-        ),
-        SETTINGS_BUTTON(
-            page = TutorialPage.HOME,
-            title = "Launcher Settings",
-            description = "This settings shortcut opens the full launcher configuration screen. The tutorial will walk through each settings section next.",
-            targetViewId = R.id.app_dock,
-            targetViewTag = "settings_button"
         ),
         WIDGETS_PAGE(
             page = TutorialPage.WIDGETS,
@@ -143,15 +129,6 @@ class FeatureTutorialManager(
             targetViewId = R.id.widget_config_button,
             scrollToTarget = false
         ),
-        WIDGETS_SCROLL(
-            page = TutorialPage.WIDGETS,
-            title = "Scrollable Widget Feed",
-            description = "This page scrolls vertically, so you can keep multiple widgets here without crowding the home page.",
-            targetViewId = R.id.widgets_drawer_scroll,
-            highlightPosition = HighlightPosition.CENTER,
-            highlightVisible = false,
-            scrollToTarget = false
-        ),
         WALLPAPER_PAGE(
             page = TutorialPage.WALLPAPER,
             title = "Wallpaper Page",
@@ -160,12 +137,6 @@ class FeatureTutorialManager(
             highlightPosition = HighlightPosition.CENTER,
             highlightVisible = false,
             scrollToTarget = false
-        ),
-        WALLPAPER_CLOCK(
-            page = TutorialPage.WALLPAPER,
-            title = "Ambient Clock",
-            description = "Use this page when you want a distraction-free wallpaper and clock view.",
-            targetViewId = R.id.right_drawer_time
         ),
         PAGE_NAVIGATION(
             page = TutorialPage.HOME,
@@ -236,6 +207,7 @@ class FeatureTutorialManager(
 
     private fun resolveTargetView(step: TutorialStep, pageRoot: ViewGroup?): View? {
         if (pageRoot == null) return null
+        
         return if (step.targetViewTag != null) {
             pageRoot.findViewWithTag(step.targetViewTag)
         } else {
@@ -428,11 +400,6 @@ class FeatureTutorialManager(
     }
 
     private fun nextStep() {
-        if (TutorialStep.entries[currentStep] == TutorialStep.SETTINGS_BUTTON) {
-            launchSettingsTutorial()
-            return
-        }
-
         currentStep++
         sharedPreferences.edit { putInt(PREF_TUTORIAL_STEP, currentStep) }
 

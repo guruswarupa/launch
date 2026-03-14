@@ -66,10 +66,10 @@ class PermissionsActivity : ComponentActivity() {
             val sw = view.findViewById<SwitchCompat>(R.id.permission_switch)
             sw.isChecked = perm.granted
             sw.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked && !perm.granted) handlePermissionGrant(perm)
-                else if (!isChecked && perm.granted) {
-                    Toast.makeText(this, "Revoke in system settings", Toast.LENGTH_SHORT).show()
-                    sw.postDelayed({ sw.isChecked = true }, 500)
+                if (isChecked && !perm.granted) {
+                    handlePermissionRequest(perm)
+                } else if (!isChecked && perm.granted) {
+                    handlePermissionRevoke(perm)
                 }
             }
             permissionsList.addView(view)
@@ -92,7 +92,7 @@ class PermissionsActivity : ComponentActivity() {
         return list
     }
 
-    private fun handlePermissionGrant(perm: PermItem) {
+    private fun handlePermissionRequest(perm: PermItem) {
         when(perm.type) {
             "DEFAULT" -> startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
             "USAGE" -> startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
@@ -102,9 +102,31 @@ class PermissionsActivity : ComponentActivity() {
         }
     }
 
+    private fun handlePermissionRevoke(perm: PermItem) {
+        when(perm.type) {
+            "DEFAULT" -> startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+            "USAGE" -> startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            "OVERLAY" -> startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()))
+            "ACCESSIBILITY" -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            "NORMAL" -> {
+                // For runtime permissions, we take them to app info where they can toggle permissions
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
+                startActivity(intent)
+                Toast.makeText(this, "Go to Permissions to revoke access", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun check(p: String) = ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
     private fun hasUsageStats(): Boolean {
-        val mode = (getSystemService(APP_OPS_SERVICE) as AppOpsManager).checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
+        val appOps = getSystemService(APP_OPS_SERVICE) as AppOpsManager
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
+        } else {
+            appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
+        }
         return mode == AppOpsManager.MODE_ALLOWED
     }
     private fun hasAccessibility(): Boolean {
@@ -112,7 +134,8 @@ class PermissionsActivity : ComponentActivity() {
         return services.contains(packageName)
     }
     private fun isDefaultLauncher(): Boolean {
-        val resolve = packageManager.resolveActivity(Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }, PackageManager.MATCH_DEFAULT_ONLY)
+        val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+        val resolve = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
         return resolve?.activityInfo?.packageName == packageName
     }
 
