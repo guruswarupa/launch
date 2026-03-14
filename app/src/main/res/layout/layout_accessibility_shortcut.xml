@@ -21,15 +21,15 @@
             android:layout_height="wrap_content"
             android:text="Control Center"
             android:textColor="#FFFFFF"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:fontFamily="sans-serif-medium"
-            android:layout_marginBottom="20dp"
-            android:letterSpacing="0.03"/>
+            android:layout_marginBottom="24dp"
+            android:letterSpacing="0.05"/>
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxHeight="450dp"
+            android:maxHeight="500dp"
             android:scrollbars="none"
             android:overScrollMode="never">
 
@@ -38,112 +38,134 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Sliders (Always visible at top) -->
+                <!-- Sliders Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:paddingHorizontal="4dp">
 
+                    <!-- Brightness -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#33000000"
-                        android:padding="10dp"
-                        android:layout_marginBottom="8dp">
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="#1AFFFFFF"
+                        android:padding="12dp"
+                        android:layout_marginBottom="12dp">
                         <ImageView
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_brightness_stat"
-                            android:tint="#7AA2F7"/>
+                            android:tint="@color/nord8"/>
                         <SeekBar
                             android:id="@+id/brightness_seekbar"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:max="255"
-                            android:progressTint="#7AA2F7"
-                            android:thumbTint="#7AA2F7"
+                            android:progressTint="@color/nord8"
+                            android:thumbTint="@color/nord8"
                             android:splitTrack="false"
                             android:paddingStart="12dp"
                             android:paddingEnd="12dp"/>
                     </LinearLayout>
 
+                    <!-- Media Volume -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#33000000"
-                        android:padding="10dp"
-                        android:layout_marginBottom="8dp">
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="#1AFFFFFF"
+                        android:padding="12dp"
+                        android:layout_marginBottom="12dp">
                         <ImageView
                             android:id="@+id/img_volume_media_icon"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_volume_up_stat"
-                            android:tint="#BB9AF7"/>
+                            android:tint="@color/nord9"/>
                         <SeekBar
                             android:id="@+id/volume_media_seekbar"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:progressTint="#BB9AF7"
-                            android:thumbTint="#BB9AF7"
+                            android:progressTint="@color/nord9"
+                            android:thumbTint="@color/nord9"
                             android:splitTrack="false"
                             android:paddingStart="12dp"
                             android:paddingEnd="12dp"/>
                     </LinearLayout>
 
+                    <!-- Ring/Vibrate Volume -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#33000000"
-                        android:padding="10dp"
-                        android:layout_marginBottom="8dp">
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="#1AFFFFFF"
+                        android:padding="12dp"
+                        android:layout_marginBottom="12dp">
                         <ImageView
                             android:id="@+id/img_volume_ring_icon"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
                             android:src="@drawable/ic_vibrate_stat"
-                            android:tint="#E0AF68"/>
+                            android:tint="@color/nord13"/>
                         <SeekBar
                             android:id="@+id/volume_ring_seekbar"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:progressTint="#E0AF68"
-                            android:thumbTint="#E0AF68"
+                            android:progressTint="@color/nord13"
+                            android:thumbTint="@color/nord13"
                             android:splitTrack="false"
                             android:paddingStart="12dp"
                             android:paddingEnd="12dp"/>
                     </LinearLayout>
 
+                    <!-- Alarm Volume -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="#33000000"
-                        android:padding="10dp"
-                        android:layout_marginBottom="12dp">
-                        <ImageView
-                            android:id="@+id/img_volume_alarm_icon"
-                            android:layout_width="18dp"
-                            android:layout_height="18dp"
-                            android:src="@android:drawable/ic_lock_silent_mode"
-                            android:tint="#F7768E"/>
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="#1AFFFFFF"
+                        android:padding="12dp"
+                        android:layout_marginBottom="16dp">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:id="@+id/img_volume_alarm_icon"
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@android:drawable/ic_lock_silent_mode"
+                                android:tint="@color/nord11"/>
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="ALARM"
+                                android:textColor="@color/nord11"
+                                android:textSize="8sp"
+                                android:textStyle="bold"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
                         <SeekBar
                             android:id="@+id/volume_alarm_seekbar"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:progressTint="#F7768E"
-                            android:thumbTint="#F7768E"
+                            android:progressTint="@color/nord11"
+                            android:thumbTint="@color/nord11"
                             android:splitTrack="false"
                             android:paddingStart="12dp"
                             android:paddingEnd="12dp"/>
