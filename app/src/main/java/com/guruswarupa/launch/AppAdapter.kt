@@ -548,22 +548,38 @@ class AppAdapter(
             }
 
             else -> {
-                val cachedLabel = labelCache[packageName]
-                if (cachedLabel != null) {
-                    holder.appName?.text = cachedLabel
+                // Special handling for internal launcher activities to ensure correct names
+                val activityName = appInfo.activityInfo.name
+                if (packageName == activity.packageName) {
+                    when {
+                        activityName.contains("SettingsActivity") -> {
+                            holder.appName?.text = activity.getString(R.string.settings_app_name)
+                        }
+                        activityName.contains("EncryptedVaultActivity") -> {
+                            holder.appName?.text = activity.getString(R.string.vault_app_name)
+                        }
+                        else -> {
+                            holder.appName?.text = labelCache[packageName] ?: appInfo.loadLabel(activity.packageManager).toString()
+                        }
+                    }
                 } else {
-                    if (position < 50) {
-                        try {
-                            val label = appInfo.loadLabel(activity.packageManager).toString()
-                            labelCache[packageName] = label
-                            holder.appName?.text = label
-                        } catch (_: Exception) {
+                    val cachedLabel = labelCache[packageName]
+                    if (cachedLabel != null) {
+                        holder.appName?.text = cachedLabel
+                    } else {
+                        if (position < 50) {
+                            try {
+                                val label = appInfo.loadLabel(activity.packageManager).toString()
+                                labelCache[packageName] = label
+                                holder.appName?.text = label
+                            } catch (_: Exception) {
+                                holder.appName?.text = packageName
+                                loadLabelAsync(holder, position, appInfo, packageName)
+                            }
+                        } else {
                             holder.appName?.text = packageName
                             loadLabelAsync(holder, position, appInfo, packageName)
                         }
-                    } else {
-                        holder.appName?.text = packageName
-                        loadLabelAsync(holder, position, appInfo, packageName)
                     }
                 }
 

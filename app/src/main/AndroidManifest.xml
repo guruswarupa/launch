@@ -126,10 +126,16 @@
 
         <activity
             android:name=".ui.activities.EncryptedVaultActivity"
-            android:exported="false"
+            android:exported="true"
             android:theme="@style/Theme.Launch.Settings"
-            android:label=""
-            android:excludeFromRecents="true" />
+            android:label="@string/vault_app_name"
+            android:icon="@drawable/ic_vault_icon"
+            android:excludeFromRecents="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".ui.activities.NoteEditorActivity"

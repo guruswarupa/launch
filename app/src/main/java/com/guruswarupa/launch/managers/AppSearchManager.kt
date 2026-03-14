@@ -157,6 +157,17 @@ class AppSearchManager(
                 if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.APPS) {
                     fullAppListSnapshot.forEach { info ->
                         val packageName = info.activityInfo.packageName
+                        
+                        // Exclude launcher's own activities except SettingsActivity and EncryptedVaultActivity
+                        if (packageName == context.packageName) {
+                            val activityName = info.activityInfo.name
+                            val isAllowedInternalActivity = activityName.contains("SettingsActivity") || 
+                                                          activityName.contains("EncryptedVaultActivity")
+                            if (!isAllowedInternalActivity || activityName.contains("MainActivity")) {
+                                return@forEach
+                            }
+                        }
+                        
                         // Always respect filtering for Focus Mode or Hidden Apps even during search
                         if (isAppFiltered?.invoke(packageName) == true) return@forEach
                         
@@ -177,7 +188,14 @@ class AppSearchManager(
 
                     // Add settings matches (only in ALL or APPS mode)
                     getSettingsMatches(queryLower).forEach { setting ->
-                        newFilteredList.add(createSettingsOption(setting))
+                        // Prevent duplicate internal results if they are already in the app list
+                        val settingLower = setting.lowercase()
+                        val isDuplicate = settingLower == "launch settings" || 
+                                         settingLower == "vault" || 
+                                         settingLower == "launch"
+                        if (!isDuplicate) {
+                            newFilteredList.add(createSettingsOption(setting))
+                        }
                     }
                     
                     if (currentSearchMode == SearchMode.APPS) return@run // STRICT

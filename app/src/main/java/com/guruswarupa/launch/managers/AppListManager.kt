@@ -32,12 +32,15 @@ class AppListManager(
             val packageName = app.activityInfo.packageName
             val activityName = app.activityInfo.name
             
-            // Allow SettingsActivity, but exclude MainActivity
+            // Allow internal activities (Settings, Vault), but exclude MainActivity
             val isLauncherApp = packageName == "com.guruswarupa.launch"
-            if (isLauncherApp && !(activityName.contains("SettingsActivity") && 
-                                   !activityName.contains("MainActivity"))) {
-                return@filter false
-            }
+            val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") || 
+                                              activityName.contains("EncryptedVaultActivity"))
+            
+            if (isLauncherApp && !isAllowedInternalActivity) return@filter false
+            
+            // If it's a settings or vault activity, we ALWAYS show it (bypass focus/workspace/hidden filters)
+            if (isAllowedInternalActivity) return@filter true
             
             // Filter out hidden apps
             if (hiddenAppManager?.isAppHidden(packageName) == true) return@filter false
@@ -64,18 +67,16 @@ class AppListManager(
             val packageName = app.activityInfo.packageName
             val activityName = app.activityInfo.name
             
-            // Allow SettingsActivity, but exclude MainActivity
+            // Allow internal activities (Settings, Vault), but exclude MainActivity
             val isLauncherApp = packageName == "com.guruswarupa.launch"
-            val isAllowedLauncherActivity = activityName.contains("SettingsActivity") && 
-                                          !activityName.contains("MainActivity")
+            val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") || 
+                                              activityName.contains("EncryptedVaultActivity"))
             
-            val shouldInclude = if (isLauncherApp) {
-                isAllowedLauncherActivity
-            } else {
-                true
-            }
+            if (isLauncherApp && !isAllowedInternalActivity) return@filter false
             
-            shouldInclude &&
+            // If it's a settings or vault activity, we ALWAYS show it
+            if (isAllowedInternalActivity) return@filter true
+            
             // Filter out hidden apps (unless in workspace mode, where we might want to show them)
             !(hiddenAppManager?.isAppHidden(packageName) ?: false) &&
             (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
@@ -96,6 +97,7 @@ class AppListManager(
     /**
      * Sorts apps alphabetically by name using metadata cache when available.
      * Favorites are placed at the very top.
+     * Internal Launcher apps (Settings, Vault) are placed at the absolute bottom.
      * Apps starting with numbers or '#' are placed at the end of the alphabetical section.
      */
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
@@ -103,8 +105,17 @@ class AppListManager(
         val favorites = favoriteAppManager.getFavoriteApps()
         
         return apps.sortedWith(compareBy<ResolveInfo> { app ->
-            // First priority: Favorites (0 for favorite, 1 for rest)
-            if (favorites.contains(app.activityInfo.packageName)) 0 else 1
+            val packageName = app.activityInfo.packageName
+            val activityName = app.activityInfo.name
+            val isInternal = packageName == "com.guruswarupa.launch" && 
+                           (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
+            
+            // Priority: 0 for favorites, 1 for normal apps, 2 for internal apps (at the end)
+            when {
+                favorites.contains(packageName) -> 0
+                isInternal -> 2
+                else -> 1
+            }
         }.thenBy { app ->
             // Second priority: Alphabetical/Numbers
             val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
@@ -150,7 +161,10 @@ class AppListManager(
         
         for (app in apps) {
             val packageName = app.activityInfo.packageName
+            val activityName = app.activityInfo.name
             val isFavorite = favorites.contains(packageName)
+            val isInternal = packageName == "com.guruswarupa.launch" && 
+                           (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
             
             // Transition from favorites to normal apps
             if (hasFavorites && !isFavorite && !isAfterFavorites) {
@@ -159,7 +173,8 @@ class AppListManager(
             }
             
             // Between normal apps with different starting letters
-            if (!isFavorite) {
+            // Skip separators for internal apps shown at the end
+            if (!isFavorite && !isInternal) {
                 val label = metadataCache[packageName]?.label ?: packageName
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
@@ -168,15 +183,17 @@ class AppListManager(
                     result.add(createSeparatorInfo("letter_separator_$effectiveLetter"))
                 }
                 lastLetter = effectiveLetter
+            } else if (isInternal && lastLetter != null) {
+                // When we hit internal apps at the end, ensure we don't add more letter separators
+                // We might want one final separator for system apps
+                if (lastLetter != '⚙') {
+                    result.add(createSeparatorInfo("letter_separator_SYSTEM"))
+                    lastLetter = '⚙'
+                }
             }
             
             result.add(app)
         }
-        
-        // If in grid mode, ensure each section fills its last row with empty items
-        // to maintain proper alignment if separators are used.
-        // However, the current request suggests "arrange the apps properly" which 
-        // usually means ensuring separators don't mess up the grid flow.
         
         return result
     }

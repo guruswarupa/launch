@@ -23,7 +23,6 @@ class FocusModeManager(private val context: Context, private val sharedPreferenc
 
     fun setFocusModeEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(FOCUS_MODE_ENABLED, enabled) }
-        updateDndState(enabled)
         
         // Notify accessibility service about focus mode change
         val intent = Intent("com.guruswarupa.launch.FOCUS_MODE_CHANGED").apply {
@@ -43,7 +42,9 @@ class FocusModeManager(private val context: Context, private val sharedPreferenc
         }
 
         if (notificationManager.currentInterruptionFilter != filter) {
-            notificationManager.setInterruptionFilter(filter)
+            try {
+                notificationManager.setInterruptionFilter(filter)
+            } catch (_: Exception) {}
         }
     }
 
