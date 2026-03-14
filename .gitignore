@@ -20,3 +20,4 @@ wrapper/
 .tmp/
 kotlin-profile/
 jdks/
+app/release/app-release
