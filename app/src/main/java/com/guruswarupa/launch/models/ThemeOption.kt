@@ -14,49 +14,49 @@ data class ThemeOption(
             ThemeOption(
                 "stardust", 
                 "Deep Stardust", 
-                "https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?q=80&w=2400&auto=format&fit=crop", 
+                "https://i.pinimg.com/1200x/0e/dd/70/0edd7082a53fb8ad4cfe4d361904a0a1.jpg", 
                 "#94A3B8",
                 "Landscape"
             ),
             ThemeOption(
                 "forest", 
                 "Evergreen Forest", 
-                "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2400&auto=format&fit=crop", 
+                "https://i.pinimg.com/1200x/f4/7d/d5/f47dd53023bf5efbdf2968ae145e30f8.jpg", 
                 "#10B981",
                 "Landscape"
             ),
             ThemeOption(
                 "midnight_peak",
                 "Midnight Peak",
-                "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/1200x/35/4b/76/354b76938cdf21f8b6e09944e46c3186.jpg",
                 "#6366F1",
                 "Landscape"
             ),
             ThemeOption(
                 "desert", 
                 "Golden Sands", 
-                "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?q=80&w=2400&auto=format&fit=crop", 
+                "https://i.pinimg.com/1200x/1a/77/dc/1a77dcc2b9b830d835d5ce97670fd893.jpg", 
                 "#F59E0B",
                 "Landscape"
             ),
             ThemeOption(
                 "aurora",
                 "Aurora Borealis",
-                "https://images.unsplash.com/photo-1531366930477-4fbd595da335?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/1200x/24/6d/30/246d300272e182a154a400f15618777e.jpg",
                 "#2DD4BF",
                 "Landscape"
             ),
             ThemeOption(
                 "ocean", 
                 "Pacific Blue", 
-                "https://images.unsplash.com/photo-1505118380757-91f5f45d8de4?q=80&w=2400&auto=format&fit=crop", 
+                "https://i.pinimg.com/736x/2c/90/d7/2c90d74fed30e3563155d3158a23d856.jpg", 
                 "#0EA5E9",
                 "Landscape"
             ),
             ThemeOption(
                 "autumn",
                 "Autumn Ember",
-                "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/736x/db/6f/31/db6f310af1b34a66af83037c45651827.jpg",
                 "#EA580C",
                 "Landscape"
             ),
@@ -65,65 +65,74 @@ data class ThemeOption(
             ThemeOption(
                 "cyber",
                 "Cyber City",
-                "https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/1200x/cf/7f/a9/cf7fa9350a8d2a21ee70069059fa641c.jpg",
                 "#F472B6",
                 "City"
             ),
             ThemeOption(
                 "tokyo_night",
                 "Tokyo Neon",
-                "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/736x/03/0a/74/030a74346c9324c13e7939b7c6873f70.jpg",
                 "#818CF8",
                 "City"
             ),
             ThemeOption(
                 "ny_skyline",
                 "Gotham Spirit",
-                "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/1200x/a5/9a/2d/a59a2d7341995e943ea455b68a3b8cdc.jpg",
+                "#FCD34D",
+                "City"
+            ),
+              ThemeOption(
+                "blr_blooms",
+                "Bengaluru Blooms",
+                "https://i.pinimg.com/736x/47/c1/ab/47c1abb68c056f4ba1d96d3a87512322.jpg",
                 "#FCD34D",
                 "City"
             ),
 
-            // Abstract & Gradient
+            // Abstract
             ThemeOption(
                 "lavender",
                 "Lavender Mist",
-                "https://images.unsplash.com/photo-1496101021205-f3763f68d6f5?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/736x/9a/02/0c/9a020c30f610d2930852e9530b153c7a.jpg",
                 "#A855F7",
                 "Abstract"
             ),
             ThemeOption(
                 "solar",
                 "Solar Flare",
-                "https://images.unsplash.com/photo-1541119638723-c51cbe2262aa?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/736x/c4/9a/d4/c49ad42724b3b8095c3289af5513d45f.jpg",
                 "#FB923C",
                 "Abstract"
             ),
             ThemeOption(
                 "crimson",
                 "Crimson Dusk",
-                "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/1200x/3d/6f/89/3d6f89f30253f975787b90ed52a6ff74.jpg",
                 "#F87171",
                 "Abstract"
             ),
+
+            // Minimal
             ThemeOption(
                 "nordic",
                 "Nordic Ice",
-                "https://images.unsplash.com/photo-1516616370751-86d6bd8b03f0?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/736x/8e/ca/6f/8eca6fe01ef8e6d6f43b1f4cbd628196.jpg",
                 "#22D3EE",
                 "Minimal"
             ),
             ThemeOption(
                 "volcanic",
                 "Volcanic Ash",
-                "https://images.unsplash.com/photo-1467348733814-393e0bc59639?q=80&w=2400&auto=format&fit=crop",
+                "https://i.pinimg.com/1200x/a5/b0/1a/a5b01a17de8e3a8e795f0cf6416f842d.jpg",
                 "#9CA3AF",
                 "Minimal"
             ),
             ThemeOption(
                 "minimalist", 
                 "Minimal Slate", 
-                "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2400&auto=format&fit=crop", 
+                "https://i.pinimg.com/1200x/b1/05/65/b105650530a4584e120758f032026a78.jpg", 
                 "#64748B",
                 "Minimal"
             )

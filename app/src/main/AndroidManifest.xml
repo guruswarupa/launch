@@ -149,7 +149,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="App Usage Monitoring" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="App Usage Monitoring" />
         </service>
 
         <service
@@ -163,7 +163,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Shake detection for torch toggle" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="Shake detection for torch toggle" />
         </service>
 
         <service
@@ -171,7 +171,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Screen Dimming" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="Screen Dimming" />
         </service>
 
         <service
@@ -179,7 +179,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Night Mode" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="Night Mode" />
         </service>
 
         <service
@@ -187,7 +187,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Flip to DND sensing" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="Flip to DND sensing" />
         </service>
 
         <service
@@ -195,7 +195,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Back tap gesture detection" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="Back tap gesture detection" />
         </service>
 
         <service
@@ -203,7 +203,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY_USER_SHELTER" android:value="Screen Recording" />
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="Screen Recording" />
         </service>
 
         <activity

@@ -229,18 +229,8 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
-        
-        val selectedThemeId = sharedPreferences.getString(Constants.Prefs.SELECTED_THEME, "system_default")
-        if (selectedThemeId != "system_default") {
-            WallpaperDisplayHelper.applySystemWallpaper(views.rightDrawerWallpaper)
-        } else {
-            try {
-                val drawable = WallpaperManager.getInstance(this).drawable
-                views.rightDrawerWallpaper.setImageDrawable(drawable)
-            } catch (_: Exception) {
-                // Ignore failures when the system wallpaper can't be loaded
-            }
-        }
+        // Always show the system wallpaper for the right drawer to ensure consistency
+        WallpaperDisplayHelper.applySystemWallpaper(views.rightDrawerWallpaper)
     }
 
     /**

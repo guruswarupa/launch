@@ -2,7 +2,6 @@ package com.guruswarupa.launch.utils
 
 import android.app.WallpaperManager
 import android.content.Context
-import android.content.SharedPreferences
 import android.os.Build
 import android.widget.ImageView
 import com.bumptech.glide.Glide
@@ -16,64 +15,61 @@ import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.ThemeOption
 
 object WallpaperDisplayHelper {
+    /**
+     * Applies the actual system wallpaper to the target ImageView.
+     * This always fetches what is currently set as the device wallpaper.
+     */
     fun applySystemWallpaper(target: ImageView, fallbackRes: Int = R.drawable.wallpaper_background) {
         val context = target.context
-        val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-        val selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default")
         
-        if (selectedThemeId == "system_default") {
-            val wallpaperDrawable = try {
-                WallpaperManager.getInstance(context).drawable
-            } catch (_: Exception) {
-                null
-            }
+        val wallpaperDrawable = try {
+            WallpaperManager.getInstance(context).drawable
+        } catch (_: Exception) {
+            null
+        }
 
-            if (wallpaperDrawable != null) {
-                target.setImageDrawable(wallpaperDrawable)
-            } else {
-                target.setImageResource(fallbackRes)
-            }
+        if (wallpaperDrawable != null) {
+            target.setImageDrawable(wallpaperDrawable)
         } else {
-            val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }
-            if (theme != null) {
-                // Use highest quality settings for the actual wallpaper
-                val options = RequestOptions()
-                    .format(DecodeFormat.PREFER_ARGB_8888)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .override(Target.SIZE_ORIGINAL) // Load original resolution
-                    .centerCrop()
+            target.setImageResource(fallbackRes)
+        }
+    }
+    
+    /**
+     * Applies a theme's wallpaper URL to the target ImageView.
+     * Used for previews or when a specific theme wallpaper is requested.
+     */
+    fun applyThemeWallpaper(target: ImageView, themeId: String, fallbackRes: Int = R.drawable.wallpaper_background) {
+        val context = target.context
+        val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId }
+        
+        if (theme != null) {
+            val options = RequestOptions()
+                .format(DecodeFormat.PREFER_ARGB_8888)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .override(Target.SIZE_ORIGINAL)
+                .centerCrop()
 
-                Glide.with(context)
-                    .asDrawable()
-                    .load(theme.wallpaperUrl)
-                    .apply(options)
-                    .transition(DrawableTransitionOptions.withCrossFade())
-                    .placeholder(R.drawable.wallpaper_background)
-                    .error(fallbackRes)
-                    .into(target)
-            } else {
-                target.setImageResource(fallbackRes)
-            }
+            Glide.with(context)
+                .asDrawable()
+                .load(theme.wallpaperUrl)
+                .apply(options)
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .placeholder(R.drawable.wallpaper_background)
+                .error(fallbackRes)
+                .into(target)
+        } else {
+            applySystemWallpaper(target, fallbackRes)
         }
     }
     
     fun applyThemePreview(target: ImageView, themeId: String) {
         val context = target.context
         if (themeId == "system_default") {
-            val wallpaperDrawable = try {
-                WallpaperManager.getInstance(context).drawable
-            } catch (_: Exception) {
-                null
-            }
-            if (wallpaperDrawable != null) {
-                target.setImageDrawable(wallpaperDrawable)
-            } else {
-                target.setImageResource(R.drawable.wallpaper_background)
-            }
+            applySystemWallpaper(target)
         } else {
             val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId }
             if (theme != null) {
-                // Previews can be smaller to save memory, but still clear
                 Glide.with(context)
                     .load(theme.wallpaperUrl)
                     .placeholder(R.drawable.wallpaper_background)

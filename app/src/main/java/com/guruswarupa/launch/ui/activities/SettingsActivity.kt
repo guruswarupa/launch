@@ -97,7 +97,7 @@ class SettingsActivity : ComponentActivity() {
     private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
         notifySettingsChanged()
-        setupWallpaper()
+        setupWallpaper(null)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,7 +114,9 @@ class SettingsActivity : ComponentActivity() {
 
         selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default") ?: "system_default"
 
-        setupWallpaper()
+        // Always show system wallpaper on startup as per user request
+        setupWallpaper(null)
+        
         setupAppearanceSection()
         setupActionsSection()
         setupSecuritySection()
@@ -188,9 +190,13 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
-    private fun setupWallpaper() {
+    private fun setupWallpaper(demoThemeId: String?) {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
+        if (demoThemeId == null || demoThemeId == "system_default") {
+            WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
+        } else {
+            WallpaperDisplayHelper.applyThemeWallpaper(wallpaperImageView, demoThemeId)
+        }
     }
 
     private fun setupAppearanceSection() {
@@ -375,7 +381,7 @@ class SettingsActivity : ComponentActivity() {
                         selectedThemeId = "system_default"
                         prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
                         setupThemeSelection()
-                        setupWallpaper()
+                        setupWallpaper(null) // Reset to system wallpaper
                         notifySettingsChanged()
                     } else {
                         selectedThemeCategory = category
@@ -445,7 +451,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
                     applyBtn.isVisible = theme.id != "system_default"
                     setupThemeSelection()
-                    setupWallpaper()
+                    setupWallpaper(theme.id) // Demo preview
                     notifySettingsChanged()
                 }
                 row.addView(themeView)

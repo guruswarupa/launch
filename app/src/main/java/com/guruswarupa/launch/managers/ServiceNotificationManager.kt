@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import java.util.Collections
 
 /**
  * Manages a single consolidated notification for all Launch background services.
@@ -19,7 +20,9 @@ object ServiceNotificationManager {
     private const val CHANNEL_NAME = "Launch Background Services"
     const val NOTIFICATION_ID = 1000
 
-    private val activeServices = mutableSetOf<String>()
+    // Use a synchronized set for thread safety
+    private val activeServices = Collections.synchronizedSet(mutableSetOf<String>())
+    private var isChannelCreated = false
 
     fun updateServiceStatus(context: Context, serviceName: String, isRunning: Boolean): Notification {
         if (isRunning) {
@@ -28,11 +31,19 @@ object ServiceNotificationManager {
             activeServices.remove(serviceName)
         }
 
-        createNotificationChannel(context)
+        if (!isChannelCreated) {
+            createNotificationChannel(context)
+            isChannelCreated = true
+        }
+        
         val notification = createNotification(context)
         
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        if (activeServices.isNotEmpty()) {
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        } else {
+            notificationManager.cancel(NOTIFICATION_ID)
+        }
         
         return notification
     }
@@ -67,17 +78,15 @@ object ServiceNotificationManager {
         )
 
         val contentText = if (activeServices.isEmpty()) {
-            "No background services running"
+            "Launch background services"
         } else {
             activeServices.joinToString(", ")
         }
 
-        val title = if (activeServices.size == 1) {
-            "Launch Service Active"
-        } else if (activeServices.size > 1) {
-            "Launch Services Active (${activeServices.size})"
-        } else {
-            "Launch Services"
+        val title = when {
+            activeServices.size == 1 -> "Launch Service Active"
+            activeServices.size > 1 -> "Launch Services Active (${activeServices.size})"
+            else -> "Launch Services"
         }
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
@@ -89,6 +98,7 @@ object ServiceNotificationManager {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setShowWhen(false)
+            .setSilent(true)
             .build()
     }
 }

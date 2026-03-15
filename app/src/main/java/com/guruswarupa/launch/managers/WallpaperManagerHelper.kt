@@ -37,14 +37,9 @@ class WallpaperManagerHelper(
         // Apply blur based on preference
         applyBlurToViews()
 
-        val selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default") ?: "system_default"
-        
-        if (selectedThemeId != "system_default") {
-            // Apply custom theme wallpaper
-            WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
-            drawerWallpaperBackground?.let { WallpaperDisplayHelper.applySystemWallpaper(it) }
-            return
-        }
+        // We always prioritize the system wallpaper for the home screens.
+        // Even if a theme is selected for colors/icons, we show the system wallpaper.
+        // Users can "Apply" a theme's wallpaper to the system via settings.
 
         val wallpaperManager = WallpaperManager.getInstance(activity)
         val wallpaperId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
