@@ -628,7 +628,9 @@ class SettingsActivity : ComponentActivity() {
 
         val acts = arrayOf("None", "Torch", "Screenshot", "Notifications", "Screen Off", "Sound")
         val vals = arrayOf(BackTapService.ACTION_NONE, BackTapService.ACTION_TORCH_TOGGLE, BackTapService.ACTION_SCREENSHOT, BackTapService.ACTION_NOTIFICATIONS, BackTapService.ACTION_SCREEN_OFF, BackTapService.ACTION_SOUND_TOGGLE)
-        spin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, acts).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        spin.adapter =  ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, acts).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
         spin.setSelection(vals.indexOf(prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, BackTapService.ACTION_SOUND_TOGGLE)).coerceAtLeast(0))
 
         val cur = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 7).coerceIn(1, 10)
@@ -851,7 +853,9 @@ class SettingsActivity : ComponentActivity() {
 
         val intV = arrayOf("light", "regular", "bold", "extra_bold")
         val intL = arrayOf("Light weight", "Regular weight", "Bold weight", "Heavy weight")
-        intS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, intL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        intS.adapter =  ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, intL).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
         intS.setSelection(intV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular")).coerceAtLeast(0))
         intS.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
