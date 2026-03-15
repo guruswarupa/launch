@@ -35,8 +35,6 @@ class AppLockSettingsActivity : ComponentActivity() {
     private lateinit var changePinButton: Button
     private lateinit var resetAppLockButton: Button
     private var isPinVerifiedForThisSession = false
-    
-    private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Enable edge-to-edge for transparent system bars with white icons
@@ -47,7 +45,6 @@ class AppLockSettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_app_lock_settings)
         applyContentInsets()
-        applyBackgroundTranslucency()
         
         appLockManager = AppLockManager(this)
         setupViews()
@@ -171,13 +168,6 @@ class AppLockSettingsActivity : ComponentActivity() {
         return apps.filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
             .map { AppInfo(it.packageName, it.loadLabel(pm).toString(), it.loadIcon(pm)) }
             .sortedBy { it.appName }
-    }
-
-    private fun applyBackgroundTranslucency() {
-        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
-        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
-        val color = Color.argb(alpha, 0, 0, 0)
-        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
 
     private fun applyContentInsets() {

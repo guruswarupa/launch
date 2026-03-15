@@ -85,7 +85,7 @@ class SettingsActivity : ComponentActivity() {
         SettingsTutorialStep("Security", "Manage App Lock and your Encrypted Vault.", R.id.app_lock_header),
         SettingsTutorialStep("System", "Backup, Restore, and Launcher maintenance.", R.id.backup_restore_header)
     )
-    
+
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) result.data?.data?.let { exportSettingsToFile(it) }
     }
@@ -102,13 +102,13 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Enable edge-to-edge for transparent system bars with white icons
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
-        
+
         setContentView(R.layout.activity_settings)
         applyContentInsets()
         applyBackgroundTranslucency()
@@ -117,7 +117,7 @@ class SettingsActivity : ComponentActivity() {
 
         // Always show system wallpaper on startup as per user request
         setupWallpaper(null)
-        
+
         setupAppearanceSection()
         setupActionsSection()
         setupSecuritySection()
@@ -134,12 +134,12 @@ class SettingsActivity : ComponentActivity() {
             window.decorView.post { startSettingsTutorial() }
         }
     }
-    
+
     private fun triggerWallpaperPicker(themeId: String) {
         val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId } ?: return
-        
+
         Toast.makeText(this, "Preparing wallpaper picker...", Toast.LENGTH_SHORT).show()
-        
+
         Glide.with(this)
             .asFile()
             .load(theme.wallpaperUrl)
@@ -148,13 +148,13 @@ class SettingsActivity : ComponentActivity() {
                     try {
                         val wallpaperFile = File(cacheDir, "theme_wallpaper.jpg")
                         resource.copyTo(wallpaperFile, overwrite = true)
-                        
+
                         val uri = androidx.core.content.FileProvider.getUriForFile(
-                            this@SettingsActivity, 
-                            "$packageName.fileprovider", 
+                            this@SettingsActivity,
+                            "$packageName.fileprovider",
                             wallpaperFile
                         )
-                        
+
                         val wm = WallpaperManager.getInstance(this@SettingsActivity)
                         try {
                             // Try the direct crop-and-set intent
@@ -170,7 +170,7 @@ class SettingsActivity : ComponentActivity() {
                             }
                             startActivity(Intent.createChooser(intent, "Set System Wallpaper"))
                         }
-                        
+
                         Toast.makeText(this@SettingsActivity, "Use the system dialog to set your wallpaper.", Toast.LENGTH_LONG).show()
                     } catch (e: Exception) {
                         Toast.makeText(this@SettingsActivity, "Failed to prepare wallpaper: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -211,7 +211,7 @@ class SettingsActivity : ComponentActivity() {
         val gridSection = findViewById<LinearLayout>(R.id.grid_columns_section)
         val gridValue = findViewById<TextView>(R.id.grid_columns_value)
         val gridSeek = findViewById<SeekBar>(R.id.grid_columns_seekbar)
-        
+
         val minCols = resources.getInteger(R.integer.grid_columns_min)
         val maxCols = resources.getInteger(R.integer.grid_columns_max)
         var selectedCols = prefs.getInt(Constants.Prefs.GRID_COLUMNS, resources.getInteger(R.integer.app_grid_columns))
@@ -222,7 +222,7 @@ class SettingsActivity : ComponentActivity() {
         gridSeek.max = maxCols - minCols
         gridSeek.progress = selectedCols - minCols
         gridValue.text = getString(R.string.apps_per_row_format, selectedCols)
-        
+
         gridSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
                 selectedCols = minCols + p
@@ -237,7 +237,7 @@ class SettingsActivity : ComponentActivity() {
 
         updateDisplayStyleButtons(gridBtn, listBtn, selectedStyle)
         gridSection.isVisible = selectedStyle == "grid"
-        
+
         gridBtn.setOnClickListener {
             selectedStyle = "grid"
             updateDisplayStyleButtons(gridBtn, listBtn, "grid")
@@ -258,7 +258,7 @@ class SettingsActivity : ComponentActivity() {
         val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
         val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
         val iconVal = findViewById<TextView>(R.id.icon_size_value)
-        
+
         val shapes = arrayOf("Round", "Squircle", "Squared", "Teardrop", "Vortex", "Overlay")
         val values = arrayOf("round", "squircle", "squared", "teardrop", "vortex", "overlay")
         iconSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, shapes).apply {
@@ -272,7 +272,7 @@ class SettingsActivity : ComponentActivity() {
             }
             override fun onNothingSelected(p: AdapterView<*>) {}
         }
-        
+
         val currentSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
         iconSeek.max = 60 // 36 to 96
         iconSeek.progress = currentSize - 36
@@ -317,11 +317,11 @@ class SettingsActivity : ComponentActivity() {
         val translucencySeek = findViewById<SeekBar>(R.id.background_translucency_seekbar)
         val translucencyValue = findViewById<TextView>(R.id.background_translucency_value)
         val currentTranslucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
-        
+
         translucencySeek.max = 100
         translucencySeek.progress = currentTranslucency
         translucencyValue.text = "$currentTranslucency%"
-        
+
         translucencySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
                 translucencyValue.text = "$p%"
@@ -329,7 +329,7 @@ class SettingsActivity : ComponentActivity() {
                 val alpha = (p * 255 / 100).coerceIn(0, 255)
                 val color = Color.argb(alpha, 0, 0, 0)
                 findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
-                
+
                 if (f) {
                     prefs.edit { putInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, p) }
                     notifySettingsChanged()
@@ -348,7 +348,7 @@ class SettingsActivity : ComponentActivity() {
         if (selectedThemeCategory == null) {
             // Show Category Cards
             val categories = listOf("System", "Landscape", "City", "Abstract", "Minimal")
-            
+
             val scrollContainer = HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -368,7 +368,7 @@ class SettingsActivity : ComponentActivity() {
 
                 name.text = category
                 indicator.isVisible = false
-                
+
                 // Highlight if selected
                 val isSelected = if (category == "System") {
                     selectedThemeId == "system_default"
@@ -413,14 +413,14 @@ class SettingsActivity : ComponentActivity() {
         } else {
             // Show Themes in Selected Category
             val category = selectedThemeCategory!!
-            
+
             val contentRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = android.view.Gravity.CENTER_VERTICAL
             }
-            
+
             val backBtn = ImageButton(this).apply {
-                setImageResource(R.drawable.ic_arrow_right) 
+                setImageResource(R.drawable.ic_arrow_right)
                 rotation = 180f
                 setBackgroundResource(android.R.color.transparent)
                 setColorFilter(ContextCompat.getColor(this@SettingsActivity, R.color.white))
@@ -475,7 +475,7 @@ class SettingsActivity : ComponentActivity() {
                 }
                 row.addView(themeView)
             }
-            
+
             // Ensure button visibility is correct based on currently selected theme in this category
             applyBtn.isVisible = selectedThemeId != "system_default" && themes.any { it.id == selectedThemeId }
         }
@@ -695,7 +695,7 @@ class SettingsActivity : ComponentActivity() {
         val seek = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
         val valT = findViewById<TextView>(R.id.dimmer_value_text)
         val cont = findViewById<View>(R.id.screen_dimmer_container)
-        
+
         val en = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
         sw.isChecked = en
         seek.progress = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 10)
@@ -729,7 +729,7 @@ class SettingsActivity : ComponentActivity() {
         val seek = findViewById<SeekBar>(R.id.night_mode_intensity_seekbar)
         val valT = findViewById<TextView>(R.id.night_mode_value_text)
         val cont = findViewById<View>(R.id.night_mode_container)
-        
+
         val en = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
         sw.isChecked = en
         seek.progress = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
@@ -799,11 +799,11 @@ class SettingsActivity : ComponentActivity() {
         val colS = findViewById<Spinner>(R.id.typography_color_spinner)
 
         val scale = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
-        
+
         // Prepare font style lists including downloaded fonts
         val baseStyV = mutableListOf("default", "serif", "monospace", "condensed", "rounded", "casual", "cursive")
         val baseStyL = mutableListOf("Modern Sans", "Classic Serif", "Dev Mono", "Clean Condensed", "Soft Rounded", "Casual Hand", "Creative Script")
-        
+
         // Add downloaded fonts to the dropdown lists
         DownloadableFontManager.getFontOptions().forEach { font ->
             if (DownloadableFontManager.isDownloaded(this, font.styleKey)) {
@@ -828,7 +828,7 @@ class SettingsActivity : ComponentActivity() {
         })
 
         styS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, baseStyL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
-        
+
         val currentStyle = prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
         val selectedIndex = baseStyV.indexOf(currentStyle)
         if (selectedIndex >= 0) {
@@ -861,9 +861,56 @@ class SettingsActivity : ComponentActivity() {
             } override fun onNothingSelected(p: AdapterView<*>) {}
         }
 
-        val colL = arrayOf("Default Adaptive", "Pure White", "Deep Ocean", "Electric Purple", "Neon Pink", "Solar Gold", "Emerald Mist", "Arctic Frost", "Midnight Teal", "Cyan Accent", "Nord Mint", "Lavender", "Orange Glow", "Slate Gray")
-        val colV = arrayOf(Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, "#FFFFFFFF", "#FF1E3A8A", "#FF7C3AED", "#FFEC4899", "#FFF59E0B", "#FF10B981", "#FF93C5FD", "#FF0F766E", "#FF03DAC5", "#FF8FBCBB", "#FFB48EAD", "#FFD08770", "#FF4A5568")
-        colS.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, colL).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        val colL = arrayOf(
+            "Pure White",      // Default white text
+            "Electric Purple", // Bright purple
+            "Neon Pink",       // Vibrant pink
+            "Solar Gold",      // Golden yellow
+            "Emerald Mist",    // Soft emerald green
+            "Arctic Frost",    // Light icy blue
+            "Midnight Teal",   // Deep teal tone
+            "Cyan Accent",     // Bright cyan
+            "Nord Mint",       // Nordic mint green
+            "Lavender",        // Soft lavender purple
+            "Orange Glow",     // Warm orange glow
+
+            "Sky Blue",        // Clear bright sky blue
+            "Soft Coral",      // Light coral red
+            "Lime Glow",       // Bright lime green
+            "Ice Blue",        // Pale icy blue
+            "Rose Pink",       // Soft rose pink
+            "Bright Amber",    // Strong amber yellow
+            "Mint Green",      // Fresh mint green
+            "Violet Glow",     // Bright glowing violet
+            "Aqua Light",      // Light aqua cyan
+            "Peach Light"      // Soft peach tone
+        )
+
+        val colV = arrayOf(
+            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, // Pure White
+            "#FF7C3AED", // Electric Purple
+            "#FFEC4899", // Neon Pink
+            "#FFF59E0B", // Solar Gold
+            "#FF10B981", // Emerald Mist
+            "#FF93C5FD", // Arctic Frost
+            "#FF0F766E", // Midnight Teal
+            "#FF03DAC5", // Cyan Accent
+            "#FF8FBCBB", // Nord Mint
+            "#FFB48EAD", // Lavender
+            "#FFD08770", // Orange Glow
+
+            "#FF60A5FA", // Sky Blue
+            "#FFF87171", // Soft Coral
+            "#FFA3E635", // Lime Glow
+            "#FFBAE6FD", // Ice Blue
+            "#FFF472B6", // Rose Pink
+            "#FFFBBF24", // Bright Amber
+            "#FF6EE7B7", // Mint Green
+            "#FFA78BFA", // Violet Glow
+            "#FF67E8F9", // Aqua Light
+            "#FFFDA4AF"  // Peach Light
+        )
+        colS.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, colL, colV).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         colS.setSelection(colV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)).coerceAtLeast(0))
         colS.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
@@ -971,9 +1018,9 @@ class SettingsActivity : ComponentActivity() {
             .setTitle("Restart Launcher")
             .setMessage("Are you sure you want to restart the launcher?")
             .setPositiveButton("Restart") { _, _ ->
-                packageManager.getLaunchIntentForPackage(packageName)?.let { 
+                packageManager.getLaunchIntentForPackage(packageName)?.let {
                     startActivity(Intent.makeRestartActivityTask(it.component!!))
-                    Runtime.getRuntime().exit(0) 
+                    Runtime.getRuntime().exit(0)
                 }
             }
             .setNegativeButton("Later", null)
@@ -1038,7 +1085,7 @@ class SettingsActivity : ComponentActivity() {
                                     val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
                                     p.keys().forEach { k ->
                                         val v = p.get(k)
-                                        
+
                                         // Fix for corrupted data format: if it should be a set but is a string like "[a, b]"
                                         if (k in stringSetKeys) {
                                             val set = when (v) {
@@ -1094,30 +1141,41 @@ class SettingsActivity : ComponentActivity() {
 }
 
 /**
- * Custom ArrayAdapter that applies theme color to spinner items
+ * Custom ArrayAdapter that applies theme color or specific item colors to spinner items
  */
 class ThemedArrayAdapter(
     context: Context,
     private val resource: Int,
-    objects: Array<String>
+    objects: Array<String>,
+    private val itemColors: Array<String>? = null
 ) : ArrayAdapter<String>(context, resource, objects) {
-    
+
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
         val view = super.getView(position, convertView, parent)
-        applyThemeColor(view)
+        applyThemeColor(view, position)
         return view
     }
-    
+
     override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup?): View {
         val view = super.getDropDownView(position, convertView, parent)
-        applyThemeColor(view)
+        applyThemeColor(view, position)
         return view
     }
-    
-    private fun applyThemeColor(view: View) {
+
+    private fun applyThemeColor(view: View, position: Int) {
         if (view is TextView) {
-            val themeColor = TypographyManager.getConfiguredFontColor(context) ?: Color.WHITE
-            view.setTextColor(themeColor)
+            val color = if (itemColors != null && position < itemColors.size) {
+                val colorStr = itemColors[position]
+                if (colorStr == Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT) {
+                    // For default adaptive, use white or some neutral color for the preview
+                    Color.WHITE
+                } else {
+                    try { Color.parseColor(colorStr) } catch (e: Exception) { Color.WHITE }
+                }
+            } else {
+                TypographyManager.getConfiguredFontColor(context) ?: Color.WHITE
+            }
+            view.setTextColor(color)
         }
     }
 }

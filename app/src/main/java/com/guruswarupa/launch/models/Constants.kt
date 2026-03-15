@@ -45,8 +45,8 @@ object Constants {
 
     }
 
-    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "default"
-    
+    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "#FFFFFFF"
+
     // FileProvider
     const val FILE_PROVIDER_AUTHORITY_SUFFIX = ".fileprovider"
     
