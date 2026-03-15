@@ -61,8 +61,6 @@ class BackTapService : Service() {
     override fun onCreate() {
         super.onCreate()
         try {
-            startForegroundServiceStatus()
-            
             torchManager = TorchManager(this)
             
             backTapDetector = BackTapDetector(this) { count ->
@@ -104,9 +102,18 @@ class BackTapService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // CRITICAL: Call startForeground IMMEDIATELY and UNCONDITIONALLY as the first operation
+        // This MUST happen within 5 seconds to avoid ForegroundServiceDidNotStartInTimeException
         try {
             startForegroundServiceStatus()
-            
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground service", e)
+            // If we can't start foreground, we must stop the service
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        
+        try {
             applySettings()
             
             when (intent?.action) {

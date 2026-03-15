@@ -78,10 +78,18 @@ class ShakeDetectionService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // ALWAYS call startForeground as the very first thing in onStartCommand
-        // to satisfy the system's requirement for startForegroundService()
-        startForegroundServiceStatus()
+        // CRITICAL: Call startForeground IMMEDIATELY and UNCONDITIONALLY as the first operation
+        // This MUST happen within 5 seconds to avoid ForegroundServiceDidNotStartInTimeException
+        try {
+            startForegroundServiceStatus()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground service", e)
+            // If we can't start foreground, we must stop the service
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
+        // Now handle the service logic after foreground is established
         try {
             applySensitivity()
 

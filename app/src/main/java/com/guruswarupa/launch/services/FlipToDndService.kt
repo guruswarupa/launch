@@ -55,8 +55,6 @@ class FlipToDndService : Service(), SensorEventListener {
             notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             sharedPreferences = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
             
-            startForegroundServiceStatus()
-            
             registerSensors()
         } catch (e: Exception) {
             Log.e(TAG, "Error in onCreate", e)
@@ -88,10 +86,14 @@ class FlipToDndService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // CRITICAL: Call startForeground IMMEDIATELY and UNCONDITIONALLY as the first operation
+        // This MUST happen within 5 seconds to avoid ForegroundServiceDidNotStartInTimeException
         try {
             startForegroundServiceStatus()
         } catch (e: Exception) {
-            Log.e(TAG, "Error in onStartCommand", e)
+            Log.e(TAG, "Failed to start foreground service", e)
+            stopSelf()
+            return START_NOT_STICKY
         }
         return START_STICKY
     }
