@@ -347,6 +347,49 @@
                                 app:thumbTint="@color/nord8"
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/background_translucency_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="20dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Background Translucency"
+                                    android:textSize="15sp"
+                                    android:textColor="@color/white"/>
+
+                                <TextView
+                                    android:id="@+id/background_translucency_value"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="40%"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:textColor="@color/nord8"
+                                    android:gravity="end"/>
+                            </LinearLayout>
+
+                            <SeekBar
+                                android:id="@+id/background_translucency_seekbar"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:paddingHorizontal="0dp"
+                                android:thumbTint="@color/nord8"
+                                android:progressTint="@color/nord8"
+                                android:progressBackgroundTint="#20FFFFFF"/>
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

@@ -132,6 +132,7 @@ class MainActivity : FragmentActivity() {
     fun isAppListLoaderInitialized() = ::appListLoader.isInitialized
     fun isFinanceWidgetManagerInitialized() = ::financeWidgetManager.isInitialized
     fun isTimeDateManagerInitialized() = ::timeDateManager.isInitialized
+    fun isViewsInitialized() = ::activityInitializer.isInitialized
 
     /**
      * Initializes core managers that are needed early in the lifecycle.

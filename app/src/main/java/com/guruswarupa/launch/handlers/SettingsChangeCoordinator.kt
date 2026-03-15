@@ -1,5 +1,6 @@
 package com.guruswarupa.launch.handlers
 
+import android.graphics.Color
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.guruswarupa.launch.MainActivity
@@ -39,6 +40,22 @@ class SettingsChangeCoordinator(
     }
 
     /**
+     * Applies background translucency to center and left pages based on saved preference.
+     */
+    fun applyBackgroundTranslucency() {
+        val sharedPreferences = activity.sharedPreferences
+        val views = activity.views
+        val translucency = sharedPreferences.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        
+        if (activity.isViewsInitialized() && views.areTranslucencyOverlaysInitialized()) {
+            views.backgroundTranslucencyOverlay.setBackgroundColor(color)
+            views.widgetsDrawerTranslucencyOverlay.setBackgroundColor(color)
+        }
+    }
+
+    /**
      * Handles updates when shared preferences change.
      */
     fun handleSettingsUpdate() {
@@ -48,6 +65,7 @@ class SettingsChangeCoordinator(
         val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
 
         applyThemeBasedWidgetBackgrounds()
+        applyBackgroundTranslucency()
         TypographyManager.applyToActivity(activity)
         views.fastScroller.refreshTypography(sharedPreferences)
 

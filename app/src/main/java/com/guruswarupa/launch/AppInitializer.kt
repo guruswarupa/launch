@@ -121,6 +121,9 @@ class AppInitializer(private val activity: MainActivity) {
             // Apply theme-appropriate widget backgrounds
             applyThemeBasedWidgetBackgrounds()
             
+            // Apply background translucency
+            settingsChangeCoordinator.applyBackgroundTranslucency()
+            
             // Initialize appList before using it (must be initialized before appListLoader)
             appList = mutableListOf()
             fullAppList = mutableListOf()

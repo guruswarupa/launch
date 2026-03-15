@@ -98,6 +98,8 @@ class ActivityInitializer(
             weeklyUsageGraph = activity.findViewById(R.id.weekly_usage_graph)
             searchTypeButton = activity.findViewById(R.id.search_type_button)
             drawerLayout = activity.findViewById(R.id.drawer_layout)
+            backgroundTranslucencyOverlay = activity.findViewById(R.id.background_translucency_overlay)
+            widgetsDrawerTranslucencyOverlay = activity.findViewById(R.id.widgets_drawer_translucency_overlay)
 
             setupSearchBox(searchBox)
             setupLayoutManager(recyclerView)

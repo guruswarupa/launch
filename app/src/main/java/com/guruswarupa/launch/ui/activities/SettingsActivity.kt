@@ -319,6 +319,27 @@ class SettingsActivity : ComponentActivity() {
                 notifySettingsChanged()
             }
         }
+
+        // Background Translucency
+        val translucencySeek = findViewById<SeekBar>(R.id.background_translucency_seekbar)
+        val translucencyValue = findViewById<TextView>(R.id.background_translucency_value)
+        val currentTranslucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        
+        translucencySeek.max = 100
+        translucencySeek.progress = currentTranslucency
+        translucencyValue.text = "$currentTranslucency%"
+        
+        translucencySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
+                translucencyValue.text = "$p%"
+                if (f) {
+                    prefs.edit { putInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, p) }
+                    notifySettingsChanged()
+                }
+            }
+            override fun onStartTrackingTouch(s: SeekBar?) {}
+            override fun onStopTrackingTouch(s: SeekBar?) {}
+        })
     }
 
     private fun setupThemeSelection() {
