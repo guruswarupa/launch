@@ -261,7 +261,7 @@ class SettingsActivity : ComponentActivity() {
         
         val shapes = arrayOf("Round", "Squircle", "Squared", "Teardrop", "Vortex", "Overlay")
         val values = arrayOf("round", "squircle", "squared", "teardrop", "vortex", "overlay")
-        iconSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, shapes).apply {
+        iconSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, shapes).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
         iconSpinner.setSelection(values.indexOf(prefs.getString(Constants.Prefs.ICON_STYLE, "squircle")).coerceAtLeast(0))
@@ -781,7 +781,7 @@ class SettingsActivity : ComponentActivity() {
     private fun setupSearchEngine() {
         val s = findViewById<Spinner>(R.id.search_engine_spinner)
         val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
-        s.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, engines).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        s.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, engines).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         s.setSelection(engines.indexOf(prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")).coerceAtLeast(0))
         s.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
@@ -1090,5 +1090,34 @@ class SettingsActivity : ComponentActivity() {
         if (settingsTutorialStepIndex >= settingsTutorialSteps.size) { settingsTutorialActive = false; return }
         val step = settingsTutorialSteps[settingsTutorialStepIndex]
         AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle(step.title).setMessage(step.description).setPositiveButton(if (settingsTutorialStepIndex == settingsTutorialSteps.size - 1) "Finish" else "Next") { _, _ -> settingsTutorialStepIndex++; showCurrentSettingsTutorialStep() }.setNegativeButton("Skip") { _, _ -> settingsTutorialActive = false }.show()
+    }
+}
+
+/**
+ * Custom ArrayAdapter that applies theme color to spinner items
+ */
+class ThemedArrayAdapter(
+    context: Context,
+    private val resource: Int,
+    objects: Array<String>
+) : ArrayAdapter<String>(context, resource, objects) {
+    
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+        val view = super.getView(position, convertView, parent)
+        applyThemeColor(view)
+        return view
+    }
+    
+    override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup?): View {
+        val view = super.getDropDownView(position, convertView, parent)
+        applyThemeColor(view)
+        return view
+    }
+    
+    private fun applyThemeColor(view: View) {
+        if (view is TextView) {
+            val themeColor = TypographyManager.getConfiguredFontColor(context) ?: Color.WHITE
+            view.setTextColor(themeColor)
+        }
     }
 }

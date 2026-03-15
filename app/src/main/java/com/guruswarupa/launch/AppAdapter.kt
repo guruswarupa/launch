@@ -798,7 +798,7 @@ class AppAdapter(
     @SuppressLint("DiscouragedPrivateApi")
     private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
         try {
-            val textColor = ContextCompat.getColor(activity, R.color.text)
+            val textColor = TypographyManager.getConfiguredFontColor(activity) ?: ContextCompat.getColor(activity, R.color.text)
             val popupField = popupMenu.javaClass.getDeclaredField("mPopup")
             popupField.isAccessible = true
             val menuPopupHelper = popupField.get(popupMenu)
@@ -820,8 +820,21 @@ class AppAdapter(
             }
             
             listView?.let { lv ->
+                // Apply immediately
                 try { for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i)) } catch (_: Exception) {}
-                lv.post { try { for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i)) } catch (_: Exception) {} }
+                // Apply again after layout to catch all items
+                lv.post { 
+                    try { 
+                        for (i in 0 until lv.childCount) { 
+                            val itemView = lv.getChildAt(i)
+                            if (itemView is TextView) {
+                                itemView.setTextColor(textColor)
+                            } else if (itemView is ViewGroup) {
+                                findTextViewsAndSetColor(itemView, textColor)
+                            }
+                        }
+                    } catch (_: Exception) {} 
+                }
             }
         } catch (_: Exception) {}
     }
