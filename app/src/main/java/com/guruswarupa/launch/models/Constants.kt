@@ -36,7 +36,6 @@ object Constants {
         const val GRID_COLUMNS = "grid_columns"
         const val ICON_STYLE = "icon_style"
         const val ICON_SIZE = "icon_size"
-        const val APP_NAME_SCRIM_ENABLED = "app_name_scrim_enabled"
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
         
         // Vault Prefs (Simplified)

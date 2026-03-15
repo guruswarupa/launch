@@ -86,7 +86,6 @@ class AppAdapter(
     private val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
     private var currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
-    private var isAppNameScrimEnabled = prefs.getBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, false)
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
         override fun run() = action.run()
@@ -115,14 +114,6 @@ class AppAdapter(
 
     fun updateIconSize(size: Int) {
         currentIconSize = size
-        (context as? Activity)?.runOnUiThread {
-            notifyDataSetChanged()
-        }
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    fun updateAppNameScrim(enabled: Boolean) {
-        isAppNameScrimEnabled = enabled
         (context as? Activity)?.runOnUiThread {
             notifyDataSetChanged()
         }
@@ -342,13 +333,6 @@ class AppAdapter(
             params.width = sizeInPx
             params.height = sizeInPx
             holder.appIcon.layoutParams = params
-        }
-
-        // Apply background translucent scrim to the whole row/item container if enabled
-        if (isAppNameScrimEnabled) {
-            holder.container?.setBackgroundResource(R.drawable.app_name_scrim)
-        } else {
-            holder.container?.background = null
         }
 
         holder.appIcon?.background = null

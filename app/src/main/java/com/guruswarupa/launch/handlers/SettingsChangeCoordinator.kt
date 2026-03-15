@@ -134,10 +134,6 @@ class SettingsChangeCoordinator(
         // Update icon size if changed
         val iconSize = sharedPreferences.getInt(Constants.Prefs.ICON_SIZE, 40)
         adapter?.updateIconSize(iconSize)
-
-        // Update app name scrim if changed
-        val isAppNameScrimEnabled = sharedPreferences.getBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, false)
-        adapter?.updateAppNameScrim(isAppNameScrimEnabled)
         
         // Update fast scroller visibility
         activity.updateFastScrollerVisibility()

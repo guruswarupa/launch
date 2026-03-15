@@ -312,14 +312,6 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
-        findViewById<SwitchCompat>(R.id.app_name_scrim_switch).apply {
-            isChecked = prefs.getBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, false)
-            setOnCheckedChangeListener { _, isChecked ->
-                prefs.edit { putBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, isChecked) }
-                notifySettingsChanged()
-            }
-        }
-
         // Background Translucency
         val translucencySeek = findViewById<SeekBar>(R.id.background_translucency_seekbar)
         val translucencyValue = findViewById<TextView>(R.id.background_translucency_value)

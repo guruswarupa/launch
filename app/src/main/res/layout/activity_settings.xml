@@ -312,43 +312,6 @@
 
                         <!-- App Highlighting / Scrim Option -->
                         <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginTop="16dp">
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Enhanced Readability"
-                                    android:textColor="@color/white"
-                                    android:textSize="15sp"/>
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Pill background for apps and scroll bar"
-                                    android:textColor="@color/white"
-                                    android:alpha="0.5"
-                                    android:textSize="11sp"/>
-                            </LinearLayout>
-
-                            <androidx.appcompat.widget.SwitchCompat
-                                android:id="@+id/app_name_scrim_switch"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                app:thumbTint="@color/nord8"
-                                app:trackTint="#30FFFFFF"/>
-                        </LinearLayout>
-
-                        <LinearLayout
                             android:id="@+id/background_translucency_section"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

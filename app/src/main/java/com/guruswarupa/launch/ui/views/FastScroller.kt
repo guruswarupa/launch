@@ -46,8 +46,6 @@ class FastScroller @JvmOverloads constructor(
     private var selectedIndex = -1
     private var scrollIndex = -1
     private var isSliding = false
-    
-    private var isAppNameScrimEnabled = false
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ColorUtils.setAlphaComponent(currentColor, 20)
@@ -92,26 +90,12 @@ class FastScroller @JvmOverloads constructor(
         textSize = 30f * density
         isFakeBoldText = true
     }
-    
-    private val scrimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#80000000")
-        style = Paint.Style.FILL
-    }
-
-    private val scrimStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#40FFFFFF")
-        style = Paint.Style.STROKE
-        strokeWidth = 1f * density
-    }
 
     private val wavePath = Path()
 
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
         refreshTypography()
-        
-        val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-        isAppNameScrimEnabled = prefs.getBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, false)
     }
 
     fun setRecyclerView(rv: RecyclerView) {
@@ -209,8 +193,6 @@ class FastScroller @JvmOverloads constructor(
         val intensity = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
         applyTypeface(fontStyle, intensity)
         TypographyManager.getConfiguredFontColor(context)?.let { setTextColor(it) }
-        
-        isAppNameScrimEnabled = preferences.getBoolean(Constants.Prefs.APP_NAME_SCRIM_ENABLED, false)
         invalidate()
     }
 
@@ -292,25 +274,11 @@ class FastScroller @JvmOverloads constructor(
 
         val baseOffset = (letterPaint.descent() + letterPaint.ascent()) / 2
         val textX = trackX - 16f * density
-        
-        val pillWidth = 24f * density
-        val pillHeight = 20f * density
-        val pillRadius = pillHeight / 2f
 
         for (i in alphabet.indices) {
             val y = trackTop + letterSpacing * i
             val isSelected = i == selectedIndex && isSliding
             val isCurrentScroll = !isSliding && i == scrollIndex
-            
-            if (isAppNameScrimEnabled) {
-                val pillLeft = textX - pillWidth / 2f
-                val pillTop = y - pillHeight / 2f
-                val pillRight = textX + pillWidth / 2f
-                val pillBottom = y + pillHeight / 2f
-                
-                canvas.drawRoundRect(pillLeft, pillTop, pillRight, pillBottom, pillRadius, pillRadius, scrimPaint)
-                canvas.drawRoundRect(pillLeft, pillTop, pillRight, pillBottom, pillRadius, pillRadius, scrimStrokePaint)
-            }
 
             val paintToUse = if (isSelected || isCurrentScroll) selectedLetterPaint else letterPaint
             
