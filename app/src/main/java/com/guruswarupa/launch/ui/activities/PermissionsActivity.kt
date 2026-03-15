@@ -25,6 +25,7 @@ import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class PermissionsActivity : ComponentActivity() {
@@ -47,6 +48,7 @@ class PermissionsActivity : ComponentActivity() {
         
         setContentView(R.layout.activity_permissions)
         applyContentInsets()
+        applyBackgroundTranslucency()
 
         permissionsList = findViewById(R.id.permissions_list)
         WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
@@ -137,6 +139,13 @@ class PermissionsActivity : ComponentActivity() {
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
         val resolve = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
         return resolve?.activityInfo?.packageName == packageName
+    }
+
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
 
     private fun applyContentInsets() {

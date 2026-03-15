@@ -111,6 +111,7 @@ class SettingsActivity : ComponentActivity() {
         
         setContentView(R.layout.activity_settings)
         applyContentInsets()
+        applyBackgroundTranslucency()
 
         selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default") ?: "system_default"
 
@@ -324,6 +325,11 @@ class SettingsActivity : ComponentActivity() {
         translucencySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
                 translucencyValue.text = "$p%"
+                // Apply translucency immediately for live preview
+                val alpha = (p * 255 / 100).coerceIn(0, 255)
+                val color = Color.argb(alpha, 0, 0, 0)
+                findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
+                
                 if (f) {
                     prefs.edit { putInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, p) }
                     notifySettingsChanged()
@@ -935,6 +941,13 @@ class SettingsActivity : ComponentActivity() {
         prefs.edit { putBoolean("feature_tutorial_shown", false); putInt("feature_tutorial_current_step", 0) }
         startActivity(Intent(this, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP; putExtra("start_tutorial", true) })
         finish()
+    }
+
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
 
     private fun applyContentInsets() {

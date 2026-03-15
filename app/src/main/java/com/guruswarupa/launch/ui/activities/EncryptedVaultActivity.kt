@@ -122,6 +122,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         
         makeSystemBarsTransparent()
         setupWallpaper()
+        applyBackgroundTranslucency()
 
         vaultManager = EncryptedFolderManager(this)
         recyclerView = findViewById(R.id.vault_recycler_view)
@@ -262,6 +263,13 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             value.toFloat(),
             resources.displayMetrics
         ).toInt()
+
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
+    }
 
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)

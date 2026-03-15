@@ -66,9 +66,9 @@
                     android:layout_height="wrap_content"
                     app:cardCornerRadius="22dp"
                     app:cardElevation="0dp"
-                    app:cardBackgroundColor="#33FFFFFF"
+                    app:cardBackgroundColor="#66000000"
                     app:strokeWidth="1dp"
-                    app:strokeColor="#20FFFFFF"
+                    app:strokeColor="#40FFFFFF"
                     android:clickable="true"
                     android:focusable="true">
                     
@@ -450,8 +450,10 @@
                             android:text="Set Theme Wallpaper"
                             android:textAllCaps="false"
                             app:cornerRadius="12dp"
-                            android:backgroundTint="@color/nord8"
-                            android:textColor="@color/nord0"
+                            android:backgroundTint="#66000000"
+                            android:textColor="@color/white"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="#40FFFFFF"
                             android:fontFamily="sans-serif-black"
                             android:visibility="gone"/>
 

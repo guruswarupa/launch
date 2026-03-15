@@ -32,6 +32,7 @@ class ControlCenterConfigActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_control_center_config)
         applyContentInsets()
+        applyBackgroundTranslucency()
         window.decorView.post { makeSystemBarsTransparent() }
 
         WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
@@ -83,6 +84,13 @@ class ControlCenterConfigActivity : ComponentActivity() {
         "record" -> android.R.drawable.ic_menu_slideshow; "lock" -> android.R.drawable.ic_lock_idle_lock; "power" -> android.R.drawable.ic_lock_power_off
         "hotspot" -> R.drawable.ic_wifi_stat; "screen_timeout" -> R.drawable.ic_settings_icon
         else -> android.R.drawable.ic_menu_help
+    }
+
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
 
     private fun applyContentInsets() {

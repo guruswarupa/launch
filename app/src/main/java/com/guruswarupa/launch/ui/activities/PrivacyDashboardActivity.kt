@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.ui.adapters.AppPrivacyInfo
 import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
@@ -46,6 +47,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
 
     private var allApps = listOf<AppPrivacyInfo>()
     private val executor = Executors.newSingleThreadExecutor()
+    private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
     private val sensitivePermissions = listOfNotNull(
         Manifest.permission.CAMERA,
@@ -71,8 +73,9 @@ class PrivacyDashboardActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
-
+                
         setContentView(R.layout.activity_privacy_dashboard)
+        applyBackgroundTranslucency()
         
         setupTheme()
 
@@ -103,14 +106,21 @@ class PrivacyDashboardActivity : ComponentActivity() {
     }
     
     private fun setupTheme() {
-        val overlay = findViewById<View>(R.id.settings_overlay)
-        overlay.setBackgroundColor(ContextCompat.getColor(this, R.color.settings_overlay))
+        // Apply dynamic translucency instead of hardcoded overlay color
+        applyBackgroundTranslucency()
         setupWallpaper()
     }
     
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
+    }
+
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
 
     private fun loadApps() {

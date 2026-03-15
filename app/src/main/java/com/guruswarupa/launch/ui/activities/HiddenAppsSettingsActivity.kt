@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.HiddenAppManager
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class HiddenAppsSettingsActivity : ComponentActivity() {
@@ -24,11 +25,14 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
     private lateinit var appsRecyclerView: RecyclerView
     private lateinit var emptyStateLayout: LinearLayout
     private var hiddenAppsList = mutableListOf<ResolveInfo>()
+    
+    private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_hidden_apps_settings)
         applyContentInsets()
+        applyBackgroundTranslucency()
         
         window.decorView.post { makeSystemBarsTransparent() }
 
@@ -67,6 +71,13 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
                 setResult(RESULT_OK)
             }
         }
+    }
+
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
 
     private fun applyContentInsets() {
