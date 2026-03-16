@@ -27,28 +27,35 @@ class AppSearchManager(
     private val isFocusModeActive: (() -> Boolean)? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
-    private val searchExecutor = Executors.newSingleThreadExecutor() // Background thread for search operations
+    private val searchExecutor = Executors.newSingleThreadExecutor()
     private val debounceRunnable = Runnable {
-        // Run search on background thread
         val query = searchBox.text.toString()
         searchExecutor.execute {
             filterAppsAndContacts(query)
         }
     }
 
-    private val appLabelCache = mutableMapOf<String, String>()
-    private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
+    private val appLabelCache = object : LinkedHashMap<String, String>(50, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean {
+            return size > 50
+        }
+    }
+    
+    // Reduced size and added entry limit to avoid memory leaks
+    private val searchCache = object : LinkedHashMap<String, List<ResolveInfo>>(20, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<ResolveInfo>>?): Boolean {
+            return size > 20
+        }
+    }
+    
     private val dataLock = Any()
 
     init {
-        // Optimization #4: Avoid rebuilding label map in background. 
-        // We'll use appMetadataCache directly during search.
         searchBox.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 handler.removeCallbacks(debounceRunnable)
-                // Reduced from 30ms to 10ms for better responsiveness
                 handler.postDelayed(debounceRunnable, 10)
             }
 
@@ -64,30 +71,25 @@ class AppSearchManager(
 
     fun updateContactsList() {
         synchronized(dataLock) {
-            // Update contacts list and clear search cache
             searchCache.clear()
         }
-        // Clear contact photo cache to refresh photos
         adapter?.clearContactPhotoCache()
-        // Contacts list is refreshed by the caller via updateData
     }
 
     private fun getAppLabel(info: ResolveInfo): String {
         val packageName = info.activityInfo.packageName
-        // Use pre-loaded metadata cache if available
         return appMetadataCache?.get(packageName)?.label?.lowercase()
-            ?: appLabelCache.getOrPut(packageName) {
-                try {
-                    info.loadLabel(packageManager).toString().lowercase()
-                } catch (_: Exception) {
-                    packageName.lowercase()
+            ?: synchronized(appLabelCache) {
+                appLabelCache.getOrPut(packageName) {
+                    try {
+                        info.loadLabel(packageManager).toString().lowercase()
+                    } catch (_: Exception) {
+                        packageName.lowercase()
+                    }
                 }
             }
     }
 
-    /**
-     * Generates a sort key that puts numbers and '#' at the end.
-     */
     private fun getSortKey(label: String): String {
         if (label.isEmpty()) return label
         val firstChar = label[0]
@@ -111,8 +113,6 @@ class AppSearchManager(
 
     fun updateData(newFullAppList: List<ResolveInfo>, newHomeAppList: List<ResolveInfo>, newContactsList: List<String>) {
         synchronized(dataLock) {
-            // Update data without resetting currentSearchMode
-            // CRITICAL FIX: Only clear and addAll if it's not the same list reference to avoid nuke-on-refresh bug
             if (newFullAppList !== fullAppList) {
                 fullAppList.clear()
                 fullAppList.addAll(newFullAppList)
@@ -121,7 +121,6 @@ class AppSearchManager(
             contactsList = newContactsList
             searchCache.clear()
         }
-        // Clear contact photo cache to refresh photos when contacts are updated
         adapter?.clearContactPhotoCache()
         refreshSearch()
     }
@@ -135,7 +134,6 @@ class AppSearchManager(
         val queryLower = query.lowercase().trim()
         val newFilteredList = ArrayList<ResolveInfo>()
         
-        // Take snapshots under lock to prevent ConcurrentModificationException
         val fullAppListSnapshot: List<ResolveInfo>
         val homeAppListSnapshot: List<ResolveInfo>
         val contactsListSnapshot: List<String>
@@ -153,12 +151,10 @@ class AppSearchManager(
                 val exactMatches = ArrayList<ResolveInfo>()
                 val partialMatches = ArrayList<ResolveInfo>()
 
-                // 1. Search Apps
                 if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.APPS) {
                     fullAppListSnapshot.forEach { info ->
                         val packageName = info.activityInfo.packageName
                         
-                        // Exclude launcher's own activities except SettingsActivity and EncryptedVaultActivity
                         if (packageName == context.packageName) {
                             val activityName = info.activityInfo.name
                             val isAllowedInternalActivity = activityName.contains("SettingsActivity") || 
@@ -168,7 +164,6 @@ class AppSearchManager(
                             }
                         }
                         
-                        // Always respect filtering for Focus Mode or Hidden Apps even during search
                         if (isAppFiltered?.invoke(packageName) == true) return@forEach
                         
                         val label = getAppLabel(info)
@@ -179,16 +174,13 @@ class AppSearchManager(
                         }
                     }
 
-                    // Sort alphabetically for matches found
                     val sortedExact = exactMatches.sortedBy { getSortKey(getAppLabel(it)) }
                     val sortedPartial = partialMatches.sortedBy { getSortKey(getAppLabel(it)) }
 
                     newFilteredList.addAll(sortedExact)
                     newFilteredList.addAll(sortedPartial)
 
-                    // Add settings matches (only in ALL or APPS mode)
                     getSettingsMatches(queryLower).forEach { setting ->
-                        // Prevent duplicate internal results if they are already in the app list
                         val settingLower = setting.lowercase()
                         val isDuplicate = settingLower == "launch settings" || 
                                          settingLower == "vault" || 
@@ -198,10 +190,9 @@ class AppSearchManager(
                         }
                     }
                     
-                    if (currentSearchMode == SearchMode.APPS) return@run // STRICT
+                    if (currentSearchMode == SearchMode.APPS) return@run
                 }
 
-                // 2. Search Contacts
                 if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.CONTACTS) {
                     contactsListSnapshot.asSequence()
                         .filter { it.contains(query, ignoreCase = true) }
@@ -210,23 +201,20 @@ class AppSearchManager(
                             newFilteredList.add(createUnifiedContactOption(contact))
                         }
                     
-                    if (currentSearchMode == SearchMode.CONTACTS) return@run // STRICT
+                    if (currentSearchMode == SearchMode.CONTACTS) return@run
                 }
 
-                // 3. Search Files
                 if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.FILES) {
-                    // This is the heavy part, so we only do it if requested
                     getFileMatches(queryLower).forEach { file ->
                         newFilteredList.add(createFileOption(file))
                     }
                     
-                    if (currentSearchMode == SearchMode.FILES) return@run // STRICT
+                    if (currentSearchMode == SearchMode.FILES) return@run
                 }
 
-                // 4. Platform-specific searches (STRICT FILTERING)
                 if (currentSearchMode == SearchMode.MAPS) {
                     newFilteredList.add(createGoogleMapsSearchOption(query))
-                    return@run // Exit early to only show Maps
+                    return@run
                 }
                 
                 if (currentSearchMode == SearchMode.PLAYSTORE) {
@@ -244,9 +232,7 @@ class AppSearchManager(
                     return@run
                 }
 
-                // If in ALL mode, add specialized ones at the bottom
                 if (currentSearchMode == SearchMode.ALL) {
-                    // Don't add web, YouTube, or Play Store options when focus mode is active
                     if (!(isFocusModeActive?.invoke() == true)) {
                         newFilteredList.add(createGoogleMapsSearchOption(query))
                         newFilteredList.add(createPlayStoreSearchOption(query))
@@ -256,37 +242,19 @@ class AppSearchManager(
                 }
             }
         } else {
-            // EMPTY QUERY: Apply search mode filtering
             when (currentSearchMode) {
                 SearchMode.ALL -> newFilteredList.addAll(homeAppListSnapshot)
                 SearchMode.APPS -> newFilteredList.addAll(homeAppListSnapshot)
                 SearchMode.CONTACTS -> {
-                    // Show contacts placeholder or message when in contacts mode with empty query
-                    // For now, show all contacts if we have them
                     contactsListSnapshot.forEach { contact ->
                         newFilteredList.add(createUnifiedContactOption(contact))
                     }
                 }
-                SearchMode.FILES -> {
-                    // Show files placeholder or message when in files mode with empty query
-                    // For now, don't show anything until user types
-                }
-                SearchMode.MAPS -> {
-                    // Show maps search option even with empty query
-                    newFilteredList.add(createGoogleMapsSearchOption(""))
-                }
-                SearchMode.WEB -> {
-                    // Show web search option even with empty query
-                    newFilteredList.add(createBrowserSearchOption(""))
-                }
-                SearchMode.PLAYSTORE -> {
-                    // Show play store search option even with empty query
-                    newFilteredList.add(createPlayStoreSearchOption(""))
-                }
-                SearchMode.YOUTUBE -> {
-                    // Show youtube search option even with empty query
-                    newFilteredList.add(createYoutubeSearchOption(""))
-                }
+                SearchMode.FILES -> {}
+                SearchMode.MAPS -> newFilteredList.add(createGoogleMapsSearchOption(""))
+                SearchMode.WEB -> newFilteredList.add(createBrowserSearchOption(""))
+                SearchMode.PLAYSTORE -> newFilteredList.add(createPlayStoreSearchOption(""))
+                SearchMode.YOUTUBE -> newFilteredList.add(createYoutubeSearchOption(""))
             }
         }
 
@@ -295,34 +263,33 @@ class AppSearchManager(
         }
     }
 
-    private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()
+    private val cachedResolveInfos = object : LinkedHashMap<String, ResolveInfo>(50, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ResolveInfo>?): Boolean {
+            return size > 50
+        }
+    }
 
     private fun evaluateMathExpression(expression: String): String? {
         return try {
             val result = ExpressionBuilder(expression).build().evaluate()
             result.toString()
         } catch (_: Exception) {
-            null // Return null if it's not a valid math expression
+            null
         }
     }
 
     private fun getSettingsMatches(query: String): List<String> {
-        // Search only Android system settings, excluding the app's own settings
-        val matchedSystemSettings = AndroidSettingsHelper.searchSettings(query).take(8).map { it.title }
-        
-        return matchedSystemSettings
+        return AndroidSettingsHelper.searchSettings(query).take(8).map { it.title }
     }
 
     private fun createSettingsOption(setting: String): ResolveInfo {
-        // Find the system setting
         val systemSetting = AndroidSettingsHelper.getAllSystemSettings().find { it.title == setting }
         
         return cachedResolveInfos.getOrPut("settings_result_$setting") {
             ResolveInfo().apply {
                 activityInfo = ActivityInfo().apply {
-                    packageName = "system_settings_result"  // Always use system settings result since we removed app settings
+                    packageName = "system_settings_result"
                     name = setting
-                    // Store the action in nonLocalizedLabel for system settings
                     if (systemSetting != null) {
                         nonLocalizedLabel = systemSetting.action
                     }
@@ -352,7 +319,7 @@ class AppSearchManager(
                 "${android.provider.MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
             )?.use { cursor ->
                 val dataColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Files.FileColumns.DATA)
-                while (cursor.moveToNext() && results.size < 10) {
+                while (cursor.moveToNext() && results.size < 5) { // Reduced from 10 to 5
                     val path = cursor.getString(dataColumn)
                     if (path != null) {
                         val file = File(path)
@@ -363,19 +330,16 @@ class AppSearchManager(
                 }
             }
         } catch (_: Exception) {
-            // Fallback to basic search if MediaStore fails or permission is missing
             try {
                 val dirsToSearch = listOf(
                     Environment.DIRECTORY_DOWNLOADS,
-                    Environment.DIRECTORY_DOCUMENTS,
-                    Environment.DIRECTORY_DCIM,
-                    Environment.DIRECTORY_PICTURES
+                    Environment.DIRECTORY_DOCUMENTS
                 )
                 for (dirName in dirsToSearch) {
                     val dir = Environment.getExternalStoragePublicDirectory(dirName)
                     if (dir.exists() && dir.isDirectory) {
                         searchFilesRecursively(dir, query, results, 0)
-                        if (results.size >= 10) break
+                        if (results.size >= 5) break
                     }
                 }
             } catch (_: Exception) {}
@@ -384,14 +348,14 @@ class AppSearchManager(
     }
 
     private fun searchFilesRecursively(dir: File, query: String, results: MutableList<File>, depth: Int) {
-        if (depth > 2 || results.size >= 10) return
+        if (depth > 1 || results.size >= 5) return // Reduced depth from 2 to 1
         dir.listFiles()?.forEach { file ->
             if (file.isDirectory) {
                 searchFilesRecursively(file, query, results, depth + 1)
             } else if (file.name.contains(query, ignoreCase = true)) {
                 results.add(file)
             }
-            if (results.size >= 10) return
+            if (results.size >= 5) return
         }
     }
 
@@ -401,7 +365,6 @@ class AppSearchManager(
                 activityInfo = ActivityInfo().apply {
                     packageName = "file_result"
                     name = file.name
-                    // Store path in a field we can retrieve
                     nonLocalizedLabel = file.absolutePath
                 }
             }
@@ -474,10 +437,10 @@ class AppSearchManager(
         }
     }
     
-    /**
-     * Cleanup method to shutdown executor when done
-     */
     fun cleanup() {
         searchExecutor.shutdown()
+        synchronized(appLabelCache) { appLabelCache.clear() }
+        synchronized(cachedResolveInfos) { cachedResolveInfos.clear() }
+        synchronized(dataLock) { searchCache.clear() }
     }
 }

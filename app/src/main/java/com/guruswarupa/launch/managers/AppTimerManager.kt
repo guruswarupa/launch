@@ -22,6 +22,7 @@ import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 import java.util.Calendar
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 
@@ -451,6 +452,21 @@ class AppTimerManager(private val context: Context) {
     }
 
     fun cleanup() {
-        backgroundExecutor.shutdown()
+        // Cancel any running timer
+        currentTimer?.cancel()
+        currentTimer = null
+        currentDialog?.dismiss()
+        currentDialog = null
+        // Shutdown executor
+        if (!backgroundExecutor.isShutdown) {
+            backgroundExecutor.shutdown()
+            try {
+                if (!backgroundExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
+                    backgroundExecutor.shutdownNow()
+                }
+            } catch (_: InterruptedException) {
+                backgroundExecutor.shutdownNow()
+            }
+        }
     }
 }

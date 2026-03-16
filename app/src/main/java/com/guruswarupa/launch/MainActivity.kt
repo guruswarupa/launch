@@ -43,6 +43,7 @@ import com.guruswarupa.launch.utils.VoiceCommandHandler
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
 class MainActivity : FragmentActivity() {
@@ -585,10 +586,57 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= TRIM_MEMORY_MODERATE) {
+            // Clear intensive caches when memory is moderate or higher
+            if (::adapter.isInitialized) {
+                adapter.onTrimMemory()
+            }
+            if (::wallpaperManagerHelper.isInitialized) {
+                wallpaperManagerHelper.clearCache()
+            }
+            if (::usageStatsManager.isInitialized) {
+                usageStatsManager.invalidateCache()
+            }
+            System.gc()
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        // Aggressively clear caches on low memory
+        if (::adapter.isInitialized) {
+            adapter.onTrimMemory()
+        }
+        if (::wallpaperManagerHelper.isInitialized) {
+            wallpaperManagerHelper.clearCache()
+        }
+        if (::usageStatsManager.isInitialized) {
+            usageStatsManager.invalidateCache()
+        }
+        System.gc()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
+        }
+        // Destroy adapter to clear caches and shutdown executors
+        if (::adapter.isInitialized) {
+            adapter.destroy()
+        }
+        // Shutdown background executor
+        if (!backgroundExecutor.isShutdown) {
+            backgroundExecutor.shutdown()
+            try {
+                if (!backgroundExecutor.awaitTermination(1, TimeUnit.SECONDS)) {
+                    backgroundExecutor.shutdownNow()
+                }
+            } catch (_: InterruptedException) {
+                backgroundExecutor.shutdownNow()
+            }
         }
     }
 

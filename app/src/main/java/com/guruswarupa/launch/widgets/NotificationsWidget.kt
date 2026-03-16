@@ -621,10 +621,11 @@ class NotificationAdapter(
         
         // Handle large icon (not used in media layout)
         holder.largeIconView?.let { view ->
-            if (item.largeIcon != null && !isMediaPlayer) {
+            if (item.largeIcon != null && !item.largeIcon.isRecycled && !isMediaPlayer) {
                 view.setImageBitmap(item.largeIcon)
                 view.visibility = View.VISIBLE
             } else {
+                view.setImageDrawable(null)
                 view.visibility = View.GONE
             }
         }
@@ -632,7 +633,7 @@ class NotificationAdapter(
         // Handle big picture - always show for media players, conditional for others
         holder.bigPictureView?.let { view ->
             val bitmap = item.bigPicture ?: (if (isMediaPlayer) item.largeIcon else null)
-            if (bitmap != null) {
+            if (bitmap != null && !bitmap.isRecycled) {
                 // Use high-quality scaling to avoid pixelation
                 view.setImageBitmap(bitmap)
                 view.scaleType = ImageView.ScaleType.CENTER_CROP
@@ -656,6 +657,7 @@ class NotificationAdapter(
                     }
                 }
             } else {
+                view.setImageDrawable(null)
                 view.visibility = View.GONE
             }
         }

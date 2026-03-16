@@ -3,6 +3,7 @@ package com.guruswarupa.launch.core
 import android.os.Handler
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
+import java.util.concurrent.TimeUnit
 
 import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.widgets.NotificationsWidget
@@ -236,7 +237,19 @@ class LifecycleManager(
     fun onDestroy() {
         wallpaperManagerHelper?.cleanup()
         broadcastReceiverManager?.unregisterReceivers()
-        backgroundExecutor?.shutdown()
+        // Shutdown background executor properly
+        backgroundExecutor?.let { exec ->
+            if (!exec.isShutdown) {
+                exec.shutdown()
+                try {
+                    if (!exec.awaitTermination(1, TimeUnit.SECONDS)) {
+                        exec.shutdownNow()
+                    }
+                } catch (_: InterruptedException) {
+                    exec.shutdownNow()
+                }
+            }
+        }
         shareManager?.cleanup()
         widgetManager?.onDestroy()
         widgetLifecycleCoordinator?.onDestroy()

@@ -495,8 +495,12 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             val file = files[position]
             holder.name.text = file.name
             holder.info.text = formatFileSize(file.length())
+            
+            // Clear previous drawable to prevent drawing recycled bitmap
+            holder.thumbnail.setImageDrawable(null)
+            
             val bitmap = vaultManager.getThumbnail(file.name)
-            if (bitmap != null) {
+            if (bitmap != null && !bitmap.isRecycled) {
                 holder.thumbnail.setImageBitmap(bitmap)
                 holder.thumbnail.imageTintList = null
                 holder.thumbnail.alpha = 1.0f
