@@ -30,6 +30,8 @@ import java.io.File
 import java.util.concurrent.*
 import androidx.core.content.FileProvider
 import android.content.ComponentName
+import android.os.Handler
+import android.os.Looper
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.managers.TypographyManager
@@ -106,10 +108,39 @@ class AppAdapter(
     private val executor = Executors.newSingleThreadExecutor()
     private var itemsRendered = 0
     private var isDestroyed = false
+    private var isFastScrolling = false
+    private var fastScrollDebounceHandler = Handler(Looper.getMainLooper())
+    private var fastScrollDebounceRunnable: Runnable? = null
     
     private val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
     private var currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
+    
+    /**
+     * Called by FastScroller when fast scrolling starts/stops.
+     */
+    fun setFastScrollingState(isScrolling: Boolean) {
+        isFastScrolling = isScrolling
+        
+        // Cancel any pending debounce
+        fastScrollDebounceRunnable?.let { fastScrollDebounceHandler.removeCallbacks(it) }
+        
+        if (!isScrolling) {
+            // After fast scrolling stops, wait a bit then refresh visible icons
+            fastScrollDebounceRunnable = Runnable {
+                forceRefreshVisibleIcons()
+            }
+            fastScrollDebounceHandler.postDelayed(fastScrollDebounceRunnable!!, 100)
+        }
+    }
+    
+    /**
+     * Forces refresh of currently visible icons after fast scrolling stops.
+     */
+    private fun forceRefreshVisibleIcons() {
+        // This will be called from FastScroller via forceRebindViewHolder
+        // The actual refresh happens when FastScroller calls forceRebindViewHolder for each visible item
+    }
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
         override fun run() = action.run()
@@ -118,9 +149,8 @@ class AppAdapter(
     
     // Wrapper task that can be tracked and cancelled - implements Comparable for PriorityBlockingQueue
     private class TrackedTask(
-        private val priorityRunnable: PriorityRunnable,
-        private val packageName: String
-    ) : Runnable, Comparable<TrackedTask>, java.util.concurrent.Future<Boolean> {
+        private val priorityRunnable: PriorityRunnable
+    ) : Runnable, Comparable<TrackedTask>, Future<Boolean> {
         @Volatile private var isDone = false
         @Volatile private var isCancelled = false
         
@@ -153,7 +183,7 @@ class AppAdapter(
     
     // Track pending tasks per package to avoid redundant work and save RAM
     private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
-    private val pendingLabelTasks = ConcurrentHashMap<String, java.util.concurrent.Future<*>>()
+    private val pendingLabelTasks = ConcurrentHashMap<String, Future<*>>()
 
     private val iconPreloadExecutor = ThreadPoolExecutor(
         1, 1, 0L, TimeUnit.MILLISECONDS, // Reduced from 2, 2 to 1, 1 to save threads and memory
@@ -324,6 +354,18 @@ class AppAdapter(
         }
     }
     
+    /**
+     * Forces a rebind of a view holder to refresh icon loading.
+     * Called after fast scrolling stops to ensure visible icons are properly loaded.
+     */
+    fun forceRebindViewHolder(viewHolder: ViewHolder, position: Int) {
+        if (isDestroyed || position < 0 || position >= appList.size) return
+        
+        // Call onBindViewHolder to refresh the view
+        // This will check the cache and load icons if they're now available
+        onBindViewHolder(viewHolder, position)
+    }
+    
     private class AppListDiffCallback(
         private val oldList: List<ResolveInfo>,
         private val newList: List<ResolveInfo>
@@ -381,7 +423,11 @@ class AppAdapter(
             if (holder != null && holder.appIcon != null && iconCache.containsKey(packageName)) {
                 val icon = iconCache[packageName]
                 (context as? Activity)?.runOnUiThread {
-                    if (holder.bindingAdapterPosition == position && holder.itemView.tag.toString() == packageName) {
+                    // More robust verification: check position, tag, and that position is still valid
+                    val currentPosition = holder.bindingAdapterPosition
+                    if (currentPosition != RecyclerView.NO_POSITION && 
+                        currentPosition == position && 
+                        holder.itemView.tag.toString() == packageName) {
                         holder.appIcon.setImageDrawable(icon)
                         activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                     }
@@ -402,8 +448,11 @@ class AppAdapter(
                     
                     if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
-                            // Verify ViewHolder still represents the same app by checking tag
-                            if (holder.itemView.tag.toString() == packageName) {
+                            // More robust verification: check position, tag, and that position is still valid
+                            val currentPosition = holder.bindingAdapterPosition
+                            if (currentPosition != RecyclerView.NO_POSITION && 
+                                currentPosition == position && 
+                                holder.itemView.tag.toString() == packageName) {
                                 holder.appIcon.setImageDrawable(icon)
                                 activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                             }
@@ -414,7 +463,7 @@ class AppAdapter(
         }
         
         // Track with a wrapper that we can cancel
-        val trackedTask = TrackedTask(priorityRunnable, packageName)
+        val trackedTask = TrackedTask(priorityRunnable)
         iconPreloadExecutor.execute(trackedTask)
         pendingIconTasks[packageName] = trackedTask
         
@@ -431,7 +480,7 @@ class AppAdapter(
         if (startPosition >= size) return
         
         // Only preload a small window ahead to save RAM
-        val actualEnd = minOf(startPosition + 5, size) // Reduced from 9 to 5
+        val actualEnd = minOf(endPosition, size)
         if (actualEnd <= startPosition) return
         
         val appsToPreload = try {
@@ -487,7 +536,7 @@ class AppAdapter(
             if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
                 currentParams.width = sizeInPx
                 currentParams.height = sizeInPx
-                holder.appIcon?.layoutParams = currentParams
+                holder.appIcon.layoutParams = currentParams
             }
         }
         
@@ -728,7 +777,9 @@ class AppAdapter(
                                 activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
                             } else {
                                 holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
-                                submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
+                                // Use highest priority for visible items
+                                val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
+                                submitIconLoadTask(appInfo, priority, holder, position)
                             }
                         }
                     }
@@ -758,13 +809,25 @@ class AppAdapter(
                         activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
                     } else {
                         holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
-                        submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
+                        // Use highest priority for visible items, especially during fast scrolling
+                        val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
+                        submitIconLoadTask(appInfo, priority, holder, position)
                     }
                 }
                 
-                // Only preload when scrolling near the end of loaded items (every 12 items instead of 8)
-                if (position < appList.size - 1 && position % 12 == 0) {
-                    preloadNextIcons(position + 1, position + 6)
+                // More aggressive preloading during fast scrolling
+                if (position < appList.size - 1) {
+                    if (isFastScrolling) {
+                        // Preload more icons ahead during fast scrolling (every 6 items, load 9 ahead)
+                        if (position % 6 == 0) {
+                            preloadNextIcons(position + 1, position + 9)
+                        }
+                    } else {
+                        // Normal scrolling: preload fewer icons (every 12 items, load 6 ahead)
+                        if (position % 12 == 0) {
+                            preloadNextIcons(position + 1, position + 6)
+                        }
+                    }
                 }
 
                 val clickDebounceDelay = 500L
@@ -850,7 +913,7 @@ class AppAdapter(
         pendingLabelTasks[packageName]?.cancel(true)
         
         // Use a Runnable wrapper that we can track
-        val labelTask = object : Runnable, java.util.concurrent.Future<Boolean> {
+        val labelTask = object : Runnable, Future<Boolean> {
             @Volatile private var isDone = false
             @Volatile private var isCancelled = false
             

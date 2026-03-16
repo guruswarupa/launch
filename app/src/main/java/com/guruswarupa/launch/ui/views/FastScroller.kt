@@ -14,7 +14,6 @@ import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.AppAdapter
-import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.models.Constants
 
@@ -101,15 +100,76 @@ class FastScroller @JvmOverloads constructor(
     fun setRecyclerView(rv: RecyclerView) {
         recyclerView = rv
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            private var previousState = RecyclerView.SCROLL_STATE_IDLE
+            
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (!isSliding) {
                     updateScrollIndex()
                 }
             }
+            
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                
+                val adapter = recyclerView.adapter as? AppAdapter
+                when (newState) {
+                    RecyclerView.SCROLL_STATE_DRAGGING -> {
+                        // User started scrolling
+                        adapter?.setFastScrollingState(true)
+                    }
+                    RecyclerView.SCROLL_STATE_SETTLING -> {
+                        // Fast scroll in progress
+                        adapter?.setFastScrollingState(true)
+                    }
+                    RecyclerView.SCROLL_STATE_IDLE -> {
+                        // Scrolling stopped
+                        if (previousState != RecyclerView.SCROLL_STATE_IDLE) {
+                            adapter?.setFastScrollingState(false)
+                            // Force refresh visible icons after a short delay
+                            if (!isSliding) {
+                                forceRefreshVisibleIcons()
+                            }
+                        }
+                    }
+                }
+                previousState = newState
+            }
         })
         
         // Initial sync if the recycler view is already populated
         rv.post { updateScrollIndex() }
+    }
+    
+    /**
+     * Forces a refresh of visible item icons after scrolling stops.
+     * This helps ensure icons load properly after fast scrolling with the fast scroller.
+     */
+    private fun forceRefreshVisibleIcons() {
+        val rv = recyclerView ?: return
+        val layoutManager = rv.layoutManager as? LinearLayoutManager ?: return
+        
+        val firstVisiblePos = layoutManager.findFirstVisibleItemPosition()
+        val lastVisiblePos = layoutManager.findLastVisibleItemPosition()
+        
+        if (firstVisiblePos == RecyclerView.NO_POSITION || lastVisiblePos == RecyclerView.NO_POSITION) return
+        
+        val adapter = rv.adapter as? AppAdapter ?: return
+        
+        // Notify adapter to rebind visible items to refresh icons
+        // Use a small delay to ensure layout is stable
+        rv.postDelayed({
+            for (pos in firstVisiblePos..lastVisiblePos) {
+                if (pos < adapter.itemCount) {
+                    rv.findViewHolderForAdapterPosition(pos)?.let { viewHolder ->
+                        // Force rebind by calling onBindViewHolder directly
+                        // This will check cache and reload icons if needed
+                        if (viewHolder is AppAdapter.ViewHolder) {
+                            adapter.forceRebindViewHolder(viewHolder, pos)
+                        }
+                    }
+                }
+            }
+        }, 50)
     }
 
     private fun updateScrollIndex() {
@@ -122,9 +182,6 @@ class FastScroller @JvmOverloads constructor(
         val appList = adapter.appList
         if (firstVisiblePos >= appList.size) return
 
-        val app = appList[firstVisiblePos]
-        val packageName = app.activityInfo.packageName
-        
         var newIndex = -1
         
         // Find if we are in favorites section or past it
@@ -343,6 +400,11 @@ class FastScroller @JvmOverloads constructor(
         canvas.drawText(alphabet[selectedIndex], bubbleX, centerY - textOffset, previewTextPaint)
     }
 
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val x = event.x
         val y = event.y
@@ -357,6 +419,7 @@ class FastScroller @JvmOverloads constructor(
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                 parent?.requestDisallowInterceptTouchEvent(true)
                 handleTouch(y)
+                performClick()
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
