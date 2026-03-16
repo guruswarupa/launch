@@ -322,6 +322,9 @@ class AppAdapter(
         if (packageName == SEPARATOR_PACKAGE) {
             return
         }
+        
+        // Re-apply typography to ensure theme color is updated on recycled views
+        TypographyManager.applyToView(holder.itemView)
 
         // Apply icon shape style programmatically
         holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
