@@ -549,6 +549,18 @@
                     android:id="@+id/weekly_usage_graph"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
+
+                <Button
+                    android:id="@+id/request_usage_stats_permission_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Grant Usage Access Permission"
+                    android:textColor="@color/widget_text"
+                    android:textSize="14sp"
+                    android:background="@drawable/button_neutral_ripple"
+                    android:paddingVertical="12dp"
+                    android:layout_marginTop="16dp"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Noise Decibel Widget -->

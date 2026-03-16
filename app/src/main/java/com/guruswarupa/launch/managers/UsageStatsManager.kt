@@ -19,6 +19,7 @@ class AppUsageStatsManager(private val context: Context) {
     private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usage, timestamp)
     
     companion object {
+        const val USAGE_STATS_REQUEST = 600
         private const val CACHE_DURATION = 30000L // 30 seconds
     }
     

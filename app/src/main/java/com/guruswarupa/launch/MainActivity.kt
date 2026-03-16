@@ -2,7 +2,6 @@ package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
 import android.app.NotificationManager
-import android.app.WallpaperManager
 import android.content.SharedPreferences
 import android.content.pm.ResolveInfo
 import android.content.Intent
@@ -13,6 +12,7 @@ import android.os.Looper
 import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
+import androidx.core.content.edit
 
 // Import moved managers
 import com.guruswarupa.launch.core.CacheManager
@@ -31,13 +31,14 @@ import com.guruswarupa.launch.widgets.WidgetSetupManager
 import com.guruswarupa.launch.widgets.WidgetThemeManager
 import com.guruswarupa.launch.widgets.WidgetVisibilityManager
 import com.guruswarupa.launch.widgets.DeferredWidgetInitializer
+import com.guruswarupa.launch.widgets.CalendarEventsWidget
+import com.guruswarupa.launch.widgets.CountdownWidget
 
 import com.guruswarupa.launch.utils.TimeDateManager
 import com.guruswarupa.launch.utils.WeatherManager
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.utils.TodoAlarmManager
 import com.guruswarupa.launch.utils.FinanceWidgetManager
-import com.guruswarupa.launch.utils.OnboardingHelper
 import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.utils.VoiceCommandHandler
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
@@ -77,7 +78,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var appListLoader: AppListLoader
     internal lateinit var contactManager: ContactManager
     internal lateinit var usageStatsCacheManager: UsageStatsCacheManager
-    internal lateinit var onboardingHelper: OnboardingHelper
     internal lateinit var lifecycleManager: LifecycleManager
     internal lateinit var appSearchManager: AppSearchManager
     internal lateinit var appDockManager: AppDockManager
@@ -311,9 +311,10 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
-     * Requests initial permissions needed by the app.
+     * Requests basic permissions needed by the app.
      */
-    internal fun requestInitialPermissions() {
+    internal fun requestInitialPermissions(onComplete: () -> Unit = {}) {
+        // Step 1: Contacts Permission
         permissionManager.requestContactsPermission { 
             contactManager.loadContacts {
                 if (::appSearchManager.isInitialized) {
@@ -322,9 +323,27 @@ class MainActivity : FragmentActivity() {
                     updateAppSearchManager()
                 }
             }
+            // Chain to Usage Stats
+            permissionManager.requestUsageStatsPermission(usageStatsManager) {
+                onComplete()
+            }
         }
-        permissionManager.requestSmsPermission()
-        permissionManager.requestUsageStatsPermission(usageStatsManager)
+    }
+    
+    /**
+     * Starts feature tutorial and requests basic permissions after tutorial completes.
+     */
+    internal fun startFeatureTutorialAndRequestPermissions() {
+        // Prevent multiple calls
+        if (sharedPreferences.getBoolean("initial_permissions_asked", false)) return
+        
+        requestInitialPermissions {
+            sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+            
+            if (featureTutorialManager.shouldShowTutorial()) {
+                featureTutorialManager.startTutorial()
+            }
+        }
     }
     
     /**
@@ -422,6 +441,11 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        
+        // If we're coming from the disclosure activity (likely via a task flag), check permissions
+        if (intent.getBooleanExtra("request_permissions_after_onboarding", false)) {
+            startFeatureTutorialAndRequestPermissions()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
@@ -669,6 +693,30 @@ class MainActivity : FragmentActivity() {
         if (::screenPagerManager.isInitialized) {
             screenPagerManager.openCenterPage(animated = false)
         }
+        
+        // Check if we're waiting for user to return from usage stats settings
+        if (sharedPreferences.getBoolean("waiting_for_usage_stats_return", false)) {
+            // User just returned from usage stats settings
+            sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", false) }
+            // Mark as completed and proceed
+            if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+                sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                // Start tutorial if needed
+                if (::featureTutorialManager.isInitialized && featureTutorialManager.shouldShowTutorial()) {
+                    featureTutorialManager.startTutorial()
+                }
+            }
+            return // Exit early to avoid triggering fallback
+        }
+        
+        // Final fallback: If tutorial is done but permissions weren't asked, ask them now
+        // Only trigger if we're not already requesting permissions
+        if (sharedPreferences.getBoolean("feature_tutorial_shown", false) && 
+            !sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+            requestInitialPermissions {
+                sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+            }
+        }
     }
 
     override fun onPause() {
@@ -704,8 +752,31 @@ class MainActivity : FragmentActivity() {
                     if (::todoManager.isInitialized) {
                         todoManager.rescheduleTodoAlarms()
                     }
+                },
+                onStorageGranted = {
+                    // Storage permission granted, can be used for wallpaper or other features
+                },
+                onActivityRecognitionGranted = {
+                    if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
+                        widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
+                    }
                 }
             )
+
+            // Sequential chaining for initial request flow
+            if (requestCode == PermissionManager.CONTACTS_PERMISSION_REQUEST) {
+                // Check if tutorial is still pending (initial flow)
+                if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+                    handler.postDelayed({
+                        permissionManager.requestUsageStatsPermission(usageStatsManager) {
+                            sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                            if (featureTutorialManager.shouldShowTutorial()) {
+                                featureTutorialManager.startTutorial()
+                            }
+                        }
+                    }, 300)
+                }
+            }
         }
         
         // Handle voice search permission separately
@@ -725,10 +796,10 @@ class MainActivity : FragmentActivity() {
                 105 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
                     widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
                 }
-                101 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
+                CalendarEventsWidget.REQUEST_CODE_CALENDAR_PERMISSION -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
                     widgetLifecycleCoordinator.calendarEventsWidget.onPermissionGranted()
                 }
-                102 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
+                CountdownWidget.REQUEST_CODE_CALENDAR_PERMISSION -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
                     widgetLifecycleCoordinator.countdownWidget.onPermissionGranted()
                 }
             }

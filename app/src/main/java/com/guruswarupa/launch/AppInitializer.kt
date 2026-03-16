@@ -61,7 +61,6 @@ class AppInitializer(private val activity: MainActivity) {
             // Initialize new managers
             usageStatsCacheManager = UsageStatsCacheManager(sharedPreferences, backgroundExecutor)
             contactManager = ContactManager(activity, contentResolver, backgroundExecutor)
-            onboardingHelper = OnboardingHelper(activity, sharedPreferences, packageManager, packageName)
             
             // Load usage stats cache immediately
             usageStatsCacheManager.loadCache()
@@ -72,11 +71,6 @@ class AppInitializer(private val activity: MainActivity) {
                 if (activity.isAppSearchManagerInitialized()) {
                     updateAppSearchManager()
                 }
-            }
-            
-            // Check if onboarding is needed
-            if (onboardingHelper.checkAndStartOnboarding()) {
-                return@with
             }
             
             // Check if user has given consent for app data collection
@@ -93,8 +87,15 @@ class AppInitializer(private val activity: MainActivity) {
             // Initialize views and UI components
             initializeViews()
             
-            // Request necessary permissions
-            requestInitialPermissions()
+            // Request necessary permissions only if coming from onboarding completion
+            val requestPermissionsAfterOnboarding = activity.intent.getBooleanExtra("request_permissions_after_onboarding", false)
+            if (requestPermissionsAfterOnboarding) {
+                // Post to handler to ensure views are fully initialized first
+                activity.handler.post {
+                    // Start feature tutorial first, then request permissions after tutorial completes
+                    activity.startFeatureTutorialAndRequestPermissions()
+                }
+            }
 
             // Initialize time/date and weather widgets
             initializeTimeDateAndWeather()

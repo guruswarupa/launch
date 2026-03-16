@@ -10,28 +10,12 @@
     <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock. This service does not collect, store, or transmit any personal data. It only performs system-level actions like screen locking and taking screenshots when explicitly triggered by user gestures.</string>
     
     <!-- App Data Disclosure Strings -->
-    <string name="app_data_disclosure_title">App Data Collection</string>
-    <string name="app_data_disclosure_message">Launch collects information about installed applications on your device to display them in the app launcher. This data is stored locally on your device and is not transmitted to any external servers or third parties.
-
-We collect:
-• Package names of installed apps
-• App names and icons
-• Launch intent information
-
-This data is used solely to:
-• Display your apps in the launcher
-• Enable app search functionality
-• Provide app organization features
-
-No personal data is collected, stored, or shared with third parties.</string>
-    <string name="data_disclosure_links">For more information, please review our:
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing Guidelines&lt;/a&gt;
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="app_data_disclosure_title">Privacy &amp; Data Disclosure</string>
+    <string name="app_data_disclosure_message">To provide a functional launcher experience, Launch processes information about your installed applications. All data is stored &lt;b&gt;locally on your device&lt;/b&gt; and is never shared with third parties.&lt;br/&gt;&lt;br/&gt;&lt;b&gt;What we collect:&lt;/b&gt;&lt;br/&gt;• Package names, app names, and icons&lt;br/&gt;• Launch intent information&lt;br/&gt;&lt;br/&gt;&lt;b&gt;How we use it:&lt;/b&gt;&lt;br/&gt;• Displaying and searching your apps&lt;br/&gt;• Enabling app organization features&lt;br/&gt;&lt;br/&gt;By clicking \'Accept\', you agree to these data practices.</string>
+    <string name="data_disclosure_links">&lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
     <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
-    <string name="i_agree">I Agree</string>
-    <string name="decline">Decline</string>
+    <string name="i_agree">Accept &amp; Continue</string>
+    <string name="decline">Exit</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
     <string name="accessibility_permission_message">To lock the screen and keep fingerprint unlock working, please enable Launch in Accessibility settings.</string>
 

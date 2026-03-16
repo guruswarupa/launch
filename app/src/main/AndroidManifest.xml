@@ -72,19 +72,6 @@
         android:theme="@style/Theme.Launch"
         android:networkSecurityConfig="@xml/network_security_config">
         
-
-        <activity
-            android:name=".ui.activities.OnboardingActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Launch"
-            android:screenOrientation="fullSensor"
-            android:excludeFromRecents="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
         <activity
             android:name=".ui.activities.FocusModeConfigActivity"
             android:exported="false"
@@ -109,6 +96,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 

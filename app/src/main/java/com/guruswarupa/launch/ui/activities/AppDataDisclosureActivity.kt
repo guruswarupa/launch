@@ -1,21 +1,50 @@
 package com.guruswarupa.launch.ui.activities
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.Html
+import android.text.method.LinkMovementMethod
+import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.AnticipateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.Button
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.WallpaperManagerHelper
 import com.guruswarupa.launch.models.Constants
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.concurrent.Executors
+import java.util.zip.ZipInputStream
 
 /**
  * Activity that shows prominent disclosure for app data collection.
  * Required by Google Play User Data policy for collecting installed applications information.
  */
 class AppDataDisclosureActivity : AppCompatActivity() {
+    
+    private val backgroundExecutor = Executors.newSingleThreadExecutor()
+    private val handler = Handler(Looper.getMainLooper())
+
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            result.data?.data?.let { uri ->
+                importSettingsFromFile(uri)
+            }
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,11 +60,19 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         }
         
         setupViews()
+        setupWallpaper()
+        startWelcomeAnimation()
 
         // Handle back press - user must make a choice before proceeding
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Do nothing: prominent disclosure cannot be dismissed by back button
+                val importRoot = findViewById<LinearLayout>(R.id.import_root)
+                val disclosureRoot = findViewById<LinearLayout>(R.id.disclosure_root)
+                if (importRoot.visibility == View.VISIBLE) {
+                    importRoot.visibility = View.GONE
+                    disclosureRoot.visibility = View.VISIBLE
+                }
+                // Otherwise do nothing: prominent disclosure cannot be dismissed by back button
             }
         })
     }
@@ -43,35 +80,216 @@ class AppDataDisclosureActivity : AppCompatActivity() {
     private fun setupViews() {
         val titleText = findViewById<TextView>(R.id.disclosure_title)
         val messageText = findViewById<TextView>(R.id.disclosure_message)
+        val linksText = findViewById<TextView>(R.id.disclosure_links)
         val acceptButton = findViewById<Button>(R.id.accept_button)
         val declineButton = findViewById<Button>(R.id.decline_button)
         
+        val importRoot = findViewById<LinearLayout>(R.id.import_root)
+        val disclosureRoot = findViewById<LinearLayout>(R.id.disclosure_root)
+        val importDataButton = findViewById<Button>(R.id.import_data_button)
+        val skipImportButton = findViewById<Button>(R.id.skip_import_button)
+
         titleText.text = getString(R.string.app_data_disclosure_title)
-        messageText.text = getString(R.string.app_data_disclosure_message)
         
-        acceptButton.text = getString(R.string.i_agree)
-        declineButton.text = getString(R.string.decline)
+        // Use Html.fromHtml for better formatting
+        messageText.text = Html.fromHtml(getString(R.string.app_data_disclosure_message), Html.FROM_HTML_MODE_COMPACT)
+        
+        linksText.text = Html.fromHtml(getString(R.string.data_disclosure_links), Html.FROM_HTML_MODE_COMPACT)
+        linksText.movementMethod = LinkMovementMethod.getInstance()
         
         acceptButton.setOnClickListener {
             // Save consent
             val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
             prefs.edit { putBoolean("app_data_consent_given", true) }
             
-            // Proceed to main app
-            startMainActivity()
+            // Show Import Page
+            disclosureRoot.animate()
+                .alpha(0f)
+                .scaleX(0.95f)
+                .scaleY(0.95f)
+                .setDuration(400)
+                .withEndAction {
+                    disclosureRoot.visibility = View.GONE
+                    importRoot.visibility = View.VISIBLE
+                    importRoot.alpha = 0f
+                    importRoot.scaleX = 1.05f
+                    importRoot.scaleY = 1.05f
+                    importRoot.animate()
+                        .alpha(1f)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(500)
+                        .setInterpolator(OvershootInterpolator())
+                        .start()
+                }
+                .start()
         }
         
         declineButton.setOnClickListener {
             // User declined - close app
             finishAffinity()
         }
+
+        importDataButton.setOnClickListener {
+            importLauncher.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/zip"
+            })
+        }
+
+        skipImportButton.setOnClickListener {
+            startMainActivity(requestPermissions = true)
+        }
+    }
+
+    private fun importSettingsFromFile(uri: Uri) {
+        try {
+            val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
+            contentResolver.openInputStream(uri)?.use { ins ->
+                ZipInputStream(ins).use { zis ->
+                    var entry = zis.nextEntry
+                    while (entry != null) {
+                        if (entry.name == "settings.json") {
+                            val p = JSONObject(zis.bufferedReader().readText()).optJSONObject("main_preferences")
+                            if (p != null) {
+                                prefs.edit {
+                                    val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
+                                    p.keys().forEach { k ->
+                                        val v = p.get(k)
+
+                                        if (k in stringSetKeys) {
+                                            val set = when (v) {
+                                                is JSONArray -> {
+                                                    val s = mutableSetOf<String>()
+                                                    for (i in 0 until v.length()) s.add(v.getString(i))
+                                                    s
+                                                }
+                                                is String -> {
+                                                    if (v.startsWith("[") && v.endsWith("]")) {
+                                                        v.substring(1, v.length - 1)
+                                                            .split(",")
+                                                            .map { it.trim() }
+                                                            .filter { it.isNotEmpty() }
+                                                            .toSet()
+                                                    } else {
+                                                        setOf(v)
+                                                    }
+                                                }
+                                                else -> emptySet<String>()
+                                            }
+                                            putStringSet(k, set)
+                                        } else {
+                                            when (v) {
+                                                is String -> putString(k, v)
+                                                is Boolean -> putBoolean(k, v)
+                                                is Int -> putInt(k, v)
+                                                is Long -> putLong(k, v)
+                                                is Double -> putFloat(k, v.toFloat())
+                                                is JSONArray -> putString(k, v.toString())
+                                            }
+                                        }
+                                    }
+                                    // Ensure consent is still marked as given after import
+                                    putBoolean("app_data_consent_given", true)
+                                    // Reset permission denial flags so permissions can be requested again
+                                    putBoolean("contacts_permission_denied", false)
+                                    putBoolean("usage_stats_permission_denied", false)
+                                    // Reset initial_permissions_asked to ensure fresh permission flow
+                                    putBoolean("initial_permissions_asked", false)
+                                    // Clear any pending usage stats return flag
+                                    putBoolean("waiting_for_usage_stats_return", false)
+                                }
+                            }
+                        }
+                        zis.closeEntry()
+                        entry = zis.nextEntry
+                    }
+                }
+            }
+            Toast.makeText(this, "Settings imported successfully", Toast.LENGTH_SHORT).show()
+            startMainActivity(requestPermissions = true)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to import settings: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun startWelcomeAnimation() {
+        val welcomeContainer = findViewById<LinearLayout>(R.id.welcome_container)
+        val welcomeText = findViewById<TextView>(R.id.welcome_text)
+        val welcomeSubtitle = findViewById<TextView>(R.id.welcome_subtitle)
+        val disclosureRoot = findViewById<LinearLayout>(R.id.disclosure_root)
+
+        // 1. "Welcome" text spring-in animation
+        welcomeText.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .translationY(0f)
+            .setDuration(1200)
+            .setInterpolator(OvershootInterpolator(0.8f))
+            .setStartDelay(400)
+            .start()
+
+        // 2. Subtitle fade-in with a slight upward slide
+        welcomeSubtitle.translationY = 20f
+        welcomeSubtitle.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(1000)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .setStartDelay(1000)
+            .start()
+
+        // 3. Sequential Transition (Apple-style "Zoom through")
+        handler.postDelayed({
+            // Zoom Welcome out (towards the user)
+            welcomeContainer.animate()
+                .alpha(0f)
+                .scaleX(1.5f)
+                .scaleY(1.5f)
+                .setDuration(800)
+                .setInterpolator(AnticipateInterpolator())
+                .withEndAction {
+                    welcomeContainer.visibility = View.GONE
+                    
+                    // Reveal Disclosure Content with a subtle zoom-in
+                    disclosureRoot.visibility = View.VISIBLE
+                    disclosureRoot.alpha = 0f
+                    disclosureRoot.scaleX = 0.95f
+                    disclosureRoot.scaleY = 0.95f
+                    
+                    disclosureRoot.animate()
+                        .alpha(1f)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(1000)
+                        .setInterpolator(AccelerateDecelerateInterpolator())
+                        .start()
+                }
+                .start()
+        }, 3800)
+    }
+
+    private fun setupWallpaper() {
+        val wallpaperView = findViewById<ImageView>(R.id.disclosure_wallpaper)
+        val wallpaperHelper = WallpaperManagerHelper(this, wallpaperView, null, backgroundExecutor)
+        wallpaperHelper.setWallpaperBackground()
     }
     
-    private fun startMainActivity() {
+    private fun startMainActivity(requestPermissions: Boolean = false) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            if (requestPermissions) {
+                putExtra("request_permissions_after_onboarding", true)
+            }
         }
         startActivity(intent)
         finish()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        backgroundExecutor.shutdown()
+        handler.removeCallbacksAndMessages(null)
     }
 }

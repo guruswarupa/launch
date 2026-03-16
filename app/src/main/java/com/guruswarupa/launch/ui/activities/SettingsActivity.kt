@@ -1137,6 +1137,9 @@ class SettingsActivity : ComponentActivity() {
                                             }
                                         }
                                     }
+                                    // Reset permission denial flags so permissions can be requested again
+                                    putBoolean("contacts_permission_denied", false)
+                                    putBoolean("usage_stats_permission_denied", false)
                                 }
                             }
                         }

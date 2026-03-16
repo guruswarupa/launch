@@ -175,6 +175,9 @@ class LifecycleManager(
         deviceInfoWidget?.onResume()
         networkStatsWidget?.onResume()
         
+        // Refresh usage stats permission button and load data if permission granted
+        usageStatsDisplayManager?.refreshPermissionButton()
+        
         // Update time/date
         val isPowerSaverMode = sharedPreferences.getBoolean("power_saver_mode", false)
         timeDateManager?.startUpdates(isPowerSaverMode)

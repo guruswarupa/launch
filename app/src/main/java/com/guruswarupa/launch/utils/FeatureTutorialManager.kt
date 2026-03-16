@@ -29,6 +29,7 @@ class FeatureTutorialManager(
     private var tutorialOverlay: View? = null
     private var isTutorialActive = false
     private var renderToken = 0
+    private var onTutorialCompleteCallback: (() -> Unit)? = null
 
     companion object {
         private const val PREF_TUTORIAL_SHOWN = "feature_tutorial_shown"
@@ -153,15 +154,17 @@ class FeatureTutorialManager(
         return !sharedPreferences.getBoolean(PREF_TUTORIAL_SHOWN, false)
     }
 
-    fun startTutorial() {
+    fun startTutorial(onComplete: (() -> Unit)? = null) {
         removeTutorialOverlay()
         currentStep = sharedPreferences.getInt(PREF_TUTORIAL_STEP, 0)
         if (currentStep >= TutorialStep.entries.size) {
             markTutorialComplete()
+            onComplete?.invoke()
             return
         }
 
         isTutorialActive = true
+        onTutorialCompleteCallback = onComplete
         showCurrentStep()
     }
 
@@ -432,6 +435,8 @@ class FeatureTutorialManager(
         renderToken++
         activity.openHomePage(animated = false)
         markTutorialComplete()
+        onTutorialCompleteCallback?.invoke()
+        onTutorialCompleteCallback = null
     }
 
     private fun markTutorialComplete() {
