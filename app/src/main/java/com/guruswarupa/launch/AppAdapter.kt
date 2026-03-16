@@ -76,30 +76,30 @@ class AppAdapter(
 
     private val usageStatsManager = AppUsageStatsManager(activity)
     
-    // Reduced cache sizes to save memory
-    private val iconCache = object : LinkedHashMap<String, Drawable>(60, 0.75f, true) {
+    // Optimized cache sizes for minimal RAM usage - only cache visible + nearby apps
+    private val iconCache = object : LinkedHashMap<String, Drawable>(40, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Drawable>?): Boolean {
-            return size > 60 // Reduced from 100 to 60
+            return size > 40 // Keep only most recently used icons
         }
     }
-    private val labelCache = object : LinkedHashMap<String, String>(150, 0.75f, true) {
+    private val labelCache = object : LinkedHashMap<String, String>(100, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean {
-            return size > 150 // Reduced from 200 to 150
+            return size > 100 // Labels are small, but still limit
         }
     }
-    private val specialAppIconCache = object : LinkedHashMap<String, Drawable>(15, 0.75f, true) {
+    private val specialAppIconCache = object : LinkedHashMap<String, Drawable>(10, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Drawable>?): Boolean {
-            return size > 15 // Reduced from 20 to 15
+            return size > 10 // Only ~10 special apps max
         }
     }
-    private val contactPhotoCache = object : LinkedHashMap<String, Drawable>(30, 0.75f, true) {
+    private val contactPhotoCache = object : LinkedHashMap<String, Drawable>(20, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Drawable>?): Boolean {
-            return size > 30 // Reduced from 50 to 30
+            return size > 20 // Contacts have photos, keep minimal
         }
     }
-    private val usageCache = object : LinkedHashMap<String, String>(50, 0.75f, true) {
+    private val usageCache = object : LinkedHashMap<String, String>(30, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean {
-            return size > 50 // Reduced from 100 to 50
+            return size > 30 // Usage stats only for visible apps
         }
     }
     
@@ -115,6 +115,45 @@ class AppAdapter(
         override fun run() = action.run()
         override fun compareTo(other: PriorityRunnable): Int = other.priority.compareTo(this.priority)
     }
+    
+    // Wrapper task that can be tracked and cancelled - implements Comparable for PriorityBlockingQueue
+    private class TrackedTask(
+        private val priorityRunnable: PriorityRunnable,
+        private val packageName: String
+    ) : Runnable, Comparable<TrackedTask>, java.util.concurrent.Future<Boolean> {
+        @Volatile private var isDone = false
+        @Volatile private var isCancelled = false
+        
+        override fun run() {
+            try {
+                priorityRunnable.run()
+            } finally {
+                isDone = true
+            }
+        }
+        
+        override fun compareTo(other: TrackedTask): Int {
+            // Delegate comparison to the wrapped PriorityRunnable
+            return this.priorityRunnable.compareTo(other.priorityRunnable)
+        }
+        
+        override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+            if (isDone || isCancelled) return false
+            isCancelled = true
+            return true
+        }
+        
+        override fun isCancelled(): Boolean = isCancelled
+        override fun isDone(): Boolean = isDone
+        
+        // These methods are not needed for our use case but required by Future interface
+        override fun get(): Boolean? = null
+        override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
+    }
+    
+    // Track pending tasks per package to avoid redundant work and save RAM
+    private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
+    private val pendingLabelTasks = ConcurrentHashMap<String, java.util.concurrent.Future<*>>()
 
     private val iconPreloadExecutor = ThreadPoolExecutor(
         1, 1, 0L, TimeUnit.MILLISECONDS, // Reduced from 2, 2 to 1, 1 to save threads and memory
@@ -141,6 +180,11 @@ class AppAdapter(
         contactPhotoCache.clear()
         specialAppIconCache.clear()
         usageCache.clear()
+        // Cancel pending tasks to free resources
+        pendingIconTasks.values.forEach { it.cancel(true) }
+        pendingIconTasks.clear()
+        pendingLabelTasks.values.forEach { it.cancel(true) }
+        pendingLabelTasks.clear()
     }
 
     /**
@@ -153,6 +197,11 @@ class AppAdapter(
         specialAppIconCache.clear()
         contactPhotoCache.clear()
         usageCache.clear()
+        // Cancel all pending tasks
+        pendingIconTasks.values.forEach { it.cancel(true) }
+        pendingIconTasks.clear()
+        pendingLabelTasks.values.forEach { it.cancel(true) }
+        pendingLabelTasks.clear()
         executor.shutdown()
         iconPreloadExecutor.shutdown()
         try {
@@ -300,24 +349,26 @@ class AppAdapter(
     private fun preloadIcons(apps: List<ResolveInfo>) {
         if (isDestroyed) return
         
-        // Only preload first 20 icons to save memory
-        val immediateLoad = apps.take(20)
+        // Load only visible apps immediately (first screen typically shows ~15-20 apps)
+        val immediateLoad = apps.take(15)
         for (app in immediateLoad) {
-            submitIconLoadTask(app, PRIORITY_LOW)
+            submitIconLoadTask(app, PRIORITY_MEDIUM) // Higher priority for visible apps
         }
         
-        val remainingApps = apps.drop(20)
-        if (!executor.isShutdown) {
+        // Preload next screen worth of apps with delay
+        val remainingApps = apps.drop(15).take(20) // Limit total preload to save RAM
+        if (!executor.isShutdown && remainingApps.isNotEmpty()) {
             executor.execute {
-                // Batch processing with longer sleep to keep CPU and Memory usage low
-                for (batch in remainingApps.chunked(15)) {
-                    for (app in batch) {
-                        submitIconLoadTask(app, PRIORITY_BACKGROUND)
+                // Longer delays to reduce CPU/RAM pressure
+                for ((index, app) in remainingApps.withIndex()) {
+                    submitIconLoadTask(app, PRIORITY_BACKGROUND)
+                    if (index % 5 == 4) { // Sleep every 5 apps
+                        try { Thread.sleep(200) } catch (_: InterruptedException) {}
                     }
-                    try { Thread.sleep(150) } catch (_: InterruptedException) {}
                 }
             }
         }
+        // Don't load all apps - let on-demand loading handle the rest
     }
     
     private fun submitIconLoadTask(app: ResolveInfo, priority: Int, holder: ViewHolder? = null, position: Int = -1) {
@@ -330,7 +381,7 @@ class AppAdapter(
             if (holder != null && holder.appIcon != null && iconCache.containsKey(packageName)) {
                 val icon = iconCache[packageName]
                 (context as? Activity)?.runOnUiThread {
-                    if (holder.bindingAdapterPosition == position) {
+                    if (holder.bindingAdapterPosition == position && holder.itemView.tag.toString() == packageName) {
                         holder.appIcon.setImageDrawable(icon)
                         activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                     }
@@ -339,7 +390,11 @@ class AppAdapter(
             return
         }
         
-        iconPreloadExecutor.execute(PriorityRunnable(priority) {
+        // Cancel any pending task for this package to avoid redundant work
+        pendingIconTasks[packageName]?.cancel(true)
+        
+        // Use execute instead of submit to avoid FutureTask wrapping (PriorityBlockingQueue needs Comparable)
+        val priorityRunnable = PriorityRunnable(priority) {
             try {
                 if (!iconCache.containsKey(packageName)) {
                     val icon = app.loadIcon(activity.packageManager)
@@ -347,7 +402,8 @@ class AppAdapter(
                     
                     if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
-                            if (holder.bindingAdapterPosition == position) {
+                            // Verify ViewHolder still represents the same app by checking tag
+                            if (holder.itemView.tag.toString() == packageName) {
                                 holder.appIcon.setImageDrawable(icon)
                                 activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                             }
@@ -355,7 +411,17 @@ class AppAdapter(
                     }
                 }
             } catch (_: Exception) {}
-        })
+        }
+        
+        // Track with a wrapper that we can cancel
+        val trackedTask = TrackedTask(priorityRunnable, packageName)
+        iconPreloadExecutor.execute(trackedTask)
+        pendingIconTasks[packageName] = trackedTask
+        
+        // Clean up completed/cancelled tasks periodically
+        if (pendingIconTasks.size > 100) {
+            pendingIconTasks.entries.removeAll { it.value.isDone }
+        }
     }
 
     private fun preloadNextIcons(startPosition: Int, endPosition: Int) {
@@ -363,12 +429,19 @@ class AppAdapter(
         
         val size = appList.size
         if (startPosition >= size) return
+        
+        // Only preload a small window ahead to save RAM
+        val actualEnd = minOf(startPosition + 5, size) // Reduced from 9 to 5
+        if (actualEnd <= startPosition) return
+        
         val appsToPreload = try {
-            ArrayList(appList.subList(startPosition, minOf(endPosition, size)))
+            ArrayList(appList.subList(startPosition, actualEnd))
         } catch (_: Exception) { return }
+        
+        // Use lower priority and only load if not already cached
         for (app in appsToPreload) { 
-            if (app.activityInfo.packageName != SEPARATOR_PACKAGE) {
-                submitIconLoadTask(app, PRIORITY_MEDIUM) 
+            if (app.activityInfo.packageName != SEPARATOR_PACKAGE && !iconCache.containsKey(app.activityInfo.packageName)) {
+                submitIconLoadTask(app, PRIORITY_LOW) // Lowest priority for background preload
             }
         }
     }
@@ -398,23 +471,30 @@ class AppAdapter(
             return
         }
         
-        // Re-apply typography to ensure theme color is updated on recycled views
-        TypographyManager.applyToView(holder.itemView)
-
-        // Apply icon shape style programmatically
-        holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
+        // Only apply expensive operations if view is being recycled (has old data)
+        val needsRefresh = holder.itemView.tag != null && holder.itemView.tag != packageName
         
-        // Apply icon size
-        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
-        val params = holder.appIcon?.layoutParams
-        if (params != null) {
-            params.width = sizeInPx
-            params.height = sizeInPx
-            holder.appIcon.layoutParams = params
+        if (needsRefresh) {
+            // Re-apply typography only when needed
+            TypographyManager.applyToView(holder.itemView)
+            
+            // Apply icon shape style programmatically
+            holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
+            
+            // Apply icon size - avoid layout param changes unless necessary
+            val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
+            val currentParams = holder.appIcon?.layoutParams
+            if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
+                currentParams.width = sizeInPx
+                currentParams.height = sizeInPx
+                holder.appIcon?.layoutParams = currentParams
+            }
         }
-
+        
         holder.appIcon?.background = null
         holder.itemView.elevation = 0f
+        // Tag the view with package name to track correct icon assignment during recycling
+        holder.itemView.tag = packageName
 
         holder.appName?.visibility = View.VISIBLE
         holder.appUsageTime?.visibility = View.GONE
@@ -425,7 +505,7 @@ class AppAdapter(
                 val cachedPhoto = contactPhotoCache[contactName]
                 if (cachedPhoto != null) {
                     holder.appIcon?.setImageDrawable(cachedPhoto)
-                } else {
+                } else if (holder.itemView.tag.toString() != contactName) { // Avoid duplicate loads
                     holder.appIcon?.setImageResource(R.drawable.ic_person)
                     executor.execute {
                         try {
@@ -437,7 +517,9 @@ class AppAdapter(
                                 if (drawable != null) {
                                     contactPhotoCache[contactName] = drawable
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(drawable)
+                                        if (holder.itemView.tag.toString() == contactName) { // Verify with tag
+                                            holder.appIcon?.setImageDrawable(drawable)
+                                        }
                                     }
                                 }
                             }
@@ -680,8 +762,9 @@ class AppAdapter(
                     }
                 }
                 
-                if (position < appList.size - 1 && position % 8 == 0) { // Reduced preloading frequency
-                    preloadNextIcons(position + 1, minOf(position + 9, appList.size))
+                // Only preload when scrolling near the end of loaded items (every 12 items instead of 8)
+                if (position < appList.size - 1 && position % 12 == 0) {
+                    preloadNextIcons(position + 1, position + 6)
                 }
 
                 val clickDebounceDelay = 500L
@@ -761,31 +844,67 @@ class AppAdapter(
 
     private fun loadLabelAsync(holder: ViewHolder, position: Int, appInfo: ResolveInfo, packageName: String) {
         if (isDestroyed || executor.isShutdown) return
+        if (labelCache.containsKey(packageName)) return // Already cached
         
-        executor.execute {
-            try {
-                val label = appInfo.loadLabel(activity.packageManager).toString()
-                labelCache[packageName] = label
+        // Cancel any pending label task for this package
+        pendingLabelTasks[packageName]?.cancel(true)
+        
+        // Use a Runnable wrapper that we can track
+        val labelTask = object : Runnable, java.util.concurrent.Future<Boolean> {
+            @Volatile private var isDone = false
+            @Volatile private var isCancelled = false
+            
+            override fun run() {
                 try {
-                    activity.cacheManager.updateMetadataCache(packageName,
-                        AppMetadata(packageName, appInfo.activityInfo.name, label, System.currentTimeMillis())
-                    )
-                } catch (_: Exception) {}
-                
-                if (!isDestroyed && activity !is android.app.Activity || !(activity as Activity).isFinishing) {
-                    (context as? Activity)?.runOnUiThread {
-                        if (!isDestroyed && holder.bindingAdapterPosition == position) holder.appName?.text = label else notifyItemChanged(position)
+                    val label = appInfo.loadLabel(activity.packageManager).toString()
+                    labelCache[packageName] = label
+                    try {
+                        activity.cacheManager.updateMetadataCache(packageName,
+                            AppMetadata(packageName, appInfo.activityInfo.name, label, System.currentTimeMillis())
+                        )
+                    } catch (_: Exception) {}
+                    
+                    if (!isDestroyed && !(activity as? Activity)?.isFinishing!!) {
+                        (context as? Activity)?.runOnUiThread {
+                            // Verify ViewHolder still represents the same app
+                            if (holder.itemView.tag.toString() == packageName && holder.bindingAdapterPosition == position) {
+                                holder.appName?.text = label
+                            }
+                        }
                     }
-                }
-            } catch (_: Exception) {
-                val fallbackLabel = packageName
-                labelCache[packageName] = fallbackLabel
-                if (!isDestroyed && activity !is android.app.Activity || !(activity as Activity).isFinishing) {
-                    (context as? Activity)?.runOnUiThread {
-                        if (!isDestroyed && holder.bindingAdapterPosition == position) holder.appName?.text = fallbackLabel else notifyItemChanged(position)
+                } catch (_: Exception) {
+                    val fallbackLabel = packageName
+                    labelCache[packageName] = fallbackLabel
+                    if (!isDestroyed && !(activity as? Activity)?.isFinishing!!) {
+                        (context as? Activity)?.runOnUiThread {
+                            if (holder.itemView.tag.toString() == packageName) {
+                                holder.appName?.text = fallbackLabel
+                            }
+                        }
                     }
+                } finally {
+                    isDone = true
                 }
             }
+            
+            override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+                if (isDone || isCancelled) return false
+                isCancelled = true
+                return true
+            }
+            
+            override fun isCancelled(): Boolean = isCancelled
+            override fun isDone(): Boolean = isDone
+            override fun get(): Boolean? = null
+            override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
+        }
+        
+        executor.execute(labelTask)
+        pendingLabelTasks[packageName] = labelTask
+        
+        // Clean up completed tasks periodically
+        if (pendingLabelTasks.size > 50) {
+            pendingLabelTasks.entries.removeAll { it.value.isDone }
         }
     }
 
