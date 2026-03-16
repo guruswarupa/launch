@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
+import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -40,6 +41,7 @@ class PermissionManager(
         const val NOTIFICATION_PERMISSION_REQUEST = 900
         const val DEVICE_ADMIN_REQUEST = 1000
         const val NOTIFICATION_POLICY_REQUEST = 1100
+        const val DEFAULT_LAUNCHER_REQUEST = 1200
     }
     
     // Flag to prevent multiple simultaneous permission requests
@@ -139,6 +141,52 @@ class PermissionManager(
                 onComplete()
             }
         } else {
+            onComplete()
+        }
+    }
+
+    /**
+     * Checks if the app is currently the default launcher
+     */
+    fun isDefaultLauncher(): Boolean {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.packageManager.resolveActivity(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
+        } else {
+            @Suppress("DEPRECATION")
+            activity.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        }
+        return resolveInfo?.activityInfo?.packageName == activity.packageName
+    }
+
+    /**
+     * Request to set as default launcher using system popup
+     */
+    fun requestDefaultLauncher(onComplete: () -> Unit = {}) {
+        if (isDefaultLauncher()) {
+            onComplete()
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = activity.getSystemService(Context.ROLE_SERVICE) as RoleManager
+            if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
+                !roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
+                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
+                @Suppress("DEPRECATION")
+                activity.startActivityForResult(intent, DEFAULT_LAUNCHER_REQUEST)
+                // We call onComplete here as the activity result will be handled asynchronously 
+                // or the user will return to MainActivity
+                onComplete()
+            } else {
+                onComplete()
+            }
+        } else {
+            val intent = Intent(Intent.ACTION_MAIN)
+            intent.addCategory(Intent.CATEGORY_HOME)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            activity.startActivity(Intent.createChooser(intent, "Set Default Launcher"))
             onComplete()
         }
     }

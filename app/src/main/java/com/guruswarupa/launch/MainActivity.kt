@@ -117,6 +117,9 @@ class MainActivity : FragmentActivity() {
     internal lateinit var contactActionHandler: ContactActionHandler
     internal lateinit var settingsChangeCoordinator: SettingsChangeCoordinator
 
+    // State trackers
+    private var hasAskedDefaultLauncherThisOpen = false
+
     // Initialization check helpers for AppInitializer
     fun isWidgetManagerInitialized() = ::widgetManager.isInitialized
     fun isAppSearchManagerInitialized() = ::appSearchManager.isInitialized
@@ -325,7 +328,11 @@ class MainActivity : FragmentActivity() {
             }
             // Chain to Usage Stats
             permissionManager.requestUsageStatsPermission(usageStatsManager) {
-                onComplete()
+                // Step 3: Default Launcher
+                permissionManager.requestDefaultLauncher {
+                    hasAskedDefaultLauncherThisOpen = true
+                    onComplete()
+                }
             }
         }
     }
@@ -436,6 +443,7 @@ class MainActivity : FragmentActivity() {
         if (::systemBarManager.isInitialized) {
             systemBarManager.makeSystemBarsTransparent()
         }
+        hasAskedDefaultLauncherThisOpen = false
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -445,6 +453,11 @@ class MainActivity : FragmentActivity() {
         // If we're coming from the disclosure activity (likely via a task flag), check permissions
         if (intent.getBooleanExtra("request_permissions_after_onboarding", false)) {
             startFeatureTutorialAndRequestPermissions()
+        }
+        
+        // Reset the flag if explicitly opened again to allow re-prompting
+        if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
+            hasAskedDefaultLauncherThisOpen = false
         }
     }
 
@@ -698,12 +711,17 @@ class MainActivity : FragmentActivity() {
         if (sharedPreferences.getBoolean("waiting_for_usage_stats_return", false)) {
             // User just returned from usage stats settings
             sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", false) }
-            // Mark as completed and proceed
-            if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
-                sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
-                // Start tutorial if needed
-                if (::featureTutorialManager.isInitialized && featureTutorialManager.shouldShowTutorial()) {
-                    featureTutorialManager.startTutorial()
+            
+            // Ask for default launcher before finishing initial setup
+            permissionManager.requestDefaultLauncher {
+                hasAskedDefaultLauncherThisOpen = true
+                // Mark as completed and proceed
+                if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+                    sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                    // Start tutorial if needed
+                    if (::featureTutorialManager.isInitialized && featureTutorialManager.shouldShowTutorial()) {
+                        featureTutorialManager.startTutorial()
+                    }
                 }
             }
             return // Exit early to avoid triggering fallback
@@ -716,6 +734,21 @@ class MainActivity : FragmentActivity() {
             requestInitialPermissions {
                 sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
             }
+            return
+        }
+
+        // Ask for default launcher if onboarding is done but app is not default
+        // "Whenever it is opened" logic: check once per session/open
+        if (!hasAskedDefaultLauncherThisOpen && 
+            sharedPreferences.getBoolean("initial_permissions_asked", false) && 
+            ::permissionManager.isInitialized && 
+            !permissionManager.isDefaultLauncher()) {
+            
+            hasAskedDefaultLauncherThisOpen = true
+            // Use a slight delay to ensure the UI is fully settled before system popup appears
+            handler.postDelayed({
+                permissionManager.requestDefaultLauncher()
+            }, 1000)
         }
     }
 
@@ -769,9 +802,12 @@ class MainActivity : FragmentActivity() {
                 if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
                     handler.postDelayed({
                         permissionManager.requestUsageStatsPermission(usageStatsManager) {
-                            sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
-                            if (featureTutorialManager.shouldShowTutorial()) {
-                                featureTutorialManager.startTutorial()
+                            permissionManager.requestDefaultLauncher {
+                                hasAskedDefaultLauncherThisOpen = true
+                                sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                                if (featureTutorialManager.shouldShowTutorial()) {
+                                    featureTutorialManager.startTutorial()
+                                }
                             }
                         }
                     }, 300)
