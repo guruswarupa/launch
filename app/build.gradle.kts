@@ -12,8 +12,8 @@ android {
         applicationId = "com.guruswarupa.launch"
         minSdk = 24
         targetSdk = 35
-        versionCode = 27
-        versionName = "6.7"
+        versionCode = 28
+        versionName = "6.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.cardview)
     implementation(libs.material)
     implementation(libs.exp4j)
+    implementation(libs.glide)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

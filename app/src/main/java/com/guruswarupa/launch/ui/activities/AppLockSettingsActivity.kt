@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppLockManager
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 class AppLockSettingsActivity : ComponentActivity() {

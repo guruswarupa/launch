@@ -2,18 +2,26 @@ package com.guruswarupa.launch.utils
 
 import android.app.WallpaperManager
 import android.content.Context
-import android.content.SharedPreferences
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.os.Build
 import android.widget.ImageView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.Target
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.models.ThemeOption
 
 object WallpaperDisplayHelper {
-    fun applySystemWallpaper(target: ImageView, fallbackRes: Int = R.drawable.wallpaper_overlay) {
+    /**
+     * Applies the actual system wallpaper to the target ImageView.
+     * This always fetches what is currently set as the device wallpaper.
+     */
+    fun applySystemWallpaper(target: ImageView, fallbackRes: Int = R.drawable.wallpaper_background) {
         val context = target.context
-        val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        
         val wallpaperDrawable = try {
             WallpaperManager.getInstance(context).drawable
         } catch (_: Exception) {
@@ -25,12 +33,50 @@ object WallpaperDisplayHelper {
         } else {
             target.setImageResource(fallbackRes)
         }
-
-        applyBlurIfNeeded(target, prefs)
     }
+    
+    /**
+     * Applies a theme's wallpaper URL to the target ImageView.
+     * Used for previews or when a specific theme wallpaper is requested.
+     */
+    fun applyThemeWallpaper(target: ImageView, themeId: String, fallbackRes: Int = R.drawable.wallpaper_background) {
+        val context = target.context
+        val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId }
+        
+        if (theme != null) {
+            val options = RequestOptions()
+                .format(DecodeFormat.PREFER_ARGB_8888)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .override(Target.SIZE_ORIGINAL)
+                .centerCrop()
 
-    private fun applyBlurIfNeeded(target: ImageView, prefs: SharedPreferences) {
-        // Blur removed - always disable blur effect
-        target.setRenderEffect(null)
+            Glide.with(context)
+                .asDrawable()
+                .load(theme.wallpaperUrl)
+                .apply(options)
+                .transition(DrawableTransitionOptions.withCrossFade())
+                .placeholder(R.drawable.wallpaper_background)
+                .error(fallbackRes)
+                .into(target)
+        } else {
+            applySystemWallpaper(target, fallbackRes)
+        }
+    }
+    
+    fun applyThemePreview(target: ImageView, themeId: String) {
+        val context = target.context
+        if (themeId == "system_default") {
+            applySystemWallpaper(target)
+        } else {
+            val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId }
+            if (theme != null) {
+                Glide.with(context)
+                    .load(theme.wallpaperUrl)
+                    .placeholder(R.drawable.wallpaper_background)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .centerCrop()
+                    .into(target)
+            }
+        }
     }
 }

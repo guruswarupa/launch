@@ -193,6 +193,7 @@ class FastScroller @JvmOverloads constructor(
         val intensity = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
         applyTypeface(fontStyle, intensity)
         TypographyManager.getConfiguredFontColor(context)?.let { setTextColor(it) }
+        invalidate()
     }
 
     private fun applyTypeface(fontStyle: String, intensity: String) {
@@ -240,7 +241,7 @@ class FastScroller @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        trackX = width - paddingEnd - 8f * density
+        trackX = width - paddingEnd - 2f * density
         trackTop = paddingTop + extraVerticalPadding
         trackBottom = height - paddingBottom - extraVerticalPadding
         if (trackBottom <= trackTop) {
@@ -273,12 +274,12 @@ class FastScroller @JvmOverloads constructor(
 
         val baseOffset = (letterPaint.descent() + letterPaint.ascent()) / 2
         val textX = trackX - 16f * density
-        
+
         for (i in alphabet.indices) {
             val y = trackTop + letterSpacing * i
             val isSelected = i == selectedIndex && isSliding
             val isCurrentScroll = !isSliding && i == scrollIndex
-            
+
             val paintToUse = if (isSelected || isCurrentScroll) selectedLetterPaint else letterPaint
             
             val alpha = if (isSelected || isCurrentScroll) 255 else (fadeAlpha * 0.3f).toInt()

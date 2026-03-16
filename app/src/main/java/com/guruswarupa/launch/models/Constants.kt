@@ -10,6 +10,7 @@ object Constants {
     @SuppressLint("unused")
     object Prefs {
         const val PREFS_NAME = "com.guruswarupa.launch.PREFS"
+        const val SELECTED_THEME = "selected_theme"
         const val SHAKE_TORCH_ENABLED = "shake_torch_enabled"
         const val SHAKE_SENSITIVITY = "shake_sensitivity"
         const val SCREEN_DIMMER_ENABLED = "screen_dimmer_enabled"
@@ -35,6 +36,7 @@ object Constants {
         const val GRID_COLUMNS = "grid_columns"
         const val ICON_STYLE = "icon_style"
         const val ICON_SIZE = "icon_size"
+        const val BACKGROUND_TRANSLUCENCY = "background_translucency"
         
         // Vault Prefs (Simplified)
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"
@@ -43,8 +45,8 @@ object Constants {
 
     }
 
-    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "default"
-    
+    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "#FFFFFFF"
+
     // FileProvider
     const val FILE_PROVIDER_AUTHORITY_SUFFIX = ".fileprovider"
     

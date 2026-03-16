@@ -40,6 +40,7 @@ import com.guruswarupa.launch.utils.FinanceWidgetManager
 import com.guruswarupa.launch.utils.OnboardingHelper
 import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.utils.VoiceCommandHandler
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import java.util.concurrent.Executors
 
@@ -131,6 +132,7 @@ class MainActivity : FragmentActivity() {
     fun isAppListLoaderInitialized() = ::appListLoader.isInitialized
     fun isFinanceWidgetManagerInitialized() = ::financeWidgetManager.isInitialized
     fun isTimeDateManagerInitialized() = ::timeDateManager.isInitialized
+    fun isViewsInitialized() = ::activityInitializer.isInitialized
 
     /**
      * Initializes core managers that are needed early in the lifecycle.
@@ -228,12 +230,8 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
-        try {
-            val drawable = WallpaperManager.getInstance(this).drawable
-            views.rightDrawerWallpaper.setImageDrawable(drawable)
-        } catch (_: Exception) {
-            // Ignore failures when the system wallpaper can't be loaded
-        }
+        // Always show the system wallpaper for the right drawer to ensure consistency
+        WallpaperDisplayHelper.applySystemWallpaper(views.rightDrawerWallpaper)
     }
 
     /**

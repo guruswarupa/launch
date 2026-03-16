@@ -43,29 +43,16 @@ class ShakeDetectionService : Service() {
     
     override fun onCreate() {
         super.onCreate()
-        try {
-            // Start foreground immediately in onCreate to avoid timeout
-            startForegroundServiceStatus()
-            
-            // Initialize torch manager
-            torchManager = TorchManager(this)
-            
-            // Initialize shake detector with torch toggle callback
-            shakeDetector = ShakeDetector(this) {
-                // Triple shake detected - toggle torch
-                if (GestureCoordinator.requestTrigger()) {
-                    try {
-                        torchManager?.toggleTorch()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error toggling torch", e)
-                    }
-                } else {
-                    Log.d(TAG, "Shake gesture ignored due to coordination")
+        // Initialize components
+        torchManager = TorchManager(this)
+        shakeDetector = ShakeDetector(this) {
+            if (GestureCoordinator.requestTrigger()) {
+                try {
+                    torchManager?.toggleTorch()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error toggling torch", e)
                 }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in onCreate", e)
-            // If startForeground fails, the service will likely crash or be killed by the system
         }
     }
 
@@ -91,11 +78,19 @@ class ShakeDetectionService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // CRITICAL: Call startForeground IMMEDIATELY and UNCONDITIONALLY as the first operation
+        // This MUST happen within 5 seconds to avoid ForegroundServiceDidNotStartInTimeException
         try {
-            // Re-assert foreground state
             startForegroundServiceStatus()
-            
-            // Apply current sensitivity
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground service", e)
+            // If we can't start foreground, we must stop the service
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        // Now handle the service logic after foreground is established
+        try {
             applySensitivity()
 
             when (intent?.action) {
@@ -115,108 +110,50 @@ class ShakeDetectionService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Error in onStartCommand", e)
         }
-        return START_STICKY // Restart if killed by system
+        return START_STICKY
     }
     
-    /**
-     * Updates shake detection based on screen state
-     * Only listens when screen is on to save battery
-     */
     private fun updateShakeDetectionState() {
         val isScreenOn = powerManager.isInteractive
-        
-        if (isScreenOn) {
-            shakeDetector?.start()
-        } else {
-            shakeDetector?.stop()
-        }
+        if (isScreenOn) shakeDetector?.start() else shakeDetector?.stop()
     }
     
-    /**
-     * Registers receiver to monitor screen on/off state
-     */
     private fun registerScreenReceiver() {
         if (screenOnReceiver != null) return
-        
         screenOnReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
-                    Intent.ACTION_SCREEN_ON -> {
-                        shakeDetector?.start()
-                    }
-                    Intent.ACTION_SCREEN_OFF -> {
-                        shakeDetector?.stop()
-                    }
+                    Intent.ACTION_SCREEN_ON -> shakeDetector?.start()
+                    Intent.ACTION_SCREEN_OFF -> shakeDetector?.stop()
                 }
             }
         }
-        
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
         }
-        
-        // Use ContextCompat to register receiver with appropriate export flag
-        ContextCompat.registerReceiver(
-            this,
-            screenOnReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        ContextCompat.registerReceiver(this, screenOnReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
     
-    /**
-     * Registers receiver to monitor settings updates
-     */
     private fun registerSettingsReceiver() {
         if (settingsReceiver != null) return
-        
         settingsReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 applySensitivity()
             }
         }
-        
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
-        
-        // Use ContextCompat to register receiver with appropriate export flag
-        ContextCompat.registerReceiver(
-            this,
-            settingsReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
+        ContextCompat.registerReceiver(this, settingsReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
     
     override fun onDestroy() {
         super.onDestroy()
-        try {
-            isRunning = false
-            screenOnReceiver?.let {
-                try {
-                    unregisterReceiver(it)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Error unregistering screen receiver", e)
-                }
-            }
-            screenOnReceiver = null
-            
-            settingsReceiver?.let {
-                try {
-                    unregisterReceiver(it)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Error unregistering settings receiver", e)
-                }
-            }
-            settingsReceiver = null
-            
-            shakeDetector?.cleanup()
-            torchManager?.turnOffTorch() // Turn off torch when service stops
-            
-            ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in onDestroy", e)
-        }
+        isRunning = false
+        screenOnReceiver?.let { try { unregisterReceiver(it) } catch (_: Exception) {} }
+        settingsReceiver?.let { try { unregisterReceiver(it) } catch (_: Exception) {} }
+        shakeDetector?.cleanup()
+        torchManager?.turnOffTorch()
+        ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
     
     override fun onBind(intent: Intent?): IBinder? = null

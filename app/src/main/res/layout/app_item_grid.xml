@@ -1,56 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="6dp"
-    android:layout_marginHorizontal="2dp"
     android:orientation="vertical"
-    android:clickable="true"
-    android:focusable="true"
     android:gravity="center_horizontal"
-    android:paddingTop="8dp"
-    android:paddingBottom="12dp">
+    android:paddingVertical="8dp"
+    android:paddingEnd="8dp">
 
-    <!-- Icon ImageView -->
+    <!-- Icon is now outside the background container -->
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/app_icon"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
         android:scaleType="centerCrop"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="6dp"
         app:shapeAppearanceOverlay="@style/CircleImage" />
 
-    <!-- App Name TextView -->
-    <TextView
-        android:id="@+id/app_name"
+    <!-- Container for labels only - this will get the pill background -->
+    <LinearLayout
+        android:id="@+id/app_item_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="12sp"
-        android:textColor="@color/white"
-        android:ellipsize="end"
-        android:maxLines="1"
-        android:maxWidth="72dp"
-        android:gravity="center"
-        android:padding="2dp"
-        android:shadowColor="#BF000000"
-        android:shadowDx="1.5"
-        android:shadowDy="1.5"
-        android:shadowRadius="3" />
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="3dp">
 
-    <!-- Usage Time TextView -->
-    <TextView
-        android:id="@+id/app_usage_time"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="10sp"
-        android:textColor="@color/white"
-        android:alpha="0.8"
-        android:layout_marginBottom="4dp"
-        android:maxWidth="72dp"
-        android:gravity="center"
-        android:padding="2dp"
-        android:shadowColor="#BF000000"
-        android:shadowDx="1.2"
-        android:shadowDy="1.2"
-        android:shadowRadius="2" />
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textColor="@color/white"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:maxWidth="64dp"
+            android:gravity="center"
+            android:shadowColor="#BF000000"
+            android:shadowDx="1.5"
+            android:shadowDy="1.5"
+            android:shadowRadius="3" />
+
+        <TextView
+            android:id="@+id/app_usage_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="9sp"
+            android:textColor="@color/white"
+            android:alpha="0.8"
+            android:maxWidth="64dp"
+            android:gravity="center"
+            android:visibility="gone"
+            android:shadowColor="#BF000000"
+            android:shadowDx="1.2"
+            android:shadowDy="1.2"
+            android:shadowRadius="2" />
+    </LinearLayout>
 </LinearLayout>

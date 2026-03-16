@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.FocusModeManager
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.ui.adapters.FocusModeAppAdapter
@@ -37,6 +38,7 @@ class FocusModeConfigActivity : ComponentActivity() {
     private lateinit var cancelButton: Button
 
     private val backgroundExecutor = Executors.newSingleThreadExecutor()
+    private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +57,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         recyclerView = findViewById(R.id.focus_mode_app_list)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
         themeOverlay = findViewById(R.id.theme_overlay)
+        applyBackgroundTranslucency()
         titleText = findViewById(R.id.title_text)
         subtitleText = findViewById(R.id.subtitle_text)
         appsContainer = findViewById(R.id.apps_container)
@@ -95,7 +98,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         // Set system wallpaper
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
-        themeOverlay.setBackgroundColor(Color.parseColor("#66000000"))
+        applyBackgroundTranslucency()
         
         appsContainer.setBackgroundResource(R.drawable.widget_background)
         
@@ -126,5 +129,12 @@ class FocusModeConfigActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         backgroundExecutor.shutdown()
+    }
+    
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        themeOverlay.setBackgroundColor(color)
     }
 }

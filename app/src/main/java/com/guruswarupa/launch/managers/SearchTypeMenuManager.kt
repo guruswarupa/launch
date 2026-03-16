@@ -92,6 +92,7 @@ class SearchTypeMenuManager(
             true
         }
         popup.show()
+        applyThemeColorToPopupMenu(popup)
     }
     
     /**
@@ -173,5 +174,67 @@ class SearchTypeMenuManager(
         }
         
         return popup
+    }
+    
+    /**
+     * Applies theme color to popup menu items
+     */
+    private fun applyThemeColorToPopupMenu(popup: PopupMenu) {
+        try {
+            val themeColor = TypographyManager.getConfiguredFontColor(context) ?: ContextCompat.getColor(context, R.color.white)
+            val popupField = popup.javaClass.getDeclaredField("mPopup")
+            popupField.isAccessible = true
+            val menuPopupHelper = popupField.get(popup)
+            val cls = menuPopupHelper.javaClass
+            
+            // Get the list view
+            val listViewFieldNames = arrayOf("mDropDownList", "mPopup", "mListView")
+            var listView: android.widget.ListView? = null
+            
+            for (fieldName in listViewFieldNames) {
+                try {
+                    val listViewField = cls.getDeclaredField(fieldName)
+                    listViewField.isAccessible = true
+                    val result = listViewField.get(menuPopupHelper)
+                    if (result is android.widget.ListView) {
+                        listView = result
+                        break
+                    }
+                } catch (_: NoSuchFieldException) {}
+            }
+            
+            // Apply theme color to list items
+            listView?.let { lv ->
+                // Apply immediately
+                for (i in 0 until lv.childCount) {
+                    val itemView = lv.getChildAt(i)
+                    if (itemView is android.widget.TextView) {
+                        itemView.setTextColor(themeColor)
+                    }
+                }
+                // Post to ensure items are rendered
+                lv.post {
+                    for (i in 0 until lv.childCount) {
+                        val itemView = lv.getChildAt(i)
+                        if (itemView is android.widget.TextView) {
+                            itemView.setTextColor(themeColor)
+                        } else if (itemView is android.view.ViewGroup) {
+                            findTextViewsAndSetColor(itemView, themeColor)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+    
+    private fun findTextViewsAndSetColor(viewGroup: android.view.ViewGroup, color: Int) {
+        for (i in 0 until viewGroup.childCount) {
+            val child = viewGroup.getChildAt(i)
+            if (child is android.widget.TextView) {
+                child.setTextColor(color)
+            } else if (child is android.view.ViewGroup) {
+                findTextViewsAndSetColor(child, color)
+            }
+        }
     }
 }

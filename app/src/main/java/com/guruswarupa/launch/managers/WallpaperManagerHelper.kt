@@ -14,6 +14,7 @@ import android.widget.ImageView
 import androidx.core.graphics.createBitmap
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 
 /**
  * Helper class for managing wallpaper display
@@ -35,6 +36,10 @@ class WallpaperManagerHelper(
     fun setWallpaperBackground(forceReload: Boolean = false) {
         // Apply blur based on preference
         applyBlurToViews()
+
+        // We always prioritize the system wallpaper for the home screens.
+        // Even if a theme is selected for colors/icons, we show the system wallpaper.
+        // Users can "Apply" a theme's wallpaper to the system via settings.
 
         val wallpaperManager = WallpaperManager.getInstance(activity)
         val wallpaperId = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {

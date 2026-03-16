@@ -2,6 +2,7 @@ package com.guruswarupa.launch.ui.activities
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -33,6 +34,7 @@ import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.handlers.ActivityResultHandler
 import com.guruswarupa.launch.managers.TypographyManager
+import com.guruswarupa.launch.models.Constants
 
 class WidgetConfigurationActivity : AppCompatActivity() {
 
@@ -49,6 +51,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     // Widget data
     private var allWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
     private var filteredWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
+    
+    private val prefs by lazy { getSharedPreferences(prefsName, MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +73,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         supportActionBar?.hide()
         
         setContentView(R.layout.activity_widget_configuration)
+        applyBackgroundTranslucency()
 
         val mainContent = findViewById<View>(R.id.main_content)
         ViewCompat.setOnApplyWindowInsetsListener(mainContent) { view, insets ->
@@ -243,6 +248,13 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     
     private fun Int.toPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
+    }
+    
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
     
     fun updateWidgetState(widgetId: String, enabled: Boolean) {

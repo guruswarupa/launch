@@ -20,6 +20,7 @@ import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import android.graphics.Color
+import com.guruswarupa.launch.models.Constants
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
@@ -32,6 +33,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspacesContainer: LinearLayout
     
     private val backgroundExecutor = Executors.newSingleThreadExecutor()
+    private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +52,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         createWorkspaceButton = findViewById(R.id.create_workspace_button)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
         themeOverlay = findViewById(R.id.theme_overlay)
+        applyBackgroundTranslucency()
         titleText = findViewById(R.id.title_text)
         subtitleText = findViewById(R.id.subtitle_text)
         workspacesContainer = findViewById(R.id.workspaces_container)
@@ -64,11 +67,18 @@ class WorkspaceConfigActivity : ComponentActivity() {
         loadWorkspaces()
     }
     
+    private fun applyBackgroundTranslucency() {
+        val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
+        val alpha = (translucency * 255 / 100).coerceIn(0, 255)
+        val color = Color.argb(alpha, 0, 0, 0)
+        themeOverlay.setBackgroundColor(color)
+    }
+    
     private fun applyThemeAndWallpaper() {
         // Set system wallpaper
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
-        themeOverlay.setBackgroundColor(Color.parseColor("#66000000"))
+        applyBackgroundTranslucency()
         
         workspacesContainer.setBackgroundResource(R.drawable.widget_background)
         

@@ -18,6 +18,13 @@
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
 
+        <!-- Translucency Overlay -->
+        <View
+            android:id="@+id/background_translucency_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#00000000"/>
+
         <!-- Hidden scroll view kept for gesture handler padding/inset adjustments -->
         <androidx.core.widget.NestedScrollView
             android:id="@+id/main_scroll_view"
@@ -239,6 +246,13 @@
             android:layout_height="match_parent"
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
+
+        <!-- Translucency Overlay for Widgets Drawer -->
+        <View
+            android:id="@+id/widgets_drawer_translucency_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#00000000"/>
 
         <View
             android:layout_width="match_parent"

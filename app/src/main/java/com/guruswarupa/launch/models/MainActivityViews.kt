@@ -1,5 +1,6 @@
 package com.guruswarupa.launch.models
 
+import android.view.View
 import android.widget.AutoCompleteTextView
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -34,6 +35,8 @@ class MainActivityViews {
     lateinit var rightDrawerTime: TextView
     lateinit var rightDrawerDate: TextView
     lateinit var drawerLayout: DrawerLayout
+    lateinit var backgroundTranslucencyOverlay: View
+    lateinit var widgetsDrawerTranslucencyOverlay: View
 
     fun isSearchBoxInitialized() = ::searchBox.isInitialized
     fun isSearchContainerInitialized() = ::searchContainer.isInitialized
@@ -41,4 +44,5 @@ class MainActivityViews {
     fun isVoiceSearchButtonInitialized() = ::voiceSearchButton.isInitialized
     fun isRightDrawerWallpaperInitialized() = ::rightDrawerWallpaper.isInitialized
     fun isRecyclerViewInitialized() = ::recyclerView.isInitialized
+    fun areTranslucencyOverlaysInitialized() = ::backgroundTranslucencyOverlay.isInitialized && ::widgetsDrawerTranslucencyOverlay.isInitialized
 }
