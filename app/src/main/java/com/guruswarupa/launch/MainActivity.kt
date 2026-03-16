@@ -450,13 +450,20 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         
+        val isHomeOrLauncher = intent.action == Intent.ACTION_MAIN && 
+            (intent.hasCategory(Intent.CATEGORY_HOME) || intent.hasCategory(Intent.CATEGORY_LAUNCHER))
+
+        if (isHomeOrLauncher && ::screenPagerManager.isInitialized) {
+            screenPagerManager.openCenterPage(animated = true)
+        }
+
         // If we're coming from the disclosure activity (likely via a task flag), check permissions
         if (intent.getBooleanExtra("request_permissions_after_onboarding", false)) {
             startFeatureTutorialAndRequestPermissions()
         }
         
         // Reset the flag if explicitly opened again to allow re-prompting
-        if (intent.action == Intent.ACTION_MAIN && intent.hasCategory(Intent.CATEGORY_LAUNCHER)) {
+        if (isHomeOrLauncher) {
             hasAskedDefaultLauncherThisOpen = false
         }
     }
@@ -702,9 +709,6 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onResume(intent)
-        }
-        if (::screenPagerManager.isInitialized) {
-            screenPagerManager.openCenterPage(animated = false)
         }
         
         // Check if we're waiting for user to return from usage stats settings
