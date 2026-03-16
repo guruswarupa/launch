@@ -76,6 +76,18 @@ class AppSearchManager(
         adapter?.clearContactPhotoCache()
     }
 
+    fun getFullAppList(): List<ResolveInfo> {
+        synchronized(dataLock) {
+            return ArrayList(fullAppList)
+        }
+    }
+
+    fun getHomeAppList(): List<ResolveInfo> {
+        synchronized(dataLock) {
+            return ArrayList(homeAppList)
+        }
+    }
+
     private fun getAppLabel(info: ResolveInfo): String {
         val packageName = info.activityInfo.packageName
         return appMetadataCache?.get(packageName)?.label?.lowercase()

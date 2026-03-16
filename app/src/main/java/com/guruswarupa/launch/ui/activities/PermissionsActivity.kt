@@ -83,7 +83,8 @@ class PermissionsActivity : ComponentActivity() {
         list.add(PermItem("Launcher", "Set as default home", isDefaultLauncher(), type = "DEFAULT"))
         list.add(PermItem("Contacts", "Search & call contacts", check(Manifest.permission.READ_CONTACTS), Manifest.permission.READ_CONTACTS))
         
-        // Storage permission removed
+        val storage = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
+        list.add(PermItem("Files & Media", "Search files and media", check(storage), storage))
         
         if (Build.VERSION.SDK_INT >= 33) list.add(PermItem("Notifications", "Show widget alerts", check(Manifest.permission.POST_NOTIFICATIONS), Manifest.permission.POST_NOTIFICATIONS))
         list.add(PermItem("Microphone", "Voice search access", check(Manifest.permission.RECORD_AUDIO), Manifest.permission.RECORD_AUDIO))

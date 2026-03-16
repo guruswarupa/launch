@@ -319,9 +319,14 @@ class MainActivity : FragmentActivity() {
     internal fun requestInitialPermissions(onComplete: () -> Unit = {}) {
         // Step 1: Contacts Permission
         permissionManager.requestContactsPermission { 
-            contactManager.loadContacts {
+            contactManager.loadContacts { loadedContacts ->
                 if (::appSearchManager.isInitialized) {
-                    appSearchManager.updateContactsList()
+                    // Update the AppSearchManager with the newly loaded contacts
+                    appSearchManager.updateData(
+                        newFullAppList = appSearchManager.getFullAppList(),
+                        newHomeAppList = appSearchManager.getHomeAppList(),
+                        newContactsList = loadedContacts
+                    )
                 } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                     updateAppSearchManager()
                 }
@@ -444,6 +449,11 @@ class MainActivity : FragmentActivity() {
             systemBarManager.makeSystemBarsTransparent()
         }
         hasAskedDefaultLauncherThisOpen = false
+        
+        // Eagerly load contacts if permission is already granted
+        if (::contactManager.isInitialized) {
+            contactManager.loadContactsEagerly()
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -776,9 +786,14 @@ class MainActivity : FragmentActivity() {
                 permissions,
                 grantResults,
                 onContactsGranted = { 
-                    contactManager.loadContacts {
+                    contactManager.loadContacts { loadedContacts ->
                         if (::appSearchManager.isInitialized) {
-                            appSearchManager.updateContactsList()
+                            // Update the AppSearchManager with the newly loaded contacts
+                            appSearchManager.updateData(
+                                newFullAppList = appSearchManager.getFullAppList(),
+                                newHomeAppList = appSearchManager.getHomeAppList(),
+                                newContactsList = loadedContacts
+                            )
                         } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                             updateAppSearchManager()
                         }
