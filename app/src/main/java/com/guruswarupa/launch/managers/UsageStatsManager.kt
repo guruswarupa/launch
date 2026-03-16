@@ -111,6 +111,29 @@ class AppUsageStatsManager(private val context: Context) {
     }
 
     /**
+     * Returns usage stats for all apps for today in a single call.
+     * This is much faster for batch processing.
+     */
+    fun getUsageMapForToday(): Map<String, Long> {
+        if (!hasUsageStatsPermission()) return emptyMap()
+        
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+        
+        return try {
+            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+            statsMap.mapValues { it.value.totalTimeInForeground }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    /**
      * Filters out system apps and the launcher itself to show only user-relevant apps.
      */
     private fun isReportableApp(packageName: String): Boolean {

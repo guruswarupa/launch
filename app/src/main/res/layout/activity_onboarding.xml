@@ -541,17 +541,6 @@
                         android:textSize="26sp" />
 
                     <TextView
-                        android:id="@+id/favorites_loading_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
-                        android:gravity="center"
-                        android:text="Loading apps..."
-                        android:textColor="@color/onboarding_text_secondary"
-                        android:textSize="14sp"
-                        android:visibility="gone" />
-
-                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
@@ -559,18 +548,32 @@
                         android:textColor="@color/onboarding_text_secondary"
                         android:textSize="15sp" />
 
-                    <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
-                        android:id="@+id/favorites_recycler_view"
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
-                        android:background="@android:color/transparent"
-                        android:clipToPadding="false"
-                        android:fadeScrollbars="false"
-                        android:nestedScrollingEnabled="false"
-                        android:overScrollMode="never"
-                        android:paddingBottom="12dp"
-                        android:scrollbars="none" />
+                        android:layout_height="wrap_content">
+
+                        <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
+                            android:id="@+id/favorites_recycler_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="18dp"
+                            android:background="@android:color/transparent"
+                            android:clipToPadding="false"
+                            android:fadeScrollbars="false"
+                            android:nestedScrollingEnabled="false"
+                            android:overScrollMode="never"
+                            android:paddingBottom="12dp"
+                            android:scrollbars="none" />
+
+                        <ProgressBar
+                            android:id="@+id/loading_progress_bar"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:visibility="gone"
+                            android:indeterminateTint="@color/white"
+                            android:translationZ="10dp" />
+                    </FrameLayout>
                 </LinearLayout>
 
                 <LinearLayout
@@ -635,17 +638,6 @@
                         android:visibility="gone" />
 
                     <TextView
-                        android:id="@+id/workspaces_loading_text"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center"
-                        android:text="Loading apps..."
-                        android:textColor="@color/onboarding_text_secondary"
-                        android:textSize="14sp"
-                        android:visibility="gone" />
-
-                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
@@ -654,17 +646,31 @@
                         android:textColor="@color/onboarding_text"
                         android:textSize="15sp" />
 
-                    <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
-                        android:id="@+id/workspaces_apps_recycler_view"
+                    <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:background="@android:color/transparent"
-                        android:clipToPadding="false"
-                        android:nestedScrollingEnabled="false"
-                        android:overScrollMode="never"
-                        android:paddingBottom="12dp"
-                        android:scrollbars="none" />
+                        android:layout_height="wrap_content">
+
+                        <com.guruswarupa.launch.ui.views.WrapContentRecyclerView
+                            android:id="@+id/workspaces_apps_recycler_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:background="@android:color/transparent"
+                            android:clipToPadding="false"
+                            android:nestedScrollingEnabled="false"
+                            android:overScrollMode="never"
+                            android:paddingBottom="12dp"
+                            android:scrollbars="none" />
+
+                        <ProgressBar
+                            android:id="@+id/workspaces_loading_progress_bar"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:visibility="gone"
+                            android:indeterminateTint="@color/white"
+                            android:translationZ="10dp" />
+                    </FrameLayout>
 
                 </LinearLayout>
 
@@ -766,6 +772,8 @@
                         android:textColor="@color/white"
                         android:textSize="15sp" />
                 </LinearLayout>
+
+
             </FrameLayout>
 
             <LinearLayout

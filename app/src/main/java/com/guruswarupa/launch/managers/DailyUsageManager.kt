@@ -51,27 +51,24 @@ class DailyUsageManager(private val context: Context) {
     /**
      * Set daily usage limit for an app in milliseconds
      */
-    private fun setDailyLimit(packageName: String, limitMs: Long) {
+    fun setDailyLimit(packageName: String, limitMs: Long) {
         prefs.edit { putLong("${PREF_DAILY_LIMIT_PREFIX}$packageName", limitMs) }
     }
 
     /**
      * Get today's usage for an app in milliseconds
-     * Uses the same method as AppUsageStatsManager to ensure consistency with app list display
      */
     fun getTodayUsage(packageName: String): Long {
         resetIfNewDay()
-        
-        // Use AppUsageStatsManager.getAppUsageTime() to get the same value shown in app list
-        // This uses queryEvents for accurate real-time tracking
-        val usageFromStats = appUsageStatsManager.getAppUsageTime(packageName)
-        
-        // Store it for quick access (though we'll always use the manager for accuracy)
-        if (usageFromStats > 0) {
-            prefs.edit { putLong("${PREF_DAILY_USAGE_PREFIX}$packageName", usageFromStats) }
-        }
-        
-        return usageFromStats
+        return appUsageStatsManager.getAppUsageTime(packageName)
+    }
+
+    /**
+     * Get usage for all apps for today in a single efficient call.
+     */
+    fun getTodayUsageMap(): Map<String, Long> {
+        resetIfNewDay()
+        return appUsageStatsManager.getUsageMapForToday()
     }
 
     /**
@@ -79,8 +76,6 @@ class DailyUsageManager(private val context: Context) {
      */
     fun recordAppUsage(packageName: String) {
         resetIfNewDay()
-        // Usage is tracked via UsageStatsManager, but we can store a timestamp
-        // to track when the app was last used
         prefs.edit { putLong("last_used_$packageName", System.currentTimeMillis()) }
     }
 
@@ -89,12 +84,12 @@ class DailyUsageManager(private val context: Context) {
      */
     fun canLaunchApp(packageName: String): Boolean {
         if (!isTimerEnabled(packageName)) {
-            return true // Timer not enabled, allow launch
+            return true
         }
 
         val limit = getDailyLimit(packageName)
         if (limit == 0L) {
-            return true // No limit set, allow launch
+            return true
         }
 
         val usage = getTodayUsage(packageName)
@@ -189,7 +184,6 @@ class DailyUsageManager(private val context: Context) {
         val lastResetDate = prefs.getLong(PREF_LAST_RESET_DATE, 0L)
         
         if (lastResetDate != today) {
-            // New day - clear all usage data
             prefs.edit {
                 val allPrefs = prefs.all
                 for (key in allPrefs.keys) {
@@ -203,7 +197,7 @@ class DailyUsageManager(private val context: Context) {
     }
 
     /**
-     * Reset usage for a specific app (for testing or manual reset)
+     * Reset usage for a specific app
      */
     fun resetUsage(packageName: String) {
         prefs.edit { remove("${PREF_DAILY_USAGE_PREFIX}$packageName") }

@@ -120,6 +120,7 @@ class SettingsActivity : ComponentActivity() {
 
         setupAppearanceSection()
         setupActionsSection()
+        setupAppTimerSection()
         setupSecuritySection()
         setupMaintenanceSection()
         setupSupportSection()
@@ -519,6 +520,17 @@ class SettingsActivity : ComponentActivity() {
 
         findViewById<View>(R.id.config_control_center_button).setOnClickListener {
             startActivity(Intent(this, ControlCenterConfigActivity::class.java))
+        }
+    }
+
+    private fun setupAppTimerSection() {
+        val tHeader = findViewById<LinearLayout>(R.id.app_timer_header)
+        val tContent = findViewById<LinearLayout>(R.id.app_timer_content)
+        val tArrow = findViewById<TextView>(R.id.app_timer_arrow)
+        setupSectionToggle(tHeader, tContent, tArrow)
+        
+        findViewById<View>(R.id.manage_app_timers_button).setOnClickListener {
+            startActivity(Intent(this, AppTimerManagementActivity::class.java))
         }
     }
 

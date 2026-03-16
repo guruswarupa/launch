@@ -20,13 +20,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.text.TextWatcher
 import android.text.Editable
-import android.widget.Button
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
-import android.widget.Toast
-import android.widget.ImageView
+import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -111,8 +105,8 @@ class OnboardingActivity : ComponentActivity() {
     private lateinit var progressSubtitle: TextView
     private lateinit var weatherApiKeyInput: EditText
     private lateinit var weatherLocationInput: EditText
-    private lateinit var favoritesLoadingText: TextView
-    private lateinit var workspacesLoadingText: TextView
+    private lateinit var favoritesLoadingProgressBar: ProgressBar
+    private lateinit var workspacesLoadingProgressBar: ProgressBar
     private lateinit var favoritesRecyclerView: androidx.recyclerview.widget.RecyclerView
     private var favoritesAdapter: FavoritesOnboardingAdapter? = null
     private var selectedFavorites = mutableSetOf<String>()
@@ -362,8 +356,8 @@ class OnboardingActivity : ComponentActivity() {
         progressSubtitle = findViewById(R.id.progress_subtitle)
         weatherApiKeyInput = findViewById(R.id.weather_api_key_input)
         weatherLocationInput = findViewById(R.id.weather_location_input)
-        favoritesLoadingText = findViewById(R.id.favorites_loading_text)
-        workspacesLoadingText = findViewById(R.id.workspaces_loading_text)
+        favoritesLoadingProgressBar = findViewById(R.id.loading_progress_bar)
+        workspacesLoadingProgressBar = findViewById(R.id.workspaces_loading_progress_bar)
 
         step1Indicator = findViewById(R.id.step1_indicator)
         step2Indicator = findViewById(R.id.step2_indicator)
@@ -397,6 +391,8 @@ class OnboardingActivity : ComponentActivity() {
         currentStep = step
         updateProgressHeader(step)
         workspaceActionFab.visibility = View.GONE
+        favoritesLoadingProgressBar.visibility = View.GONE
+        workspacesLoadingProgressBar.visibility = View.GONE
         
         // Hide all steps first
         welcomeStep.visibility = View.GONE
@@ -1026,11 +1022,17 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun loadAppsForFavoritesSelection() {
-        favoritesLoadingText.visibility = View.VISIBLE
-        favoritesRecyclerView.visibility = View.GONE
+        if (cachedAppsList == null) {
+            favoritesLoadingProgressBar.visibility = View.VISIBLE
+            favoritesRecyclerView.visibility = View.GONE
+        } else {
+            favoritesLoadingProgressBar.visibility = View.GONE
+            favoritesRecyclerView.visibility = View.VISIBLE
+        }
+        
         preloadAppList { apps ->
             ensureFavoritesAdapterReady(apps)
-            favoritesLoadingText.visibility = View.GONE
+            favoritesLoadingProgressBar.visibility = View.GONE
             favoritesRecyclerView.visibility = View.VISIBLE
         }
     }
@@ -1043,8 +1045,14 @@ class OnboardingActivity : ComponentActivity() {
     }
     
     private fun loadAppsForWorkspacesSelection() {
-        workspacesLoadingText.visibility = View.VISIBLE
-        workspacesAppsRecyclerView.visibility = View.GONE
+        if (cachedAppsList == null) {
+            workspacesLoadingProgressBar.visibility = View.VISIBLE
+            workspacesAppsRecyclerView.visibility = View.GONE
+        } else {
+            workspacesLoadingProgressBar.visibility = View.GONE
+            workspacesAppsRecyclerView.visibility = View.VISIBLE
+        }
+
         preloadAppList { apps ->
             allAppsList = apps
             updateAvailableAppsForWorkspace()
@@ -1064,7 +1072,7 @@ class OnboardingActivity : ComponentActivity() {
             )
             workspacesListRecyclerView.adapter = workspacesListAdapter
             updateWorkspacesListVisibility()
-            workspacesLoadingText.visibility = View.GONE
+            workspacesLoadingProgressBar.visibility = View.GONE
             workspacesAppsRecyclerView.visibility = View.VISIBLE
         }
     }
