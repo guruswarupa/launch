@@ -29,6 +29,7 @@ class AppListLoader(
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
     private val cacheManager: CacheManager?,
+    private val webAppManager: WebAppManager,
     private val backgroundExecutor: Executor,
     private val handler: Handler,
     private val recyclerView: RecyclerView,
@@ -103,14 +104,15 @@ class AppListLoader(
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
-                    val cachedFinalList = appListManager.filterAndPrepareApps(cachedApps, focusMode, workspaceMode)
+                    val cachedAppsWithWebApps = appendWebApps(cachedApps)
+                    val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                     
                     if (cachedFinalList.isNotEmpty() && adapter != null) {
                         val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                         
                         handler.post {
                             // Pass false as isFinal because version check is pending
-                            onAppListUpdated?.invoke(sorted, cachedApps, false)
+                            onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                         }
                         
                         // Verify version in background (non-blocking) - use list-based check to avoid re-querying PM
@@ -141,14 +143,15 @@ class AppListLoader(
                 val focusMode = appDockManager.getCurrentMode()
                 val workspaceMode = appDockManager.isWorkspaceModeActive()
                 
-                val cachedFinalList = appListManager.filterAndPrepareApps(cachedUnsortedList!!, focusMode, workspaceMode)
+                val cachedAppsWithWebApps = appendWebApps(cachedUnsortedList!!)
+                val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                 
                 if (cachedFinalList.isNotEmpty() && adapter != null) {
                     val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                     
                     handler.post {
                         // Pass false as isFinal
-                        onAppListUpdated?.invoke(sorted, cachedUnsortedList!!, false)
+                        onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                     }
                 }
             } catch (_: Exception) {
@@ -225,7 +228,9 @@ class AppListLoader(
                     list
                 }
                 
-                if (unsortedList.isEmpty()) {
+                val fullList = appendWebApps(unsortedList)
+
+                if (fullList.isEmpty()) {
                     handler.post {
                         if (appList.isEmpty()) {
                             Toast.makeText(activity, "No apps found!", Toast.LENGTH_SHORT).show()
@@ -237,7 +242,7 @@ class AppListLoader(
                     val workspaceMode = appListManager.getWorkspaceMode()
                     
                     // STEP 1: Fast single-pass filtering without expensive operations
-                    val finalAppList = appListManager.filterAndPrepareApps(unsortedList, focusMode, workspaceMode)
+                    val finalAppList = appListManager.filterAndPrepareApps(fullList, focusMode, workspaceMode)
                     
                     // STEP 2: Sort using cached metadata for instant sorted display
                     // This ensures all apps are shown, just sorted using cache (fast)
@@ -253,7 +258,7 @@ class AppListLoader(
                         }
                         
                         // Show list immediately with cached sorting to prevent freeze
-                        onAppListUpdated?.invoke(initiallySorted, unsortedList, false)
+                        onAppListUpdated?.invoke(initiallySorted, fullList, false)
                         
                         // Optimize: Use existing adapter instead of creating new one
                         if (adapter == null) {
@@ -352,5 +357,27 @@ class AppListLoader(
     fun clearCache() {
         cachedUnsortedList = null
         lastCacheTime = 0L
+    }
+
+    private fun appendWebApps(installedApps: List<ResolveInfo>): List<ResolveInfo> {
+        val webApps = webAppManager.getWebApps()
+        if (webApps.isEmpty()) return installedApps
+
+        val fullList = ArrayList(installedApps)
+        val now = System.currentTimeMillis()
+        webApps.forEach { entry ->
+            val resolveInfo = webAppManager.createResolveInfo(entry)
+            cacheManager?.updateMetadataCache(
+                resolveInfo.activityInfo.packageName,
+                AppMetadata(
+                    packageName = resolveInfo.activityInfo.packageName,
+                    activityName = resolveInfo.activityInfo.name,
+                    label = entry.name,
+                    lastUpdated = now
+                )
+            )
+            fullList.add(resolveInfo)
+        }
+        return fullList
     }
 }

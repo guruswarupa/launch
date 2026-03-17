@@ -151,7 +151,7 @@ class AppInitializer(private val activity: MainActivity) {
             // Initialize app list loader
             appListLoader = AppListLoader(
                 activity, packageManager, appListManager, appDockManager,
-                cacheManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
+                cacheManager, webAppManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
             )
             
             // Initialize AppListUIUpdater

@@ -36,10 +36,14 @@ import android.os.Handler
 import android.os.Looper
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.managers.WebAppIconFetcher
 import com.guruswarupa.launch.managers.TypographyManager
+import com.guruswarupa.launch.managers.WebAppManager
 import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.models.AppMetadata
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.ui.activities.WebAppActivity
+import com.guruswarupa.launch.ui.activities.WebAppSettingsActivity
 import com.google.android.material.shape.ShapeAppearanceModel
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.RelativeCornerSize
@@ -206,6 +210,7 @@ class AppAdapter(
 
         val overDailyLimit = packageName !in SPECIAL_PACKAGE_NAMES &&
             packageName != SEPARATOR_PACKAGE &&
+            !WebAppManager.isWebAppPackage(packageName) &&
             activity.appTimerManager.isAppOverDailyLimit(packageName)
 
         if (grayscaleIconsEnabled || overDailyLimit) {
@@ -266,6 +271,7 @@ class AppAdapter(
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
         if (packageName == SEPARATOR_PACKAGE) return ""
+        if (WebAppManager.isWebAppPackage(packageName)) return appInfo.activityInfo.name ?: ""
         if (packageName in SPECIAL_PACKAGE_NAMES) {
             return appInfo.activityInfo.name ?: ""
         }
@@ -469,6 +475,11 @@ class AppAdapter(
         val packageName = appInfo.activityInfo.packageName
 
         if (packageName == SEPARATOR_PACKAGE) {
+            return
+        }
+
+        if (WebAppManager.isWebAppPackage(packageName)) {
+            bindWebApp(holder, appInfo, packageName)
             return
         }
         
@@ -1040,6 +1051,87 @@ class AppAdapter(
         popupMenu.show()
         fixPopupMenuTextColors(popupMenu)
     }
+
+    private fun showWebAppContextMenu(view: View, packageName: String, appInfo: ResolveInfo) {
+        val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
+        val textColor = ContextCompat.getColor(activity, R.color.text)
+        val appName = appInfo.activityInfo.name
+
+        popupMenu.menu.add(0, 200, 0, activity.getString(R.string.open_web_app))
+        popupMenu.menu.add(0, 201, 1, activity.getString(R.string.edit_web_app))
+        popupMenu.menu.add(0, 202, 2, activity.getString(R.string.open_in_browser))
+        popupMenu.menu.add(0, 203, 3, activity.getString(R.string.remove_web_app))
+        popupMenu.menu.add(
+            0,
+            204,
+            4,
+            if (activity.favoriteAppManager.isFavoriteApp(packageName)) {
+                activity.getString(R.string.remove_from_favorites_plain)
+            } else {
+                activity.getString(R.string.add_to_favorites_plain)
+            }
+        )
+        popupMenu.menu.add(
+            0,
+            205,
+            5,
+            if (activity.hiddenAppManager.isAppHidden(packageName)) {
+                activity.getString(R.string.unhide_app_plain)
+            } else {
+                activity.getString(R.string.hide_app_plain)
+            }
+        )
+
+        for (i in 0 until popupMenu.menu.size()) {
+            val item = popupMenu.menu.getItem(i)
+            val spannable = android.text.SpannableString(item.title)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            item.title = spannable
+        }
+
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                200 -> {
+                    openWebApp(appInfo)
+                    true
+                }
+                201 -> {
+                    activity.startActivity(Intent(activity, WebAppSettingsActivity::class.java))
+                    true
+                }
+                202 -> {
+                    val url = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+                    if (url.isNotBlank()) {
+                        activity.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                    }
+                    true
+                }
+                203 -> {
+                    val webApp = activity.webAppManager.getWebApp(packageName)
+                    if (webApp != null) {
+                        activity.webAppManager.removeWebApp(webApp.id)
+                        Toast.makeText(activity, activity.getString(R.string.removed_web_app, appName), Toast.LENGTH_SHORT).show()
+                        activity.sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply {
+                            setPackage(activity.packageName)
+                        })
+                    }
+                    true
+                }
+                204 -> {
+                    toggleFavoriteApp(packageName, appInfo)
+                    true
+                }
+                205 -> {
+                    toggleHideApp(packageName, appInfo)
+                    true
+                }
+                else -> false
+            }
+        }
+
+        popupMenu.show()
+        fixPopupMenuTextColors(popupMenu)
+    }
     
     @SuppressLint("DiscouragedPrivateApi")
     private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
@@ -1132,6 +1224,66 @@ class AppAdapter(
         } catch (_: UninitializedPropertyAccessException) {
             Toast.makeText(activity, activity.getString(R.string.hidden_apps_feature_not_available), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun bindWebApp(holder: ViewHolder, appInfo: ResolveInfo, packageName: String) {
+        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
+        val currentParams = holder.appIcon?.layoutParams
+        if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
+            currentParams.width = sizeInPx
+            currentParams.height = sizeInPx
+            holder.appIcon.layoutParams = currentParams
+            holder.appIcon.requestLayout()
+        }
+
+        holder.itemView.tag = packageName
+        holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
+        holder.appIcon?.setImageResource(R.drawable.ic_browser)
+        holder.appIcon?.background = null
+        holder.appName?.text = appInfo.activityInfo.name
+        holder.appUsageTime?.visibility = View.GONE
+        if (isGridMode) {
+            val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+            holder.appName?.visibility = if (showAppNamesInGrid) View.VISIBLE else View.GONE
+        } else {
+            holder.appName?.visibility = View.VISIBLE
+        }
+        applyIconVisualState(packageName, holder.appIcon)
+        val siteUrl = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+        if (siteUrl.isNotBlank()) {
+            WebAppIconFetcher.loadIcon(activity, siteUrl) { drawable ->
+                if (holder.itemView.tag == packageName && drawable != null) {
+                    holder.appIcon?.setImageDrawable(drawable)
+                    applyIconVisualState(packageName, holder.appIcon)
+                }
+            }
+        }
+
+        holder.itemView.setOnClickListener {
+            openWebApp(appInfo)
+            searchBox.text.clear()
+            activity.appSearchManager.filterAppsAndContacts("")
+        }
+        holder.itemView.setOnLongClickListener {
+            showWebAppContextMenu(holder.itemView, packageName, appInfo)
+            true
+        }
+    }
+
+    private fun openWebApp(appInfo: ResolveInfo) {
+        val name = appInfo.activityInfo.name
+        val url = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+        if (url.isBlank()) {
+            Toast.makeText(activity, R.string.web_app_load_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        activity.startActivity(
+            Intent(activity, WebAppActivity::class.java).apply {
+                putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, name)
+                putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
+            }
+        )
     }
 
     private fun showContactChoiceDialog(contactName: String) {

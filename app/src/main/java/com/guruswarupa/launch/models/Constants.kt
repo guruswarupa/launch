@@ -40,6 +40,7 @@ object Constants {
         const val GRAYSCALE_ICONS_ENABLED = "grayscale_icons_enabled"
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
         const val DEFAULT_HOME_PAGE_INDEX = "default_home_page_index"
+        const val WEB_APPS = "web_apps"
         
         // Vault Prefs (Simplified)
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"

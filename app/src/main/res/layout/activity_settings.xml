@@ -1488,6 +1488,16 @@
                             android:layout_marginBottom="8dp"/>
 
                         <Button
+                            android:id="@+id/web_apps_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Manage Web Apps"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:layout_marginBottom="8dp"/>
+
+                        <Button
                             android:id="@+id/privacy_dashboard_button"
                             android:layout_width="match_parent"
                             android:layout_height="52dp"

@@ -129,6 +129,17 @@
             android:label=""
             android:excludeFromRecents="true" />
 
+        <activity
+            android:name=".ui.activities.WebAppActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings" />
+
+        <activity
+            android:name=".ui.activities.WebAppSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
         <service
             android:name=".managers.AppUsageMonitor"
             android:enabled="true"

@@ -96,6 +96,7 @@ class MainActivity : FragmentActivity() {
     internal lateinit var widgetLifecycleCoordinator: WidgetLifecycleCoordinator
     lateinit var favoriteAppManager: FavoriteAppManager
     internal lateinit var hiddenAppManager: HiddenAppManager
+    internal lateinit var webAppManager: WebAppManager
     internal lateinit var widgetManager: WidgetManager
     internal lateinit var resultRegistry: MainActivityResultRegistry
     internal var voiceCommandHandler: VoiceCommandHandler? = null
@@ -150,6 +151,7 @@ class MainActivity : FragmentActivity() {
         appTimerManager = AppTimerManager(this)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
+        webAppManager = WebAppManager(sharedPreferences)
         
         // Initialize new modular managers
         appLauncher = AppLauncher(this, packageManager, appLockManager)
