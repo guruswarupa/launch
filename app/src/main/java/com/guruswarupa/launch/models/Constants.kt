@@ -34,6 +34,7 @@ object Constants {
         const val TYPOGRAPHY_FONT_COLOR = "typography_font_color"
         const val CLOCK_24_HOUR_FORMAT = "clock_24_hour_format"
         const val GRID_COLUMNS = "grid_columns"
+        const val SHOW_APP_NAME_IN_GRID = "show_app_name_in_grid"
         const val ICON_STYLE = "icon_style"
         const val ICON_SIZE = "icon_size"
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"

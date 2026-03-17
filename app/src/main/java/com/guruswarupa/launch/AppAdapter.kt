@@ -563,7 +563,14 @@ class AppAdapter(
         // Tag the view with package name to track correct icon assignment during recycling
         holder.itemView.tag = packageName
 
-        holder.appName?.visibility = View.VISIBLE
+        // Control app name visibility based on preference in grid mode
+        if (isGridMode) {
+            val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+            holder.appName?.visibility = if (showAppNamesInGrid) View.VISIBLE else View.GONE
+        } else {
+            holder.appName?.visibility = View.VISIBLE
+        }
         holder.appUsageTime?.visibility = View.GONE
 
         when (packageName) {

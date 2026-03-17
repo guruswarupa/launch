@@ -237,10 +237,33 @@ class SettingsActivity : ComponentActivity() {
         updateDisplayStyleButtons(gridBtn, listBtn, selectedStyle)
         gridSection.isVisible = selectedStyle == "grid"
 
+        listBtn.setOnClickListener {
+            selectedStyle = "list"
+            updateDisplayStyleButtons(gridBtn, listBtn, "list")
+            gridSection.isVisible = false
+            prefs.edit { putString("view_preference", "list") }
+            notifySettingsChanged()
+        }
+
+        // Show app names in grid toggle
+        val showAppNameInSection = findViewById<LinearLayout>(R.id.show_app_name_in_grid_section)
+        val showAppNameSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.show_app_name_in_grid_switch)
+        showAppNameInSection.isVisible = selectedStyle == "grid"
+        
+        var showAppNamesInGrid = prefs.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+        showAppNameSwitch.isChecked = showAppNamesInGrid
+        
+        showAppNameSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, isChecked) }
+            notifySettingsChanged()
+        }
+
+        // Update visibility of app name toggle when switching between grid and list
         gridBtn.setOnClickListener {
             selectedStyle = "grid"
             updateDisplayStyleButtons(gridBtn, listBtn, "grid")
             gridSection.isVisible = true
+            showAppNameInSection.isVisible = true
             prefs.edit { putString("view_preference", "grid") }
             notifySettingsChanged()
         }
@@ -249,6 +272,7 @@ class SettingsActivity : ComponentActivity() {
             selectedStyle = "list"
             updateDisplayStyleButtons(gridBtn, listBtn, "list")
             gridSection.isVisible = false
+            showAppNameInSection.isVisible = false
             prefs.edit { putString("view_preference", "list") }
             notifySettingsChanged()
         }
