@@ -37,6 +37,7 @@ object Constants {
         const val SHOW_APP_NAME_IN_GRID = "show_app_name_in_grid"
         const val ICON_STYLE = "icon_style"
         const val ICON_SIZE = "icon_size"
+        const val GRAYSCALE_ICONS_ENABLED = "grayscale_icons_enabled"
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
         const val DEFAULT_HOME_PAGE_INDEX = "default_home_page_index"
         

@@ -19,6 +19,8 @@ import android.widget.AutoCompleteTextView
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.graphics.drawable.Drawable
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -94,6 +96,7 @@ class AppAdapter(
     private val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
     private var currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
+    private var grayscaleIconsEnabled = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
     
     /**
      * Called by FastScroller when fast scrolling starts/stops.
@@ -191,6 +194,32 @@ class AppAdapter(
         }
     }
 
+    fun updateGrayscaleIcons(enabled: Boolean) {
+        grayscaleIconsEnabled = enabled
+        (context as? Activity)?.runOnUiThread {
+            notifyDataSetChanged()
+        }
+    }
+
+    private fun applyIconVisualState(packageName: String, imageView: ImageView?) {
+        if (imageView == null) return
+
+        val overDailyLimit = packageName !in SPECIAL_PACKAGE_NAMES &&
+            packageName != SEPARATOR_PACKAGE &&
+            activity.appTimerManager.isAppOverDailyLimit(packageName)
+
+        if (grayscaleIconsEnabled || overDailyLimit) {
+            val matrix = ColorMatrix().apply { setSaturation(0f) }
+            imageView.colorFilter = ColorMatrixColorFilter(matrix)
+            imageView.alpha = if (overDailyLimit) 0.5f else 0.72f
+        } else {
+            imageView.colorFilter = null
+            imageView.clearColorFilter()
+            imageView.alpha = 1f
+            imageView.drawable?.clearColorFilter()
+        }
+    }
+
     private fun getShapeAppearanceModel(): ShapeAppearanceModel {
         val density = context.resources.displayMetrics.density
         val builder = ShapeAppearanceModel.builder()
@@ -280,6 +309,7 @@ class AppAdapter(
                 executor.execute { preloadIcons(newItems.filter { it.activityInfo.packageName != SEPARATOR_PACKAGE }) }
             }
         }
+
     }
     
     /**
@@ -351,7 +381,7 @@ class AppAdapter(
                         currentTag != null && 
                         currentTag.toString() == packageName) {
                         holder.appIcon.setImageDrawable(icon)
-                        activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
+                        applyIconVisualState(packageName, holder.appIcon)
                     }
                 }
             }
@@ -385,7 +415,7 @@ class AppAdapter(
                                 currentTag != null && 
                                 currentTag.toString() == packageName) {
                                 holder.appIcon.setImageDrawable(icon)
-                                activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
+                                applyIconVisualState(packageName, holder.appIcon)
                             }
                         }
                     }
@@ -503,6 +533,7 @@ class AppAdapter(
                                     (context as? Activity)?.runOnUiThread {
                                         if (holder.itemView.tag.toString() == contactName) { // Verify with tag
                                             holder.appIcon?.setImageDrawable(drawable)
+                                            applyIconVisualState(packageName, holder.appIcon)
                                         }
                                     }
                                 }
@@ -528,7 +559,10 @@ class AppAdapter(
                             val icon = activity.packageManager.getApplicationIcon("com.android.vending")
                             specialAppIconCache["com.android.vending"] = icon
                             (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon?.setImageDrawable(icon)
+                                    applyIconVisualState(packageName, holder.appIcon)
+                                }
                             }
                         } catch (_: Exception) {}
                     }
@@ -552,7 +586,10 @@ class AppAdapter(
                             val icon = activity.packageManager.getApplicationIcon("com.google.android.apps.maps")
                             specialAppIconCache["com.google.android.apps.maps"] = icon
                             (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon?.setImageDrawable(icon)
+                                    applyIconVisualState(packageName, holder.appIcon)
+                                }
                             }
                         } catch (_: Exception) {}
                     }
@@ -586,14 +623,20 @@ class AppAdapter(
                                 val icon = activity.packageManager.getApplicationIcon("app.revanced.android.youtube")
                                 specialAppIconCache["app.revanced.android.youtube"] = icon
                                 (context as? Activity)?.runOnUiThread {
-                                    if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                    if (holder.bindingAdapterPosition == position) {
+                                        holder.appIcon?.setImageDrawable(icon)
+                                        applyIconVisualState(packageName, holder.appIcon)
+                                    }
                                 }
                             } catch (_: Exception) {
                                 try {
                                     val icon = activity.packageManager.getApplicationIcon("com.google.android.youtube")
                                     specialAppIconCache["com.google.android.youtube"] = icon
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                        if (holder.bindingAdapterPosition == position) {
+                                            holder.appIcon?.setImageDrawable(icon)
+                                            applyIconVisualState(packageName, holder.appIcon)
+                                        }
                                     }
                                 } catch (_: Exception) {}
                             }
@@ -733,7 +776,7 @@ class AppAdapter(
                             val cachedIcon = iconCache[packageName]
                             if (cachedIcon != null) {
                                 holder.appIcon?.setImageDrawable(cachedIcon)
-                                activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
+                                applyIconVisualState(packageName, holder.appIcon)
                             } else {
                                 holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
                                 // Use highest priority for visible items
@@ -765,13 +808,15 @@ class AppAdapter(
                     val cachedIcon = iconCache[packageName]
                     if (cachedIcon != null) {
                         holder.appIcon?.setImageDrawable(cachedIcon)
-                        activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
+                        applyIconVisualState(packageName, holder.appIcon)
                     } else {
                         holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
                         val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
                         submitIconLoadTask(appInfo, priority, holder, position)
                     }
                 }
+
+                applyIconVisualState(packageName, holder.appIcon)
                 
                 if (position < appList.size - 1 && position % 5 == 0) {
                     preloadNextIcons(position + 1, minOf(position + 11, appList.size))

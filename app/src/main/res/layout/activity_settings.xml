@@ -304,6 +304,30 @@
                                     android:textColor="@color/nord8"
                                     android:gravity="end"/>
                             </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Grayscale app icons"
+                                    android:textColor="@color/white"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium" />
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/grayscale_icons_switch"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:thumbTint="@color/nord8"
+                                    android:trackTint="@color/nord8" />
+                            </LinearLayout>
                         </LinearLayout>
 
                         <View

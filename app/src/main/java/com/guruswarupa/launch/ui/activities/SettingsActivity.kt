@@ -281,6 +281,7 @@ class SettingsActivity : ComponentActivity() {
         val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
         val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
         val iconVal = findViewById<TextView>(R.id.icon_size_value)
+        val grayscaleIconsSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.grayscale_icons_switch)
 
         val shapes = arrayOf("Round", "Squircle", "Squared", "Teardrop", "Vortex", "Overlay")
         val values = arrayOf("round", "squircle", "squared", "teardrop", "vortex", "overlay")
@@ -311,6 +312,12 @@ class SettingsActivity : ComponentActivity() {
             } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
+
+        grayscaleIconsSwitch.isChecked = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
+        grayscaleIconsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, isChecked) }
+            notifySettingsChanged()
+        }
 
         // Default Home Page
         val homePageSpinner = findViewById<Spinner>(R.id.default_home_page_spinner)
