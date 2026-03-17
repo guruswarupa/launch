@@ -255,6 +255,11 @@ class AppListManager(
             result.add(app)
         }
         
+        // Add a horizontal separator before Settings and Vault shortcuts
+        if (result.isNotEmpty()) {
+            result.add(createSeparatorInfo("bottom_system_separator"))
+        }
+        
         // Add Settings and Vault shortcuts at the very end
         result.add(createLauncherShortcut("launcher_settings_shortcut"))
         result.add(createLauncherShortcut("launcher_vault_shortcut"))
