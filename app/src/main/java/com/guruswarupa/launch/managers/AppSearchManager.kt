@@ -35,19 +35,8 @@ class AppSearchManager(
         }
     }
 
-    private val appLabelCache = object : LinkedHashMap<String, String>(50, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?): Boolean {
-            return size > 50
-        }
-    }
-    
-    // Reduced size and added entry limit to avoid memory leaks
-    private val searchCache = object : LinkedHashMap<String, List<ResolveInfo>>(20, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, List<ResolveInfo>>?): Boolean {
-            return size > 20
-        }
-    }
-    
+    private val appLabelCache = mutableMapOf<String, String>()
+    private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
     private val dataLock = Any()
 
     init {
@@ -91,13 +80,11 @@ class AppSearchManager(
     private fun getAppLabel(info: ResolveInfo): String {
         val packageName = info.activityInfo.packageName
         return appMetadataCache?.get(packageName)?.label?.lowercase()
-            ?: synchronized(appLabelCache) {
-                appLabelCache.getOrPut(packageName) {
-                    try {
-                        info.loadLabel(packageManager).toString().lowercase()
-                    } catch (_: Exception) {
-                        packageName.lowercase()
-                    }
+            ?: appLabelCache.getOrPut(packageName) {
+                try {
+                    info.loadLabel(packageManager).toString().lowercase()
+                } catch (_: Exception) {
+                    packageName.lowercase()
                 }
             }
     }
@@ -275,11 +262,7 @@ class AppSearchManager(
         }
     }
 
-    private val cachedResolveInfos = object : LinkedHashMap<String, ResolveInfo>(50, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ResolveInfo>?): Boolean {
-            return size > 50
-        }
-    }
+    private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()
 
     private fun evaluateMathExpression(expression: String): String? {
         return try {
@@ -331,7 +314,7 @@ class AppSearchManager(
                 "${android.provider.MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
             )?.use { cursor ->
                 val dataColumn = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Files.FileColumns.DATA)
-                while (cursor.moveToNext() && results.size < 5) { // Reduced from 10 to 5
+                while (cursor.moveToNext() && results.size < 10) {
                     val path = cursor.getString(dataColumn)
                     if (path != null) {
                         val file = File(path)
@@ -345,13 +328,15 @@ class AppSearchManager(
             try {
                 val dirsToSearch = listOf(
                     Environment.DIRECTORY_DOWNLOADS,
-                    Environment.DIRECTORY_DOCUMENTS
+                    Environment.DIRECTORY_DOCUMENTS,
+                    Environment.DIRECTORY_DCIM,
+                    Environment.DIRECTORY_PICTURES
                 )
                 for (dirName in dirsToSearch) {
                     val dir = Environment.getExternalStoragePublicDirectory(dirName)
                     if (dir.exists() && dir.isDirectory) {
                         searchFilesRecursively(dir, query, results, 0)
-                        if (results.size >= 5) break
+                        if (results.size >= 10) break
                     }
                 }
             } catch (_: Exception) {}
@@ -360,14 +345,14 @@ class AppSearchManager(
     }
 
     private fun searchFilesRecursively(dir: File, query: String, results: MutableList<File>, depth: Int) {
-        if (depth > 1 || results.size >= 5) return // Reduced depth from 2 to 1
+        if (depth > 2 || results.size >= 10) return
         dir.listFiles()?.forEach { file ->
             if (file.isDirectory) {
                 searchFilesRecursively(file, query, results, depth + 1)
             } else if (file.name.contains(query, ignoreCase = true)) {
                 results.add(file)
             }
-            if (results.size >= 5) return
+            if (results.size >= 10) return
         }
     }
 
@@ -451,8 +436,5 @@ class AppSearchManager(
     
     fun cleanup() {
         searchExecutor.shutdown()
-        synchronized(appLabelCache) { appLabelCache.clear() }
-        synchronized(cachedResolveInfos) { cachedResolveInfos.clear() }
-        synchronized(dataLock) { searchCache.clear() }
     }
 }
