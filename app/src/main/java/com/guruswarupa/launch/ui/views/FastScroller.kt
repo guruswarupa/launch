@@ -23,7 +23,7 @@ class FastScroller @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private val alphabet = listOf("★") + ('A'..'Z').map { it.toString() } + "#"
+    private var alphabet = listOf("★") + ('A'..'Z').map { it.toString() } + "#"
     private var recyclerView: RecyclerView? = null
 
     private val density = resources.displayMetrics.density
@@ -95,6 +95,28 @@ class FastScroller @JvmOverloads constructor(
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
         refreshTypography()
+    }
+
+    fun setFavoritesVisible(visible: Boolean) {
+        val newAlphabet = if (visible) {
+            listOf("★") + ('A'..'Z').map { it.toString() } + "#"
+        } else {
+            ('A'..'Z').map { it.toString() } + "#"
+        }
+        
+        if (alphabet != newAlphabet) {
+            alphabet = newAlphabet
+            recalculateSpacing()
+            invalidate()
+        }
+    }
+
+    private fun recalculateSpacing() {
+        if (trackBottom <= trackTop || alphabet.isEmpty()) {
+            letterSpacing = 0f
+            return
+        }
+        letterSpacing = (trackBottom - trackTop) / (alphabet.size - 1).coerceAtLeast(1)
     }
 
     fun setRecyclerView(rv: RecyclerView) {
@@ -209,7 +231,7 @@ class FastScroller @JvmOverloads constructor(
 
         if (isInFavoritesSection) {
             // In favorites section - always show star
-            newIndex = 0 // "★"
+            newIndex = alphabet.indexOf("★")
         } else {
             // Outside favorites section - find the correct letter
             // Scan backwards from firstVisiblePos to find the nearest letter separator
@@ -314,11 +336,7 @@ class FastScroller @JvmOverloads constructor(
         trackX = width - paddingEnd - 2f * density
         trackTop = paddingTop + extraVerticalPadding
         trackBottom = height - paddingBottom - extraVerticalPadding
-        if (trackBottom <= trackTop) {
-            letterSpacing = 0f
-            return
-        }
-        letterSpacing = (trackBottom - trackTop) / (alphabet.size - 1).coerceAtLeast(1)
+        recalculateSpacing()
         updateWaveShader()
     }
 
@@ -350,15 +368,15 @@ class FastScroller @JvmOverloads constructor(
             val isSelected = i == selectedIndex && isSliding
             val isCurrentScroll = !isSliding && i == scrollIndex
 
-            val paintToUse = if (isSelected || isCurrentScroll) selectedLetterPaint else letterPaint
+            val paintToUse = if (isSelected || i == scrollIndex) selectedLetterPaint else letterPaint
             
-            val alpha = if (isSelected || isCurrentScroll) 255 else (fadeAlpha * 0.3f).toInt()
+            val alpha = if (isSelected || i == scrollIndex) 255 else (fadeAlpha * 0.3f).toInt()
             paintToUse.alpha = alpha
             
             if (alphabet[i] == "★") {
-                paintToUse.textSize = (if (isSelected || isCurrentScroll) 18f else 12f) * density
+                paintToUse.textSize = (if (isSelected || i == scrollIndex) 18f else 12f) * density
             } else {
-                paintToUse.textSize = (if (isSelected || isCurrentScroll) 14f else 9f) * density
+                paintToUse.textSize = (if (isSelected || i == scrollIndex) 14f else 9f) * density
             }
             
             if (isSelected) {

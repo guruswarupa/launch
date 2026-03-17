@@ -107,14 +107,22 @@ class AppListManager(
      * Favorites are shown BOTH at the top AND in their alphabetical positions.
      * Internal Launcher apps (Settings, Vault) are placed at the absolute bottom.
      * Apps starting with numbers or '#' are placed at the end of the alphabetical section.
+     * Favorites list at the top is only shown in normal mode (not focus or workspace mode).
      */
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
         val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         val favorites = favoriteAppManager.getFavoriteApps()
+        val focusMode = appDockManager.getCurrentMode()
+        val workspaceMode = appDockManager.isWorkspaceModeActive()
+        val showFavoritesAtTop = !focusMode && !workspaceMode
         
         // Get all favorites that exist in the current app list
-        val favoriteApps = apps.filter { app ->
-            favorites.contains(app.activityInfo.packageName)
+        val favoriteApps = if (showFavoritesAtTop) {
+            apps.filter { app ->
+                favorites.contains(app.activityInfo.packageName)
+            }
+        } else {
+            emptyList()
         }
         
         // Sort favorites alphabetically among themselves
@@ -162,6 +170,7 @@ class AppListManager(
      * Separates favorites from normal apps and normal apps by starting letter.
      * Favorites are shown at the top and also in their alphabetical positions.
      * Settings and Vault shortcuts are added at the very end.
+     * Favorites separators are only added in normal mode.
      */
     fun addSeparators(apps: List<ResolveInfo>, isGridMode: Boolean): List<ResolveInfo> {
         if (apps.isEmpty()) return apps
@@ -169,13 +178,18 @@ class AppListManager(
         val favorites = favoriteAppManager.getFavoriteApps()
         val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         val result = mutableListOf<ResolveInfo>()
+        val focusMode = appDockManager.getCurrentMode()
+        val workspaceMode = appDockManager.isWorkspaceModeActive()
+        val showFavoritesSection = !focusMode && !workspaceMode
         
         // Check if we have favorites
         var hasFavorites = false
-        for (app in apps) {
-            if (favorites.contains(app.activityInfo.packageName)) {
-                hasFavorites = true
-                break
+        if (showFavoritesSection) {
+            for (app in apps) {
+                if (favorites.contains(app.activityInfo.packageName)) {
+                    hasFavorites = true
+                    break
+                }
             }
         }
         
@@ -218,7 +232,7 @@ class AppListManager(
                     result.add(createSeparatorInfo("letter_separator_$effectiveLetter"))
                 }
                 lastLetter = effectiveLetter
-            } else if (isFavorite && isAfterFavorites) {
+            } else if (isFavorite && (isAfterFavorites || !showFavoritesSection)) {
                 // This is a favorite appearing in its alphabetical position
                 // Add a letter separator if needed
                 val label = metadataCache[packageName]?.label ?: packageName

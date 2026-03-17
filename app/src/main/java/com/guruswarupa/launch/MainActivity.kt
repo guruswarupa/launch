@@ -294,6 +294,11 @@ class MainActivity : FragmentActivity() {
     internal fun updateFastScrollerVisibility() {
         if (!::sharedPreferences.isInitialized || !views.isSearchBoxInitialized() || !::appList.isInitialized) return
         
+        // Update favorites visibility on FastScroller based on current modes
+        val focusMode = if (::appDockManager.isInitialized) appDockManager.getCurrentMode() else false
+        val workspaceMode = if (::appDockManager.isInitialized) appDockManager.isWorkspaceModeActive() else false
+        views.fastScroller.setFavoritesVisible(!focusMode && !workspaceMode)
+
         // Fast scroller is now requested to be always visible
         if (appList.isNotEmpty()) {
             views.fastScroller.visibility = View.VISIBLE
@@ -578,6 +583,12 @@ class MainActivity : FragmentActivity() {
     fun openWallpaperPage(animated: Boolean = true) {
         if (::screenPagerManager.isInitialized) {
             screenPagerManager.openRightPage(animated)
+        }
+    }
+
+    fun openDefaultHomePage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openDefaultHomePage(animated)
         }
     }
 
