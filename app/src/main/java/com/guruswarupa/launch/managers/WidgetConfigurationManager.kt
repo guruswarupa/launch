@@ -176,10 +176,7 @@ class WidgetConfigurationManager(
                 val appWidgetId = json.getInt("appWidgetId")
                 val packageName = json.optString("providerPackage", "")
                 val className = json.optString("providerClass", "")
-                
-                // Skip proximity-related system widgets
-                if (packageName.contains("proximity", ignoreCase = true) || 
-                    className.contains("proximity", ignoreCase = true)) continue
+
                 
                 // Verify widget still exists
                 val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
