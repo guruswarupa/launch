@@ -67,7 +67,8 @@ class AppAdapter(
         
         private val SPECIAL_PACKAGE_NAMES = setOf(
             "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result",
-            "file_result", "settings_result", "system_settings_result"
+            "file_result", "settings_result", "system_settings_result",
+            "launcher_settings_shortcut", "launcher_vault_shortcut"
         )
         
         private const val PRIORITY_HIGH = 100
@@ -423,11 +424,13 @@ class AppAdapter(
             if (holder != null && holder.appIcon != null && iconCache.containsKey(packageName)) {
                 val icon = iconCache[packageName]
                 (context as? Activity)?.runOnUiThread {
-                    // More robust verification: check position, tag, and that position is still valid
+                    // Robust verification: check position, tag, and view identity
                     val currentPosition = holder.bindingAdapterPosition
+                    val currentTag = holder.itemView.tag
                     if (currentPosition != RecyclerView.NO_POSITION && 
                         currentPosition == position && 
-                        holder.itemView.tag.toString() == packageName) {
+                        currentTag != null && 
+                        currentTag.toString() == packageName) {
                         holder.appIcon.setImageDrawable(icon)
                         activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                     }
@@ -448,11 +451,20 @@ class AppAdapter(
                     
                     if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
-                            // More robust verification: check position, tag, and that position is still valid
+                            // Extra robust verification during fast scrolling
+                            // Check: position, tag, and that the view hasn't been recycled
                             val currentPosition = holder.bindingAdapterPosition
+                            val currentTag = holder.itemView.tag
+                            
+                            // Only update if ALL checks pass:
+                            // 1. Position is valid
+                            // 2. Position hasn't changed
+                            // 3. Tag matches package name (view wasn't recycled for different app)
+                            // 4. Tag is not null (view is properly initialized)
                             if (currentPosition != RecyclerView.NO_POSITION && 
                                 currentPosition == position && 
-                                holder.itemView.tag.toString() == packageName) {
+                                currentTag != null && 
+                                currentTag.toString() == packageName) {
                                 holder.appIcon.setImageDrawable(icon)
                                 activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
                             }
@@ -529,15 +541,21 @@ class AppAdapter(
             
             // Apply icon shape style programmatically
             holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
-            
-            // Apply icon size - avoid layout param changes unless necessary
-            val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
-            val currentParams = holder.appIcon?.layoutParams
-            if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
-                currentParams.width = sizeInPx
-                currentParams.height = sizeInPx
-                holder.appIcon.layoutParams = currentParams
-            }
+        }
+        
+        // Always apply icon size to ensure correct display
+        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
+        val currentParams = holder.appIcon?.layoutParams
+        if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
+            currentParams.width = sizeInPx
+            currentParams.height = sizeInPx
+            holder.appIcon.layoutParams = currentParams
+            holder.appIcon.requestLayout()
+        }
+        
+        if (needsRefresh) {
+            // Clear old icon immediately when recycling to prevent showing wrong icons
+            holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
         }
         
         holder.appIcon?.background = null
@@ -756,6 +774,30 @@ class AppAdapter(
                 holder.appName?.text = appInfo.activityInfo.name
             }
 
+            "launcher_settings_shortcut" -> {
+                holder.appIcon?.setImageResource(R.drawable.ic_settings)
+                holder.appName?.text = activity.getString(R.string.settings_app_name)
+                holder.itemView.setOnClickListener {
+                    val settingsIntent = Intent(activity, com.guruswarupa.launch.ui.activities.SettingsActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                    activity.startActivity(settingsIntent)
+                    searchBox.text.clear()
+                }
+            }
+
+            "launcher_vault_shortcut" -> {
+                holder.appIcon?.setImageResource(R.drawable.ic_vault_icon)
+                holder.appName?.text = activity.getString(R.string.vault_app_name)
+                holder.itemView.setOnClickListener {
+                    val vaultIntent = Intent(activity, com.guruswarupa.launch.ui.activities.EncryptedVaultActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                    activity.startActivity(vaultIntent)
+                    searchBox.text.clear()
+                }
+            }
+
             else -> {
                 // Special handling for internal launcher activities to ensure correct names
                 val activityName = appInfo.activityInfo.name
@@ -805,9 +847,11 @@ class AppAdapter(
 
                     val cachedIcon = iconCache[packageName]
                     if (cachedIcon != null) {
+                        // Always set cached icon immediately
                         holder.appIcon?.setImageDrawable(cachedIcon)
                         activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
                     } else {
+                        // Set default icon first to avoid showing old icons
                         holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
                         // Use highest priority for visible items, especially during fast scrolling
                         val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM

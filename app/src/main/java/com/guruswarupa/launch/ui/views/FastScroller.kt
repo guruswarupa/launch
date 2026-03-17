@@ -184,23 +184,36 @@ class FastScroller @JvmOverloads constructor(
 
         var newIndex = -1
         
-        // Find if we are in favorites section or past it
-        var favoritesSeparatorIndex = -1
+        // Find both favorites separators
+        var favoritesStartSeparatorIndex = -1
+        var favoritesEndSeparatorIndex = -1
         for (i in appList.indices) {
-            if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
-                appList[i].activityInfo.name == "favorites_separator") {
-                favoritesSeparatorIndex = i
-                break
+            if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
+                if (appList[i].activityInfo.name == "favorites_separator") {
+                    favoritesStartSeparatorIndex = i
+                } else if (appList[i].activityInfo.name == "favorites_end_separator") {
+                    favoritesEndSeparatorIndex = i
+                }
             }
         }
 
-        if (favoritesSeparatorIndex == -1 || firstVisiblePos < favoritesSeparatorIndex) {
-            // In favorites section or favorites not present
+        // Check if we're in the favorites section (between start and end separators)
+        val isInFavoritesSection = if (favoritesStartSeparatorIndex != -1 && favoritesEndSeparatorIndex != -1) {
+            firstVisiblePos >= favoritesStartSeparatorIndex && firstVisiblePos < favoritesEndSeparatorIndex
+        } else if (favoritesStartSeparatorIndex != -1) {
+            // Only start separator exists (no end separator yet)
+            firstVisiblePos >= favoritesStartSeparatorIndex
+        } else {
+            false
+        }
+
+        if (isInFavoritesSection) {
+            // In favorites section - always show star
             newIndex = 0 // "★"
         } else {
-            // Past favorites, find the correct letter
+            // Outside favorites section - find the correct letter
             // Scan backwards from firstVisiblePos to find the nearest letter separator
-            for (i in firstVisiblePos downTo favoritesSeparatorIndex + 1) {
+            for (i in firstVisiblePos downTo 0) {
                 val currentApp = appList[i]
                 if (currentApp.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
                     val separatorId = currentApp.activityInfo.name ?: ""
@@ -212,7 +225,7 @@ class FastScroller @JvmOverloads constructor(
                 }
             }
             
-            // If no separator found above firstVisiblePos, use the label of the first visible app
+            // If no letter separator found, use the first visible app's label
             if (newIndex == -1) {
                 val label = adapter.getAppLabel(firstVisiblePos)
                 if (label.isNotEmpty()) {
@@ -460,14 +473,25 @@ class FastScroller @JvmOverloads constructor(
         if (letter == "★") {
             targetPosition = 0
         } else {
-            // Find the start of the normal (non-favorite) list section.
-            // We search from after the 'favorites_separator'.
+            // Find the start of the alphabetical list section (after favorites end)
+            // Search for favorites_end_separator to skip ALL favorites
             var searchStartIndex = 0
             for (i in appList.indices) {
                 if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
-                    appList[i].activityInfo.name == "favorites_separator") {
+                    appList[i].activityInfo.name == "favorites_end_separator") {
                     searchStartIndex = i + 1
                     break
+                }
+            }
+            
+            // If favorites_end_separator not found, try favorites_separator
+            if (searchStartIndex == 0) {
+                for (i in appList.indices) {
+                    if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
+                        appList[i].activityInfo.name == "favorites_separator") {
+                        searchStartIndex = i + 1
+                        break
+                    }
                 }
             }
             

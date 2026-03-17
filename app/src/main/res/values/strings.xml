@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Launch</string>
     <string name="settings_app_name">Launch Settings</string>
-    <string name="vault_app_name">Vault</string>
+    <string name="vault_app_name">Launch Vault</string>
     <string name="grid_columns_title">Apps per row</string>
     <string name="apps_per_row_format">%1$d apps per row</string>
     <string name="search_text"> Search...</string>

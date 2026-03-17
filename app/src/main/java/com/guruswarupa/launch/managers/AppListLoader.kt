@@ -181,13 +181,31 @@ class AppListLoader(
                     (currentTime - lastCacheTime) < cacheDuration) {
                     cachedUnsortedList!!
                 } else {
-                    val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                    }
-                    val rawList = packageManager.queryIntentActivities(mainIntent, 0)
+                    // Optimization #1: Use getInstalledApplications instead of queryIntentActivities
+                    // This is significantly faster on most Android versions
+                    val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+                    val list = mutableListOf<ResolveInfo>()
                     
-                    // Deduplicate results from PackageManager
-                    val list = rawList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+                    for (app in installedApps) {
+                        try {
+                            // Only include enabled apps with launch intents
+                            if (!app.enabled) continue
+                            
+                            val launchIntent = packageManager.getLaunchIntentForPackage(app.packageName)
+                            if (launchIntent != null) {
+                                val resolveInfo = ResolveInfo()
+                                // Create a dummy ActivityInfo since we only need package and class name
+                                val activityInfo = android.content.pm.ActivityInfo()
+                                activityInfo.packageName = app.packageName
+                                activityInfo.name = launchIntent.component?.className ?: ""
+                                activityInfo.applicationInfo = app
+                                resolveInfo.activityInfo = activityInfo
+                                list.add(resolveInfo)
+                            }
+                        } catch (_: Exception) {
+                            // Skip apps that fail to resolve launch intent
+                        }
+                    }
                     
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
