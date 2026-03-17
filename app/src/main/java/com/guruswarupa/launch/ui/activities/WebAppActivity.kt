@@ -8,9 +8,11 @@ import android.os.Bundle
 import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -21,6 +23,7 @@ import androidx.activity.SystemBarStyle
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.WebAppAdBlocker
 
 class WebAppActivity : ComponentActivity() {
     companion object {
@@ -32,6 +35,10 @@ class WebAppActivity : ComponentActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var titleView: TextView
     private lateinit var addressView: TextView
+    private lateinit var fullscreenContainer: FrameLayout
+
+    private var customView: View? = null
+    private var customViewCallback: WebChromeClient.CustomViewCallback? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +67,7 @@ class WebAppActivity : ComponentActivity() {
         addressView = findViewById<TextView>(R.id.web_app_address).apply { text = url }
         progressBar = findViewById(R.id.web_app_progress)
         webView = findViewById(R.id.web_app_webview)
+        fullscreenContainer = findViewById(R.id.web_app_fullscreen_container)
 
         findViewById<ImageButton>(R.id.web_app_back_button).setOnClickListener {
             if (webView.canGoBack()) webView.goBack() else finish()
@@ -83,8 +91,41 @@ class WebAppActivity : ComponentActivity() {
                 progressBar.progress = newProgress
                 progressBar.visibility = if (newProgress in 1..99) View.VISIBLE else View.GONE
             }
+
+            override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                if (view == null || customView != null) {
+                    callback?.onCustomViewHidden()
+                    return
+                }
+                customView = view
+                customViewCallback = callback
+                fullscreenContainer.visibility = View.VISIBLE
+                fullscreenContainer.addView(view, FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                ))
+                webView.visibility = View.GONE
+            }
+
+            override fun onHideCustomView() {
+                exitFullscreen()
+            }
         }
         webView.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
+                if (WebAppAdBlocker.shouldBlock(request?.url)) {
+                    return WebAppAdBlocker.createEmptyResponse()
+                }
+                return super.shouldInterceptRequest(view, request)
+            }
+
+            override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
+                if (WebAppAdBlocker.shouldBlock(url?.let { Uri.parse(it) })) {
+                    return WebAppAdBlocker.createEmptyResponse()
+                }
+                return super.shouldInterceptRequest(view, url)
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val targetUrl = request?.url?.toString().orEmpty()
                 val scheme = request?.url?.scheme.orEmpty()
@@ -116,6 +157,10 @@ class WebAppActivity : ComponentActivity() {
     }
 
     override fun onBackPressed() {
+        if (customView != null) {
+            exitFullscreen()
+            return
+        }
         if (::webView.isInitialized && webView.canGoBack()) {
             webView.goBack()
         } else {
@@ -124,9 +169,21 @@ class WebAppActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        exitFullscreen()
         if (::webView.isInitialized) {
             webView.destroy()
         }
         super.onDestroy()
+    }
+
+    private fun exitFullscreen() {
+        customView?.let {
+            fullscreenContainer.removeView(it)
+            customView = null
+        }
+        customViewCallback?.onCustomViewHidden()
+        customViewCallback = null
+        fullscreenContainer.visibility = View.GONE
+        webView.visibility = View.VISIBLE
     }
 }

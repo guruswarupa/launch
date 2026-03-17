@@ -120,6 +120,7 @@ class SettingsActivity : ComponentActivity() {
         setupActionsSection()
         setupAppTimerSection()
         setupSecuritySection()
+        setupWebAppsSection()
         setupMaintenanceSection()
         setupSupportSection()
         setupVersionInfo()
@@ -567,8 +568,15 @@ class SettingsActivity : ComponentActivity() {
 
         findViewById<View>(R.id.app_lock_button).setOnClickListener { startActivity(Intent(this, AppLockSettingsActivity::class.java)) }
         findViewById<View>(R.id.hidden_apps_button).setOnClickListener { startActivity(Intent(this, HiddenAppsSettingsActivity::class.java)) }
-        findViewById<View>(R.id.web_apps_button).setOnClickListener { startActivity(Intent(this, WebAppSettingsActivity::class.java)) }
         findViewById<View>(R.id.privacy_dashboard_button).setOnClickListener { startActivity(Intent(this, PrivacyDashboardActivity::class.java)) }
+    }
+
+    private fun setupWebAppsSection() {
+        val h = findViewById<LinearLayout>(R.id.web_apps_header)
+        val c = findViewById<LinearLayout>(R.id.web_apps_content)
+        val a = findViewById<TextView>(R.id.web_apps_arrow)
+        setupSectionToggle(h, c, a)
+        findViewById<View>(R.id.web_apps_button).setOnClickListener { startActivity(Intent(this, WebAppSettingsActivity::class.java)) }
     }
 
     private fun setupMaintenanceSection() {
