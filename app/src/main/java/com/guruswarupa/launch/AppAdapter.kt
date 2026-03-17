@@ -555,7 +555,7 @@ class AppAdapter(
         
         if (needsRefresh) {
             // Clear old icon immediately when recycling to prevent showing wrong icons
-            holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+            holder.appIcon?.setImageDrawable(null)
         }
         
         holder.appIcon?.background = null
@@ -605,7 +605,7 @@ class AppAdapter(
                 if (cachedIcon != null) {
                     holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                    holder.appIcon?.setImageDrawable(null)
                     executor.execute {
                         try {
                             val icon = activity.packageManager.getApplicationIcon("com.android.vending")
@@ -629,7 +629,7 @@ class AppAdapter(
                 if (cachedIcon != null) {
                     holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                    holder.appIcon?.setImageDrawable(null)
                     executor.execute {
                         try {
                             val icon = activity.packageManager.getApplicationIcon("com.google.android.apps.maps")
@@ -662,7 +662,7 @@ class AppAdapter(
                 if (cachedIcon != null) {
                     holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                    holder.appIcon?.setImageDrawable(null)
                     executor.execute {
                         try {
                             try {
@@ -818,7 +818,7 @@ class AppAdapter(
                                 holder.appIcon?.setImageDrawable(cachedIcon)
                                 activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
                             } else {
-                                holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                                holder.appIcon?.setImageDrawable(null)
                                 // Use highest priority for visible items
                                 val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
                                 submitIconLoadTask(appInfo, priority, holder, position)
@@ -852,7 +852,7 @@ class AppAdapter(
                         activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
                     } else {
                         // Set default icon first to avoid showing old icons
-                        holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                        holder.appIcon?.setImageDrawable(null)
                         // Use highest priority for visible items, especially during fast scrolling
                         val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
                         submitIconLoadTask(appInfo, priority, holder, position)

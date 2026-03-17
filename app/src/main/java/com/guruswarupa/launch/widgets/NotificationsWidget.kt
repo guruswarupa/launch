@@ -616,7 +616,7 @@ class NotificationAdapter(
             holder.appIcon.setImageDrawable(pm.getApplicationIcon(appInfo))
         } catch (_: Exception) {
             // Use default icon if app not found
-            holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+            holder.appIcon.setImageDrawable(null)
         }
         
         // Handle large icon (not used in media layout)
