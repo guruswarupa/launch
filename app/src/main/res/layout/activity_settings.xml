@@ -1534,39 +1534,14 @@
                             android:textColor="@color/white"
                             android:layout_marginBottom="12dp"/>
 
-                        <LinearLayout
-                            android:id="@+id/tutorial_header"
+                        <Button
+                            android:id="@+id/show_tutorial_button"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginBottom="12dp"
-                            android:paddingVertical="8dp">
-                            
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Show Onboarding Tutorial"
-                                android:textColor="@color/white"
-                                android:textSize="15sp"/>
-                                
-                            <Button
-                                android:id="@+id/show_tutorial_button"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Start"
-                                android:minWidth="60dp"
-                                android:textAllCaps="false"
-                                android:background="@drawable/settings_card_background"
-                                android:textColor="@color/nord8"/>
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/tutorial_arrow"
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:visibility="gone"/>
+                            android:layout_height="52dp"
+                            android:text="Show Tutorial"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"/>
 
                     </LinearLayout>
                 </LinearLayout>

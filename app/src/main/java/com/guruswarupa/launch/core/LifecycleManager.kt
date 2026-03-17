@@ -15,7 +15,6 @@ import com.guruswarupa.launch.widgets.NetworkStatsWidget
 import com.guruswarupa.launch.utils.TimeDateManager
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.utils.TodoAlarmManager
-import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.models.MainActivityViews
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 import com.guruswarupa.launch.widgets.WidgetThemeManager
@@ -48,7 +47,6 @@ class LifecycleManager(
     private var usageStatsDisplayManager: UsageStatsDisplayManager? = null
     private var todoManager: TodoManager? = null
     private var todoAlarmManager: TodoAlarmManager? = null
-    private var featureTutorialManager: FeatureTutorialManager? = null
     private var backgroundExecutor: java.util.concurrent.ExecutorService? = null
     private var widgetLifecycleCoordinator: WidgetLifecycleCoordinator? = null
     private var widgetThemeManager: WidgetThemeManager? = null
@@ -85,7 +83,6 @@ class LifecycleManager(
     fun setUsageStatsDisplayManager(manager: UsageStatsDisplayManager) { this.usageStatsDisplayManager = manager }
     fun setTodoManager(manager: TodoManager) { this.todoManager = manager }
     fun setTodoAlarmManager(manager: TodoAlarmManager) { this.todoAlarmManager = manager }
-    fun setFeatureTutorialManager(manager: FeatureTutorialManager) { this.featureTutorialManager = manager }
     fun setBackgroundExecutor(executor: java.util.concurrent.ExecutorService) { this.backgroundExecutor = executor }
     fun setWidgetLifecycleCoordinator(coordinator: WidgetLifecycleCoordinator) { this.widgetLifecycleCoordinator = coordinator }
     fun setWidgetThemeManager(manager: WidgetThemeManager) { this.widgetThemeManager = manager }
@@ -101,13 +98,6 @@ class LifecycleManager(
     
     fun onResume(intent: android.content.Intent) {
         val mainActivity = activity as? MainActivity
-        val shouldStartTutorial = intent.getBooleanExtra("start_tutorial", false)
-
-        if (shouldStartTutorial) {
-            mainActivity?.openDefaultHomePage(animated = false)
-            // Ensure we are at the top of the page
-            mainActivity?.views?.recyclerView?.scrollToPosition(0)
-        }
 
         // Ensure system bars stay transparent
         systemBarManager?.makeSystemBarsTransparent()
@@ -204,18 +194,6 @@ class LifecycleManager(
             
             todoManager?.rescheduleTodoAlarms()
         }, 50)
-        
-        // Feature tutorial
-        handler.postDelayed({
-            featureTutorialManager?.let {
-                if (shouldStartTutorial || it.shouldShowTutorial()) {
-                    it.startTutorial()
-                }
-            }
-            if (shouldStartTutorial) {
-                intent.removeExtra("start_tutorial")
-            }
-        }, 1000)
         
         onResumeCallbacks.forEach { it.invoke() }
     }

@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.content.pm.ResolveInfo
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -39,9 +40,9 @@ import com.guruswarupa.launch.utils.WeatherManager
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.utils.TodoAlarmManager
 import com.guruswarupa.launch.utils.FinanceWidgetManager
-import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.utils.VoiceCommandHandler
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
+import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -98,7 +99,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var hiddenAppManager: HiddenAppManager
     internal lateinit var widgetManager: WidgetManager
     internal lateinit var resultRegistry: MainActivityResultRegistry
-    internal lateinit var featureTutorialManager: FeatureTutorialManager
     internal var voiceCommandHandler: VoiceCommandHandler? = null
 
     // New modular managers
@@ -138,6 +138,10 @@ class MainActivity : FragmentActivity() {
     fun isTimeDateManagerInitialized() = ::timeDateManager.isInitialized
     fun isViewsInitialized() = ::activityInitializer.isInitialized
 
+    fun isTablet(): Boolean {
+        return (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+    }
+
     /**
      * Initializes core managers that are needed early in the lifecycle.
      */
@@ -147,7 +151,6 @@ class MainActivity : FragmentActivity() {
         appTimerManager = AppTimerManager(this)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
-        featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
         
         // Initialize new modular managers
         appLauncher = AppLauncher(this, packageManager, appLockManager)
@@ -348,21 +351,19 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
-     * Starts feature tutorial and requests basic permissions after tutorial completes.
+     * Starts feature tutorial and requests initial permissions.
      */
-    internal fun startFeatureTutorialAndRequestPermissions() {
-        // Prevent multiple calls
-        if (sharedPreferences.getBoolean("initial_permissions_asked", false)) return
-        
-        requestInitialPermissions {
-            sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
-            
-            if (featureTutorialManager.shouldShowTutorial()) {
-                featureTutorialManager.startTutorial()
+    fun startFeatureTutorialAndRequestPermissions() {
+        val tutorialManager = FeatureTutorialManager(this, sharedPreferences)
+        if (tutorialManager.shouldShowTutorial()) {
+            tutorialManager.startTutorial {
+                requestInitialPermissions()
             }
+        } else {
+            requestInitialPermissions()
         }
     }
-    
+
     /**
      * Initializes time/date and weather widgets.
      */
@@ -473,8 +474,12 @@ class MainActivity : FragmentActivity() {
         }
 
         // If we're coming from the disclosure activity (likely via a task flag), check permissions
-        if (intent.getBooleanExtra("request_permissions_after_onboarding", false)) {
-            startFeatureTutorialAndRequestPermissions()
+        if (intent.getBooleanExtra("request_permissions_after_disclosure", false)) {
+            if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+                requestInitialPermissions {
+                    sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                }
+            }
         }
         
         // Reset the flag if explicitly opened again to allow re-prompting
@@ -519,7 +524,6 @@ class MainActivity : FragmentActivity() {
             lifecycleManager.setTodoManager(todoManager)
         }
         
-        lifecycleManager.setFeatureTutorialManager(featureTutorialManager)
         lifecycleManager.setBackgroundExecutor(backgroundExecutor)
         lifecycleManager.setWidgetLifecycleCoordinator(widgetLifecycleCoordinator)
         lifecycleManager.setWidgetThemeManager(widgetThemeManager)
@@ -743,27 +747,12 @@ class MainActivity : FragmentActivity() {
                 // Mark as completed and proceed
                 if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
                     sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
-                    // Start tutorial if needed
-                    if (::featureTutorialManager.isInitialized && featureTutorialManager.shouldShowTutorial()) {
-                        featureTutorialManager.startTutorial()
-                    }
                 }
             }
             return // Exit early to avoid triggering fallback
         }
-        
-        // Final fallback: If tutorial is done but permissions weren't asked, ask them now
-        // Only trigger if we're not already requesting permissions
-        if (sharedPreferences.getBoolean("feature_tutorial_shown", false) && 
-            !sharedPreferences.getBoolean("initial_permissions_asked", false)) {
-            requestInitialPermissions {
-                sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
-            }
-            return
-        }
 
-        // Ask for default launcher if onboarding is done but app is not default
-        // "Whenever it is opened" logic: check once per session/open
+        // Ask for default launcher if permissions are asked but app is not default
         if (!hasAskedDefaultLauncherThisOpen && 
             sharedPreferences.getBoolean("initial_permissions_asked", false) && 
             ::permissionManager.isInitialized && 
@@ -828,16 +817,13 @@ class MainActivity : FragmentActivity() {
 
             // Sequential chaining for initial request flow
             if (requestCode == PermissionManager.CONTACTS_PERMISSION_REQUEST) {
-                // Check if tutorial is still pending (initial flow)
+                // Check if still pending (initial flow)
                 if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
                     handler.postDelayed({
                         permissionManager.requestUsageStatsPermission(usageStatsManager) {
                             permissionManager.requestDefaultLauncher {
                                 hasAskedDefaultLauncherThisOpen = true
                                 sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
-                                if (featureTutorialManager.shouldShowTutorial()) {
-                                    featureTutorialManager.startTutorial()
-                                }
                             }
                         }
                     }, 300)

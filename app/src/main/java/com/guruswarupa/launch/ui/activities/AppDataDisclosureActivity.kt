@@ -280,7 +280,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             if (requestPermissions) {
-                putExtra("request_permissions_after_onboarding", true)
+                putExtra("request_permissions_after_disclosure", true)
             }
         }
         startActivity(intent)

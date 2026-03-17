@@ -24,18 +24,22 @@ import com.guruswarupa.launch.services.*
  */
 class AppInitializer(private val activity: MainActivity) {
 
+    private fun isTablet(): Boolean {
+        return (activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+    }
+
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     fun initialize(savedInstanceState: Bundle?) {
         with(activity) {
             sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-            
+
             // Lock orientation to portrait for phones only
             if (!isTablet()) {
                 requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             }
-            
+
             setContentView(R.layout.activity_main)
-            
+
             // Initialize core managers
             initializeCoreManagers()
 
@@ -46,25 +50,25 @@ class AppInitializer(private val activity: MainActivity) {
 
             // Initialize widget configuration manager
             widgetConfigurationManager = WidgetConfigurationManager(activity, sharedPreferences)
-            
+
             // Initialize widget visibility manager
             widgetVisibilityManager = WidgetVisibilityManager(activity, widgetConfigurationManager)
-            
+
             // Initialize result registry
             resultRegistry = MainActivityResultRegistry(activity)
-            
+
             // Initialize managers
             cacheManager = CacheManager(activity, packageManager, backgroundExecutor)
             permissionManager = PermissionManager(activity, sharedPreferences)
             systemBarManager = SystemBarManager(activity)
-            
+
             // Initialize new managers
             usageStatsCacheManager = UsageStatsCacheManager(sharedPreferences, backgroundExecutor)
             contactManager = ContactManager(activity, contentResolver, backgroundExecutor)
-            
+
             // Load usage stats cache immediately
             usageStatsCacheManager.loadCache()
-            
+
             // Load metadata cache from CacheManager asynchronously
             cacheManager.loadAppMetadataFromCacheAsync {
                 // Once metadata is loaded, refresh search manager if it's already initialized
@@ -72,7 +76,7 @@ class AppInitializer(private val activity: MainActivity) {
                     updateAppSearchManager()
                 }
             }
-            
+
             // Check if user has given consent for app data collection
             if (!sharedPreferences.getBoolean("app_data_consent_given", false)) {
                 // Show disclosure activity
@@ -80,16 +84,16 @@ class AppInitializer(private val activity: MainActivity) {
                 finish()
                 return@with
             }
-            
+
             // Initialize broadcast receiver manager
             initializeBroadcastReceivers()
 
             // Initialize views and UI components
             initializeViews()
-            
-            // Request necessary permissions only if coming from onboarding completion
-            val requestPermissionsAfterOnboarding = activity.intent.getBooleanExtra("request_permissions_after_onboarding", false)
-            if (requestPermissionsAfterOnboarding) {
+
+            // Request necessary permissions only if coming from disclosure completion
+            val requestPermissionsAfterDisclosure = activity.intent.getBooleanExtra("request_permissions_after_disclosure", false)
+            if (requestPermissionsAfterDisclosure) {
                 // Post to handler to ensure views are fully initialized first
                 activity.handler.post {
                     // Start feature tutorial first, then request permissions after tutorial completes
@@ -309,12 +313,5 @@ class AppInitializer(private val activity: MainActivity) {
             )
             resultRegistry.setDependencies(deps)
         }
-    }
-
-    /**
-     * Checks if the device is a tablet based on screen size.
-     */
-    private fun isTablet(): Boolean {
-        return activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK >= Configuration.SCREENLAYOUT_SIZE_LARGE
     }
 }
