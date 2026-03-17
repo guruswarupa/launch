@@ -288,6 +288,22 @@ class SettingsActivity : ComponentActivity() {
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
+        // Default Home Page
+        val homePageSpinner = findViewById<Spinner>(R.id.default_home_page_spinner)
+        val pages = arrayOf("Widgets (Left)", "Home (Center)", "Wallpaper (Right)")
+        homePageSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, pages).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        val defaultPageIndex = prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)
+        homePageSpinner.setSelection(defaultPageIndex)
+        homePageSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, pos) }
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
+        }
+
         // Wallpaper Blur Section
         val wallHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
         val wallContent = findViewById<LinearLayout>(R.id.wallpaper_content)
@@ -547,7 +563,19 @@ class SettingsActivity : ComponentActivity() {
         setupSectionToggle(pHeader, pContent, pArrow)
 
         findViewById<View>(R.id.check_permissions_button).setOnClickListener { startActivity(Intent(this, PermissionsActivity::class.java)) }
+        findViewById<View>(R.id.app_info_button).setOnClickListener { openAppInfo() }
         findViewById<View>(R.id.show_tutorial_button).setOnClickListener { showTutorial() }
+    }
+
+    private fun openAppInfo() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to open app info", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupSupportSection() {

@@ -26,10 +26,10 @@ class NavigationManager(
             return
         }
 
-        if (screenPagerManager.isPageOpen(ScreenPagerManager.Page.LEFT) ||
-            screenPagerManager.isPageOpen(ScreenPagerManager.Page.RIGHT)
-        ) {
-            screenPagerManager.openCenterPage(animated = true)
+        val defaultPage = screenPagerManager.getDefaultPage()
+        // If we're not on the default home page, return to it
+        if (!screenPagerManager.isPageOpen(defaultPage)) {
+            screenPagerManager.openDefaultHomePage(animated = true)
         } else {
             superOnBackPressed()
         }

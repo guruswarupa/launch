@@ -37,6 +37,7 @@ object Constants {
         const val ICON_STYLE = "icon_style"
         const val ICON_SIZE = "icon_size"
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
+        const val DEFAULT_HOME_PAGE_INDEX = "default_home_page_index"
         
         // Vault Prefs (Simplified)
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"

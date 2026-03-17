@@ -104,8 +104,8 @@ class LifecycleManager(
         val shouldStartTutorial = intent.getBooleanExtra("start_tutorial", false)
 
         if (shouldStartTutorial) {
-            mainActivity?.openHomePage(animated = false)
-            // Ensure we are at the top of the center page
+            mainActivity?.openDefaultHomePage(animated = false)
+            // Ensure we are at the top of the page
             mainActivity?.views?.recyclerView?.scrollToPosition(0)
         }
 

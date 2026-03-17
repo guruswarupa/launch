@@ -694,7 +694,7 @@ class AppDockManager(
         val mainActivity = activity
         if (lock) {
             mainActivity.setWidgetsPageLocked(true)
-            mainActivity.openHomePage(animated = true)
+            mainActivity.openDefaultHomePage(animated = true)
         } else {
             mainActivity.setWidgetsPageLocked(false)
         }

@@ -464,7 +464,7 @@ class MainActivity : FragmentActivity() {
             (intent.hasCategory(Intent.CATEGORY_HOME) || intent.hasCategory(Intent.CATEGORY_LAUNCHER))
 
         if (isHomeOrLauncher && ::screenPagerManager.isInitialized) {
-            screenPagerManager.openCenterPage(animated = true)
+            screenPagerManager.openDefaultHomePage(animated = true)
         }
 
         // If we're coming from the disclosure activity (likely via a task flag), check permissions

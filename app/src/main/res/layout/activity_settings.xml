@@ -310,6 +310,30 @@
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
 
+                        <!-- Default Home Page Option -->
+                        <LinearLayout
+                            android:id="@+id/default_home_page_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="20dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Default Home Screen"
+                                android:textSize="13sp"
+                                android:textColor="@color/white"
+                                android:alpha="0.6"
+                                android:layout_marginBottom="8dp"/>
+
+                            <Spinner
+                                android:id="@+id/default_home_page_spinner"
+                                style="@style/TranslucentSpinnerStyle"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"/>
+                        </LinearLayout>
+
                         <!-- App Highlighting / Scrim Option -->
                         <LinearLayout
                             android:id="@+id/background_translucency_section"
@@ -1495,6 +1519,16 @@
                             android:layout_width="match_parent"
                             android:layout_height="52dp"
                             android:text="Manage System Permissions"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:layout_marginBottom="12dp"/>
+
+                        <Button
+                            android:id="@+id/app_info_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="System App Settings"
                             android:textAllCaps="false"
                             android:background="@drawable/settings_card_background"
                             android:textColor="@color/white"
