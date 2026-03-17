@@ -68,7 +68,7 @@ class SettingsActivity : ComponentActivity() {
     private val vaultManager by lazy { EncryptedFolderManager(this) }
     private var settingsTutorialStepIndex = 0
     private var settingsTutorialActive = false
-    private var selectedThemeId: String = "system_default"
+    private var selectedThemeId: String = "stardust"
     private var selectedThemeCategory: String? = null
 
     private data class SettingsTutorialStep(
@@ -95,8 +95,6 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
-        notifySettingsChanged()
         setupWallpaper(null)
     }
 
@@ -113,7 +111,7 @@ class SettingsActivity : ComponentActivity() {
         applyContentInsets()
         applyBackgroundTranslucency()
 
-        selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default") ?: "system_default"
+        selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "stardust") ?: "stardust"
 
         // Always show system wallpaper on startup as per user request
         setupWallpaper(null)
@@ -194,7 +192,7 @@ class SettingsActivity : ComponentActivity() {
 
     private fun setupWallpaper(demoThemeId: String?) {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        if (demoThemeId == null || demoThemeId == "system_default") {
+        if (demoThemeId == null) {
             WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
         } else {
             WallpaperDisplayHelper.applyThemeWallpaper(wallpaperImageView, demoThemeId)
@@ -348,7 +346,7 @@ class SettingsActivity : ComponentActivity() {
 
         if (selectedThemeCategory == null) {
             // Show Category Cards
-            val categories = listOf("System", "Landscape", "City", "Abstract", "Minimal")
+            val categories = listOf("Landscape", "City", "Abstract", "Minimal")
 
             val scrollContainer = HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
@@ -371,11 +369,7 @@ class SettingsActivity : ComponentActivity() {
                 indicator.isVisible = false
 
                 // Highlight if selected
-                val isSelected = if (category == "System") {
-                    selectedThemeId == "system_default"
-                } else {
-                    ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
-                }
+                val isSelected = ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
 
                 if (isSelected) {
                     card.strokeColor = ContextCompat.getColor(this, R.color.nord8)
@@ -386,27 +380,14 @@ class SettingsActivity : ComponentActivity() {
                 }
 
                 // Find a preview image for the category
-                when (category) {
-                    "System" -> WallpaperDisplayHelper.applyThemePreview(preview, "system_default")
-                    else -> {
-                        val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
-                        if (firstThemeInCategory != null) {
-                            WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
-                        }
-                    }
+                val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
+                if (firstThemeInCategory != null) {
+                    WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
                 }
 
                 card.setOnClickListener {
-                    if (category == "System") {
-                        selectedThemeId = "system_default"
-                        prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
-                        setupThemeSelection()
-                        setupWallpaper(null) // Reset to system wallpaper
-                        notifySettingsChanged()
-                    } else {
-                        selectedThemeCategory = category
-                        setupThemeSelection()
-                    }
+                    selectedThemeCategory = category
+                    setupThemeSelection()
                 }
                 row.addView(categoryView)
             }
@@ -469,7 +450,6 @@ class SettingsActivity : ComponentActivity() {
                 card.setOnClickListener {
                     selectedThemeId = theme.id
                     prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
-                    applyBtn.isVisible = theme.id != "system_default"
                     setupThemeSelection()
                     setupWallpaper(theme.id) // Demo preview
                     notifySettingsChanged()
@@ -478,14 +458,12 @@ class SettingsActivity : ComponentActivity() {
             }
 
             // Ensure button visibility is correct based on currently selected theme in this category
-            applyBtn.isVisible = selectedThemeId != "system_default" && themes.any { it.id == selectedThemeId }
+            applyBtn.isVisible = themes.any { it.id == selectedThemeId }
         }
 
         // Re-set the listener since we re-calculate logic but keep the button reference
         applyBtn.setOnClickListener {
-            if (selectedThemeId != "system_default") {
-                triggerWallpaperPicker(selectedThemeId)
-            }
+            triggerWallpaperPicker(selectedThemeId)
         }
     }
 
