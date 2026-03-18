@@ -70,6 +70,7 @@ class SettingsActivity : ComponentActivity() {
     private var settingsTutorialActive = false
     private var selectedThemeId: String = "stardust"
     private var selectedThemeCategory: String? = null
+    private var hasUnsavedThemeChanges = false
 
     private data class SettingsTutorialStep(
         val title: String,
@@ -124,11 +125,6 @@ class SettingsActivity : ComponentActivity() {
         setupMaintenanceSection()
         setupSupportSection()
         setupVersionInfo()
-
-        findViewById<View>(R.id.save_settings_button).setOnClickListener {
-            Toast.makeText(this, "Settings applied", Toast.LENGTH_SHORT).show()
-            finish()
-        }
 
         if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
             window.decorView.post { startSettingsTutorial() }
@@ -500,6 +496,7 @@ class SettingsActivity : ComponentActivity() {
                     prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
                     setupThemeSelection()
                     setupWallpaper(theme.id) // Demo preview
+                    hasUnsavedThemeChanges = true
                     notifySettingsChanged()
                 }
                 row.addView(themeView)
@@ -511,6 +508,7 @@ class SettingsActivity : ComponentActivity() {
 
         // Re-set the listener since we re-calculate logic but keep the button reference
         applyBtn.setOnClickListener {
+            hasUnsavedThemeChanges = false
             triggerWallpaperPicker(selectedThemeId)
         }
     }
@@ -1202,6 +1200,25 @@ class SettingsActivity : ComponentActivity() {
         if (settingsTutorialStepIndex >= settingsTutorialSteps.size) { settingsTutorialActive = false; return }
         val step = settingsTutorialSteps[settingsTutorialStepIndex]
         AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle(step.title).setMessage(step.description).setPositiveButton(if (settingsTutorialStepIndex == settingsTutorialSteps.size - 1) "Finish" else "Next") { _, _ -> settingsTutorialStepIndex++; showCurrentSettingsTutorialStep() }.setNegativeButton("Skip") { _, _ -> settingsTutorialActive = false }.show()
+    }
+
+    private fun showUnsavedChangesDialog(onConfirm: () -> Unit) {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Unsaved Changes")
+            .setMessage("You have selected a new theme but haven't applied it yet. Are you sure you want to leave without applying?")
+            .setPositiveButton("Leave Without Applying") { _, _ -> onConfirm() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    override fun onBackPressed() {
+        if (hasUnsavedThemeChanges) {
+            showUnsavedChangesDialog {
+                super.onBackPressed()
+            }
+        } else {
+            super.onBackPressed()
+        }
     }
 }
 

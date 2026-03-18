@@ -59,29 +59,6 @@
                     android:shadowDx="0"
                     android:shadowDy="2"
                     android:shadowRadius="6"/>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/save_settings_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:cardCornerRadius="22dp"
-                    app:cardElevation="0dp"
-                    app:cardBackgroundColor="#66000000"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="#40FFFFFF"
-                    android:clickable="true"
-                    android:focusable="true">
-                    
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="APPLY"
-                        android:textColor="@color/white"
-                        android:textSize="13sp"
-                        android:fontFamily="sans-serif-black"
-                        android:paddingHorizontal="24dp"
-                        android:paddingVertical="12dp"/>
-                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
             <!-- Appearance Category -->
