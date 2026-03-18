@@ -132,7 +132,10 @@
         <activity
             android:name=".ui.activities.WebAppActivity"
             android:exported="false"
-            android:theme="@style/Theme.Launch.Settings" />
+            android:theme="@style/Theme.Launch.Settings"
+            android:label="@string/app_name"
+            android:launchMode="standard"
+            android:autoRemoveFromRecents="false" />
 
         <activity
             android:name=".ui.activities.WebAppSettingsActivity"

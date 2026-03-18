@@ -1282,6 +1282,10 @@ class AppAdapter(
             Intent(activity, WebAppActivity::class.java).apply {
                 putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, name)
                 putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
+                // Always create new task for each web app
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
+                         Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             }
         )
     }

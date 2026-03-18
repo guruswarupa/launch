@@ -75,12 +75,15 @@ class WebAppSettingsActivity : ComponentActivity() {
                 }
             }
             itemView.findViewById<ImageButton>(R.id.web_app_item_open).setOnClickListener {
-                startActivity(
-                    Intent(this, WebAppActivity::class.java).apply {
-                        putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, entry.name)
-                        putExtra(WebAppActivity.EXTRA_WEB_APP_URL, entry.url)
-                    }
-                )
+                val intent = Intent(this, WebAppActivity::class.java).apply {
+                    putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, entry.name)
+                    putExtra(WebAppActivity.EXTRA_WEB_APP_URL, entry.url)
+                    // Always create new task for each web app
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
+                             Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+                             Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                }
+                startActivity(intent)
             }
             itemView.findViewById<ImageButton>(R.id.web_app_item_edit).setOnClickListener {
                 showEditorDialog(entry)

@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -17,15 +18,17 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.WebAppAdBlocker
+import com.guruswarupa.launch.managers.WebAppIconFetcher
 
-class WebAppActivity : ComponentActivity() {
+class WebAppActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_WEB_APP_NAME = "web_app_name"
         const val EXTRA_WEB_APP_URL = "web_app_url"
@@ -39,16 +42,35 @@ class WebAppActivity : ComponentActivity() {
 
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
+    
+    private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+        if (uris.isNotEmpty()) {
+            // Grant URI permissions temporarily
+            uris.forEach { uri ->
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            // Pass the URIs back to the WebView
+            fileUploadCallback?.onReceiveValue(uris.toTypedArray())
+        } else {
+            fileUploadCallback?.onReceiveValue(null)
+        }
+        fileUploadCallback = null
+    }
+    
+    private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
+        val appName = intent.getStringExtra(EXTRA_WEB_APP_NAME).orEmpty()
+        val url = intent.getStringExtra(EXTRA_WEB_APP_URL).orEmpty()
+        
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
         setContentView(R.layout.activity_web_app)
-
+        
         val root = findViewById<View>(R.id.web_app_root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -56,13 +78,43 @@ class WebAppActivity : ComponentActivity() {
             insets
         }
 
-        val appName = intent.getStringExtra(EXTRA_WEB_APP_NAME).orEmpty()
-        val url = intent.getStringExtra(EXTRA_WEB_APP_URL).orEmpty()
+        // Validate again after UI is set up
         if (appName.isBlank() || url.isBlank()) {
             finish()
             return
         }
-
+        
+        // Set dynamic label for recent apps to show web app name
+        title = appName
+        
+        // Load and set web app icon for recent apps
+        WebAppIconFetcher.loadIcon(this, url) { drawable ->
+            if (drawable != null) {
+                try {
+                    // Convert drawable to bitmap for task description
+                    val bitmap = android.graphics.Bitmap.createBitmap(
+                        drawable.intrinsicWidth.coerceAtLeast(1),
+                        drawable.intrinsicHeight.coerceAtLeast(1),
+                        android.graphics.Bitmap.Config.ARGB_8888
+                    )
+                    val canvas = android.graphics.Canvas(bitmap)
+                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.draw(canvas)
+                    
+                    // Use deprecated constructor that accepts bitmap (works on all APIs)
+                    @Suppress("DEPRECATION")
+                    val taskDescription = android.app.ActivityManager.TaskDescription(
+                        appName,
+                        bitmap,
+                        android.graphics.Color.TRANSPARENT
+                    )
+                    setTaskDescription(taskDescription)
+                } catch (_: Exception) {
+                    // Ignore if icon loading fails
+                }
+            }
+        }
+        
         titleView = findViewById<TextView>(R.id.web_app_title).apply { text = appName }
         addressView = findViewById<TextView>(R.id.web_app_address).apply { text = url }
         progressBar = findViewById(R.id.web_app_progress)
@@ -85,6 +137,10 @@ class WebAppActivity : ComponentActivity() {
             builtInZoomControls = false
             displayZoomControls = false
             mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            // Enable media capture support
+            mediaPlaybackRequiresUserGesture = false
+            allowFileAccess = true
+            allowContentAccess = true
         }
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -109,6 +165,36 @@ class WebAppActivity : ComponentActivity() {
 
             override fun onHideCustomView() {
                 exitFullscreen()
+            }
+            
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                // Cancel any pending upload
+                fileUploadCallback?.onReceiveValue(null)
+                fileUploadCallback = filePathCallback
+                
+                // Determine accept type from params
+                val acceptTypes = fileChooserParams?.acceptTypes ?: arrayOf("*/*")
+                val isVideo = acceptTypes.any { it.startsWith("video/") }
+                val isImage = acceptTypes.any { it.startsWith("image/") || it == "*/*" }
+                
+                try {
+                    // Launch media picker
+                    val mimeType = when {
+                        isVideo -> "video/*"
+                        isImage -> "image/*"
+                        else -> "*/*"
+                    }
+                    mediaPickerLauncher.launch(mimeType)
+                    return true
+                } catch (_: Exception) {
+                    fileUploadCallback?.onReceiveValue(null)
+                    fileUploadCallback = null
+                    return false
+                }
             }
         }
         webView.webViewClient = object : WebViewClient() {
