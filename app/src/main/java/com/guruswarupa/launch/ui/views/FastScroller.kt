@@ -37,6 +37,9 @@ class FastScroller @JvmOverloads constructor(
     private var currentAlpha = 1f // Always visible
     private var waveProgress = 0f
     private var waveAnimator: ValueAnimator? = null
+    
+    // Track touch position for wave animation origin
+    private var touchX = 0f
 
     private var trackTop = 0f
     private var trackBottom = 0f
@@ -47,7 +50,7 @@ class FastScroller @JvmOverloads constructor(
     private var isSliding = false
 
     private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ColorUtils.setAlphaComponent(currentColor, 20)
+        color = ColorUtils.setAlphaComponent(currentColor, 30)
         strokeWidth = trackStroke
         strokeCap = Paint.Cap.ROUND
     }
@@ -64,14 +67,14 @@ class FastScroller @JvmOverloads constructor(
     }
 
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ColorUtils.setAlphaComponent(currentColor, 10)
+        color = ColorUtils.setAlphaComponent(currentColor, 20)
         style = Paint.Style.STROKE
-        strokeWidth = trackStroke * 6
-        maskFilter = BlurMaskFilter(10f * density, BlurMaskFilter.Blur.NORMAL)
+        strokeWidth = trackStroke * 8
+        maskFilter = BlurMaskFilter(15f * density, BlurMaskFilter.Blur.NORMAL)
     }
 
     private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = ColorUtils.setAlphaComponent(currentColor, 40)
+        color = ColorUtils.setAlphaComponent(currentColor, 60)
         style = Paint.Style.FILL
     }
 
@@ -321,10 +324,18 @@ class FastScroller @JvmOverloads constructor(
     private fun animateWaveProgress(to: Float) {
         waveAnimator?.cancel()
         waveAnimator = ValueAnimator.ofFloat(waveProgress, to).apply {
-            duration = 400
-            interpolator = OvershootInterpolator(1.6f)
-            addUpdateListener {
-                waveProgress = it.animatedValue as Float
+            duration = 350
+            interpolator = OvershootInterpolator(1.8f)
+            addUpdateListener { animator ->
+                waveProgress = animator.animatedValue as Float
+                // Animate alpha based on wave progress for smooth fade in/out
+                currentAlpha = if (to > 0f) {
+                    // Fading in
+                    (waveProgress * 1.2f).coerceIn(0f, 1f)
+                } else {
+                    // Fading out
+                    ((1f - waveProgress) * 1.2f).coerceIn(0f, 1f)
+                }
                 invalidate()
             }
             start()
@@ -334,6 +345,8 @@ class FastScroller @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         trackX = width - paddingEnd - 2f * density
+        // Initialize touchX to trackX so wave fades from right when not touching
+        touchX = trackX
         trackTop = paddingTop + extraVerticalPadding
         trackBottom = height - paddingBottom - extraVerticalPadding
         recalculateSpacing()
@@ -341,11 +354,13 @@ class FastScroller @JvmOverloads constructor(
     }
 
     private fun updateWaveShader() {
-        val startX = (trackX - maxWaveDepth).coerceAtLeast(0f)
-        val startColor = ColorUtils.setAlphaComponent(currentColor, 100)
+        // Wave now animates from touch position towards the track
+        val startX = (touchX - maxWaveDepth).coerceAtLeast(0f)
+        // Darker gradient for better visibility on dark backgrounds
+        val startColor = ColorUtils.setAlphaComponent(currentColor, 120)
         val endColor = ColorUtils.setAlphaComponent(currentColor, 0)
         val shader = LinearGradient(
-            startX, 0f, trackX, 0f,
+            startX, 0f, touchX, 0f,
             startColor, endColor, Shader.TileMode.CLAMP
         )
         wavePaint.shader = shader
@@ -370,7 +385,8 @@ class FastScroller @JvmOverloads constructor(
 
             val paintToUse = if (isSelected || i == scrollIndex) selectedLetterPaint else letterPaint
             
-            val alpha = if (isSelected || i == scrollIndex) 255 else (fadeAlpha * 0.3f).toInt()
+            // Improved alpha values for better dark theme visibility
+            val alpha = if (isSelected || i == scrollIndex) 255 else (fadeAlpha * 0.5f).toInt()
             paintToUse.alpha = alpha
             
             if (alphabet[i] == "★") {
@@ -380,8 +396,13 @@ class FastScroller @JvmOverloads constructor(
             }
             
             if (isSelected) {
-                haloPaint.alpha = (fadeAlpha * 0.2f).toInt()
-                canvas.drawCircle(textX, y, 16f * density * waveProgress, haloPaint)
+                // Enhanced halo effect for better visibility on dark backgrounds
+                haloPaint.alpha = (fadeAlpha * 0.4f).toInt()
+                canvas.drawCircle(textX, y, 18f * density * waveProgress, haloPaint)
+                
+                // Add subtle glow around selected letter
+                glowPaint.alpha = (fadeAlpha * 0.3f).toInt()
+                canvas.drawCircle(textX, y, 22f * density * waveProgress, glowPaint)
             }
             
             val letterY = y - baseOffset
@@ -414,14 +435,22 @@ class FastScroller @JvmOverloads constructor(
         if (selectedIndex < 0 || waveProgress <= 0f) return
         val centerY = (trackTop + letterSpacing * selectedIndex).coerceIn(trackTop, trackBottom)
         val radius = previewRadius * waveProgress
-        val bubbleX = trackX - 115f * density * waveProgress
+        // Adjusted bubble position for wider FastScroller - moves more left when expanding
+        val bubbleX = trackX - 140f * density - (120f * density * (1f - waveProgress))
         
-        // Soft shadow
+        // Enhanced soft shadow for better depth on dark backgrounds
         val shadowPaint = Paint(previewPaint).apply {
-            maskFilter = BlurMaskFilter(16f * density, BlurMaskFilter.Blur.NORMAL)
-            alpha = (fadeAlpha * 0.1f).toInt()
+            maskFilter = BlurMaskFilter(20f * density, BlurMaskFilter.Blur.NORMAL)
+            alpha = (fadeAlpha * 0.3f).toInt()
         }
-        canvas.drawCircle(bubbleX, centerY, radius + 4f * density, shadowPaint)
+        canvas.drawCircle(bubbleX, centerY, radius + 6f * density, shadowPaint)
+        
+        // Add a subtle inner glow/halo effect
+        val haloPaintLocal = Paint(previewPaint).apply {
+            maskFilter = BlurMaskFilter(8f * density, BlurMaskFilter.Blur.NORMAL)
+            alpha = (fadeAlpha * 0.4f).toInt()
+        }
+        canvas.drawCircle(bubbleX, centerY, radius + 2f * density, haloPaintLocal)
         
         previewPaint.alpha = 255
         canvas.drawCircle(bubbleX, centerY, radius, previewPaint)
@@ -445,6 +474,9 @@ class FastScroller @JvmOverloads constructor(
                 val touchThreshold = width - 64f * density
                 if (x < touchThreshold) return false
                 
+                // Store exact touch X position for wave animation origin
+                touchX = x
+                
                 isSliding = true
                 animateWaveProgress(1f)
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -463,6 +495,8 @@ class FastScroller @JvmOverloads constructor(
             MotionEvent.ACTION_CANCEL -> {
                 isSliding = false
                 selectedIndex = -1
+                // Reset touchX to trackX for smooth fade out
+                touchX = trackX
                 animateWaveProgress(0f)
                 updateScrollIndex() // Sync back to scroll position after touch
                 parent?.requestDisallowInterceptTouchEvent(false)
