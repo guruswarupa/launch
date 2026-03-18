@@ -1,8 +1,10 @@
 package com.guruswarupa.launch.ui.activities
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
@@ -18,10 +20,14 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.graphics.applyCanvas
+import androidx.core.graphics.createBitmap
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.guruswarupa.launch.R
@@ -70,8 +76,8 @@ class WebAppActivity : AppCompatActivity() {
         
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
         setContentView(R.layout.activity_web_app)
 
@@ -88,22 +94,21 @@ class WebAppActivity : AppCompatActivity() {
         WebAppIconFetcher.loadIcon(this, url) { drawable ->
             if (drawable != null) {
                 try {
-                    // Convert drawable to bitmap for task description
-                    val bitmap = android.graphics.Bitmap.createBitmap(
+                    // Convert drawable to bitmap for task description using KTX
+                    val bitmap = createBitmap(
                         drawable.intrinsicWidth.coerceAtLeast(1),
-                        drawable.intrinsicHeight.coerceAtLeast(1),
-                        android.graphics.Bitmap.Config.ARGB_8888
-                    )
-                    val canvas = android.graphics.Canvas(bitmap)
-                    drawable.setBounds(0, 0, canvas.width, canvas.height)
-                    drawable.draw(canvas)
+                        drawable.intrinsicHeight.coerceAtLeast(1)
+                    ).applyCanvas {
+                        drawable.setBounds(0, 0, width, height)
+                        drawable.draw(this)
+                    }
                     
                     // Use deprecated constructor that accepts bitmap (works on all APIs)
                     @Suppress("DEPRECATION")
-                    val taskDescription = android.app.ActivityManager.TaskDescription(
+                    val taskDescription = ActivityManager.TaskDescription(
                         appName,
                         bitmap,
-                        android.graphics.Color.TRANSPARENT
+                        Color.TRANSPARENT
                     )
                     setTaskDescription(taskDescription)
                 } catch (_: Exception) {
@@ -125,7 +130,7 @@ class WebAppActivity : AppCompatActivity() {
             webView.reload()
         }
         findViewById<ImageButton>(R.id.web_app_browser_button).setOnClickListener {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(webView.url ?: url)))
+            startActivity(Intent(Intent.ACTION_VIEW, (webView.url ?: url).toUri()))
         }
 
         webView.settings.apply {
@@ -210,8 +215,10 @@ class WebAppActivity : AppCompatActivity() {
                 return super.shouldInterceptRequest(view, request)
             }
 
+            @Deprecated("Deprecated in Java")
+            @Suppress("DEPRECATION")
             override fun shouldInterceptRequest(view: WebView?, url: String?): WebResourceResponse? {
-                if (WebAppAdBlocker.shouldBlock(url?.let { Uri.parse(it) })) {
+                if (WebAppAdBlocker.shouldBlock(url?.toUri())) {
                     return WebAppAdBlocker.createEmptyResponse()
                 }
                 return super.shouldInterceptRequest(view, url)
@@ -222,7 +229,7 @@ class WebAppActivity : AppCompatActivity() {
                 val scheme = request?.url?.scheme.orEmpty()
                 if (scheme == "http" || scheme == "https") return false
                 return try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl)))
+                    startActivity(Intent(Intent.ACTION_VIEW, targetUrl.toUri()))
                     true
                 } catch (_: Exception) {
                     false
@@ -245,18 +252,23 @@ class WebAppActivity : AppCompatActivity() {
         }
 
         webView.loadUrl(url)
-    }
 
-    override fun onBackPressed() {
-        if (customView != null) {
-            exitFullscreen()
-            return
-        }
-        if (::webView.isInitialized && webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
+        // Handle back press using modern API
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (customView != null) {
+                    exitFullscreen()
+                    return
+                }
+                if (::webView.isInitialized && webView.canGoBack()) {
+                    webView.goBack()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                    isEnabled = true
+                }
+            }
+        })
     }
 
     override fun onPause() {

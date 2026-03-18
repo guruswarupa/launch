@@ -451,7 +451,7 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppInitializer(this).initialize(savedInstanceState)
+        AppInitializer(this).initialize()
         if (::systemBarManager.isInitialized) {
             systemBarManager.makeSystemBarsTransparent()
         }
@@ -489,7 +489,7 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+    override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (::screenPagerManager.isInitialized) {
             screenPagerManager.updatePageWidth()
@@ -690,7 +690,7 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         if (::lifecycleManager.isInitialized) {
-            lifecycleManager.onResume(intent)
+            lifecycleManager.onResume()
         }
         
         // Check if we're waiting for user to return from usage stats settings

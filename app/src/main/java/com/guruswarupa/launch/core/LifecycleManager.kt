@@ -9,12 +9,10 @@ import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.widgets.NotificationsWidget
 import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import com.guruswarupa.launch.AppAdapter
-import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.widgets.DeviceInfoWidget
 import com.guruswarupa.launch.widgets.NetworkStatsWidget
 import com.guruswarupa.launch.utils.TimeDateManager
 import com.guruswarupa.launch.utils.TodoManager
-import com.guruswarupa.launch.utils.TodoAlarmManager
 import com.guruswarupa.launch.models.MainActivityViews
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 import com.guruswarupa.launch.widgets.WidgetThemeManager
@@ -46,7 +44,6 @@ class LifecycleManager(
     private var weeklyUsageGraph: WeeklyUsageGraphView? = null
     private var usageStatsDisplayManager: UsageStatsDisplayManager? = null
     private var todoManager: TodoManager? = null
-    private var todoAlarmManager: TodoAlarmManager? = null
     private var backgroundExecutor: java.util.concurrent.ExecutorService? = null
     private var widgetLifecycleCoordinator: WidgetLifecycleCoordinator? = null
     private var widgetThemeManager: WidgetThemeManager? = null
@@ -76,13 +73,12 @@ class LifecycleManager(
     fun setAppListLoader(loader: AppListLoader) { this.appListLoader = loader }
     fun setWidgetManager(manager: WidgetManager) { this.widgetManager = manager }
     fun setDeviceInfoWidget(widget: DeviceInfoWidget) { this.deviceInfoWidget = widget }
-    fun setNetworkStatsWidget(widget: NetworkStatsWidget) { this.networkStatsWidget = networkStatsWidget }
+    fun setNetworkStatsWidget(widget: NetworkStatsWidget) { this.networkStatsWidget = widget }
     fun setUsageStatsManager(manager: AppUsageStatsManager) { this.usageStatsManager = manager }
     fun setTimeDateManager(manager: TimeDateManager) { this.timeDateManager = manager }
     fun setWeeklyUsageGraph(graph: WeeklyUsageGraphView) { this.weeklyUsageGraph = graph }
     fun setUsageStatsDisplayManager(manager: UsageStatsDisplayManager) { this.usageStatsDisplayManager = manager }
     fun setTodoManager(manager: TodoManager) { this.todoManager = manager }
-    fun setTodoAlarmManager(manager: TodoAlarmManager) { this.todoAlarmManager = manager }
     fun setBackgroundExecutor(executor: java.util.concurrent.ExecutorService) { this.backgroundExecutor = executor }
     fun setWidgetLifecycleCoordinator(coordinator: WidgetLifecycleCoordinator) { this.widgetLifecycleCoordinator = coordinator }
     fun setWidgetThemeManager(manager: WidgetThemeManager) { this.widgetThemeManager = manager }
@@ -94,11 +90,8 @@ class LifecycleManager(
     fun setHiddenAppManager(manager: HiddenAppManager) { this.hiddenAppManager = manager }
     
     private var isBlockingBackGesture = false
-    fun setBlockingBackGesture(isBlocking: Boolean) { this.isBlockingBackGesture = isBlocking }
     
-    fun onResume(intent: android.content.Intent) {
-        val mainActivity = activity as? MainActivity
-
+    fun onResume() {
         // Ensure system bars stay transparent
         systemBarManager?.makeSystemBarsTransparent()
         
@@ -152,9 +145,7 @@ class LifecycleManager(
             if (!activity.isFinishing && !activity.isDestroyed) {
                 hiddenAppManager?.forceRefresh()
                 
-                appListLoader?.let {
-                    it.loadApps(forceRefresh = false)
-                } ?: run {
+                appListLoader?.loadApps(forceRefresh = false) ?: run {
                     onLoadApps?.invoke(false)
                 }
             }

@@ -56,18 +56,11 @@ class CacheManager(
         }
     }
 
-    /**
-     * Fast version check using cached app list.
-     * Replaced with basic getAppListVersion check for consistency.
-     */
-    fun getAppListVersionFromList(apps: List<ResolveInfo>): String {
-        return getAppListVersion()
-    }
 
     /**
      * Check if version matches current system state.
      */
-    fun isVersionCurrentWithList(apps: List<ResolveInfo>): Boolean {
+    fun isVersionCurrent(): Boolean {
         val currentVersion = getAppListVersion()
         val cachedVersion = try {
             if (appListVersionFile.exists()) {
@@ -79,12 +72,6 @@ class CacheManager(
         return currentVersion == cachedVersion
     }
 
-    /**
-     * Check if version matches current version
-     */
-    fun isVersionCurrent(): Boolean {
-        return isVersionCurrentWithList(emptyList())
-    }
 
     /**
      * Check if cache is valid (exists and not expired)
@@ -200,11 +187,6 @@ class CacheManager(
             }
         }
     }
-
-    /**
-     * Check if metadata has been loaded
-     */
-    fun isMetadataLoaded(): Boolean = metadataLoaded
 
     /**
      * Save app metadata to persistent cache

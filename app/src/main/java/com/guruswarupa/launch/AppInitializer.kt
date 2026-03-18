@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -15,9 +14,7 @@ import com.guruswarupa.launch.core.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.ui.activities.AppDataDisclosureActivity
-import com.guruswarupa.launch.utils.*
 import com.guruswarupa.launch.widgets.*
-import com.guruswarupa.launch.services.*
 
 /**
  * Handles the initialization of MainActivity and its components.
@@ -28,13 +25,13 @@ class AppInitializer(private val activity: MainActivity) {
         return (activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    fun initialize(savedInstanceState: Bundle?) {
+    @SuppressLint("UnspecifiedRegisterReceiverFlag", "SourceLockedOrientationActivity")
+    fun initialize() {
         with(activity) {
             sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
             // Lock orientation to portrait for phones only
-            if (!isTablet()) {
+            if (!this@AppInitializer.isTablet()) {
                 requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             }
 
@@ -142,7 +139,7 @@ class AppInitializer(private val activity: MainActivity) {
                     activity.activityResultHandler.setVoiceCommandHandler(handler)
                 }
                 // Update registry if it's already been fully initialized
-                updateRegistryDependencies()
+                this@AppInitializer.updateRegistryDependencies()
             }
             
             // Initialize app list manager
@@ -157,7 +154,7 @@ class AppInitializer(private val activity: MainActivity) {
             // Initialize AppListUIUpdater
             appListUIUpdater = AppListUIUpdater(
                 activity, views.recyclerView, if (activity.isAdapterInitialized()) activity.adapter else null,
-                appList, fullAppList, appListLoader, appDockManager, appListManager,
+                appList, fullAppList, appListLoader, appListManager,
                 backgroundExecutor, views.searchBox
             )
             appListUIUpdater.setupCallbacks()
@@ -290,7 +287,7 @@ class AppInitializer(private val activity: MainActivity) {
             initializeLifecycleManager()
 
             // Finally, set all dependencies for result registry in one go
-            updateRegistryDependencies()
+            this@AppInitializer.updateRegistryDependencies()
         }
     }
 

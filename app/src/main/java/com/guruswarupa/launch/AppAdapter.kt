@@ -34,6 +34,7 @@ import androidx.core.content.FileProvider
 import android.content.ComponentName
 import android.os.Handler
 import android.os.Looper
+import androidx.core.view.size
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.managers.WebAppIconFetcher
@@ -173,7 +174,7 @@ class AppAdapter(
 
     private val iconPreloadExecutor = ThreadPoolExecutor(
         2, 2, 0L, TimeUnit.MILLISECONDS,
-        PriorityBlockingQueue<Runnable>()
+        PriorityBlockingQueue()
     )
     
     fun clearUsageCache() {
@@ -184,6 +185,7 @@ class AppAdapter(
         contactPhotoCache.clear()
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     fun updateIconStyle(style: String) {
         currentIconStyle = style
         (context as? Activity)?.runOnUiThread {
@@ -191,6 +193,7 @@ class AppAdapter(
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun updateIconSize(size: Int) {
         currentIconSize = size
         (context as? Activity)?.runOnUiThread {
@@ -198,6 +201,7 @@ class AppAdapter(
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun updateGrayscaleIcons(enabled: Boolean) {
         grayscaleIconsEnabled = enabled
         (context as? Activity)?.runOnUiThread {
@@ -703,8 +707,8 @@ class AppAdapter(
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
-                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
-                    activity.startActivity(intent ?: Intent(Settings.ACTION_SETTINGS))
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(settingAction)
+                    activity.startActivity(intent)
                     searchBox.text.clear()
                 }
             }
@@ -714,8 +718,8 @@ class AppAdapter(
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
-                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
-                    activity.startActivity(intent ?: Intent(Settings.ACTION_SETTINGS))
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(settingAction)
+                    activity.startActivity(intent)
                     searchBox.text.clear()
                 }
             }
@@ -933,10 +937,10 @@ class AppAdapter(
                         if (holder.bindingAdapterPosition == position) holder.appName?.text = label else notifyItemChanged(position)
                     }
                 } catch (_: Exception) {
-                    val fallbackLabel = packageName
-                    labelCache[packageName] = fallbackLabel
+                    labelCache[packageName] = packageName
                     (context as? Activity)?.runOnUiThread {
-                        if (holder.bindingAdapterPosition == position) holder.appName?.text = fallbackLabel else notifyItemChanged(position)
+                        if (holder.bindingAdapterPosition == position) holder.appName?.text =
+                            packageName else notifyItemChanged(position)
                     }
                 } finally {
                     isDone = true
@@ -964,6 +968,7 @@ class AppAdapter(
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun showAppContextMenu(view: View, packageName: String, appInfo: ResolveInfo) {
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
         popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
@@ -1020,7 +1025,7 @@ class AppAdapter(
             }
         }
         
-        for (i in 0 until popupMenu.menu.size()) {
+        for (i in 0 until popupMenu.menu.size) {
             val item = popupMenu.menu.getItem(i)
             val itemTitle = item.title?.toString() ?: continue
             val spannable = android.text.SpannableString(itemTitle)
@@ -1082,7 +1087,7 @@ class AppAdapter(
             }
         )
 
-        for (i in 0 until popupMenu.menu.size()) {
+        for (i in 0 until popupMenu.menu.size) {
             val item = popupMenu.menu.getItem(i)
             val spannable = android.text.SpannableString(item.title)
             spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1308,7 +1313,10 @@ class AppAdapter(
             }
         }
         val builder = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+        
+        @SuppressLint("InflateParams")
         val titleView = LayoutInflater.from(activity).inflate(R.layout.dialog_contact_title, null)
+        
         titleView.findViewById<TextView>(R.id.contact_name).text = contactName
         titleView.findViewById<TextView>(R.id.contact_number).text = phoneNumber
         val photoImageView = titleView.findViewById<ImageView>(R.id.contact_photo)

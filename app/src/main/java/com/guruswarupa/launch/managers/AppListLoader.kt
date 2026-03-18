@@ -1,6 +1,5 @@
 package com.guruswarupa.launch.managers
 
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Handler
@@ -115,9 +114,9 @@ class AppListLoader(
                             onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                         }
                         
-                        // Verify version in background (non-blocking) - use list-based check to avoid re-querying PM
+                        // Verify version in background (non-blocking)
                         safeExecute {
-                            if (!cacheManager.isVersionCurrentWithList(cachedApps)) {
+                            if (!cacheManager.isVersionCurrent()) {
                                 handler.post {
                                     if (!activity.isFinishing && !activity.isDestroyed) {
                                         loadApps(forceRefresh = false, fullAppList, appList, adapter) // Refresh without clearing cache
@@ -245,10 +244,6 @@ class AppListLoader(
                     val finalAppList = appListManager.filterAndPrepareApps(fullList, focusMode, workspaceMode)
                     
                     // STEP 2: Sort using cached metadata for instant sorted display
-                    // This ensures all apps are shown, just sorted using cache (fast)
-                    val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
-                    
-                    // Use sorting with favorites at the top
                     val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Show sorted list immediately (using cache for sorting)

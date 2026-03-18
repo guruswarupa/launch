@@ -35,7 +35,6 @@ class ServiceManager(
      */
     fun updateBackTapService() {
         val isBackTapEnabled = sharedPreferences.getBoolean(Constants.Prefs.BACK_TAP_ENABLED, false)
-        Log.d("ServiceManager", "Back tap enabled in settings: $isBackTapEnabled")
         if (isBackTapEnabled) {
             startBackTapService()
         } else {
@@ -47,7 +46,6 @@ class ServiceManager(
      * Starts the back tap detection service for background quick actions
      */
     private fun startBackTapService() {
-        Log.d("ServiceManager", "Starting BackTapService")
         val intent = Intent(context, BackTapService::class.java).apply {
             action = BackTapService.ACTION_START
         }

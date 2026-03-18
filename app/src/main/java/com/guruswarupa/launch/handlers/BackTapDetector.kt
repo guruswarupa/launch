@@ -56,7 +56,6 @@ class BackTapDetector(
             // Using SENSOR_DELAY_GAME for improved battery life over FASTEST
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
             isListening = true
-            Log.d(TAG, "Back tap detector started using ${if (isUsingLinearAcc) "Linear Acc" else "Accelerometer"}")
         }
     }
     
@@ -82,8 +81,6 @@ class BackTapDetector(
         // A shake is typically > 15-45. If maxTapThreshold is too high (e.g. 100), 
         // every shake move counts as a tap.
         maxTapThreshold = tapThreshold * 2.2f 
-        
-        Log.d(TAG, "Sensitivity: $sensitivity, Tap range: $tapThreshold to $maxTapThreshold")
     }
 
     override fun onSensorChanged(event: SensorEvent?) {

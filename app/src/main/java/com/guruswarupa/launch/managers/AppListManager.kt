@@ -2,10 +2,6 @@ package com.guruswarupa.launch.managers
 
 import android.content.pm.ResolveInfo
 import android.content.pm.ActivityInfo
-
-import com.guruswarupa.launch.managers.AppDockManager
-import com.guruswarupa.launch.managers.FavoriteAppManager
-import com.guruswarupa.launch.managers.HiddenAppManager
 import com.guruswarupa.launch.core.CacheManager
 
 /**
@@ -42,8 +38,7 @@ class AppListManager(
             // If it's a settings or vault activity, we ALWAYS show it (bypass focus/workspace/hidden filters)
             // EXCEPT in focus mode, where we hide settings to minimize distractions
             if (isAllowedInternalActivity) {
-                if (focusMode && activityName.contains("SettingsActivity")) return@filter false
-                return@filter true
+                return@filter !(focusMode && activityName.contains("SettingsActivity"))
             }
             
             // Filter out hidden apps
@@ -81,8 +76,7 @@ class AppListManager(
             // If it's a settings or vault activity, we ALWAYS show it
             // EXCEPT in focus mode, where we hide settings
             if (isAllowedInternalActivity) {
-                if (focusMode && activityName.contains("SettingsActivity")) return@filter false
-                return@filter true
+                return@filter !(focusMode && activityName.contains("SettingsActivity"))
             }
             
             // Filter out hidden apps (unless in workspace mode, where we might want to show them)
@@ -96,8 +90,7 @@ class AppListManager(
      * Note: This is now a no-op as we show all apps.
      */
     fun applyFavoritesFilter(
-        apps: List<ResolveInfo>,
-        workspaceMode: Boolean
+        apps: List<ResolveInfo>
     ): List<ResolveInfo> {
         return apps
     }
@@ -126,7 +119,7 @@ class AppListManager(
         }
         
         // Sort favorites alphabetically among themselves
-        val sortedFavorites = favoriteApps.sortedWith(compareBy<ResolveInfo> { app ->
+        val sortedFavorites = favoriteApps.sortedWith(compareBy { app ->
             val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
                 ?: app.activityInfo.packageName.lowercase()
             getSortKey(label)
@@ -172,7 +165,7 @@ class AppListManager(
      * Settings and Vault shortcuts are added at the very end.
      * Favorites separators are only added in normal mode.
      */
-    fun addSeparators(apps: List<ResolveInfo>, isGridMode: Boolean): List<ResolveInfo> {
+    fun addSeparators(apps: List<ResolveInfo>): List<ResolveInfo> {
         if (apps.isEmpty()) return apps
         
         val favorites = favoriteAppManager.getFavoriteApps()

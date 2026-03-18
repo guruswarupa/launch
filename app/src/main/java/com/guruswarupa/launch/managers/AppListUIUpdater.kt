@@ -23,7 +23,6 @@ class AppListUIUpdater(
     private val appList: MutableList<ResolveInfo>,
     private val fullAppList: MutableList<ResolveInfo>,
     private val appListLoader: AppListLoader,
-    private val appDockManager: AppDockManager,
     private val appListManager: AppListManager,
     private val backgroundExecutor: Executor,
     private val searchBox: AutoCompleteTextView
@@ -40,7 +39,7 @@ class AppListUIUpdater(
     fun setupCallbacks() {
         appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
             // Inject separators before updating UI.
-            val listWithSeparators = appListManager.addSeparators(sortedList, isGridMode)
+            val listWithSeparators = appListManager.addSeparators(sortedList)
             updateAppListUI(listWithSeparators, filteredList, isFinal)
         }
         appListLoader.onAdapterNeedsUpdate = { isGrid ->
@@ -126,7 +125,7 @@ class AppListUIUpdater(
                     val sortedFinalList = appListManager.sortAppsAlphabetically(filteredApps)
                     
                     // Inject separators.
-                    val listWithSeparators = appListManager.addSeparators(sortedFinalList, isGridMode)
+                    val listWithSeparators = appListManager.addSeparators(sortedFinalList)
                     
                     activity.runOnUiThread {
                         updateAppListUI(listWithSeparators, currentFullList, isFinal = true)

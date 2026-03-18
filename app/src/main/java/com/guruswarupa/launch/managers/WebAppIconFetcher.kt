@@ -2,10 +2,10 @@ package com.guruswarupa.launch.managers
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import androidx.core.graphics.drawable.toDrawable
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
@@ -99,7 +99,7 @@ object WebAppIconFetcher {
             file.parentFile?.mkdirs()
             file.writeBytes(iconBytes)
         }
-        return BitmapDrawable(context.resources, bitmap)
+        return bitmap.toDrawable(context.resources)
     }
 
     private fun loadFromDisk(context: Context, siteUrl: String): Drawable? {
@@ -107,7 +107,7 @@ object WebAppIconFetcher {
         if (!file.exists()) return null
         val bytes = runCatching { file.readBytes() }.getOrNull() ?: return null
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
-        return BitmapDrawable(context.resources, bitmap)
+        return bitmap.toDrawable(context.resources)
     }
 
     private fun resolveIconBytes(siteUrl: String): ByteArray? {

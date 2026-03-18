@@ -3,9 +3,11 @@ package com.guruswarupa.launch.ui.activities
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.app.ActivityOptions
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -63,7 +65,7 @@ class WebAppSettingsActivity : ComponentActivity() {
         listContainer = findViewById(R.id.web_apps_list)
         emptyView = findViewById(R.id.web_apps_empty)
         scrollView = findViewById(R.id.web_apps_scroll_view)
-        overlayView = findViewById<View>(R.id.web_apps_overlay)
+        overlayView = findViewById(R.id.web_apps_overlay)
 
         // Apply dynamic background translucency to match settings page
         applyBackgroundTranslucency()
@@ -129,8 +131,8 @@ class WebAppSettingsActivity : ComponentActivity() {
                                 Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                     )
                 }
-                startActivity(intent)
-                overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left)
+                val options = ActivityOptions.makeCustomAnimation(this, R.anim.slide_in_right, R.anim.slide_out_left)
+                startActivity(intent, options.toBundle())
             }
             
             itemView.findViewById<ImageButton>(R.id.web_app_item_edit).setOnClickListener {
@@ -166,7 +168,7 @@ class WebAppSettingsActivity : ComponentActivity() {
     private fun applyBackgroundTranslucency() {
         val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)
-        val color = android.graphics.Color.argb(alpha, 0, 0, 0)
+        val color = Color.argb(alpha, 0, 0, 0)
         overlayView.setBackgroundColor(color)
     }
     
@@ -193,8 +195,18 @@ class WebAppSettingsActivity : ComponentActivity() {
             interpolator = AccelerateDecelerateInterpolator()
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        overrideActivityTransition(
+                            OVERRIDE_TRANSITION_CLOSE,
+                            R.anim.slide_in_left,
+                            R.anim.slide_out_right
+                        )
+                    }
                     finish()
-                    overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        @Suppress("DEPRECATION")
+                        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right)
+                    }
                     isAnimating = false
                 }
             })

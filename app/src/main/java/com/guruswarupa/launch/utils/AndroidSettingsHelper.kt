@@ -1,6 +1,6 @@
 package com.guruswarupa.launch.utils
 
-import android.content.Context
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.provider.Settings
 import android.os.Build
@@ -20,6 +20,7 @@ object AndroidSettingsHelper {
     /**
      * Returns a comprehensive list of Android system settings with searchable keywords
      */
+    @SuppressLint("InlinedApi")
     fun getAllSystemSettings(): List<SettingInfo> {
         val settingsList = mutableListOf<SettingInfo>()
         
@@ -224,16 +225,14 @@ object AndroidSettingsHelper {
         )
         
         // Additional settings based on Android version
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            settingsList.add(
-                SettingInfo(
-                    title = "Data Saver",
-                    description = "Restrict background data usage",
-                    action = "android.settings.DATA_SAVER_SETTINGS",  // Use string constant since ACTION_DATA_SAVER_SETTINGS may not be available
-                    searchKeywords = listOf("data saver", "data saving", "restrict", "background", "bandwidth")
-                )
+        settingsList.add(
+            SettingInfo(
+                title = "Data Saver",
+                description = "Restrict background data usage",
+                action = "android.settings.DATA_SAVER_SETTINGS",
+                searchKeywords = listOf("data saver", "data saving", "restrict", "background", "bandwidth")
             )
-        }
+        )
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settingsList.add(
@@ -252,7 +251,7 @@ object AndroidSettingsHelper {
                 SettingInfo(
                     title = "Digital Wellbeing",
                     description = "Track and manage app usage",
-                    action = "android.settings.DIGITAL_WELLBEING_SETTINGS",  // Use string constant since ACTION_DIGITAL_WELLBEING_SETTINGS may not be available
+                    action = "android.settings.DIGITAL_WELLBEING_SETTINGS",
                     searchKeywords = listOf("wellbeing", "digital wellbeing", "usage", "screen time", "health")
                 )
             )
@@ -278,12 +277,12 @@ object AndroidSettingsHelper {
     /**
      * Create an intent to open the specified system setting
      */
-    fun createSettingsIntent(context: Context, settingAction: String): Intent? {
+    fun createSettingsIntent(settingAction: String): Intent {
         return try {
             Intent(settingAction).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Fallback to general settings if the specific action isn't available
             Intent(Settings.ACTION_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

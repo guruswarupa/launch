@@ -3,32 +3,25 @@ package com.guruswarupa.launch.ui.activities
 import android.Manifest
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.widget.EditText
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.ui.adapters.AppPrivacyInfo
-import com.guruswarupa.launch.utils.BlurUtils
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.ui.adapters.PrivacyDashboardAdapter
 import java.util.concurrent.Executors
@@ -160,6 +153,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
                     }
 
                     // Detect sideloaded apps
+                    @Suppress("DEPRECATION")
                     val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         try {
                             pm.getInstallSourceInfo(packageInfo.packageName).installingPackageName
