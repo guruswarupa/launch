@@ -14,6 +14,7 @@ import java.security.MessageDigest
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 object WebAppIconFetcher {
     private val memoryCache = ConcurrentHashMap<String, Drawable>()
@@ -29,8 +30,9 @@ object WebAppIconFetcher {
     }
     
     /**
-     * Shutdown the background thread pool.
-     * Call this only when the app is terminating.
+     * Shutdown the background thread pool and clear caches.
+     * This should only be called when the application process is terminating.
+     * Note: In most cases, you don't need to call this as Android will clean up automatically.
      */
     fun shutdown() {
         if (!executor.isShutdown) {
@@ -57,15 +59,26 @@ object WebAppIconFetcher {
             return
         }
 
-        executor.execute {
-            try {
-                val drawable = loadFromDisk(context, siteUrl) ?: fetchAndCache(context, siteUrl)
-                drawable?.let { memoryCache[siteUrl] = it }
-                mainHandler.post { onResult(drawable) }
-            } catch (_: Exception) {
-                // Silently handle exceptions to prevent crashes
-                mainHandler.post { onResult(null) }
+        // Don't execute if executor is shutdown
+        if (executor.isShutdown || executor.isTerminated) {
+            onResult(null)
+            return
+        }
+
+        try {
+            executor.execute {
+                try {
+                    val drawable = loadFromDisk(context, siteUrl) ?: fetchAndCache(context, siteUrl)
+                    drawable?.let { memoryCache[siteUrl] = it }
+                    mainHandler.post { onResult(drawable) }
+                } catch (_: Exception) {
+                    // Silently handle exceptions to prevent crashes
+                    mainHandler.post { onResult(null) }
+                }
             }
+        } catch (_: RejectedExecutionException) {
+            // Executor was shutdown between the check and execute
+            onResult(null)
         }
     }
 

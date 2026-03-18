@@ -17,6 +17,9 @@
     <string name="web_app_url_required">Enter a URL</string>
     <string name="web_app_https_required">Use an HTTPS website URL</string>
     <string name="web_app_load_failed">Unable to open this web app</string>
+    <string name="web_app_added">Web app added</string>
+    <string name="web_app_updated">Web app updated</string>
+    <string name="web_app_removed">%1$s removed</string>
     <string name="add_button">Add</string>
     <string name="save_button">Save</string>
     <string name="delete_button">Delete</string>

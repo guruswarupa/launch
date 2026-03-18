@@ -12,6 +12,7 @@
         android:scaleType="centerCrop" />
 
     <View
+        android:id="@+id/web_apps_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#88000000" />
@@ -35,7 +36,9 @@
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/back_button"
-                android:padding="8dp"
+                android:paddingTop="32dp"
+                android:paddingHorizontal="8dp"
+                android:paddingBottom="8dp"
                 android:src="@drawable/ic_back"
                 android:tint="@color/white" />
 
@@ -44,6 +47,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:paddingStart="8dp"
+                android:paddingTop="32dp"
                 android:text="@string/web_apps_title"
                 android:textColor="@color/white"
                 android:textSize="28sp"
@@ -71,10 +75,13 @@
             android:visibility="gone" />
 
         <ScrollView
+            android:id="@+id/web_apps_scroll_view"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="16dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:overScrollMode="never"
+            android:scrollbars="none">
 
             <LinearLayout
                 android:id="@+id/web_apps_list"

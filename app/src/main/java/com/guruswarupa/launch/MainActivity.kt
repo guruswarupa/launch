@@ -661,8 +661,9 @@ class MainActivity : FragmentActivity() {
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
         }
-        // Shutdown web app icon fetcher thread pool and clear caches
-        WebAppIconFetcher.shutdown()
+        // Note: WebAppIconFetcher.shutdown() is intentionally not called here
+        // as the adapter may still need to load icons during RecyclerView operations.
+        // Android will automatically clean up the process when the app terminates.
     }
 
     // Usage stats refresh methods - delegated to UsageStatsRefreshManager
