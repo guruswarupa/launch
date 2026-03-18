@@ -661,6 +661,8 @@ class MainActivity : FragmentActivity() {
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
         }
+        // Shutdown web app icon fetcher thread pool and clear caches
+        WebAppIconFetcher.shutdown()
     }
 
     // Usage stats refresh methods - delegated to UsageStatsRefreshManager

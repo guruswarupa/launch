@@ -79,9 +79,11 @@ class WebAppSettingsActivity : ComponentActivity() {
                     putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, entry.name)
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, entry.url)
                     // Always create new task for each web app
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
-                             Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
-                             Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+                                Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                    )
                 }
                 startActivity(intent)
             }
@@ -107,29 +109,47 @@ class WebAppSettingsActivity : ComponentActivity() {
         val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle(if (existing == null) R.string.add_web_app else R.string.edit_web_app)
             .setView(dialogView)
-            .setPositiveButton(if (existing == null) R.string.add_button else R.string.save_button, null)
+            .setPositiveButton(
+                if (existing == null) R.string.add_button else R.string.save_button,
+                null
+            )
             .setNegativeButton(R.string.cancel_button, null)
             .show()
 
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val name = nameInput.text.toString().trim()
-                val url = urlInput.text.toString().trim()
-                when {
-                    name.isBlank() -> Toast.makeText(this, R.string.web_app_name_required, Toast.LENGTH_SHORT).show()
-                    url.isBlank() -> Toast.makeText(this, R.string.web_app_url_required, Toast.LENGTH_SHORT).show()
-                    !isSupportedWebUrl(url) -> Toast.makeText(this, R.string.web_app_https_required, Toast.LENGTH_SHORT).show()
-                    else -> {
-                        if (existing == null) {
-                            webAppManager.addWebApp(name, url)
-                        } else {
-                            webAppManager.updateWebApp(existing.id, name, url)
-                        }
-                        notifySettingsChanged()
-                        renderWebApps()
-                        dialog.dismiss()
+            val name = nameInput.text.toString().trim()
+            val url = urlInput.text.toString().trim()
+            when {
+                name.isBlank() -> Toast.makeText(
+                    this,
+                    R.string.web_app_name_required,
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                url.isBlank() -> Toast.makeText(
+                    this,
+                    R.string.web_app_url_required,
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                !isSupportedWebUrl(url) -> Toast.makeText(
+                    this,
+                    R.string.web_app_https_required,
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                else -> {
+                    if (existing == null) {
+                        webAppManager.addWebApp(name, url)
+                    } else {
+                        webAppManager.updateWebApp(existing.id, name, url)
                     }
+                    notifySettingsChanged()
+                    renderWebApps()
+                    dialog.dismiss()
                 }
             }
+        }
     }
 
     private fun confirmDelete(entry: WebAppEntry) {
@@ -151,6 +171,16 @@ class WebAppSettingsActivity : ComponentActivity() {
     }
 
     private fun notifySettingsChanged() {
-        sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply { setPackage(packageName) })
+        sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply {
+            setPackage(
+                packageName
+            )
+        })
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Clear icon cache to free memory
+        WebAppIconFetcher.clearCache()
     }
 }

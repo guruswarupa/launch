@@ -47,7 +47,11 @@ class WebAppActivity : AppCompatActivity() {
         if (uris.isNotEmpty()) {
             // Grant URI permissions temporarily
             uris.forEach { uri ->
-                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                try {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (_: SecurityException) {
+                    // Permission may already be granted or not available
+                }
             }
             // Pass the URIs back to the WebView
             fileUploadCallback?.onReceiveValue(uris.toTypedArray())
@@ -70,13 +74,6 @@ class WebAppActivity : AppCompatActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
         setContentView(R.layout.activity_web_app)
-        
-        val root = findViewById<View>(R.id.web_app_root)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
-            val systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(0, systemInsets.top, 0, systemInsets.bottom)
-            insets
-        }
 
         // Validate again after UI is set up
         if (appName.isBlank() || url.isBlank()) {
@@ -197,6 +194,14 @@ class WebAppActivity : AppCompatActivity() {
                 }
             }
         }
+        
+        // Set window insets listener after views are initialized
+        val root = findViewById<View>(R.id.web_app_root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(0, systemInsets.top, 0, systemInsets.bottom)
+            insets
+        }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 if (WebAppAdBlocker.shouldBlock(request?.url)) {
@@ -254,11 +259,49 @@ class WebAppActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        exitFullscreen()
+    override fun onPause() {
+        super.onPause()
+        // Pause JavaScript execution, video playback, and other activities
         if (::webView.isInitialized) {
+            webView.onPause()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Resume JavaScript execution and other activities
+        if (::webView.isInitialized) {
+            webView.onResume()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Stop loading and release some resources
+        if (::webView.isInitialized) {
+            webView.stopLoading()
+        }
+    }
+
+    override fun onDestroy() {
+        // Exit fullscreen and clean up custom view
+        exitFullscreen()
+        
+        // Properly destroy WebView to prevent memory leaks
+        if (::webView.isInitialized) {
+            // Stop any ongoing operations
+            webView.stopLoading()
+            // Clear navigation history
+            webView.clearHistory()
+            // Remove all views from WebView
+            webView.removeAllViews()
+            // Destroy WebView (this will also clear internal references)
             webView.destroy()
         }
+        
+        // Clean up file upload callback
+        fileUploadCallback = null
+        
         super.onDestroy()
     }
 
