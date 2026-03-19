@@ -1481,7 +1481,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="32dp"
                 app:cardElevation="0dp"
                 app:cardBackgroundColor="@color/card_background"
                 app:cardCornerRadius="24dp"
@@ -1549,103 +1549,6 @@
                             android:textAllCaps="false"
                             android:background="@drawable/settings_card_background"
                             android:textColor="@color/white"/>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Permissions & Support Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/card_background"
-                app:cardCornerRadius="24dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/outlineColor">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="6dp">
-
-                    <LinearLayout
-                        android:id="@+id/permissions_header"
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:paddingHorizontal="16dp"
-                        android:background="?attr/selectableItemBackgroundBorderless">
-
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:src="@drawable/ic_person"
-                            app:tint="@color/white"
-                            android:alpha="1.0"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="16dp"
-                            android:text="Launcher Info"
-                            android:textSize="16sp"
-                            android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/white"/>
-
-                        <TextView
-                            android:id="@+id/permissions_arrow"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="▼"
-                            android:textSize="10sp"
-                            android:textColor="@color/white"
-                            android:alpha="0.4"/>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/permissions_content"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="gone"
-                        android:paddingHorizontal="16dp"
-                        android:paddingBottom="16dp">
-
-                        <Button
-                            android:id="@+id/check_permissions_button"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:text="Manage System Permissions"
-                            android:textAllCaps="false"
-                            android:background="@drawable/settings_card_background"
-                            android:textColor="@color/white"
-                            android:layout_marginBottom="12dp"/>
-
-                        <Button
-                            android:id="@+id/app_info_button"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:text="System App Settings"
-                            android:textAllCaps="false"
-                            android:background="@drawable/settings_card_background"
-                            android:textColor="@color/white"
-                            android:layout_marginBottom="12dp"/>
-
-                        <Button
-                            android:id="@+id/show_tutorial_button"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:text="Show Tutorial"
-                            android:textAllCaps="false"
-                            android:background="@drawable/settings_card_background"
-                            android:textColor="@color/white"/>
-
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -1836,6 +1739,103 @@
                             android:textAllCaps="false"
                             android:background="@drawable/settings_card_background"
                             android:textColor="#FF6B6B"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Permissions & Support Card (Launcher Info) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="6dp">
+
+                    <LinearLayout
+                        android:id="@+id/permissions_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="16dp"
+                        android:background="?attr/selectableItemBackgroundBorderless">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_person"
+                            app:tint="@color/white"
+                            android:alpha="1.0"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:text="Launcher Info"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            android:id="@+id/permissions_arrow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▼"
+                            android:textSize="10sp"
+                            android:textColor="@color/white"
+                            android:alpha="0.4"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/permissions_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:paddingHorizontal="16dp"
+                        android:paddingBottom="16dp">
+
+                        <Button
+                            android:id="@+id/check_permissions_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Manage System Permissions"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:layout_marginBottom="12dp"/>
+
+                        <Button
+                            android:id="@+id/app_info_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="System App Settings"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:layout_marginBottom="12dp"/>
+
+                        <Button
+                            android:id="@+id/show_tutorial_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Show Tutorial"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"/>
+
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

@@ -389,8 +389,8 @@ class SettingsActivity : ComponentActivity() {
         container.removeAllViews()
 
         if (selectedThemeCategory == null) {
-            // Show Category Cards
-            val categories = listOf("Landscape", "City", "Abstract", "Minimal")
+            // Show Category Cards - Dynamically fetch categories from PREDEFINED_THEMES
+            val categories = ThemeOption.PREDEFINED_THEMES.map { it.category }.distinct()
 
             val scrollContainer = HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
@@ -407,10 +407,8 @@ class SettingsActivity : ComponentActivity() {
                 val card = categoryView.findViewById<MaterialCardView>(R.id.theme_card)
                 val name = categoryView.findViewById<TextView>(R.id.theme_name)
                 val preview = categoryView.findViewById<ImageView>(R.id.theme_preview_image)
-                val indicator = categoryView.findViewById<View>(R.id.theme_color_indicator)
 
                 name.text = category
-                indicator.isVisible = false
 
                 // Highlight if selected
                 val isSelected = ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
@@ -477,11 +475,9 @@ class SettingsActivity : ComponentActivity() {
                 val card = themeView.findViewById<MaterialCardView>(R.id.theme_card)
                 val name = themeView.findViewById<TextView>(R.id.theme_name)
                 val preview = themeView.findViewById<ImageView>(R.id.theme_preview_image)
-                val indicator = themeView.findViewById<View>(R.id.theme_color_indicator)
 
                 name.text = theme.name
                 WallpaperDisplayHelper.applyThemePreview(preview, theme.id)
-                (indicator.background as GradientDrawable).setColor(Color.parseColor(theme.primaryColor))
 
                 if (selectedThemeId == theme.id) {
                     card.strokeColor = ContextCompat.getColor(this, R.color.nord8)
