@@ -68,8 +68,9 @@ class SettingsActivity : ComponentActivity() {
     private val vaultManager by lazy { EncryptedFolderManager(this) }
     private var settingsTutorialStepIndex = 0
     private var settingsTutorialActive = false
-    private var selectedThemeId: String = "system_default"
+    private var selectedThemeId: String = "stardust"
     private var selectedThemeCategory: String? = null
+    private var hasUnsavedThemeChanges = false
 
     private data class SettingsTutorialStep(
         val title: String,
@@ -95,8 +96,6 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private val wallpaperLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
-        notifySettingsChanged()
         setupWallpaper(null)
     }
 
@@ -113,22 +112,19 @@ class SettingsActivity : ComponentActivity() {
         applyContentInsets()
         applyBackgroundTranslucency()
 
-        selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "system_default") ?: "system_default"
+        selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "stardust") ?: "stardust"
 
         // Always show system wallpaper on startup as per user request
         setupWallpaper(null)
 
         setupAppearanceSection()
         setupActionsSection()
+        setupAppTimerSection()
         setupSecuritySection()
+        setupWebAppsSection()
         setupMaintenanceSection()
         setupSupportSection()
         setupVersionInfo()
-
-        findViewById<View>(R.id.save_settings_button).setOnClickListener {
-            Toast.makeText(this, "Settings applied", Toast.LENGTH_SHORT).show()
-            finish()
-        }
 
         if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
             window.decorView.post { startSettingsTutorial() }
@@ -193,7 +189,7 @@ class SettingsActivity : ComponentActivity() {
 
     private fun setupWallpaper(demoThemeId: String?) {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
-        if (demoThemeId == null || demoThemeId == "system_default") {
+        if (demoThemeId == null) {
             WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
         } else {
             WallpaperDisplayHelper.applyThemeWallpaper(wallpaperImageView, demoThemeId)
@@ -238,14 +234,6 @@ class SettingsActivity : ComponentActivity() {
         updateDisplayStyleButtons(gridBtn, listBtn, selectedStyle)
         gridSection.isVisible = selectedStyle == "grid"
 
-        gridBtn.setOnClickListener {
-            selectedStyle = "grid"
-            updateDisplayStyleButtons(gridBtn, listBtn, "grid")
-            gridSection.isVisible = true
-            prefs.edit { putString("view_preference", "grid") }
-            notifySettingsChanged()
-        }
-
         listBtn.setOnClickListener {
             selectedStyle = "list"
             updateDisplayStyleButtons(gridBtn, listBtn, "list")
@@ -254,10 +242,43 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
+        // Show app names in grid toggle
+        val showAppNameInSection = findViewById<LinearLayout>(R.id.show_app_name_in_grid_section)
+        val showAppNameSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.show_app_name_in_grid_switch)
+        showAppNameInSection.isVisible = selectedStyle == "grid"
+        
+        var showAppNamesInGrid = prefs.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+        showAppNameSwitch.isChecked = showAppNamesInGrid
+        
+        showAppNameSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, isChecked) }
+            notifySettingsChanged()
+        }
+
+        // Update visibility of app name toggle when switching between grid and list
+        gridBtn.setOnClickListener {
+            selectedStyle = "grid"
+            updateDisplayStyleButtons(gridBtn, listBtn, "grid")
+            gridSection.isVisible = true
+            showAppNameInSection.isVisible = true
+            prefs.edit { putString("view_preference", "grid") }
+            notifySettingsChanged()
+        }
+
+        listBtn.setOnClickListener {
+            selectedStyle = "list"
+            updateDisplayStyleButtons(gridBtn, listBtn, "list")
+            gridSection.isVisible = false
+            showAppNameInSection.isVisible = false
+            prefs.edit { putString("view_preference", "list") }
+            notifySettingsChanged()
+        }
+
         // Icons
         val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
         val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
         val iconVal = findViewById<TextView>(R.id.icon_size_value)
+        val grayscaleIconsSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.grayscale_icons_switch)
 
         val shapes = arrayOf("Round", "Squircle", "Squared", "Teardrop", "Vortex", "Overlay")
         val values = arrayOf("round", "squircle", "squared", "teardrop", "vortex", "overlay")
@@ -288,6 +309,28 @@ class SettingsActivity : ComponentActivity() {
             } override fun onStartTrackingTouch(s: SeekBar?) {}
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
+
+        grayscaleIconsSwitch.isChecked = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
+        grayscaleIconsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit { putBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, isChecked) }
+            notifySettingsChanged()
+        }
+
+        // Default Home Page
+        val homePageSpinner = findViewById<Spinner>(R.id.default_home_page_spinner)
+        val pages = arrayOf("Widgets (Left)", "Home (Center)", "Wallpaper (Right)")
+        homePageSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, pages).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        val defaultPageIndex = prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)
+        homePageSpinner.setSelection(defaultPageIndex)
+        homePageSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
+                prefs.edit { putInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, pos) }
+                notifySettingsChanged()
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {}
+        }
 
         // Wallpaper Blur Section
         val wallHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
@@ -346,8 +389,8 @@ class SettingsActivity : ComponentActivity() {
         container.removeAllViews()
 
         if (selectedThemeCategory == null) {
-            // Show Category Cards
-            val categories = listOf("System", "Landscape", "City", "Abstract", "Minimal")
+            // Show Category Cards - Dynamically fetch categories from PREDEFINED_THEMES
+            val categories = ThemeOption.PREDEFINED_THEMES.map { it.category }.distinct()
 
             val scrollContainer = HorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
@@ -364,17 +407,11 @@ class SettingsActivity : ComponentActivity() {
                 val card = categoryView.findViewById<MaterialCardView>(R.id.theme_card)
                 val name = categoryView.findViewById<TextView>(R.id.theme_name)
                 val preview = categoryView.findViewById<ImageView>(R.id.theme_preview_image)
-                val indicator = categoryView.findViewById<View>(R.id.theme_color_indicator)
 
                 name.text = category
-                indicator.isVisible = false
 
                 // Highlight if selected
-                val isSelected = if (category == "System") {
-                    selectedThemeId == "system_default"
-                } else {
-                    ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
-                }
+                val isSelected = ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
 
                 if (isSelected) {
                     card.strokeColor = ContextCompat.getColor(this, R.color.nord8)
@@ -385,27 +422,14 @@ class SettingsActivity : ComponentActivity() {
                 }
 
                 // Find a preview image for the category
-                when (category) {
-                    "System" -> WallpaperDisplayHelper.applyThemePreview(preview, "system_default")
-                    else -> {
-                        val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
-                        if (firstThemeInCategory != null) {
-                            WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
-                        }
-                    }
+                val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
+                if (firstThemeInCategory != null) {
+                    WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
                 }
 
                 card.setOnClickListener {
-                    if (category == "System") {
-                        selectedThemeId = "system_default"
-                        prefs.edit { putString(Constants.Prefs.SELECTED_THEME, "system_default") }
-                        setupThemeSelection()
-                        setupWallpaper(null) // Reset to system wallpaper
-                        notifySettingsChanged()
-                    } else {
-                        selectedThemeCategory = category
-                        setupThemeSelection()
-                    }
+                    selectedThemeCategory = category
+                    setupThemeSelection()
                 }
                 row.addView(categoryView)
             }
@@ -451,11 +475,9 @@ class SettingsActivity : ComponentActivity() {
                 val card = themeView.findViewById<MaterialCardView>(R.id.theme_card)
                 val name = themeView.findViewById<TextView>(R.id.theme_name)
                 val preview = themeView.findViewById<ImageView>(R.id.theme_preview_image)
-                val indicator = themeView.findViewById<View>(R.id.theme_color_indicator)
 
                 name.text = theme.name
                 WallpaperDisplayHelper.applyThemePreview(preview, theme.id)
-                (indicator.background as GradientDrawable).setColor(Color.parseColor(theme.primaryColor))
 
                 if (selectedThemeId == theme.id) {
                     card.strokeColor = ContextCompat.getColor(this, R.color.nord8)
@@ -468,23 +490,22 @@ class SettingsActivity : ComponentActivity() {
                 card.setOnClickListener {
                     selectedThemeId = theme.id
                     prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
-                    applyBtn.isVisible = theme.id != "system_default"
                     setupThemeSelection()
                     setupWallpaper(theme.id) // Demo preview
+                    hasUnsavedThemeChanges = true
                     notifySettingsChanged()
                 }
                 row.addView(themeView)
             }
 
             // Ensure button visibility is correct based on currently selected theme in this category
-            applyBtn.isVisible = selectedThemeId != "system_default" && themes.any { it.id == selectedThemeId }
+            applyBtn.isVisible = themes.any { it.id == selectedThemeId }
         }
 
         // Re-set the listener since we re-calculate logic but keep the button reference
         applyBtn.setOnClickListener {
-            if (selectedThemeId != "system_default") {
-                triggerWallpaperPicker(selectedThemeId)
-            }
+            hasUnsavedThemeChanges = false
+            triggerWallpaperPicker(selectedThemeId)
         }
     }
 
@@ -522,6 +543,17 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
+    private fun setupAppTimerSection() {
+        val tHeader = findViewById<LinearLayout>(R.id.app_timer_header)
+        val tContent = findViewById<LinearLayout>(R.id.app_timer_content)
+        val tArrow = findViewById<TextView>(R.id.app_timer_arrow)
+        setupSectionToggle(tHeader, tContent, tArrow)
+        
+        findViewById<View>(R.id.manage_app_timers_button).setOnClickListener {
+            startActivity(Intent(this, AppTimerManagementActivity::class.java))
+        }
+    }
+
     private fun setupSecuritySection() {
         val h = findViewById<LinearLayout>(R.id.app_lock_header)
         val c = findViewById<LinearLayout>(R.id.app_lock_content)
@@ -531,6 +563,14 @@ class SettingsActivity : ComponentActivity() {
         findViewById<View>(R.id.app_lock_button).setOnClickListener { startActivity(Intent(this, AppLockSettingsActivity::class.java)) }
         findViewById<View>(R.id.hidden_apps_button).setOnClickListener { startActivity(Intent(this, HiddenAppsSettingsActivity::class.java)) }
         findViewById<View>(R.id.privacy_dashboard_button).setOnClickListener { startActivity(Intent(this, PrivacyDashboardActivity::class.java)) }
+    }
+
+    private fun setupWebAppsSection() {
+        val h = findViewById<LinearLayout>(R.id.web_apps_header)
+        val c = findViewById<LinearLayout>(R.id.web_apps_content)
+        val a = findViewById<TextView>(R.id.web_apps_arrow)
+        setupSectionToggle(h, c, a)
+        findViewById<View>(R.id.web_apps_button).setOnClickListener { startActivity(Intent(this, WebAppSettingsActivity::class.java)) }
     }
 
     private fun setupMaintenanceSection() {
@@ -557,7 +597,19 @@ class SettingsActivity : ComponentActivity() {
         setupSectionToggle(pHeader, pContent, pArrow)
 
         findViewById<View>(R.id.check_permissions_button).setOnClickListener { startActivity(Intent(this, PermissionsActivity::class.java)) }
+        findViewById<View>(R.id.app_info_button).setOnClickListener { openAppInfo() }
         findViewById<View>(R.id.show_tutorial_button).setOnClickListener { showTutorial() }
+    }
+
+    private fun openAppInfo() {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", packageName, null)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed to open app info", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupSupportSection() {
@@ -1125,6 +1177,9 @@ class SettingsActivity : ComponentActivity() {
                                             }
                                         }
                                     }
+                                    // Reset permission denial flags so permissions can be requested again
+                                    putBoolean("contacts_permission_denied", false)
+                                    putBoolean("usage_stats_permission_denied", false)
                                 }
                             }
                         }
@@ -1141,6 +1196,25 @@ class SettingsActivity : ComponentActivity() {
         if (settingsTutorialStepIndex >= settingsTutorialSteps.size) { settingsTutorialActive = false; return }
         val step = settingsTutorialSteps[settingsTutorialStepIndex]
         AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle(step.title).setMessage(step.description).setPositiveButton(if (settingsTutorialStepIndex == settingsTutorialSteps.size - 1) "Finish" else "Next") { _, _ -> settingsTutorialStepIndex++; showCurrentSettingsTutorialStep() }.setNegativeButton("Skip") { _, _ -> settingsTutorialActive = false }.show()
+    }
+
+    private fun showUnsavedChangesDialog(onConfirm: () -> Unit) {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Unsaved Changes")
+            .setMessage("You have selected a new theme but haven't applied it yet. Are you sure you want to leave without applying?")
+            .setPositiveButton("Leave Without Applying") { _, _ -> onConfirm() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    override fun onBackPressed() {
+        if (hasUnsavedThemeChanges) {
+            showUnsavedChangesDialog {
+                super.onBackPressed()
+            }
+        } else {
+            super.onBackPressed()
+        }
     }
 }
 

@@ -4,38 +4,40 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.core.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.ui.activities.AppDataDisclosureActivity
-import com.guruswarupa.launch.utils.*
 import com.guruswarupa.launch.widgets.*
-import com.guruswarupa.launch.services.*
 
 /**
  * Handles the initialization of MainActivity and its components.
  */
 class AppInitializer(private val activity: MainActivity) {
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    fun initialize(savedInstanceState: Bundle?) {
+    private fun isTablet(): Boolean {
+        return (activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+    }
+
+    @SuppressLint("UnspecifiedRegisterReceiverFlag", "SourceLockedOrientationActivity")
+    fun initialize() {
         with(activity) {
             sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-            
+
             // Lock orientation to portrait for phones only
-            if (!isTablet()) {
+            if (!this@AppInitializer.isTablet()) {
                 requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             }
-            
+
             setContentView(R.layout.activity_main)
-            
+
             // Initialize core managers
             initializeCoreManagers()
 
@@ -46,26 +48,25 @@ class AppInitializer(private val activity: MainActivity) {
 
             // Initialize widget configuration manager
             widgetConfigurationManager = WidgetConfigurationManager(activity, sharedPreferences)
-            
+
             // Initialize widget visibility manager
             widgetVisibilityManager = WidgetVisibilityManager(activity, widgetConfigurationManager)
-            
+
             // Initialize result registry
             resultRegistry = MainActivityResultRegistry(activity)
-            
+
             // Initialize managers
             cacheManager = CacheManager(activity, packageManager, backgroundExecutor)
             permissionManager = PermissionManager(activity, sharedPreferences)
             systemBarManager = SystemBarManager(activity)
-            
+
             // Initialize new managers
             usageStatsCacheManager = UsageStatsCacheManager(sharedPreferences, backgroundExecutor)
             contactManager = ContactManager(activity, contentResolver, backgroundExecutor)
-            onboardingHelper = OnboardingHelper(activity, sharedPreferences, packageManager, packageName)
-            
+
             // Load usage stats cache immediately
             usageStatsCacheManager.loadCache()
-            
+
             // Load metadata cache from CacheManager asynchronously
             cacheManager.loadAppMetadataFromCacheAsync {
                 // Once metadata is loaded, refresh search manager if it's already initialized
@@ -73,12 +74,7 @@ class AppInitializer(private val activity: MainActivity) {
                     updateAppSearchManager()
                 }
             }
-            
-            // Check if onboarding is needed
-            if (onboardingHelper.checkAndStartOnboarding()) {
-                return@with
-            }
-            
+
             // Check if user has given consent for app data collection
             if (!sharedPreferences.getBoolean("app_data_consent_given", false)) {
                 // Show disclosure activity
@@ -86,15 +82,22 @@ class AppInitializer(private val activity: MainActivity) {
                 finish()
                 return@with
             }
-            
+
             // Initialize broadcast receiver manager
             initializeBroadcastReceivers()
 
             // Initialize views and UI components
             initializeViews()
-            
-            // Request necessary permissions
-            requestInitialPermissions()
+
+            // Request necessary permissions only if coming from disclosure completion
+            val requestPermissionsAfterDisclosure = activity.intent.getBooleanExtra("request_permissions_after_disclosure", false)
+            if (requestPermissionsAfterDisclosure) {
+                // Post to handler to ensure views are fully initialized first
+                activity.handler.post {
+                    // Start feature tutorial first, then request permissions after tutorial completes
+                    activity.startFeatureTutorialAndRequestPermissions()
+                }
+            }
 
             // Initialize time/date and weather widgets
             initializeTimeDateAndWeather()
@@ -137,7 +140,7 @@ class AppInitializer(private val activity: MainActivity) {
                     activity.activityResultHandler.setVoiceCommandHandler(handler)
                 }
                 // Update registry if it's already been fully initialized
-                updateRegistryDependencies()
+                this@AppInitializer.updateRegistryDependencies()
             }
             
             // Initialize app list manager
@@ -146,13 +149,13 @@ class AppInitializer(private val activity: MainActivity) {
             // Initialize app list loader
             appListLoader = AppListLoader(
                 activity, packageManager, appListManager, appDockManager,
-                cacheManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
+                cacheManager, webAppManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
             )
             
             // Initialize AppListUIUpdater
             appListUIUpdater = AppListUIUpdater(
                 activity, views.recyclerView, if (activity.isAdapterInitialized()) activity.adapter else null,
-                appList, fullAppList, appListLoader, appDockManager, appListManager,
+                appList, fullAppList, appListLoader, appListManager,
                 backgroundExecutor, views.searchBox
             )
             appListUIUpdater.setupCallbacks()
@@ -273,7 +276,7 @@ class AppInitializer(private val activity: MainActivity) {
                 .initialize(handler)
             
             // Start app usage monitor for daily limits
-            startService(Intent(activity, AppUsageMonitor::class.java))
+            ContextCompat.startForegroundService(activity, Intent(activity, AppUsageMonitor::class.java))
             
             // Initialize background services through ServiceManager
             serviceManager.updateShakeDetectionService()
@@ -285,7 +288,7 @@ class AppInitializer(private val activity: MainActivity) {
             initializeLifecycleManager()
 
             // Finally, set all dependencies for result registry in one go
-            updateRegistryDependencies()
+            this@AppInitializer.updateRegistryDependencies()
         }
     }
 
@@ -308,12 +311,5 @@ class AppInitializer(private val activity: MainActivity) {
             )
             resultRegistry.setDependencies(deps)
         }
-    }
-
-    /**
-     * Checks if the device is a tablet based on screen size.
-     */
-    private fun isTablet(): Boolean {
-        return activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK >= Configuration.SCREENLAYOUT_SIZE_LARGE
     }
 }

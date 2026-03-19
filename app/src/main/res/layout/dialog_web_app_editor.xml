@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="8dp">
+
+    <EditText
+        android:id="@+id/web_app_name_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/dialog_input_background"
+        android:hint="@string/web_app_name_hint"
+        android:inputType="textCapWords"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp"
+        android:textColor="@color/white"
+        android:textColorHint="#80FFFFFF" />
+
+    <EditText
+        android:id="@+id/web_app_url_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/dialog_input_background"
+        android:hint="@string/web_app_url_hint"
+        android:inputType="textUri"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp"
+        android:textColor="@color/white"
+        android:textColorHint="#80FFFFFF" />
+</LinearLayout>

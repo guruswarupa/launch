@@ -19,6 +19,7 @@ class AppUsageStatsManager(private val context: Context) {
     private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usage, timestamp)
     
     companion object {
+        const val USAGE_STATS_REQUEST = 600
         private const val CACHE_DURATION = 30000L // 30 seconds
     }
     
@@ -108,6 +109,29 @@ class AppUsageStatsManager(private val context: Context) {
         }
         
         return usageMap
+    }
+
+    /**
+     * Returns usage stats for all apps for today in a single call.
+     * This is much faster for batch processing.
+     */
+    fun getUsageMapForToday(): Map<String, Long> {
+        if (!hasUsageStatsPermission()) return emptyMap()
+        
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis
+        val endTime = System.currentTimeMillis()
+        
+        return try {
+            val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
+            statsMap.mapValues { it.value.totalTimeInForeground }
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 
     /**

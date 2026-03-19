@@ -62,7 +62,6 @@ class ShakeDetector(
         // 1 (least sensitive) -> 45.0f (extremely vigorous)
         // 10 (most sensitive) -> 15.0f (moderate shake)
         shakeThreshold = 45f - (sensitivity.coerceIn(1, 10) - 1) * 3.33f
-        Log.d("ShakeDetector", "Updated sensitivity to $sensitivity, vigorous threshold set to $shakeThreshold")
     }
     
     /**

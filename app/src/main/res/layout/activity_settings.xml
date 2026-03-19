@@ -59,29 +59,6 @@
                     android:shadowDx="0"
                     android:shadowDy="2"
                     android:shadowRadius="6"/>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/save_settings_button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:cardCornerRadius="22dp"
-                    app:cardElevation="0dp"
-                    app:cardBackgroundColor="#66000000"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="#40FFFFFF"
-                    android:clickable="true"
-                    android:focusable="true">
-                    
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="APPLY"
-                        android:textColor="@color/white"
-                        android:textSize="13sp"
-                        android:fontFamily="sans-serif-black"
-                        android:paddingHorizontal="24dp"
-                        android:paddingVertical="12dp"/>
-                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
             <!-- Appearance Category -->
@@ -220,6 +197,32 @@
                         </LinearLayout>
 
                         <LinearLayout
+                            android:id="@+id/show_app_name_in_grid_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginTop="20dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Show app names in grid"
+                                android:textSize="14sp"
+                                android:textColor="@color/white"
+                                android:fontFamily="sans-serif-medium"/>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/show_app_name_in_grid_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:thumbTint="@color/nord8"
+                                android:trackTint="@color/nord8"/>
+                        </LinearLayout>
+
+                        <LinearLayout
                             android:id="@+id/icon_style_section"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -278,6 +281,30 @@
                                     android:textColor="@color/nord8"
                                     android:gravity="end"/>
                             </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="20dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Grayscale app icons"
+                                    android:textColor="@color/white"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium" />
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/grayscale_icons_switch"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:thumbTint="@color/nord8"
+                                    android:trackTint="@color/nord8" />
+                            </LinearLayout>
                         </LinearLayout>
 
                         <View
@@ -308,6 +335,30 @@
                                 android:layout_height="wrap_content"
                                 app:thumbTint="@color/nord8"
                                 app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
+                        <!-- Default Home Page Option -->
+                        <LinearLayout
+                            android:id="@+id/default_home_page_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="20dp">
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Default Home Screen"
+                                android:textSize="13sp"
+                                android:textColor="@color/white"
+                                android:alpha="0.6"
+                                android:layout_marginBottom="8dp"/>
+
+                            <Spinner
+                                android:id="@+id/default_home_page_spinner"
+                                style="@style/TranslucentSpinnerStyle"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"/>
                         </LinearLayout>
 
                         <!-- App Highlighting / Scrim Option -->
@@ -1252,7 +1303,83 @@
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
+            
+            <!-- App Timer Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
+            
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="6dp">
+            
+                    <LinearLayout
+                        android:id="@+id/app_timer_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="16dp"
+                        android:background="?attr/selectableItemBackgroundBorderless">
+            
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_timer"
+                            app:tint="@color/white"
+                            android:alpha="1.0"/>
+            
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:text="App Timer"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/white"/>
+            
+                        <TextView
+                            android:id="@+id/app_timer_arrow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▼"
+                            android:textSize="10sp"
+                            android:textColor="@color/white"
+                            android:alpha="0.4"/>
+                    </LinearLayout>
+            
+                    <LinearLayout
+                        android:id="@+id/app_timer_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:paddingHorizontal="16dp"
+                        android:paddingBottom="16dp">
+            
+                        <Button
+                            android:id="@+id/manage_app_timers_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Manage App Timers"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            
             <!-- Security Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -1350,7 +1477,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Permissions & Support Card -->
+            <!-- Web Apps Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1368,7 +1495,7 @@
                     android:padding="6dp">
 
                     <LinearLayout
-                        android:id="@+id/permissions_header"
+                        android:id="@+id/web_apps_header"
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:orientation="horizontal"
@@ -1381,7 +1508,7 @@
                         <ImageView
                             android:layout_width="22dp"
                             android:layout_height="22dp"
-                            android:src="@drawable/ic_person"
+                            android:src="@drawable/ic_browser"
                             app:tint="@color/white"
                             android:alpha="1.0"/>
 
@@ -1390,13 +1517,13 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:layout_marginStart="16dp"
-                            android:text="Launcher Info"
+                            android:text="Web Apps"
                             android:textSize="16sp"
                             android:fontFamily="sans-serif-medium"
                             android:textColor="@color/white"/>
 
                         <TextView
-                            android:id="@+id/permissions_arrow"
+                            android:id="@+id/web_apps_arrow"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="▼"
@@ -1406,7 +1533,7 @@
                     </LinearLayout>
 
                     <LinearLayout
-                        android:id="@+id/permissions_content"
+                        android:id="@+id/web_apps_content"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
@@ -1415,49 +1542,13 @@
                         android:paddingBottom="16dp">
 
                         <Button
-                            android:id="@+id/check_permissions_button"
+                            android:id="@+id/web_apps_button"
                             android:layout_width="match_parent"
                             android:layout_height="52dp"
-                            android:text="Manage System Permissions"
+                            android:text="Manage Web Apps"
                             android:textAllCaps="false"
                             android:background="@drawable/settings_card_background"
-                            android:textColor="@color/white"
-                            android:layout_marginBottom="12dp"/>
-
-                        <LinearLayout
-                            android:id="@+id/tutorial_header"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:layout_marginBottom="12dp"
-                            android:paddingVertical="8dp">
-                            
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="Show Onboarding Tutorial"
-                                android:textColor="@color/white"
-                                android:textSize="15sp"/>
-                                
-                            <Button
-                                android:id="@+id/show_tutorial_button"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Start"
-                                android:minWidth="60dp"
-                                android:textAllCaps="false"
-                                android:background="@drawable/settings_card_background"
-                                android:textColor="@color/nord8"/>
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/tutorial_arrow"
-                            android:layout_width="0dp"
-                            android:layout_height="0dp"
-                            android:visibility="gone"/>
-
+                            android:textColor="@color/white"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -1648,6 +1739,103 @@
                             android:textAllCaps="false"
                             android:background="@drawable/settings_card_background"
                             android:textColor="#FF6B6B"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Permissions & Support Card (Launcher Info) -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="6dp">
+
+                    <LinearLayout
+                        android:id="@+id/permissions_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="16dp"
+                        android:background="?attr/selectableItemBackgroundBorderless">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_person"
+                            app:tint="@color/white"
+                            android:alpha="1.0"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:text="Launcher Info"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            android:id="@+id/permissions_arrow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▼"
+                            android:textSize="10sp"
+                            android:textColor="@color/white"
+                            android:alpha="0.4"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/permissions_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:paddingHorizontal="16dp"
+                        android:paddingBottom="16dp">
+
+                        <Button
+                            android:id="@+id/check_permissions_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Manage System Permissions"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:layout_marginBottom="12dp"/>
+
+                        <Button
+                            android:id="@+id/app_info_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="System App Settings"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:layout_marginBottom="12dp"/>
+
+                        <Button
+                            android:id="@+id/show_tutorial_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Show Tutorial"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"/>
+
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

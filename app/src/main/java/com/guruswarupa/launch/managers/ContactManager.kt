@@ -26,7 +26,7 @@ class ContactManager(
     fun loadContacts(onComplete: ((List<String>) -> Unit)? = null) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) 
             != PackageManager.PERMISSION_GRANTED) {
-            onComplete?.invoke(contactsList)
+            onComplete?.invoke(emptyList())
             return
         }
         
@@ -56,11 +56,23 @@ class ContactManager(
                 contactsList.clear()
                 contactsList.addAll(tempContactsList)
                 
-                onComplete?.invoke(contactsList)
-            } catch (_: Exception) {
-                // Handle error silently or log
-                onComplete?.invoke(contactsList)
+                onComplete?.invoke(ArrayList(contactsList))
+            } catch (e: Exception) {
+                // Log error and return empty list
+                e.printStackTrace()
+                onComplete?.invoke(emptyList())
             }
+        }
+    }
+    
+    /**
+     * Eagerly loads contacts on app start if permission is already granted.
+     * This ensures contacts are available immediately for search.
+     */
+    fun loadContactsEagerly() {
+        loadContacts { loadedList ->
+            // Contacts are now loaded and ready to use
+            // No additional action needed as they're stored in contactsList
         }
     }
     

@@ -24,7 +24,6 @@
             android:id="@+id/notification_app_icon"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_default_app_icon"
             android:scaleType="centerCrop" />
 
         <View

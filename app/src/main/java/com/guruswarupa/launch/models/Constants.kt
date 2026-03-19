@@ -34,9 +34,13 @@ object Constants {
         const val TYPOGRAPHY_FONT_COLOR = "typography_font_color"
         const val CLOCK_24_HOUR_FORMAT = "clock_24_hour_format"
         const val GRID_COLUMNS = "grid_columns"
+        const val SHOW_APP_NAME_IN_GRID = "show_app_name_in_grid"
         const val ICON_STYLE = "icon_style"
         const val ICON_SIZE = "icon_size"
+        const val GRAYSCALE_ICONS_ENABLED = "grayscale_icons_enabled"
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
+        const val DEFAULT_HOME_PAGE_INDEX = "default_home_page_index"
+        const val WEB_APPS = "web_apps"
         
         // Vault Prefs (Simplified)
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"

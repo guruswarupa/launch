@@ -75,11 +75,11 @@ class WidgetPreviewDialog(
     
     private fun loadPreview() {
         loadingProgress.visibility = android.view.View.VISIBLE
-        previewImage.setImageResource(android.R.color.transparent)
+        previewImage.setImageDrawable(null)
         
         previewManager.generatePreview(widgetInfo.id, widgetInfo.name) { bitmap ->
             loadingProgress.visibility = android.view.View.GONE
-            if (bitmap != null) {
+            if (bitmap != null && !bitmap.isRecycled) {
                 previewImage.setImageBitmap(bitmap)
             } else {
                 previewImage.setImageResource(R.drawable.ic_widget_placeholder)

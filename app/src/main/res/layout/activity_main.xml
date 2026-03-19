@@ -8,7 +8,9 @@
     <FrameLayout
         android:id="@+id/main_content"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <!-- Wallpaper Background -->
         <ImageView
@@ -214,18 +216,25 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginTop="0dp"/>
+                android:layout_marginTop="0dp"
+                android:clipToPadding="false"
+                android:clipChildren="false" />
         </LinearLayout>
 
         <!-- Fast Scroller: Positioned dynamically in ActivityInitializer to avoid mic button -->
-        <!-- Increased width to provide a larger capture area -->
+        <!-- Increased width to provide a larger capture area and prevent bubble clipping -->
         <com.guruswarupa.launch.ui.views.FastScroller
             android:id="@+id/fast_scroller"
-            android:layout_width="80dp"
+            android:layout_width="200dp"
             android:layout_height="match_parent"
             android:layout_gravity="end"
             android:background="@android:color/transparent"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:elevation="32dp"
+            android:translationZ="32dp"
+            android:clickable="true"
+            android:focusable="false"
+            android:outlineProvider="none" />
 
     </FrameLayout>
 
@@ -549,6 +558,18 @@
                     android:id="@+id/weekly_usage_graph"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"/>
+
+                <Button
+                    android:id="@+id/request_usage_stats_permission_button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Grant Usage Access Permission"
+                    android:textColor="@color/widget_text"
+                    android:textSize="14sp"
+                    android:background="@drawable/button_neutral_ripple"
+                    android:paddingVertical="12dp"
+                    android:layout_marginTop="16dp"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Noise Decibel Widget -->

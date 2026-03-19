@@ -5,6 +5,8 @@ import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.provider.FontRequest
 import androidx.core.provider.FontsContractCompat
 import com.guruswarupa.launch.R
@@ -57,8 +59,6 @@ object DownloadableFontManager {
 
     fun getFontOptions(): List<FontOption> = fontOptionsList
 
-    fun hasTypeface(styleKey: String): Boolean = typefaceCache.containsKey(styleKey)
-
     fun getTypeface(styleKey: String): Typeface? = typefaceCache[styleKey]
 
     fun isDownloaded(context: Context, styleKey: String): Boolean {
@@ -68,7 +68,7 @@ object DownloadableFontManager {
     fun uninstallFont(context: Context, styleKey: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val updated = getDownloadedFonts(context).apply { remove(styleKey) }
-        prefs.edit().putStringSet(KEY_DOWNLOADED_FONTS, updated).apply()
+        prefs.edit { putStringSet(KEY_DOWNLOADED_FONTS, updated) }
         typefaceCache.remove(styleKey)
     }
 
@@ -78,8 +78,7 @@ object DownloadableFontManager {
     }
 
     fun requestFont(context: Context, styleKey: String, callback: (Boolean) -> Unit) {
-        val option = fontOptionsMap[styleKey]
-        if (option == null) {
+        val option = fontOptionsMap[styleKey] ?: run {
             callback(false)
             return
         }
@@ -99,7 +98,10 @@ object DownloadableFontManager {
             query,
             R.array.com_google_android_gms_fonts_certs
         )
-        FontsContractCompat.requestFont(context, request, object : FontsContractCompat.FontRequestCallback() {
+        
+        val mainExecutor = ContextCompat.getMainExecutor(context)
+        
+        val fontRequestCallback = object : FontsContractCompat.FontRequestCallback() {
             override fun onTypefaceRetrieved(typeface: Typeface) {
                 typefaceCache[styleKey] = typeface
                 markFontDownloaded(context, styleKey)
@@ -107,25 +109,28 @@ object DownloadableFontManager {
             }
 
             override fun onTypefaceRequestFailed(reason: Int) {
-                handler.post {
-                    Toast.makeText(context, "Failed to download font: ${option.displayName}", Toast.LENGTH_SHORT).show()
-                }
+                // Since we use mainExecutor, this already runs on the main thread
+                Toast.makeText(context, "Failed to download font: ${option.displayName}", Toast.LENGTH_SHORT).show()
                 dispatch(styleKey, false)
             }
-        }, handler)
-    }
-
-    fun preloadDownloadedFonts(context: Context) {
-        val downloaded = getDownloadedFonts(context)
-        downloaded.forEach { styleKey ->
-            requestFont(context, styleKey) { /* Initializing cache */ }
         }
+
+        // Use the modern 6-arg signature to avoid deprecation:
+        // requestFont(Context, FontRequest, int, Executor, Executor, FontRequestCallback)
+        FontsContractCompat.requestFont(
+            context,
+            request,
+            Typeface.NORMAL,
+            mainExecutor, // loadingExecutor
+            mainExecutor, // callbackExecutor
+            fontRequestCallback
+        )
     }
 
     private fun markFontDownloaded(context: Context, styleKey: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val updated = getDownloadedFonts(context).apply { add(styleKey) }
-        prefs.edit().putStringSet(KEY_DOWNLOADED_FONTS, updated).apply()
+        prefs.edit { putStringSet(KEY_DOWNLOADED_FONTS, updated) }
     }
 
     private fun dispatch(styleKey: String, success: Boolean) {

@@ -1,63 +1,259 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center">
+    android:layout_height="match_parent">
 
+    <!-- Wallpaper Background -->
     <ImageView
-        android:layout_width="96dp"
-        android:layout_height="96dp"
-        android:layout_marginBottom="24dp"
-        android:src="@mipmap/ic_launcher_round"
-        android:contentDescription="@string/app_name" />
-
-    <TextView
-        android:id="@+id/disclosure_title"
+        android:id="@+id/disclosure_wallpaper"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/app_data_disclosure_title"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:textColor="@color/text"
-        android:gravity="center"
-        android:layout_marginBottom="16dp" />
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@android:color/black" />
 
-    <TextView
-        android:id="@+id/disclosure_message"
+    <!-- Translucency Overlay -->
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/app_data_disclosure_message"
-        android:textSize="16sp"
-        android:textColor="@color/text"
-        android:lineSpacingExtra="4dp"
-        android:layout_marginBottom="32dp" />
+        android:layout_height="match_parent"
+        android:background="#99000000" />
 
+    <!-- Animated Welcome Section -->
     <LinearLayout
+        android:id="@+id/welcome_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center">
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="visible">
 
-        <Button
-            android:id="@+id/decline_button"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/welcome_text"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="@string/decline"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            android:fontFamily="sans-serif-thin"
+            android:text="Welcome"
+            android:textColor="@color/white"
+            android:textSize="64sp"
+            android:alpha="0"
+            android:scaleX="0.8"
+            android:scaleY="0.8" />
 
-        <Button
-            android:id="@+id/accept_button"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/welcome_subtitle"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="sans-serif-light"
+            android:letterSpacing="0.2"
+            android:text="TO LAUNCH"
+            android:textColor="@color/white"
+            android:textSize="14sp"
+            android:alpha="0"
+            android:textAllCaps="true" />
+    </LinearLayout>
+
+    <!-- Disclosure Content Container -->
+    <LinearLayout
+        android:id="@+id/disclosure_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:visibility="gone">
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="@string/i_agree"
-            style="@style/Widget.Material3.Button" />
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginBottom="16dp"
+                    android:src="@mipmap/ic_launcher_round"
+                    android:contentDescription="@string/app_name" />
+
+                <TextView
+                    android:id="@+id/disclosure_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_data_disclosure_title"
+                    android:textSize="24sp"
+                    android:fontFamily="sans-serif-light"
+                    android:textColor="@color/white"
+                    android:gravity="center"
+                    android:letterSpacing="0.02"
+                    android:layout_marginBottom="24dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/widget_background"
+                    android:padding="20dp"
+                    android:layout_marginBottom="24dp">
+
+                    <TextView
+                        android:id="@+id/disclosure_message"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_data_disclosure_message"
+                        android:textSize="14sp"
+                        android:textColor="@color/white"
+                        android:fontFamily="sans-serif-light"
+                        android:lineSpacingExtra="6dp" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="48dp"
+                    android:background="@color/white"
+                    android:alpha="0.1"
+                    android:layout_marginBottom="20dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="RESOURCES"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-black"
+                    android:textColor="@color/nord8"
+                    android:letterSpacing="0.15"
+                    android:layout_marginBottom="12dp"
+                    android:alpha="0.8" />
+
+                <TextView
+                    android:id="@+id/disclosure_links"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/data_disclosure_links"
+                    android:textSize="13sp"
+                    android:textColor="@color/white"
+                    android:alpha="0.8"
+                    android:fontFamily="sans-serif-light"
+                    android:layout_marginBottom="32dp"
+                    android:gravity="center" />
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:paddingBottom="8dp">
+
+            <Button
+                android:id="@+id/decline_button"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="@string/decline"
+                android:background="@drawable/button_black_translucent_ripple"
+                app:backgroundTint="@null"
+                android:textColor="@color/white"
+                android:textAllCaps="true"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-black"
+                android:paddingHorizontal="16dp" />
+
+            <Button
+                android:id="@+id/accept_button"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="@string/i_agree"
+                android:background="@drawable/button_black_translucent_ripple"
+                app:backgroundTint="@null"
+                android:textColor="@color/white"
+                android:textAllCaps="true"
+                android:textSize="13sp"
+                android:fontFamily="sans-serif-black"
+                android:paddingHorizontal="16dp" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-</LinearLayout>
+    <!-- Import Page Container -->
+    <LinearLayout
+        android:id="@+id/import_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginBottom="24dp"
+            android:src="@drawable/ic_archive"
+            app:tint="@color/nord8" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Import Old Data"
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-light"
+            android:textColor="@color/white"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Do you want to restore your previous configuration? You can import your layout, hidden apps, and settings from a backup file."
+            android:textSize="16sp"
+            android:textColor="@color/white"
+            android:alpha="0.8"
+            android:fontFamily="sans-serif-light"
+            android:gravity="center"
+            android:lineSpacingExtra="4dp"
+            android:layout_marginBottom="48dp" />
+
+        <Button
+            android:id="@+id/import_data_button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Choose Backup File"
+            android:background="@drawable/button_black_translucent_ripple"
+            app:backgroundTint="@null"
+            android:textColor="@color/white"
+            android:textAllCaps="true"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-black"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/skip_import_button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Start Fresh"
+            android:background="@android:color/transparent"
+            android:textColor="@color/white"
+            android:alpha="0.6"
+            android:textAllCaps="true"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-black" />
+
+    </LinearLayout>
+</FrameLayout>

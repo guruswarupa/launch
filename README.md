@@ -170,14 +170,6 @@
 - Configure and customize widgets on home screen
 - Support for all standard Android widgets
 
-### 🎯 Onboarding Experience
-- First-run setup wizard
-- Guided introduction to key features
-- Permission requests with explanations
-- Quick start guide for new users
-- Interactive feature tutorial after onboarding
-- Step-by-step walkthrough of all features
-
 ---
 
 ## 💰 Finance Tracker

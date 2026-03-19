@@ -12,10 +12,14 @@ android {
         applicationId = "com.guruswarupa.launch"
         minSdk = 24
         targetSdk = 35
-        versionCode = 28
-        versionName = "6.8"
+        versionCode = 31
+        versionName = "7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Optimization: keep only English resources. 
+        // Density stripping is handled automatically when you build an App Bundle (.aab)
+        resConfigs("en")
     }
 
     buildTypes {
@@ -26,6 +30,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk {
+                debugSymbolLevel = "none"
+            }
         }
     }
 
@@ -45,7 +52,11 @@ android {
                 "META-INF/NOTICE.txt",
                 "META-INF/*.kotlin_module",
                 "META-INF/AL2.0",
-                "META-INF/LGPL2.1"
+                "META-INF/LGPL2.1",
+                "debug/**",
+                "*.txt",
+                "com/sun/jna/**",
+                "org/checkerframework/**"
             )
         }
     }

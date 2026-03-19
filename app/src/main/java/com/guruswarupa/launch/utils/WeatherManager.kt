@@ -120,24 +120,19 @@ class WeatherManager(private val context: Context) {
     fun updateWeather(weatherIcon: ImageView, weatherText: TextView, forcePrompt: Boolean = false) {
         val apiKey = getApiKey()
 
-        if (apiKey == null) {
-            if (hasUserRejectedApiKey() && !forcePrompt) {
-                handler.post {
-                    weatherText.text = context.getString(R.string.tap_to_set_api_key)
-                    weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
-
-                    val clickListener = View.OnClickListener {
-                        showWeatherSettings(weatherIcon, weatherText)
-                    }
-                    weatherIcon.setOnClickListener(clickListener)
-                    weatherText.setOnClickListener(clickListener)
-                }
-                return
+        if (apiKey == null || apiKey.isEmpty()) {
+            // Never prompt automatically. Only show the placeholder.
+            handler.post {
+                weatherText.text = context.getString(R.string.tap_to_set_api_key)
+                weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+                setupRefreshListeners(weatherIcon, weatherText)
             }
-
-            if (!isPrompting) {
+            
+            // Only show settings dialog if explicitly requested (e.g. forcePrompt = true)
+            if (forcePrompt && !isPrompting) {
                 showWeatherSettings(weatherIcon, weatherText)
             }
+            return
         } else {
             val cachedWeather = getCachedWeather()
             if (cachedWeather != null && isCacheValid(cachedWeather)) {
@@ -223,7 +218,7 @@ class WeatherManager(private val context: Context) {
         val refreshClickListener = View.OnClickListener {
             val apiKey = getApiKey()
             val storedCityName = getStoredCityName()
-            if (apiKey == null || storedCityName == null) {
+            if (apiKey == null || apiKey.isEmpty() || storedCityName == null) {
                 showWeatherSettings(weatherIcon, weatherText)
             } else {
                 fetchWeatherData(weatherIcon, weatherText, storedCityName, apiKey)
@@ -239,6 +234,7 @@ class WeatherManager(private val context: Context) {
         onApiKeyUpdated: (() -> Unit)? = null
     ) {
         handler.post {
+            if (isPrompting) return@post
             isPrompting = true
             val inflater = LayoutInflater.from(context)
             val dialogView = inflater.inflate(R.layout.dialog_weather_settings, null)

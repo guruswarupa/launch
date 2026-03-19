@@ -134,6 +134,9 @@ class SettingsChangeCoordinator(
         // Update icon size if changed
         val iconSize = sharedPreferences.getInt(Constants.Prefs.ICON_SIZE, 40)
         adapter?.updateIconSize(iconSize)
+
+        val grayscaleIconsEnabled = sharedPreferences.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
+        adapter?.updateGrayscaleIcons(grayscaleIconsEnabled)
         
         // Update fast scroller visibility
         activity.updateFastScrollerVisibility()

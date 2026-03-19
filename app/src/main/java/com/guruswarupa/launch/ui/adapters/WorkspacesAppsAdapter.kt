@@ -19,12 +19,12 @@ class WorkspacesAppsAdapter(
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val appIcon: ImageView = view.findViewById(R.id.app_icon)
         val appName: TextView = view.findViewById(R.id.app_name)
-        val checkBox: CheckBox = view.findViewById(R.id.checkbox)
+        val appCheckbox: CheckBox = view.findViewById(R.id.app_checkbox)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_favorite_app, parent, false)
+            .inflate(R.layout.focus_mode_app_item, parent, false)
         return ViewHolder(view)
     }
 
@@ -44,17 +44,17 @@ class WorkspacesAppsAdapter(
         try {
             holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
         } catch (_: Exception) {
-            holder.appIcon.setImageResource(R.drawable.ic_default_app_icon)
+            holder.appIcon.setImageDrawable(null)
         }
         
         // Remove listener before setting state to avoid triggering during recycling
-        holder.checkBox.setOnCheckedChangeListener(null)
+        holder.appCheckbox.setOnCheckedChangeListener(null)
         
         // Set checkbox state based on current selection
-        holder.checkBox.isChecked = selectedPackages.contains(packageName)
+        holder.appCheckbox.isChecked = selectedPackages.contains(packageName)
         
         // Set listener after state is set
-        holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
+        holder.appCheckbox.setOnCheckedChangeListener { _, isChecked ->
             if (selectedPackages.contains(packageName) != isChecked) {
                 onSelectionChanged(packageName, isChecked)
             }
@@ -62,8 +62,8 @@ class WorkspacesAppsAdapter(
         
         // Handle item click (toggle checkbox)
         holder.itemView.setOnClickListener {
-            val newState = !holder.checkBox.isChecked
-            holder.checkBox.isChecked = newState
+            val newState = !holder.appCheckbox.isChecked
+            holder.appCheckbox.isChecked = newState
         }
     }
 

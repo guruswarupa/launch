@@ -11,8 +11,10 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.core.PermissionManager
 import com.guruswarupa.launch.managers.NoiseDecibelManager
 import java.text.DecimalFormat
 
@@ -30,6 +32,7 @@ class NoiseDecibelWidget(
     private lateinit var noiseLevelText: TextView
     private lateinit var decibelIndicator: View
     private lateinit var toggleButton: Button
+    private lateinit var permissionButton: Button
     private lateinit var widgetContainer: LinearLayout
     private lateinit var noMicrophoneText: TextView
     private lateinit var noPermissionText: TextView
@@ -65,6 +68,7 @@ class NoiseDecibelWidget(
         noiseLevelText = widgetView.findViewById(R.id.noise_level_text)
         decibelIndicator = widgetView.findViewById(R.id.decibel_indicator)
         toggleButton = widgetView.findViewById(R.id.toggle_noise_button)
+        permissionButton = widgetView.findViewById(R.id.request_microphone_permission_button)
         widgetContainer = widgetView.findViewById(R.id.noise_container)
         noMicrophoneText = widgetView.findViewById(R.id.no_microphone_text)
         noPermissionText = widgetView.findViewById(R.id.no_permission_text)
@@ -79,6 +83,10 @@ class NoiseDecibelWidget(
         
         toggleButton.setOnClickListener {
             toggleNoiseAnalyzer()
+        }
+        
+        permissionButton.setOnClickListener {
+            requestMicrophonePermission()
         }
         
         // Ensure widget is disabled by default - explicitly set to false if not already set
@@ -127,6 +135,7 @@ class NoiseDecibelWidget(
     private fun setupWithMicrophone() {
         noMicrophoneText.visibility = View.GONE
         noPermissionText.visibility = View.GONE
+        permissionButton.visibility = View.GONE
         decibelText.visibility = View.VISIBLE
         noiseLevelText.visibility = View.VISIBLE
         decibelIndicator.visibility = View.VISIBLE
@@ -141,6 +150,7 @@ class NoiseDecibelWidget(
     private fun setupWithoutMicrophone() {
         noMicrophoneText.visibility = View.VISIBLE
         noPermissionText.visibility = View.GONE
+        permissionButton.visibility = View.GONE
         decibelText.visibility = View.GONE
         noiseLevelText.visibility = View.GONE
         decibelIndicator.visibility = View.GONE
@@ -150,18 +160,11 @@ class NoiseDecibelWidget(
     private fun setupWithoutPermission() {
         noMicrophoneText.visibility = View.GONE
         noPermissionText.visibility = View.VISIBLE
+        permissionButton.visibility = View.VISIBLE
         decibelText.visibility = View.GONE
         noiseLevelText.visibility = View.GONE
         decibelIndicator.visibility = View.GONE
         noiseManager.stopRecording()
-        
-        // Make permission text clickable to open settings
-        noPermissionText.setOnClickListener {
-            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = android.net.Uri.fromParts("package", context.packageName, null)
-            }
-            context.startActivity(intent)
-        }
     }
     
     private fun hasMicrophonePermission(): Boolean {
@@ -169,6 +172,45 @@ class NoiseDecibelWidget(
             context,
             Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
+    }
+    
+    private fun requestMicrophonePermission() {
+        if (context is androidx.fragment.app.FragmentActivity) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.RECORD_AUDIO
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // Show explanation dialog
+                android.app.AlertDialog.Builder(context, R.style.CustomDialogTheme)
+                    .setTitle("Microphone Permission")
+                    .setMessage("This permission allows the launcher to measure ambient noise levels in decibels. The data is only used locally on your device.")
+                    .setPositiveButton("Grant Permission") { _, _ ->
+                        // Permission request will be handled by the activity
+                        androidx.core.app.ActivityCompat.requestPermissions(
+                            context,
+                            arrayOf(Manifest.permission.RECORD_AUDIO),
+                            PermissionManager.VOICE_SEARCH_REQUEST
+                        )
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+        } else {
+            // If not a FragmentActivity, open settings
+            openSettings()
+        }
+    }
+    
+    private fun openSettings() {
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.fromParts("package", context.packageName, null)
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            Toast.makeText(context, "Could not open settings", Toast.LENGTH_SHORT).show()
+        }
     }
     
     private fun updateDecibelDisplay(decibel: Double) {

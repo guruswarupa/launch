@@ -15,7 +15,7 @@
         android:id="@+id/note_editor_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/note_editor_overlay_dark" />
+        android:background="@color/note_editor_overlay" />
 
     <LinearLayout
         android:layout_width="match_parent"

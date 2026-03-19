@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.app.admin.DevicePolicyManager
+import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -33,22 +34,32 @@ class PermissionManager(
         const val CONTACTS_PERMISSION_REQUEST = 100
         const val REQUEST_CODE_CALL_PHONE = 200
         const val SMS_PERMISSION_REQUEST = 300
+        const val STORAGE_PERMISSION_REQUEST = 400
         const val VOICE_SEARCH_REQUEST = 500
         const val USAGE_STATS_REQUEST = 600
+        const val ACTIVITY_RECOGNITION_REQUEST = 700
         const val NOTIFICATION_PERMISSION_REQUEST = 900
         const val DEVICE_ADMIN_REQUEST = 1000
         const val NOTIFICATION_POLICY_REQUEST = 1100
+        const val DEFAULT_LAUNCHER_REQUEST = 1200
     }
+    
+    // Flag to prevent multiple simultaneous permission requests
+    private var isRequestingPermissions = false
     
     /**
      * Request contacts permission
      */
     fun requestContactsPermission(onGranted: () -> Unit = {}) {
+        // Prevent multiple simultaneous requests
+        if (isRequestingPermissions) return
+        
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_CONTACTS)
             != PackageManager.PERMISSION_GRANTED
         ) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_CONTACTS) ||
                 !sharedPreferences.getBoolean("contacts_permission_denied", false)) {
+                isRequestingPermissions = true
                 ActivityCompat.requestPermissions(
                     activity,
                     arrayOf(Manifest.permission.READ_CONTACTS),
@@ -97,27 +108,86 @@ class PermissionManager(
     /**
      * Request usage stats permission
      */
-    fun requestUsageStatsPermission(usageStatsManager: AppUsageStatsManager) {
+    fun requestUsageStatsPermission(usageStatsManager: AppUsageStatsManager, onComplete: () -> Unit = {}) {
+        // Prevent multiple simultaneous requests
+        if (isRequestingPermissions) return
+        
         if (!usageStatsManager.hasUsageStatsPermission()) {
             if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
+                isRequestingPermissions = true
                 val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
                     .setTitle("Usage Stats Permission")
-                    .setMessage("To show app usage time, please grant usage access permission in the next screen.")
+                    .setMessage("To show app usage time, please grant usage access permission.")
                     .setPositiveButton("Grant") { _, _ ->
-                                            // Using deprecated method for backward compatibility
-                        @Suppress("DEPRECATION")
-                        activity.startActivityForResult(
-                            usageStatsManager.requestUsageStatsPermission(),
-                            USAGE_STATS_REQUEST
-                        )
+                        // Mark that we're waiting for the user to return from settings
+                        sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", true) }
+                        isRequestingPermissions = false
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        activity.startActivity(intent)
                     }
                     .setNegativeButton("Skip") { _, _ ->
                         sharedPreferences.edit { putBoolean("usage_stats_permission_denied", true) }
+                        isRequestingPermissions = false
+                        onComplete()
+                    }
+                    .setOnCancelListener { 
+                        isRequestingPermissions = false
+                        onComplete() 
                     }
                     .show()
                 
                 fixDialogTextColors(dialog)
+            } else {
+                onComplete()
             }
+        } else {
+            onComplete()
+        }
+    }
+
+    /**
+     * Checks if the app is currently the default launcher
+     */
+    fun isDefaultLauncher(): Boolean {
+        val intent = Intent(Intent.ACTION_MAIN)
+        intent.addCategory(Intent.CATEGORY_HOME)
+        val resolveInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.packageManager.resolveActivity(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
+        } else {
+            @Suppress("DEPRECATION")
+            activity.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        }
+        return resolveInfo?.activityInfo?.packageName == activity.packageName
+    }
+
+    /**
+     * Request to set as default launcher using system popup
+     */
+    fun requestDefaultLauncher(onComplete: () -> Unit = {}) {
+        if (isDefaultLauncher()) {
+            onComplete()
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val roleManager = activity.getSystemService(Context.ROLE_SERVICE) as RoleManager
+            if (roleManager.isRoleAvailable(RoleManager.ROLE_HOME) &&
+                !roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
+                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
+                @Suppress("DEPRECATION")
+                activity.startActivityForResult(intent, DEFAULT_LAUNCHER_REQUEST)
+                // We call onComplete here as the activity result will be handled asynchronously 
+                // or the user will return to MainActivity
+                onComplete()
+            } else {
+                onComplete()
+            }
+        } else {
+            val intent = Intent(Intent.ACTION_MAIN)
+            intent.addCategory(Intent.CATEGORY_HOME)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            activity.startActivity(Intent.createChooser(intent, "Set Default Launcher"))
+            onComplete()
         }
     }
     
@@ -280,6 +350,62 @@ class PermissionManager(
     }
     
     /**
+     * Request storage/media permission for wallpaper setting
+     */
+    fun requestStoragePermission(onGranted: () -> Unit = {}) {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        
+        if (ContextCompat.checkSelfPermission(activity, permission)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(activity, permission) ||
+                !sharedPreferences.getBoolean("storage_permission_denied", false)) {
+                ActivityCompat.requestPermissions(
+                    activity,
+                    arrayOf(permission),
+                    STORAGE_PERMISSION_REQUEST
+                )
+            }
+        } else {
+            onGranted()
+        }
+    }
+    
+    /**
+     * Request activity recognition permission for physical activity tracking
+     */
+    fun requestActivityRecognitionPermission(onGranted: () -> Unit = {}) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACTIVITY_RECOGNITION)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACTIVITY_RECOGNITION) ||
+                    !sharedPreferences.getBoolean("activity_recognition_permission_denied", false)) {
+                    ActivityCompat.requestPermissions(
+                        activity,
+                        arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+                        ACTIVITY_RECOGNITION_REQUEST
+                    )
+                }
+            }
+        } else {
+            // Permission not required before Android 10
+            onGranted()
+            return
+        }
+        
+        if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACTIVITY_RECOGNITION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            onGranted()
+        }
+    }
+    
+    /**
      * Request microphone permission for audio recording (used by noise decibel widget)
      */
     @Suppress("unused")
@@ -303,8 +429,13 @@ class PermissionManager(
         grantResults: IntArray,
         onContactsGranted: () -> Unit = {},
         onCallPhoneGranted: () -> Unit = {},
-        onNotificationGranted: () -> Unit = {}
+        onNotificationGranted: () -> Unit = {},
+        onStorageGranted: () -> Unit = {},
+        onActivityRecognitionGranted: () -> Unit = {}
     ) {
+        // Reset the permission request flag
+        isRequestingPermissions = false
+        
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -327,6 +458,28 @@ class PermissionManager(
                 } else {
                     if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.SEND_SMS)) {
                         sharedPreferences.edit { putBoolean("sms_permission_denied", true) }
+                    }
+                }
+            }
+            STORAGE_PERMISSION_REQUEST -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    sharedPreferences.edit { putBoolean("storage_permission_denied", false) }
+                    onStorageGranted()
+                } else {
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, 
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES 
+                            else Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                        sharedPreferences.edit { putBoolean("storage_permission_denied", true) }
+                    }
+                }
+            }
+            ACTIVITY_RECOGNITION_REQUEST -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    sharedPreferences.edit { putBoolean("activity_recognition_permission_denied", false) }
+                    onActivityRecognitionGranted()
+                } else {
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACTIVITY_RECOGNITION)) {
+                        sharedPreferences.edit { putBoolean("activity_recognition_permission_denied", true) }
                     }
                 }
             }

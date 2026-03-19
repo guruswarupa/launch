@@ -20,7 +20,6 @@ object GestureCoordinator {
     fun requestTrigger(): Boolean {
         val now = SystemClock.elapsedRealtime()
         if (now - lastTriggerTime < MUTUAL_EXCLUSION_WINDOW) {
-            Log.d(TAG, "Trigger blocked: too soon after last trigger (${now - lastTriggerTime}ms)")
             return false
         }
         lastTriggerTime = now

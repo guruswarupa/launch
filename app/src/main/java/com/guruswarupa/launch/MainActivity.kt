@@ -2,17 +2,18 @@ package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
 import android.app.NotificationManager
-import android.app.WallpaperManager
 import android.content.SharedPreferences
 import android.content.pm.ResolveInfo
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
+import androidx.core.content.edit
 
 // Import moved managers
 import com.guruswarupa.launch.core.CacheManager
@@ -31,16 +32,17 @@ import com.guruswarupa.launch.widgets.WidgetSetupManager
 import com.guruswarupa.launch.widgets.WidgetThemeManager
 import com.guruswarupa.launch.widgets.WidgetVisibilityManager
 import com.guruswarupa.launch.widgets.DeferredWidgetInitializer
+import com.guruswarupa.launch.widgets.CalendarEventsWidget
+import com.guruswarupa.launch.widgets.CountdownWidget
 
 import com.guruswarupa.launch.utils.TimeDateManager
 import com.guruswarupa.launch.utils.WeatherManager
 import com.guruswarupa.launch.utils.TodoManager
 import com.guruswarupa.launch.utils.TodoAlarmManager
 import com.guruswarupa.launch.utils.FinanceWidgetManager
-import com.guruswarupa.launch.utils.OnboardingHelper
-import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.utils.VoiceCommandHandler
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
+import com.guruswarupa.launch.utils.FeatureTutorialManager
 import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import java.util.concurrent.Executors
 
@@ -76,7 +78,6 @@ class MainActivity : FragmentActivity() {
     internal lateinit var appListLoader: AppListLoader
     internal lateinit var contactManager: ContactManager
     internal lateinit var usageStatsCacheManager: UsageStatsCacheManager
-    internal lateinit var onboardingHelper: OnboardingHelper
     internal lateinit var lifecycleManager: LifecycleManager
     internal lateinit var appSearchManager: AppSearchManager
     internal lateinit var appDockManager: AppDockManager
@@ -95,9 +96,9 @@ class MainActivity : FragmentActivity() {
     internal lateinit var widgetLifecycleCoordinator: WidgetLifecycleCoordinator
     lateinit var favoriteAppManager: FavoriteAppManager
     internal lateinit var hiddenAppManager: HiddenAppManager
+    internal lateinit var webAppManager: WebAppManager
     internal lateinit var widgetManager: WidgetManager
     internal lateinit var resultRegistry: MainActivityResultRegistry
-    internal lateinit var featureTutorialManager: FeatureTutorialManager
     internal var voiceCommandHandler: VoiceCommandHandler? = null
 
     // New modular managers
@@ -115,6 +116,9 @@ class MainActivity : FragmentActivity() {
     internal lateinit var screenPagerManager: ScreenPagerManager
     internal lateinit var contactActionHandler: ContactActionHandler
     internal lateinit var settingsChangeCoordinator: SettingsChangeCoordinator
+
+    // State trackers
+    private var hasAskedDefaultLauncherThisOpen = false
 
     // Initialization check helpers for AppInitializer
     fun isWidgetManagerInitialized() = ::widgetManager.isInitialized
@@ -134,6 +138,10 @@ class MainActivity : FragmentActivity() {
     fun isTimeDateManagerInitialized() = ::timeDateManager.isInitialized
     fun isViewsInitialized() = ::activityInitializer.isInitialized
 
+    fun isTablet(): Boolean {
+        return (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+    }
+
     /**
      * Initializes core managers that are needed early in the lifecycle.
      */
@@ -143,7 +151,7 @@ class MainActivity : FragmentActivity() {
         appTimerManager = AppTimerManager(this)
         favoriteAppManager = FavoriteAppManager(sharedPreferences)
         hiddenAppManager = HiddenAppManager(sharedPreferences)
-        featureTutorialManager = FeatureTutorialManager(this, sharedPreferences)
+        webAppManager = WebAppManager(sharedPreferences)
         
         // Initialize new modular managers
         appLauncher = AppLauncher(this, packageManager, appLockManager)
@@ -290,6 +298,11 @@ class MainActivity : FragmentActivity() {
     internal fun updateFastScrollerVisibility() {
         if (!::sharedPreferences.isInitialized || !views.isSearchBoxInitialized() || !::appList.isInitialized) return
         
+        // Update favorites visibility on FastScroller based on current modes
+        val focusMode = if (::appDockManager.isInitialized) appDockManager.getCurrentMode() else false
+        val workspaceMode = if (::appDockManager.isInitialized) appDockManager.isWorkspaceModeActive() else false
+        views.fastScroller.setFavoritesVisible(!focusMode && !workspaceMode)
+
         // Fast scroller is now requested to be always visible
         if (appList.isNotEmpty()) {
             views.fastScroller.visibility = View.VISIBLE
@@ -310,22 +323,48 @@ class MainActivity : FragmentActivity() {
     }
     
     /**
-     * Requests initial permissions needed by the app.
+     * Requests basic permissions needed by the app.
      */
-    internal fun requestInitialPermissions() {
+    internal fun requestInitialPermissions(onComplete: () -> Unit = {}) {
+        // Step 1: Contacts Permission
         permissionManager.requestContactsPermission { 
-            contactManager.loadContacts {
+            contactManager.loadContacts { loadedContacts ->
                 if (::appSearchManager.isInitialized) {
-                    appSearchManager.updateContactsList()
+                    // Update the AppSearchManager with the newly loaded contacts
+                    appSearchManager.updateData(
+                        newFullAppList = appSearchManager.getFullAppList(),
+                        newHomeAppList = appSearchManager.getHomeAppList(),
+                        newContactsList = loadedContacts
+                    )
                 } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                     updateAppSearchManager()
                 }
             }
+            // Chain to Usage Stats
+            permissionManager.requestUsageStatsPermission(usageStatsManager) {
+                // Step 3: Default Launcher
+                permissionManager.requestDefaultLauncher {
+                    hasAskedDefaultLauncherThisOpen = true
+                    onComplete()
+                }
+            }
         }
-        permissionManager.requestSmsPermission()
-        permissionManager.requestUsageStatsPermission(usageStatsManager)
     }
     
+    /**
+     * Starts feature tutorial and requests initial permissions.
+     */
+    fun startFeatureTutorialAndRequestPermissions() {
+        val tutorialManager = FeatureTutorialManager(this, sharedPreferences)
+        if (tutorialManager.shouldShowTutorial()) {
+            tutorialManager.startTutorial {
+                requestInitialPermissions()
+            }
+        } else {
+            requestInitialPermissions()
+        }
+    }
+
     /**
      * Initializes time/date and weather widgets.
      */
@@ -412,18 +451,45 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppInitializer(this).initialize(savedInstanceState)
+        AppInitializer(this).initialize()
         if (::systemBarManager.isInitialized) {
             systemBarManager.makeSystemBarsTransparent()
+        }
+        hasAskedDefaultLauncherThisOpen = false
+        
+        // Eagerly load contacts if permission is already granted
+        if (::contactManager.isInitialized) {
+            contactManager.loadContactsEagerly()
         }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        
+        val isHomeOrLauncher = intent.action == Intent.ACTION_MAIN && 
+            (intent.hasCategory(Intent.CATEGORY_HOME) || intent.hasCategory(Intent.CATEGORY_LAUNCHER))
+
+        if (isHomeOrLauncher && ::screenPagerManager.isInitialized) {
+            screenPagerManager.openDefaultHomePage(animated = true)
+        }
+
+        // If we're coming from the disclosure activity (likely via a task flag), check permissions
+        if (intent.getBooleanExtra("request_permissions_after_disclosure", false)) {
+            if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+                requestInitialPermissions {
+                    sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                }
+            }
+        }
+        
+        // Reset the flag if explicitly opened again to allow re-prompting
+        if (isHomeOrLauncher) {
+            hasAskedDefaultLauncherThisOpen = false
+        }
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+    override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (::screenPagerManager.isInitialized) {
             screenPagerManager.updatePageWidth()
@@ -459,7 +525,6 @@ class MainActivity : FragmentActivity() {
             lifecycleManager.setTodoManager(todoManager)
         }
         
-        lifecycleManager.setFeatureTutorialManager(featureTutorialManager)
         lifecycleManager.setBackgroundExecutor(backgroundExecutor)
         lifecycleManager.setWidgetLifecycleCoordinator(widgetLifecycleCoordinator)
         lifecycleManager.setWidgetThemeManager(widgetThemeManager)
@@ -523,6 +588,12 @@ class MainActivity : FragmentActivity() {
     fun openWallpaperPage(animated: Boolean = true) {
         if (::screenPagerManager.isInitialized) {
             screenPagerManager.openRightPage(animated)
+        }
+    }
+
+    fun openDefaultHomePage(animated: Boolean = true) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openDefaultHomePage(animated)
         }
     }
 
@@ -590,6 +661,9 @@ class MainActivity : FragmentActivity() {
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
         }
+        // Note: WebAppIconFetcher.shutdown() is intentionally not called here
+        // as the adapter may still need to load icons during RecyclerView operations.
+        // Android will automatically clean up the process when the app terminates.
     }
 
     // Usage stats refresh methods - delegated to UsageStatsRefreshManager
@@ -616,10 +690,36 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         if (::lifecycleManager.isInitialized) {
-            lifecycleManager.onResume(intent)
+            lifecycleManager.onResume()
         }
-        if (::screenPagerManager.isInitialized) {
-            screenPagerManager.openCenterPage(animated = false)
+        
+        // Check if we're waiting for user to return from usage stats settings
+        if (sharedPreferences.getBoolean("waiting_for_usage_stats_return", false)) {
+            // User just returned from usage stats settings
+            sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", false) }
+            
+            // Ask for default launcher before finishing initial setup
+            permissionManager.requestDefaultLauncher {
+                hasAskedDefaultLauncherThisOpen = true
+                // Mark as completed and proceed
+                if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+                    sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                }
+            }
+            return // Exit early to avoid triggering fallback
+        }
+
+        // Ask for default launcher if permissions are asked but app is not default
+        if (!hasAskedDefaultLauncherThisOpen && 
+            sharedPreferences.getBoolean("initial_permissions_asked", false) && 
+            ::permissionManager.isInitialized && 
+            !permissionManager.isDefaultLauncher()) {
+            
+            hasAskedDefaultLauncherThisOpen = true
+            // Use a slight delay to ensure the UI is fully settled before system popup appears
+            handler.postDelayed({
+                permissionManager.requestDefaultLauncher()
+            }, 1000)
         }
     }
 
@@ -643,9 +743,14 @@ class MainActivity : FragmentActivity() {
                 permissions,
                 grantResults,
                 onContactsGranted = { 
-                    contactManager.loadContacts {
+                    contactManager.loadContacts { loadedContacts ->
                         if (::appSearchManager.isInitialized) {
-                            appSearchManager.updateContactsList()
+                            // Update the AppSearchManager with the newly loaded contacts
+                            appSearchManager.updateData(
+                                newFullAppList = appSearchManager.getFullAppList(),
+                                newHomeAppList = appSearchManager.getHomeAppList(),
+                                newContactsList = loadedContacts
+                            )
                         } else if (!isFinishing && !isDestroyed && ::adapter.isInitialized) {
                             updateAppSearchManager()
                         }
@@ -656,8 +761,31 @@ class MainActivity : FragmentActivity() {
                     if (::todoManager.isInitialized) {
                         todoManager.rescheduleTodoAlarms()
                     }
+                },
+                onStorageGranted = {
+                    // Storage permission granted, can be used for wallpaper or other features
+                },
+                onActivityRecognitionGranted = {
+                    if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
+                        widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
+                    }
                 }
             )
+
+            // Sequential chaining for initial request flow
+            if (requestCode == PermissionManager.CONTACTS_PERMISSION_REQUEST) {
+                // Check if still pending (initial flow)
+                if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+                    handler.postDelayed({
+                        permissionManager.requestUsageStatsPermission(usageStatsManager) {
+                            permissionManager.requestDefaultLauncher {
+                                hasAskedDefaultLauncherThisOpen = true
+                                sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                            }
+                        }
+                    }, 300)
+                }
+            }
         }
         
         // Handle voice search permission separately
@@ -677,10 +805,10 @@ class MainActivity : FragmentActivity() {
                 105 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
                     widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
                 }
-                101 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
+                CalendarEventsWidget.REQUEST_CODE_CALENDAR_PERMISSION -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
                     widgetLifecycleCoordinator.calendarEventsWidget.onPermissionGranted()
                 }
-                102 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
+                CountdownWidget.REQUEST_CODE_CALENDAR_PERMISSION -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isCountdownWidgetInitialized()) {
                     widgetLifecycleCoordinator.countdownWidget.onPermissionGranted()
                 }
             }

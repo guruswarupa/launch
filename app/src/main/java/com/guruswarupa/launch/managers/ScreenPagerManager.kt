@@ -1,5 +1,6 @@
 package com.guruswarupa.launch.managers
 
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.view.GestureDetector
@@ -14,6 +15,7 @@ import android.widget.Toast
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 
 /**
@@ -146,8 +148,9 @@ class ScreenPagerManager(
 
         pagerScrollView.post {
             updatePageWidth()
-            scrollToPage(Page.CENTER, animated = false)
-            notifyPageChanged(Page.CENTER, force = true)
+            val defaultPage = getDefaultPage()
+            scrollToPage(defaultPage, animated = false)
+            notifyPageChanged(defaultPage, force = true)
             pagerScrollView.visibility = View.VISIBLE
         }
     }
@@ -289,7 +292,8 @@ class ScreenPagerManager(
 
     private fun nearestPageFor(scrollX: Int): Page {
         if (pageWidth <= 0) return Page.CENTER
-        return when (((scrollX + (pageWidth / 2)) / pageWidth).coerceIn(0, 2)) {
+        val index = ((scrollX + (pageWidth / 2)) / pageWidth).coerceIn(0, 2)
+        return when (index) {
             0 -> if (leftPageLocked) Page.CENTER else Page.LEFT
             1 -> Page.CENTER
             else -> Page.RIGHT
@@ -316,5 +320,30 @@ class ScreenPagerManager(
         if (!force && page == currentPage) return
         currentPage = page
         pageChangeListener?.invoke(page)
+    }
+
+    /**
+     * Gets the user-defined default home page from preferences.
+     */
+    fun getDefaultPage(): Page {
+        val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        val defaultPageIndex = prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)
+        return when (defaultPageIndex) {
+            0 -> if (leftPageLocked) Page.CENTER else Page.LEFT
+            2 -> Page.RIGHT
+            else -> Page.CENTER
+        }
+    }
+
+    /**
+     * Returns the currently active page.
+     */
+    fun getCurrentPage(): Page = currentPage
+
+    /**
+     * Re-scrolls to the user-defined default home page.
+     */
+    fun openDefaultHomePage(animated: Boolean = true) {
+        scrollToPage(getDefaultPage(), animated)
     }
 }

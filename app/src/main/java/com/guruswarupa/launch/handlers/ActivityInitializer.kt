@@ -6,6 +6,7 @@ import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.animation.ValueAnimator
 import android.view.View
+import android.view.MotionEvent
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -17,6 +18,10 @@ import android.widget.Toast
 import android.view.ViewGroup
 import android.view.ViewGroup.MarginLayoutParams
 import android.view.Gravity
+import android.transition.TransitionManager
+import android.transition.TransitionSet
+import android.transition.ChangeBounds
+import android.transition.Fade
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -50,7 +55,6 @@ class ActivityInitializer(
     }
 
     val views = MainActivityViews()
-    private var searchMarginAnimator: ValueAnimator? = null
     private lateinit var searchMarginParams: MarginLayoutParams
     private var defaultSearchTopMargin = 0
     private var pinnedSearchTopMargin = 0
@@ -68,7 +72,6 @@ class ActivityInitializer(
             fastScroller.setRecyclerView(recyclerView)
             
             // Position FastScroller to avoid search bar/mic and start from below the app dock area
-            // Set height to 65% of screen height and align to bottom to ensure it stays away from search bar
             val displayMetrics = activity.resources.displayMetrics
             val screenHeight = displayMetrics.heightPixels
             val scrollerParams = fastScroller.layoutParams as FrameLayout.LayoutParams
@@ -147,76 +150,114 @@ class ActivityInitializer(
     }
 
     private fun setupHeaderVisibilityOnScroll(recyclerView: RecyclerView) {
-        val threshold = (activity.resources.displayMetrics.density * 8).toInt()
+        val hideThreshold = (activity.resources.displayMetrics.density * 40).toInt() 
+        val showThreshold = (activity.resources.displayMetrics.density * 10).toInt()
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                // Only auto-hide/show header based on scroll when search is empty
                 val searchBox = activity.findViewById<android.widget.AutoCompleteTextView>(R.id.search_box)
                 val isSearching = !searchBox?.text.toString().trim().isNullOrEmpty()
                 
                 if (!isSearching) {
-                    val scrolledDown = rv.computeVerticalScrollOffset() > threshold
-                    if (scrolledDown && !headerHidden) {
-                        setHeaderVisibility(false)
-                    } else if (!scrolledDown && headerHidden && dy <= 0) {
+                    val offset = rv.computeVerticalScrollOffset()
+                    val scrollRange = rv.computeVerticalScrollRange()
+                    val viewportHeight = rv.height
+                    
+                    // Safety check: if we are at the top or nearly at the top, always show header
+                    if (offset <= showThreshold && headerHidden) {
+                        setHeaderVisibility(true)
+                        return
+                    }
+
+                    // If the header is hidden, we check if the content still needs scrolling.
+                    // If it fits entirely within the viewport, show the header again to prevent being "stuck".
+                    if (headerHidden && scrollRange <= viewportHeight) {
+                        setHeaderVisibility(true)
+                        return
+                    }
+
+                    // Directional hiding logic: only hide if scrolling down AND we have enough content to warrant it
+                    if (dy > 0 && !headerHidden && offset > hideThreshold) {
+                        // Only hide if the list is substantially longer than the screen to avoid glitching on short lists
+                        if (scrollRange > viewportHeight * 1.5) {
+                            setHeaderVisibility(false)
+                        }
+                    } else if (dy < 0 && headerHidden && offset <= showThreshold) {
                         setHeaderVisibility(true)
                     }
                 }
             }
         })
+
+        // Robust touch listener to catch "swipe down" when already at the top or stuck
+        recyclerView.setOnTouchListener(object : View.OnTouchListener {
+            private var startY = 0f
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> startY = event.y
+                    MotionEvent.ACTION_MOVE -> {
+                        val deltaY = event.y - startY
+                        // If user swipes down (deltaY > threshold) and header is hidden
+                        if (deltaY > 50 && headerHidden) {
+                            val offset = recyclerView.computeVerticalScrollOffset()
+                            // If we're at or near the top but can't scroll up further to trigger dy < 0
+                            if (offset <= showThreshold) {
+                                setHeaderVisibility(true)
+                            }
+                        }
+                    }
+                }
+                return false // Don't consume the touch, let RecyclerView handle scrolling
+            }
+        })
+
+        // Ensure header comes back if the list size changes (e.g. workspace switch)
+        recyclerView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            if (headerHidden) {
+                val scrollRange = recyclerView.computeVerticalScrollRange()
+                val viewportHeight = recyclerView.height
+                if (scrollRange <= viewportHeight) {
+                    recyclerView.post {
+                        if (headerHidden) setHeaderVisibility(true)
+                    }
+                }
+            }
+        }
     }
 
     /**
      * Animate header and dock visibility; called from scroll or search events.
+     * Uses TransitionManager for smooth layout reflow without glitches.
      */
     fun setHeaderVisibility(visible: Boolean) {
         if (visible && !headerHidden) return
         if (!visible && headerHidden) return
         headerHidden = !visible
-        animateViewVisibility(views.topWidgetContainer, visible)
-        animateViewVisibility(views.appDock, visible)
+        
+        val stack = views.topWidgetContainer.parent as? ViewGroup ?: return
+        
+        // Use TransitionManager to handle visibility and bounds changes smoothly.
+        val transition = TransitionSet().apply {
+            addTransition(Fade().apply {
+                addTarget(views.topWidgetContainer)
+                addTarget(views.appDock.parent as View)
+            })
+            addTransition(ChangeBounds())
+            duration = 250
+            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+        }
+        
+        TransitionManager.beginDelayedTransition(stack, transition)
+
+        views.topWidgetContainer.isVisible = visible
+        // Dock is wrapped in a HorizontalScrollView, hide the wrapper to ensure correct layout reflow
+        (views.appDock.parent as? View)?.isVisible = visible
+        
+        // Adjust search container margin to pin it to top or restore default spacing
         val targetMargin = if (visible) defaultSearchTopMargin else pinnedSearchTopMargin
-        animateSearchBarMargin(targetMargin, views.searchContainer)
-    }
-
-    private fun animateViewVisibility(view: View, visible: Boolean) {
-        view.animate().cancel()
-        if (visible) {
-            view.isVisible = true
-            view.alpha = 0f
-            val offset = -(view.height.takeIf { it > 0 } ?: 20) / 4f
-            view.translationY = offset
-            view.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(220)
-                .withEndAction(null)
-        } else {
-            val offset = -(view.height.takeIf { it > 0 } ?: 20) / 4f
-            view.animate()
-                .alpha(0f)
-                .translationY(offset)
-                .setDuration(220)
-                .withEndAction { view.isVisible = false }
-        }
-    }
-
-    private fun animateSearchBarMargin(
-        target: Int,
-        searchContainer: LinearLayout
-    ) {
-        searchMarginAnimator?.cancel()
-        val start = searchMarginParams.topMargin
-        if (start == target) return
-        searchMarginAnimator = ValueAnimator.ofInt(start, target).apply {
-            duration = 220
-            addUpdateListener {
-                searchMarginParams.topMargin = it.animatedValue as Int
-                searchContainer.layoutParams = searchMarginParams
-            }
-            start()
-        }
+        val params = views.searchContainer.layoutParams as MarginLayoutParams
+        params.topMargin = targetMargin
+        views.searchContainer.layoutParams = params
     }
 
     private fun setupTimeDateListeners(timeTextView: TextView, dateTextView: TextView) {
@@ -305,8 +346,6 @@ class ActivityInitializer(
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
-            
-            // Reverted: Each page should take full width as per user feedback
             val targetWidth = drawerWidth
 
             // Left drawer

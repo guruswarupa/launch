@@ -66,8 +66,6 @@ class BackTapService : Service() {
             backTapDetector = BackTapDetector(this) { count ->
                 if (GestureCoordinator.requestTrigger()) {
                     handleBackTapAction(count)
-                } else {
-                    Log.d(TAG, "Back tap gesture ignored due to coordination")
                 }
             }
         } catch (e: Exception) {
@@ -200,8 +198,6 @@ class BackTapService : Service() {
             if (tapCount < 2) return
             val action = doubleTapAction
             
-            Log.d(TAG, "Back tap action triggered: $action (count: $tapCount)")
-            
             if (SHOW_DEBUG_FEEDBACK) {
                 val sound = MediaActionSound()
                 sound.play(MediaActionSound.SHUTTER_CLICK)
@@ -241,8 +237,6 @@ class BackTapService : Service() {
             val accessibilityService = ScreenLockAccessibilityService.instance
             if (accessibilityService != null) {
                 accessibilityService.takeScreenshot()
-            } else {
-                Log.d(TAG, "Screenshot failed: Accessibility service not running")
             }
         }
     }

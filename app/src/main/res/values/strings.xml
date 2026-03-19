@@ -1,7 +1,35 @@
 <resources>
     <string name="app_name">Launch</string>
     <string name="settings_app_name">Launch Settings</string>
-    <string name="vault_app_name">Vault</string>
+    <string name="vault_app_name">Launch Vault</string>
+    <string name="web_apps_title">Web Apps</string>
+    <string name="add_web_app">Add Web App</string>
+    <string name="edit_web_app">Edit Web App</string>
+    <string name="remove_web_app">Remove Web App</string>
+    <string name="remove_web_app_message">Remove %1$s from your app list?</string>
+    <string name="removed_web_app">%1$s removed</string>
+    <string name="open_web_app">Open Web App</string>
+    <string name="open_in_browser">Open in Browser</string>
+    <string name="web_apps_empty_state">No web apps added yet. Add a site and it will appear in the launcher app list.</string>
+    <string name="web_app_name_hint">Name</string>
+    <string name="web_app_url_hint">https://example.com</string>
+    <string name="web_app_name_required">Enter a name</string>
+    <string name="web_app_url_required">Enter a URL</string>
+    <string name="web_app_https_required">Use an HTTPS website URL</string>
+    <string name="web_app_load_failed">Unable to open this web app</string>
+    <string name="web_app_added">Web app added</string>
+    <string name="web_app_updated">Web app updated</string>
+    <string name="web_app_removed">%1$s removed</string>
+    <string name="add_button">Add</string>
+    <string name="save_button">Save</string>
+    <string name="delete_button">Delete</string>
+    <string name="back_button">Back</string>
+    <string name="refresh">Refresh</string>
+    <string name="background">Background</string>
+    <string name="remove_from_favorites_plain">Remove from Favorites</string>
+    <string name="add_to_favorites_plain">Add to Favorites</string>
+    <string name="unhide_app_plain">Unhide App</string>
+    <string name="hide_app_plain">Hide App</string>
     <string name="grid_columns_title">Apps per row</string>
     <string name="apps_per_row_format">%1$d apps per row</string>
     <string name="search_text"> Search...</string>
@@ -10,28 +38,12 @@
     <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock. This service does not collect, store, or transmit any personal data. It only performs system-level actions like screen locking and taking screenshots when explicitly triggered by user gestures.</string>
     
     <!-- App Data Disclosure Strings -->
-    <string name="app_data_disclosure_title">App Data Collection</string>
-    <string name="app_data_disclosure_message">Launch collects information about installed applications on your device to display them in the app launcher. This data is stored locally on your device and is not transmitted to any external servers or third parties.
-
-We collect:
-• Package names of installed apps
-• App names and icons
-• Launch intent information
-
-This data is used solely to:
-• Display your apps in the launcher
-• Enable app search functionality
-• Provide app organization features
-
-No personal data is collected, stored, or shared with third parties.</string>
-    <string name="data_disclosure_links">For more information, please review our:
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing Guidelines&lt;/a&gt;
-• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="app_data_disclosure_title">Privacy &amp; Data Disclosure</string>
+    <string name="app_data_disclosure_message">To provide a functional launcher experience, Launch processes information about your installed applications. All data is stored &lt;b&gt;locally on your device&lt;/b&gt; and is never shared with third parties.&lt;br/&gt;&lt;br/&gt;&lt;b&gt;What we collect:&lt;/b&gt;&lt;br/&gt;• Package names, app names, and icons&lt;br/&gt;• Launch intent information&lt;br/&gt;&lt;br/&gt;&lt;b&gt;How we use it:&lt;/b&gt;&lt;br/&gt;• Displaying and searching your apps&lt;br/&gt;• Enabling app organization features&lt;br/&gt;By clicking \'Accept\', you agree to these data practices.</string>
+    <string name="data_disclosure_links">&lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
     <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
-    <string name="i_agree">I Agree</string>
-    <string name="decline">Decline</string>
+    <string name="i_agree">Accept &amp; Continue</string>
+    <string name="decline">Exit</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
     <string name="accessibility_permission_message">To lock the screen and keep fingerprint unlock working, please enable Launch in Accessibility settings.</string>
 
@@ -150,12 +162,6 @@ No personal data is collected, stored, or shared with third parties.</string>
     <string name="noise_button_disable">Disable</string>
     <string name="noise_button_enable">Enable</string>
 
-    <!-- Onboarding Strings -->
-    <string name="onboarding_get_started">Get Started</string>
-    <string name="onboarding_start_permissions">Start Permissions</string>
-    <string name="onboarding_skip">Skip</string>
-    <string name="onboarding_continue">Continue</string>
-    <string name="onboarding_launch_app">Launch App</string>
     <string name="create_workspace">Create Workspace</string>
     <string name="update_workspace">Update Workspace</string>
     <string name="workspace_edit_description">Edit workspace</string>

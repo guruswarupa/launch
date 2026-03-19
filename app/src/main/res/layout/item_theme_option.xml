@@ -47,13 +47,6 @@
                 android:shadowDx="1"
                 android:shadowDy="1"
                 android:shadowRadius="2"/>
-
-            <View
-                android:id="@+id/theme_color_indicator"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:layout_marginTop="4dp"
-                android:background="@drawable/circular_background" />
         </LinearLayout>
     </FrameLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -163,17 +163,6 @@ Example voice commands:
 
 ---
 
-🎓 **Onboarding & Interactive Tutorial**
-
-* First-run setup wizard
-* Guided feature introduction
-* Step-by-step walkthrough
-* Smart navigation & auto highlights
-* Resume if interrupted
-* Skip anytime
-
----
-
 🤏 **Gestures**
 
 * Tap widgets for quick actions

@@ -69,12 +69,11 @@ class FocusModeApplier(
                     appListManager.filterAppsByMode(fullAppList, false, workspaceMode)
                 }
 
-                val finalFilteredApps = appListManager.applyFavoritesFilter(filteredOrSortedApps, workspaceMode)
+                val finalFilteredApps = appListManager.applyFavoritesFilter(filteredOrSortedApps)
                 val sortedFinalList = appListManager.sortAppsAlphabetically(finalFilteredApps)
                 
                 // Inject separators to keep list consistent with main loader
-                val isGridMode = sharedPreferences?.getString("view_preference", "list") == "grid"
-                val listWithSeparators = appListManager.addSeparators(sortedFinalList, isGridMode)
+                val listWithSeparators = appListManager.addSeparators(sortedFinalList)
 
                 // Update UI on main thread
                 activity.runOnUiThread {

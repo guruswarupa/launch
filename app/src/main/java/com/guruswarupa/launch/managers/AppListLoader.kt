@@ -1,6 +1,5 @@
 package com.guruswarupa.launch.managers
 
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Handler
@@ -29,6 +28,7 @@ class AppListLoader(
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
     private val cacheManager: CacheManager?,
+    private val webAppManager: WebAppManager,
     private val backgroundExecutor: Executor,
     private val handler: Handler,
     private val recyclerView: RecyclerView,
@@ -103,19 +103,20 @@ class AppListLoader(
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
-                    val cachedFinalList = appListManager.filterAndPrepareApps(cachedApps, focusMode, workspaceMode)
+                    val cachedAppsWithWebApps = appendWebApps(cachedApps)
+                    val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                     
                     if (cachedFinalList.isNotEmpty() && adapter != null) {
                         val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                         
                         handler.post {
                             // Pass false as isFinal because version check is pending
-                            onAppListUpdated?.invoke(sorted, cachedApps, false)
+                            onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                         }
                         
-                        // Verify version in background (non-blocking) - use list-based check to avoid re-querying PM
+                        // Verify version in background (non-blocking)
                         safeExecute {
-                            if (!cacheManager.isVersionCurrentWithList(cachedApps)) {
+                            if (!cacheManager.isVersionCurrent()) {
                                 handler.post {
                                     if (!activity.isFinishing && !activity.isDestroyed) {
                                         loadApps(forceRefresh = false, fullAppList, appList, adapter) // Refresh without clearing cache
@@ -141,14 +142,15 @@ class AppListLoader(
                 val focusMode = appDockManager.getCurrentMode()
                 val workspaceMode = appDockManager.isWorkspaceModeActive()
                 
-                val cachedFinalList = appListManager.filterAndPrepareApps(cachedUnsortedList!!, focusMode, workspaceMode)
+                val cachedAppsWithWebApps = appendWebApps(cachedUnsortedList!!)
+                val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                 
                 if (cachedFinalList.isNotEmpty() && adapter != null) {
                     val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
                     
                     handler.post {
                         // Pass false as isFinal
-                        onAppListUpdated?.invoke(sorted, cachedUnsortedList!!, false)
+                        onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                     }
                 }
             } catch (_: Exception) {
@@ -181,13 +183,31 @@ class AppListLoader(
                     (currentTime - lastCacheTime) < cacheDuration) {
                     cachedUnsortedList!!
                 } else {
-                    val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                    }
-                    val rawList = packageManager.queryIntentActivities(mainIntent, 0)
+                    // Optimization #1: Use getInstalledApplications instead of queryIntentActivities
+                    // This is significantly faster on most Android versions
+                    val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+                    val list = mutableListOf<ResolveInfo>()
                     
-                    // Deduplicate results from PackageManager
-                    val list = rawList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+                    for (app in installedApps) {
+                        try {
+                            // Only include enabled apps with launch intents
+                            if (!app.enabled) continue
+                            
+                            val launchIntent = packageManager.getLaunchIntentForPackage(app.packageName)
+                            if (launchIntent != null) {
+                                val resolveInfo = ResolveInfo()
+                                // Create a dummy ActivityInfo since we only need package and class name
+                                val activityInfo = android.content.pm.ActivityInfo()
+                                activityInfo.packageName = app.packageName
+                                activityInfo.name = launchIntent.component?.className ?: ""
+                                activityInfo.applicationInfo = app
+                                resolveInfo.activityInfo = activityInfo
+                                list.add(resolveInfo)
+                            }
+                        } catch (_: Exception) {
+                            // Skip apps that fail to resolve launch intent
+                        }
+                    }
                     
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
@@ -207,7 +227,9 @@ class AppListLoader(
                     list
                 }
                 
-                if (unsortedList.isEmpty()) {
+                val fullList = appendWebApps(unsortedList)
+
+                if (fullList.isEmpty()) {
                     handler.post {
                         if (appList.isEmpty()) {
                             Toast.makeText(activity, "No apps found!", Toast.LENGTH_SHORT).show()
@@ -219,13 +241,9 @@ class AppListLoader(
                     val workspaceMode = appListManager.getWorkspaceMode()
                     
                     // STEP 1: Fast single-pass filtering without expensive operations
-                    val finalAppList = appListManager.filterAndPrepareApps(unsortedList, focusMode, workspaceMode)
+                    val finalAppList = appListManager.filterAndPrepareApps(fullList, focusMode, workspaceMode)
                     
                     // STEP 2: Sort using cached metadata for instant sorted display
-                    // This ensures all apps are shown, just sorted using cache (fast)
-                    val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
-                    
-                    // Use sorting with favorites at the top
                     val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
                     
                     // Show sorted list immediately (using cache for sorting)
@@ -235,7 +253,7 @@ class AppListLoader(
                         }
                         
                         // Show list immediately with cached sorting to prevent freeze
-                        onAppListUpdated?.invoke(initiallySorted, unsortedList, false)
+                        onAppListUpdated?.invoke(initiallySorted, fullList, false)
                         
                         // Optimize: Use existing adapter instead of creating new one
                         if (adapter == null) {
@@ -334,5 +352,27 @@ class AppListLoader(
     fun clearCache() {
         cachedUnsortedList = null
         lastCacheTime = 0L
+    }
+
+    private fun appendWebApps(installedApps: List<ResolveInfo>): List<ResolveInfo> {
+        val webApps = webAppManager.getWebApps()
+        if (webApps.isEmpty()) return installedApps
+
+        val fullList = ArrayList(installedApps)
+        val now = System.currentTimeMillis()
+        webApps.forEach { entry ->
+            val resolveInfo = webAppManager.createResolveInfo(entry)
+            cacheManager?.updateMetadataCache(
+                resolveInfo.activityInfo.packageName,
+                AppMetadata(
+                    packageName = resolveInfo.activityInfo.packageName,
+                    activityName = resolveInfo.activityInfo.name,
+                    label = entry.name,
+                    lastUpdated = now
+                )
+            )
+            fullList.add(resolveInfo)
+        }
+        return fullList
     }
 }

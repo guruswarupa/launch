@@ -86,13 +86,13 @@ class WidgetConfigAdapter(
     }
     
     private fun loadPreviewImage(holder: WidgetViewHolder, widget: WidgetConfigurationManager.WidgetInfo) {
-        // Show loading state
-        holder.previewImage.setImageResource(android.R.color.transparent)
+        // Show loading state - clear drawable completely
+        holder.previewImage.setImageDrawable(null)
         holder.loadingProgress.visibility = View.VISIBLE
         
         previewManager.generatePreview(widget.id, widget.name) { bitmap ->
             holder.loadingProgress.visibility = View.GONE
-            if (bitmap != null) {
+            if (bitmap != null && !bitmap.isRecycled) {
                 holder.previewImage.setImageBitmap(bitmap)
             } else {
                 // Show placeholder if preview generation failed

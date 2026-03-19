@@ -72,19 +72,6 @@
         android:theme="@style/Theme.Launch"
         android:networkSecurityConfig="@xml/network_security_config">
         
-
-        <activity
-            android:name=".ui.activities.OnboardingActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Launch"
-            android:screenOrientation="fullSensor"
-            android:excludeFromRecents="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
         <activity
             android:name=".ui.activities.FocusModeConfigActivity"
             android:exported="false"
@@ -109,6 +96,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
@@ -120,7 +108,6 @@
             android:excludeFromRecents="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
@@ -129,11 +116,9 @@
             android:exported="true"
             android:theme="@style/Theme.Launch.Settings"
             android:label="@string/vault_app_name"
-            android:icon="@drawable/ic_vault_icon"
             android:excludeFromRecents="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
@@ -142,6 +127,20 @@
             android:exported="false"
             android:theme="@style/Theme.Launch.Settings"
             android:label=""
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".ui.activities.WebAppActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:label="@string/app_name"
+            android:launchMode="standard"
+            android:autoRemoveFromRecents="false" />
+
+        <activity
+            android:name=".ui.activities.WebAppSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
 
         <service
@@ -313,6 +312,12 @@
 
         <activity
             android:name=".ui.activities.WidgetConfigurationActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".ui.activities.AppTimerManagementActivity"
             android:exported="false"
             android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />

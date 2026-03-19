@@ -19,6 +19,8 @@ import android.widget.AutoCompleteTextView
 import android.widget.ImageView
 import android.widget.PopupMenu
 import android.graphics.drawable.Drawable
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -30,12 +32,19 @@ import java.io.File
 import java.util.concurrent.*
 import androidx.core.content.FileProvider
 import android.content.ComponentName
+import android.os.Handler
+import android.os.Looper
+import androidx.core.view.size
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.managers.WebAppIconFetcher
 import com.guruswarupa.launch.managers.TypographyManager
+import com.guruswarupa.launch.managers.WebAppManager
 import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.models.AppMetadata
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.ui.activities.WebAppActivity
+import com.guruswarupa.launch.ui.activities.WebAppSettingsActivity
 import com.google.android.material.shape.ShapeAppearanceModel
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.RelativeCornerSize
@@ -65,7 +74,8 @@ class AppAdapter(
         
         private val SPECIAL_PACKAGE_NAMES = setOf(
             "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result",
-            "file_result", "settings_result", "system_settings_result"
+            "file_result", "settings_result", "system_settings_result",
+            "launcher_settings_shortcut", "launcher_vault_shortcut"
         )
         
         private const val PRIORITY_HIGH = 100
@@ -75,26 +85,96 @@ class AppAdapter(
     }
 
     private val usageStatsManager = AppUsageStatsManager(activity)
+    
     private val iconCache = ConcurrentHashMap<String, Drawable>()
     private val labelCache = ConcurrentHashMap<String, String>()
     private val specialAppIconCache = ConcurrentHashMap<String, Drawable>()
     private val contactPhotoCache = ConcurrentHashMap<String, Drawable>()
     private val usageCache = ConcurrentHashMap<String, String>()
+    
     private val executor = Executors.newSingleThreadExecutor()
     private var itemsRendered = 0
+    private var isFastScrolling = false
+    private var fastScrollDebounceHandler = Handler(Looper.getMainLooper())
+    private var fastScrollDebounceRunnable: Runnable? = null
     
     private val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
     private var currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
+    private var grayscaleIconsEnabled = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
+    
+    /**
+     * Called by FastScroller when fast scrolling starts/stops.
+     */
+    fun setFastScrollingState(isScrolling: Boolean) {
+        isFastScrolling = isScrolling
+        
+        // Cancel any pending debounce
+        fastScrollDebounceRunnable?.let { fastScrollDebounceHandler.removeCallbacks(it) }
+        
+        if (!isScrolling) {
+            // After fast scrolling stops, wait a bit then refresh visible icons
+            fastScrollDebounceRunnable = Runnable {
+                forceRefreshVisibleIcons()
+            }
+            fastScrollDebounceHandler.postDelayed(fastScrollDebounceRunnable!!, 100)
+        }
+    }
+    
+    /**
+     * Forces refresh of currently visible icons after fast scrolling stops.
+     */
+    private fun forceRefreshVisibleIcons() {
+        // This will be called from FastScroller via forceRebindViewHolder
+        // The actual refresh happens when FastScroller calls forceRebindViewHolder for each visible item
+    }
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
         override fun run() = action.run()
         override fun compareTo(other: PriorityRunnable): Int = other.priority.compareTo(this.priority)
     }
+    
+    // Wrapper task that can be tracked and cancelled - implements Comparable for PriorityBlockingQueue
+    private class TrackedTask(
+        private val priorityRunnable: PriorityRunnable
+    ) : Runnable, Comparable<TrackedTask>, Future<Boolean> {
+        @Volatile private var isDone = false
+        @Volatile private var isCancelled = false
+        
+        override fun run() {
+            try {
+                priorityRunnable.run()
+            } finally {
+                isDone = true
+            }
+        }
+        
+        override fun compareTo(other: TrackedTask): Int {
+            // Delegate comparison to the wrapped PriorityRunnable
+            return this.priorityRunnable.compareTo(other.priorityRunnable)
+        }
+        
+        override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+            if (isDone || isCancelled) return false
+            isCancelled = true
+            return true
+        }
+        
+        override fun isCancelled(): Boolean = isCancelled
+        override fun isDone(): Boolean = isDone
+        
+        // These methods are not needed for our use case but required by Future interface
+        override fun get(): Boolean? = null
+        override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
+    }
+    
+    // Track pending tasks per package to avoid redundant work and save RAM
+    private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
+    private val pendingLabelTasks = ConcurrentHashMap<String, Future<*>>()
 
     private val iconPreloadExecutor = ThreadPoolExecutor(
         2, 2, 0L, TimeUnit.MILLISECONDS,
-        PriorityBlockingQueue<Runnable>()
+        PriorityBlockingQueue()
     )
     
     fun clearUsageCache() {
@@ -104,7 +184,8 @@ class AppAdapter(
     fun clearContactPhotoCache() {
         contactPhotoCache.clear()
     }
-
+    
+    @SuppressLint("NotifyDataSetChanged")
     fun updateIconStyle(style: String) {
         currentIconStyle = style
         (context as? Activity)?.runOnUiThread {
@@ -112,10 +193,39 @@ class AppAdapter(
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     fun updateIconSize(size: Int) {
         currentIconSize = size
         (context as? Activity)?.runOnUiThread {
             notifyDataSetChanged()
+        }
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun updateGrayscaleIcons(enabled: Boolean) {
+        grayscaleIconsEnabled = enabled
+        (context as? Activity)?.runOnUiThread {
+            notifyDataSetChanged()
+        }
+    }
+
+    private fun applyIconVisualState(packageName: String, imageView: ImageView?) {
+        if (imageView == null) return
+
+        val overDailyLimit = packageName !in SPECIAL_PACKAGE_NAMES &&
+            packageName != SEPARATOR_PACKAGE &&
+            !WebAppManager.isWebAppPackage(packageName) &&
+            activity.appTimerManager.isAppOverDailyLimit(packageName)
+
+        if (grayscaleIconsEnabled || overDailyLimit) {
+            val matrix = ColorMatrix().apply { setSaturation(0f) }
+            imageView.colorFilter = ColorMatrixColorFilter(matrix)
+            imageView.alpha = if (overDailyLimit) 0.5f else 0.72f
+        } else {
+            imageView.colorFilter = null
+            imageView.clearColorFilter()
+            imageView.alpha = 1f
+            imageView.drawable?.clearColorFilter()
         }
     }
 
@@ -165,6 +275,7 @@ class AppAdapter(
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
         if (packageName == SEPARATOR_PACKAGE) return ""
+        if (WebAppManager.isWebAppPackage(packageName)) return appInfo.activityInfo.name ?: ""
         if (packageName in SPECIAL_PACKAGE_NAMES) {
             return appInfo.activityInfo.name ?: ""
         }
@@ -208,6 +319,19 @@ class AppAdapter(
                 executor.execute { preloadIcons(newItems.filter { it.activityInfo.packageName != SEPARATOR_PACKAGE }) }
             }
         }
+
+    }
+    
+    /**
+     * Forces a rebind of a view holder to refresh icon loading.
+     * Called after fast scrolling stops to ensure visible icons are properly loaded.
+     */
+    fun forceRebindViewHolder(viewHolder: ViewHolder, position: Int) {
+        if (position < 0 || position >= appList.size) return
+        
+        // Call onBindViewHolder to refresh the view
+        // This will check the cache and load icons if they're now available
+        onBindViewHolder(viewHolder, position)
     }
     
     private class AppListDiffCallback(
@@ -237,14 +361,16 @@ class AppAdapter(
         for (app in immediateLoad) {
             submitIconLoadTask(app, PRIORITY_LOW)
         }
-        
+
         val remainingApps = apps.drop(30)
-        executor.execute {
-            for (batch in remainingApps.chunked(20)) {
-                for (app in batch) {
-                    submitIconLoadTask(app, PRIORITY_BACKGROUND)
+        if (!executor.isShutdown) {
+            executor.execute {
+                for (batch in remainingApps.chunked(20)) {
+                    for (app in batch) {
+                        submitIconLoadTask(app, PRIORITY_BACKGROUND)
+                    }
+                    try { Thread.sleep(50) } catch (_: InterruptedException) {}
                 }
-                try { Thread.sleep(50) } catch (_: InterruptedException) {}
             }
         }
     }
@@ -257,16 +383,26 @@ class AppAdapter(
             if (holder != null && holder.appIcon != null && iconCache.containsKey(packageName)) {
                 val icon = iconCache[packageName]
                 (context as? Activity)?.runOnUiThread {
-                    if (holder.bindingAdapterPosition == position) {
+                    // Robust verification: check position, tag, and view identity
+                    val currentPosition = holder.bindingAdapterPosition
+                    val currentTag = holder.itemView.tag
+                    if (currentPosition != RecyclerView.NO_POSITION && 
+                        currentPosition == position && 
+                        currentTag != null && 
+                        currentTag.toString() == packageName) {
                         holder.appIcon.setImageDrawable(icon)
-                        activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
+                        applyIconVisualState(packageName, holder.appIcon)
                     }
                 }
             }
             return
         }
         
-        iconPreloadExecutor.execute(PriorityRunnable(priority) {
+        // Cancel any pending task for this package to avoid redundant work
+        pendingIconTasks[packageName]?.cancel(true)
+        
+        // Use execute instead of submit to avoid FutureTask wrapping (PriorityBlockingQueue needs Comparable)
+        val priorityRunnable = PriorityRunnable(priority) {
             try {
                 if (!iconCache.containsKey(packageName)) {
                     val icon = app.loadIcon(activity.packageManager)
@@ -274,15 +410,38 @@ class AppAdapter(
                     
                     if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
-                            if (holder.bindingAdapterPosition == position) {
+                            // Extra robust verification during fast scrolling
+                            // Check: position, tag, and that the view hasn't been recycled
+                            val currentPosition = holder.bindingAdapterPosition
+                            val currentTag = holder.itemView.tag
+                            
+                            // Only update if ALL checks pass:
+                            // 1. Position is valid
+                            // 2. Position hasn't changed
+                            // 3. Tag matches package name (view wasn't recycled for different app)
+                            // 4. Tag is not null (view is properly initialized)
+                            if (currentPosition != RecyclerView.NO_POSITION && 
+                                currentPosition == position && 
+                                currentTag != null && 
+                                currentTag.toString() == packageName) {
                                 holder.appIcon.setImageDrawable(icon)
-                                activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon)
+                                applyIconVisualState(packageName, holder.appIcon)
                             }
                         }
                     }
                 }
             } catch (_: Exception) {}
-        })
+        }
+        
+        // Track with a wrapper that we can cancel
+        val trackedTask = TrackedTask(priorityRunnable)
+        iconPreloadExecutor.execute(trackedTask)
+        pendingIconTasks[packageName] = trackedTask
+        
+        // Clean up completed/cancelled tasks periodically
+        if (pendingIconTasks.size > 100) {
+            pendingIconTasks.entries.removeAll { it.value.isDone }
+        }
     }
 
     private fun preloadNextIcons(startPosition: Int, endPosition: Int) {
@@ -293,7 +452,7 @@ class AppAdapter(
         } catch (_: Exception) { return }
         for (app in appsToPreload) { 
             if (app.activityInfo.packageName != SEPARATOR_PACKAGE) {
-                submitIconLoadTask(app, PRIORITY_MEDIUM) 
+                submitIconLoadTask(app, PRIORITY_MEDIUM)
             }
         }
     }
@@ -323,22 +482,50 @@ class AppAdapter(
             return
         }
 
-        // Apply icon shape style programmatically
-        holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
-        
-        // Apply icon size
-        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
-        val params = holder.appIcon?.layoutParams
-        if (params != null) {
-            params.width = sizeInPx
-            params.height = sizeInPx
-            holder.appIcon.layoutParams = params
+        if (WebAppManager.isWebAppPackage(packageName)) {
+            bindWebApp(holder, appInfo, packageName)
+            return
         }
-
+        
+        // Only apply expensive operations if view is being recycled (has old data)
+        val needsRefresh = holder.itemView.tag != null && holder.itemView.tag != packageName
+        
+        if (needsRefresh) {
+            // Re-apply typography only when needed
+            TypographyManager.applyToView(holder.itemView)
+            
+            // Apply icon shape style programmatically
+            holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
+        }
+        
+        // Always apply icon size to ensure correct display
+        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
+        val currentParams = holder.appIcon?.layoutParams
+        if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
+            currentParams.width = sizeInPx
+            currentParams.height = sizeInPx
+            holder.appIcon.layoutParams = currentParams
+            holder.appIcon.requestLayout()
+        }
+        
+        if (needsRefresh) {
+            // Clear old icon immediately when recycling to prevent showing wrong icons
+            holder.appIcon?.setImageDrawable(null)
+        }
+        
         holder.appIcon?.background = null
         holder.itemView.elevation = 0f
+        // Tag the view with package name to track correct icon assignment during recycling
+        holder.itemView.tag = packageName
 
-        holder.appName?.visibility = View.VISIBLE
+        // Control app name visibility based on preference in grid mode
+        if (isGridMode) {
+            val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+            holder.appName?.visibility = if (showAppNamesInGrid) View.VISIBLE else View.GONE
+        } else {
+            holder.appName?.visibility = View.VISIBLE
+        }
         holder.appUsageTime?.visibility = View.GONE
 
         when (packageName) {
@@ -347,7 +534,7 @@ class AppAdapter(
                 val cachedPhoto = contactPhotoCache[contactName]
                 if (cachedPhoto != null) {
                     holder.appIcon?.setImageDrawable(cachedPhoto)
-                } else {
+                } else if (holder.itemView.tag.toString() != contactName) {
                     holder.appIcon?.setImageResource(R.drawable.ic_person)
                     executor.execute {
                         try {
@@ -359,7 +546,10 @@ class AppAdapter(
                                 if (drawable != null) {
                                     contactPhotoCache[contactName] = drawable
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(drawable)
+                                        if (holder.itemView.tag.toString() == contactName) { // Verify with tag
+                                            holder.appIcon?.setImageDrawable(drawable)
+                                            applyIconVisualState(packageName, holder.appIcon)
+                                        }
                                     }
                                 }
                             }
@@ -384,7 +574,10 @@ class AppAdapter(
                             val icon = activity.packageManager.getApplicationIcon("com.android.vending")
                             specialAppIconCache["com.android.vending"] = icon
                             (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon?.setImageDrawable(icon)
+                                    applyIconVisualState(packageName, holder.appIcon)
+                                }
                             }
                         } catch (_: Exception) {}
                     }
@@ -408,7 +601,10 @@ class AppAdapter(
                             val icon = activity.packageManager.getApplicationIcon("com.google.android.apps.maps")
                             specialAppIconCache["com.google.android.apps.maps"] = icon
                             (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                if (holder.bindingAdapterPosition == position) {
+                                    holder.appIcon?.setImageDrawable(icon)
+                                    applyIconVisualState(packageName, holder.appIcon)
+                                }
                             }
                         } catch (_: Exception) {}
                     }
@@ -442,14 +638,20 @@ class AppAdapter(
                                 val icon = activity.packageManager.getApplicationIcon("app.revanced.android.youtube")
                                 specialAppIconCache["app.revanced.android.youtube"] = icon
                                 (context as? Activity)?.runOnUiThread {
-                                    if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                    if (holder.bindingAdapterPosition == position) {
+                                        holder.appIcon?.setImageDrawable(icon)
+                                        applyIconVisualState(packageName, holder.appIcon)
+                                    }
                                 }
                             } catch (_: Exception) {
                                 try {
                                     val icon = activity.packageManager.getApplicationIcon("com.google.android.youtube")
                                     specialAppIconCache["com.google.android.youtube"] = icon
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.bindingAdapterPosition == position) holder.appIcon?.setImageDrawable(icon)
+                                        if (holder.bindingAdapterPosition == position) {
+                                            holder.appIcon?.setImageDrawable(icon)
+                                            applyIconVisualState(packageName, holder.appIcon)
+                                        }
                                     }
                                 } catch (_: Exception) {}
                             }
@@ -505,8 +707,8 @@ class AppAdapter(
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
-                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
-                    activity.startActivity(intent ?: Intent(Settings.ACTION_SETTINGS))
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(settingAction)
+                    activity.startActivity(intent)
                     searchBox.text.clear()
                 }
             }
@@ -516,8 +718,8 @@ class AppAdapter(
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
-                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(activity, settingAction)
-                    activity.startActivity(intent ?: Intent(Settings.ACTION_SETTINGS))
+                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(settingAction)
+                    activity.startActivity(intent)
                     searchBox.text.clear()
                 }
             }
@@ -547,6 +749,30 @@ class AppAdapter(
                 holder.appName?.text = appInfo.activityInfo.name
             }
 
+            "launcher_settings_shortcut" -> {
+                holder.appIcon?.setImageResource(R.drawable.ic_settings)
+                holder.appName?.text = activity.getString(R.string.settings_app_name)
+                holder.itemView.setOnClickListener {
+                    val settingsIntent = Intent(activity, com.guruswarupa.launch.ui.activities.SettingsActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                    activity.startActivity(settingsIntent)
+                    searchBox.text.clear()
+                }
+            }
+
+            "launcher_vault_shortcut" -> {
+                holder.appIcon?.setImageResource(R.drawable.ic_vault_icon)
+                holder.appName?.text = activity.getString(R.string.vault_app_name)
+                holder.itemView.setOnClickListener {
+                    val vaultIntent = Intent(activity, com.guruswarupa.launch.ui.activities.EncryptedVaultActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                    activity.startActivity(vaultIntent)
+                    searchBox.text.clear()
+                }
+            }
+
             else -> {
                 // Special handling for internal launcher activities to ensure correct names
                 val activityName = appInfo.activityInfo.name
@@ -565,10 +791,12 @@ class AppAdapter(
                             val cachedIcon = iconCache[packageName]
                             if (cachedIcon != null) {
                                 holder.appIcon?.setImageDrawable(cachedIcon)
-                                activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
+                                applyIconVisualState(packageName, holder.appIcon)
                             } else {
                                 holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
-                                submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
+                                // Use highest priority for visible items
+                                val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
+                                submitIconLoadTask(appInfo, priority, holder, position)
                             }
                         }
                     }
@@ -595,12 +823,15 @@ class AppAdapter(
                     val cachedIcon = iconCache[packageName]
                     if (cachedIcon != null) {
                         holder.appIcon?.setImageDrawable(cachedIcon)
-                        activity.appTimerManager.applyGrayscaleIfOverLimit(packageName, holder.appIcon!!)
+                        applyIconVisualState(packageName, holder.appIcon)
                     } else {
                         holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
-                        submitIconLoadTask(appInfo, PRIORITY_HIGH, holder, position)
+                        val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
+                        submitIconLoadTask(appInfo, priority, holder, position)
                     }
                 }
+
+                applyIconVisualState(packageName, holder.appIcon)
                 
                 if (position < appList.size - 1 && position % 5 == 0) {
                     preloadNextIcons(position + 1, minOf(position + 11, appList.size))
@@ -623,8 +854,6 @@ class AppAdapter(
                         Intent().apply {
                             component = ComponentName(packageName, appInfo.activityInfo.name)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            // Remove FLAG_ACTIVITY_CLEAR_TOP and others that might cause restart
-                            // Only use NEW_TASK for independent launch
                         }
                     } else {
                         activity.packageManager.getLaunchIntentForPackage(packageName)
@@ -684,29 +913,62 @@ class AppAdapter(
     override fun getItemCount(): Int = appList.size
 
     private fun loadLabelAsync(holder: ViewHolder, position: Int, appInfo: ResolveInfo, packageName: String) {
-        executor.execute {
-            try {
-                val label = appInfo.loadLabel(activity.packageManager).toString()
-                labelCache[packageName] = label
+        if (labelCache.containsKey(packageName)) return // Already cached
+        
+        // Cancel any pending label task for this package
+        pendingLabelTasks[packageName]?.cancel(true)
+        
+        // Use a Runnable wrapper that we can track
+        val labelTask = object : Runnable, Future<Boolean> {
+            @Volatile private var isDone = false
+            @Volatile private var isCancelled = false
+            
+            override fun run() {
                 try {
-                    activity.cacheManager.updateMetadataCache(packageName,
-                        AppMetadata(packageName, appInfo.activityInfo.name, label, System.currentTimeMillis())
-                    )
-                } catch (_: Exception) {}
-                
-                (context as? Activity)?.runOnUiThread {
-                    if (holder.bindingAdapterPosition == position) holder.appName?.text = label else notifyItemChanged(position)
-                }
-            } catch (_: Exception) {
-                val fallbackLabel = packageName
-                labelCache[packageName] = fallbackLabel
-                (context as? Activity)?.runOnUiThread {
-                    if (holder.bindingAdapterPosition == position) holder.appName?.text = fallbackLabel else notifyItemChanged(position)
+                    val label = appInfo.loadLabel(activity.packageManager).toString()
+                    labelCache[packageName] = label
+                    try {
+                        activity.cacheManager.updateMetadataCache(packageName,
+                            AppMetadata(packageName, appInfo.activityInfo.name, label, System.currentTimeMillis())
+                        )
+                    } catch (_: Exception) {}
+                    
+                    (context as? Activity)?.runOnUiThread {
+                        if (holder.bindingAdapterPosition == position) holder.appName?.text = label else notifyItemChanged(position)
+                    }
+                } catch (_: Exception) {
+                    labelCache[packageName] = packageName
+                    (context as? Activity)?.runOnUiThread {
+                        if (holder.bindingAdapterPosition == position) holder.appName?.text =
+                            packageName else notifyItemChanged(position)
+                    }
+                } finally {
+                    isDone = true
                 }
             }
+            
+            override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+                if (isDone || isCancelled) return false
+                isCancelled = true
+                return true
+            }
+            
+            override fun isCancelled(): Boolean = isCancelled
+            override fun isDone(): Boolean = isDone
+            override fun get(): Boolean? = null
+            override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
+        }
+        
+        executor.execute(labelTask)
+        pendingLabelTasks[packageName] = labelTask
+        
+        // Clean up completed tasks periodically
+        if (pendingLabelTasks.size > 50) {
+            pendingLabelTasks.entries.removeAll { it.value.isDone }
         }
     }
 
+    @SuppressLint("NotifyDataSetChanged")
     private fun showAppContextMenu(view: View, packageName: String, appInfo: ResolveInfo) {
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
         popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
@@ -763,7 +1025,7 @@ class AppAdapter(
             }
         }
         
-        for (i in 0 until popupMenu.menu.size()) {
+        for (i in 0 until popupMenu.menu.size) {
             val item = popupMenu.menu.getItem(i)
             val itemTitle = item.title?.toString() ?: continue
             val spannable = android.text.SpannableString(itemTitle)
@@ -791,6 +1053,87 @@ class AppAdapter(
                 else -> false
             }
         }
+        popupMenu.show()
+        fixPopupMenuTextColors(popupMenu)
+    }
+
+    private fun showWebAppContextMenu(view: View, packageName: String, appInfo: ResolveInfo) {
+        val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
+        val textColor = ContextCompat.getColor(activity, R.color.text)
+        val appName = appInfo.activityInfo.name
+
+        popupMenu.menu.add(0, 200, 0, activity.getString(R.string.open_web_app))
+        popupMenu.menu.add(0, 201, 1, activity.getString(R.string.edit_web_app))
+        popupMenu.menu.add(0, 202, 2, activity.getString(R.string.open_in_browser))
+        popupMenu.menu.add(0, 203, 3, activity.getString(R.string.remove_web_app))
+        popupMenu.menu.add(
+            0,
+            204,
+            4,
+            if (activity.favoriteAppManager.isFavoriteApp(packageName)) {
+                activity.getString(R.string.remove_from_favorites_plain)
+            } else {
+                activity.getString(R.string.add_to_favorites_plain)
+            }
+        )
+        popupMenu.menu.add(
+            0,
+            205,
+            5,
+            if (activity.hiddenAppManager.isAppHidden(packageName)) {
+                activity.getString(R.string.unhide_app_plain)
+            } else {
+                activity.getString(R.string.hide_app_plain)
+            }
+        )
+
+        for (i in 0 until popupMenu.menu.size) {
+            val item = popupMenu.menu.getItem(i)
+            val spannable = android.text.SpannableString(item.title)
+            spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            item.title = spannable
+        }
+
+        popupMenu.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                200 -> {
+                    openWebApp(appInfo)
+                    true
+                }
+                201 -> {
+                    activity.startActivity(Intent(activity, WebAppSettingsActivity::class.java))
+                    true
+                }
+                202 -> {
+                    val url = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+                    if (url.isNotBlank()) {
+                        activity.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+                    }
+                    true
+                }
+                203 -> {
+                    val webApp = activity.webAppManager.getWebApp(packageName)
+                    if (webApp != null) {
+                        activity.webAppManager.removeWebApp(webApp.id)
+                        Toast.makeText(activity, activity.getString(R.string.removed_web_app, appName), Toast.LENGTH_SHORT).show()
+                        activity.sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply {
+                            setPackage(activity.packageName)
+                        })
+                    }
+                    true
+                }
+                204 -> {
+                    toggleFavoriteApp(packageName, appInfo)
+                    true
+                }
+                205 -> {
+                    toggleHideApp(packageName, appInfo)
+                    true
+                }
+                else -> false
+            }
+        }
+
         popupMenu.show()
         fixPopupMenuTextColors(popupMenu)
     }
@@ -888,6 +1231,70 @@ class AppAdapter(
         }
     }
 
+    private fun bindWebApp(holder: ViewHolder, appInfo: ResolveInfo, packageName: String) {
+        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
+        val currentParams = holder.appIcon?.layoutParams
+        if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
+            currentParams.width = sizeInPx
+            currentParams.height = sizeInPx
+            holder.appIcon.layoutParams = currentParams
+            holder.appIcon.requestLayout()
+        }
+
+        holder.itemView.tag = packageName
+        holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
+        holder.appIcon?.setImageResource(R.drawable.ic_browser)
+        holder.appIcon?.background = null
+        holder.appName?.text = appInfo.activityInfo.name
+        holder.appUsageTime?.visibility = View.GONE
+        if (isGridMode) {
+            val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+            holder.appName?.visibility = if (showAppNamesInGrid) View.VISIBLE else View.GONE
+        } else {
+            holder.appName?.visibility = View.VISIBLE
+        }
+        applyIconVisualState(packageName, holder.appIcon)
+        val siteUrl = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+        if (siteUrl.isNotBlank()) {
+            WebAppIconFetcher.loadIcon(activity, siteUrl) { drawable ->
+                if (holder.itemView.tag == packageName && drawable != null) {
+                    holder.appIcon?.setImageDrawable(drawable)
+                    applyIconVisualState(packageName, holder.appIcon)
+                }
+            }
+        }
+
+        holder.itemView.setOnClickListener {
+            openWebApp(appInfo)
+            searchBox.text.clear()
+            activity.appSearchManager.filterAppsAndContacts("")
+        }
+        holder.itemView.setOnLongClickListener {
+            showWebAppContextMenu(holder.itemView, packageName, appInfo)
+            true
+        }
+    }
+
+    private fun openWebApp(appInfo: ResolveInfo) {
+        val name = appInfo.activityInfo.name
+        val url = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+        if (url.isBlank()) {
+            Toast.makeText(activity, R.string.web_app_load_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        activity.startActivity(
+            Intent(activity, WebAppActivity::class.java).apply {
+                putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, name)
+                putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
+                // Always create new task for each web app
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
+                         Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+            }
+        )
+    }
+
     private fun showContactChoiceDialog(contactName: String) {
         val phoneNumber = getPhoneNumberForContact(contactName)
         val photoUri = getPhotoUriForContact(contactName)
@@ -906,7 +1313,10 @@ class AppAdapter(
             }
         }
         val builder = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
+        
+        @SuppressLint("InflateParams")
         val titleView = LayoutInflater.from(activity).inflate(R.layout.dialog_contact_title, null)
+        
         titleView.findViewById<TextView>(R.id.contact_name).text = contactName
         titleView.findViewById<TextView>(R.id.contact_number).text = phoneNumber
         val photoImageView = titleView.findViewById<ImageView>(R.id.contact_photo)

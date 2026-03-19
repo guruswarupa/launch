@@ -30,11 +30,49 @@ class UsageStatsDisplayManager(
 ) {
     private var lastUpdateDate: String = ""
     private val weeklyLoadInProgress = AtomicBoolean(false)
+    private lateinit var permissionButton: Button
     
     init {
         // Setup weekly usage graph callback
         weeklyUsageGraph.onDaySelected = { day, appUsages ->
             showDailyUsageDialog(day, appUsages)
+        }
+        
+        // Initialize permission button
+        initializePermissionButton()
+    }
+    
+    private fun initializePermissionButton() {
+        permissionButton = activity.findViewById(R.id.request_usage_stats_permission_button)
+        permissionButton.setOnClickListener {
+            requestUsageStatsPermission()
+        }
+        
+        // Update button visibility based on permission status
+        updatePermissionButtonVisibility()
+    }
+    
+    private fun updatePermissionButtonVisibility() {
+        if (usageStatsManager.hasUsageStatsPermission()) {
+            permissionButton.visibility = android.view.View.GONE
+        } else {
+            permissionButton.visibility = android.view.View.VISIBLE
+        }
+    }
+    
+    private fun requestUsageStatsPermission() {
+        // Directly take to the permission page (no dialog needed since user clicked the button)
+        val intent = android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        activity.startActivity(intent)
+    }
+    
+    /**
+     * Refresh the permission button visibility (call after returning from settings)
+     */
+    fun refreshPermissionButton() {
+        updatePermissionButtonVisibility()
+        if (usageStatsManager.hasUsageStatsPermission()) {
+            loadWeeklyUsageData()
         }
     }
     

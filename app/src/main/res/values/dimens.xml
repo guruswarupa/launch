@@ -8,16 +8,6 @@
     <dimen name="dock_padding_horizontal">16dp</dimen>
     <dimen name="dock_padding_vertical">8dp</dimen>
     <dimen name="min_drawer_width">320dp</dimen>
-    <!-- Onboarding responsive dimensions -->
-    <dimen name="onboarding_recycler_height">400dp</dimen>
-    <dimen name="onboarding_recycler_min_height">300dp</dimen>
-    <dimen name="onboarding_recycler_max_height">500dp</dimen>
-    <dimen name="onboarding_workspaces_list_height">150dp</dimen>
-    <dimen name="onboarding_workspaces_list_min_height">100dp</dimen>
-    <dimen name="onboarding_workspaces_list_max_height">200dp</dimen>
-    <dimen name="onboarding_workspaces_apps_height">350dp</dimen>
-    <dimen name="onboarding_workspaces_apps_min_height">250dp</dimen>
-    <dimen name="onboarding_workspaces_apps_max_height">450dp</dimen>
     <!-- Search bar margin dimensions -->
     <dimen name="search_top_margin_when_widget_hidden">48dp</dimen>
     <dimen name="main_content_stack_top_padding">32dp</dimen>

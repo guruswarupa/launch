@@ -84,13 +84,19 @@ class PermissionsActivity : ComponentActivity() {
         list.add(PermItem("Contacts", "Search & call contacts", check(Manifest.permission.READ_CONTACTS), Manifest.permission.READ_CONTACTS))
         
         val storage = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
-        list.add(PermItem("Storage", "Access wallpapers", check(storage), storage))
+        list.add(PermItem("Files & Media", "Search files and media", check(storage), storage))
         
         if (Build.VERSION.SDK_INT >= 33) list.add(PermItem("Notifications", "Show widget alerts", check(Manifest.permission.POST_NOTIFICATIONS), Manifest.permission.POST_NOTIFICATIONS))
         list.add(PermItem("Microphone", "Voice search access", check(Manifest.permission.RECORD_AUDIO), Manifest.permission.RECORD_AUDIO))
         list.add(PermItem("Usage Stats", "App time tracking", hasUsageStats(), type = "USAGE"))
         list.add(PermItem("Overlay", "Screen dimming tools", Settings.canDrawOverlays(this), type = "OVERLAY"))
         list.add(PermItem("Accessibility", "Double tap lock", hasAccessibility(), type = "ACCESSIBILITY"))
+        
+        // Add activity recognition for Android 10+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            list.add(PermItem("Physical Activity", "Track steps and distance", check(Manifest.permission.ACTIVITY_RECOGNITION), Manifest.permission.ACTIVITY_RECOGNITION))
+        }
+        
         return list
     }
 
@@ -139,6 +145,16 @@ class PermissionsActivity : ComponentActivity() {
         val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
         val resolve = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
         return resolve?.activityInfo?.packageName == packageName
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // Refresh the permissions list to show updated state
+        setupPermissionsList()
     }
 
     private fun applyBackgroundTranslucency() {

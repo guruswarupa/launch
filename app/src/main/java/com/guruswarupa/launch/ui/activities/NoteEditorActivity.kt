@@ -71,17 +71,9 @@ class NoteEditorActivity : VaultBaseActivity() {
 
     private fun setupWallpaper() {
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
-        val overlayColorRes = if (isNightMode()) {
-            R.color.note_editor_overlay_dark
-        } else {
-            R.color.note_editor_overlay_light
-        }
+        // Unified overlay color (dark themed by default)
+        val overlayColorRes = R.color.note_editor_overlay
         wallpaperOverlay.setBackgroundColor(ContextCompat.getColor(this, overlayColorRes))
-    }
-
-    private fun isNightMode(): Boolean {
-        val uiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        return uiMode == Configuration.UI_MODE_NIGHT_YES
     }
 
     private fun updateHeaderTitle() {
