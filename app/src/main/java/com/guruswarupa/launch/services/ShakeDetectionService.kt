@@ -100,10 +100,9 @@ class ShakeDetectionService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Ensure foreground status is maintained if the system kills/restarts the service
-        // Although onCreate handles it, calling it here ensures the notification is updated
-        // with the correct service status if it was previously removed.
-        
+        // Always re-assert the foreground notification to satisfy the 5s requirement
+        startForegroundServiceStatus()
+
         try {
             applySensitivity()
 

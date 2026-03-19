@@ -10,6 +10,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.core.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.managers.*
@@ -275,7 +276,7 @@ class AppInitializer(private val activity: MainActivity) {
                 .initialize(handler)
             
             // Start app usage monitor for daily limits
-            startService(Intent(activity, AppUsageMonitor::class.java))
+            ContextCompat.startForegroundService(activity, Intent(activity, AppUsageMonitor::class.java))
             
             // Initialize background services through ServiceManager
             serviceManager.updateShakeDetectionService()
