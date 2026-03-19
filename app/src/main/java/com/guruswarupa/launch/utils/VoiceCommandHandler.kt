@@ -11,9 +11,9 @@ import android.widget.Toast
 import androidx.core.net.toUri
 import com.guruswarupa.launch.models.Constants
 
-/**
- * Handles voice search commands and executes appropriate actions
- */
+
+
+
 class VoiceCommandHandler(
     private val activity: androidx.fragment.app.FragmentActivity,
     private val packageManager: android.content.pm.PackageManager,
@@ -22,10 +22,10 @@ class VoiceCommandHandler(
     private val appList: List<ResolveInfo>
 ) {
     
-    /**
-     * Handle voice command and execute appropriate action.
-     * @return true if the command was recognized and handled locally, false otherwise.
-     */
+    
+
+
+
     fun handleCommand(command: String): Boolean {
         return when {
             command.startsWith("WhatsApp ", ignoreCase = true) -> {
@@ -67,7 +67,7 @@ class VoiceCommandHandler(
                 val contactName = command.substringAfter("call ", "").trim()
                 val phoneNumber = getPhoneNumberForContact(contactName)
                 phoneNumber?.let {
-                    // Use ACTION_DIAL instead of ACTION_CALL to avoid needing CALL_PHONE permission
+                    
                     val callIntent = Intent(Intent.ACTION_DIAL)
                     callIntent.data = "tel:$it".toUri()
                     activity.startActivity(callIntent)
@@ -97,7 +97,7 @@ class VoiceCommandHandler(
             command.startsWith("open ", ignoreCase = true) -> {
                 val appName = command.substringAfter("open ", "").trim()
                 if (appName.isNotEmpty()) {
-                    // Try exact match first, then container match
+                    
                     val matchingApp = appList.find { resolveInfo ->
                         val label = resolveInfo.loadLabel(packageManager).toString().lowercase()
                         label == appName.lowercase()
@@ -140,7 +140,7 @@ class VoiceCommandHandler(
                 if (locations.size == 2) {
                     val origin = locations[0].trim()
                     val destination = locations[1].trim()
-                    // Check if it's likely a navigation command (at least one location is not empty)
+                    
                     if (origin.isNotEmpty() || destination.isNotEmpty()) {
                         val uriString = "https://www.google.com/maps/dir/?api=1&origin=${Uri.encode(origin)}&destination=${Uri.encode(destination)}&travelmode=driving"
                         val mapIntent = Intent(Intent.ACTION_VIEW, uriString.toUri())

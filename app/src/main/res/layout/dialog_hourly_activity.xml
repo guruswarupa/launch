@@ -6,7 +6,7 @@
     android:padding="20dp"
     android:background="@drawable/widget_background">
 
-    <!-- Title -->
+    
     <TextView
         android:id="@+id/dialog_title"
         android:layout_width="match_parent"
@@ -18,7 +18,7 @@
         android:gravity="center"
         android:layout_marginBottom="16dp" />
 
-    <!-- Summary Stats -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -83,14 +83,14 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Chart -->
+    
     <com.guruswarupa.launch.ui.views.HourlyStepsChartView
         android:id="@+id/hourly_chart"
         android:layout_width="match_parent"
         android:layout_height="400dp"
         android:layout_marginBottom="16dp" />
 
-    <!-- Hourly Stats List -->
+    
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

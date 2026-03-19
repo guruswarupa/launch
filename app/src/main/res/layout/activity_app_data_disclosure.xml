@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/disclosure_wallpaper"
         android:layout_width="match_parent"
@@ -12,13 +12,13 @@
         android:scaleType="centerCrop"
         android:src="@android:color/black" />
 
-    <!-- Translucency Overlay -->
+    
     <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#99000000" />
 
-    <!-- Animated Welcome Section -->
+    
     <LinearLayout
         android:id="@+id/welcome_container"
         android:layout_width="match_parent"
@@ -53,7 +53,7 @@
             android:textAllCaps="true" />
     </LinearLayout>
 
-    <!-- Disclosure Content Container -->
+    
     <LinearLayout
         android:id="@+id/disclosure_root"
         android:layout_width="match_parent"
@@ -191,7 +191,7 @@
 
     </LinearLayout>
 
-    <!-- Import Page Container -->
+    
     <LinearLayout
         android:id="@+id/import_root"
         android:layout_width="match_parent"

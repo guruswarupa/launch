@@ -9,15 +9,15 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
-/**
- * Manages all broadcast receivers for the launcher
- */
+
+
+
 class BroadcastReceiverManager(
     private val activity: FragmentActivity,
     @Suppress("UNUSED_PARAMETER") private val sharedPreferences: android.content.SharedPreferences,
     private val onSettingsUpdated: () -> Unit,
     private val onNotificationsUpdated: () -> Unit,
-    private val onPackageChanged: (String?, Boolean) -> Unit, // packageName, isRemoved
+    private val onPackageChanged: (String?, Boolean) -> Unit, 
     private val onWallpaperChanged: () -> Unit,
     private val onBatteryChanged: () -> Unit,
     private val onActivityRecognitionPermissionGranted: () -> Unit = {},
@@ -105,19 +105,19 @@ class BroadcastReceiverManager(
         }
     }
     
-    /**
-     * Register all receivers
-     */
+    
+
+
     fun registerReceivers() {
-        // Settings update receiver
+        
         val settingsFilter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         registerReceiverCompat(settingsUpdateReceiver, settingsFilter, exported = false)
         
-        // Notification update receiver
+        
         val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
         registerReceiverCompat(notificationUpdateReceiver, notificationFilter, exported = false)
         
-        // Package receiver
+        
         val packageFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -126,19 +126,19 @@ class BroadcastReceiverManager(
         }
         registerReceiverCompat(packageReceiver, packageFilter, exported = true)
         
-        // Wallpaper change receiver
+        
         @Suppress("DEPRECATION")
         val wallpaperFilter = IntentFilter(Intent.ACTION_WALLPAPER_CHANGED)
         registerReceiverCompat(wallpaperChangeReceiver, wallpaperFilter, exported = true)
         
-        // Battery change receiver
+        
         registerReceiverCompat(batteryChangeReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED), exported = true)
         
-        // Activity recognition permission receiver
+        
         val activityRecognitionFilter = IntentFilter("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
         registerReceiverCompat(activityRecognitionPermissionReceiver, activityRecognitionFilter, exported = false)
 
-        // DND state change receiver
+        
         registerReceiverCompat(dndReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED), exported = true)
     }
 
@@ -156,9 +156,9 @@ class BroadcastReceiverManager(
         }
     }
     
-    /**
-     * Unregister all receivers
-     */
+    
+
+
     fun unregisterReceivers() {
         val receivers = listOf(
             settingsUpdateReceiver,
@@ -174,7 +174,7 @@ class BroadcastReceiverManager(
             try {
                 activity.unregisterReceiver(receiver)
             } catch (_: IllegalArgumentException) {
-                // Receiver was not registered
+                
             }
         }
     }

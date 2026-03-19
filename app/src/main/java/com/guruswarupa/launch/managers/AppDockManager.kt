@@ -87,10 +87,10 @@ class AppDockManager(
         
         pomodoroManager.resumeIfNeeded()
 
-        // Handle focus mode expiry
+        
         val focusEndTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
         if (isFocusMode && focusEndTime > 0 && System.currentTimeMillis() > focusEndTime) {
-            // Just update the state without calling methods that depend on MainActivity
+            
             isFocusMode = false
             sharedPreferences.edit {
                 putBoolean(focusModeKey, false)
@@ -98,13 +98,13 @@ class AppDockManager(
             }
         }
 
-        // Initialize dock with all components
+        
         refreshDock()
         
-        // Ensure workspace toggle is added
+        
         ensureWorkspaceToggle()
 
-        // Check if focus mode timer should be restored
+        
         if (isFocusMode) {
             val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
             if (endTime > System.currentTimeMillis()) {
@@ -114,14 +114,14 @@ class AppDockManager(
                     updateDndState(true)
                 }
             } else {
-                // Timer expired, disable focus mode
+                
                 disableFocusMode()
             }
         }
     }
 
     private fun ensureVaultButton() {
-        // Vault is now an app in the drawer
+        
     }
 
     private fun openVault() {
@@ -131,13 +131,13 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
-        ensureWorkspaceToggle()      // 1. Workspace toggle
-        ensureFocusModeToggle()      // 2. Focus mode
+        ensureWorkspaceToggle()      
+        ensureFocusModeToggle()      
         updateDockVisibility()
     }
     
     fun updateDockIcons() {
-        // Update all dock icons to match current theme
+        
         if (::focusModeToggle.isInitialized) {
             updateFocusModeIcon()
         }
@@ -174,7 +174,7 @@ class AppDockManager(
     private fun getGlassyBackground(): GradientDrawable {
         return GradientDrawable().apply {
             cornerRadius = 1000f
-            // Use same translucent black as widgets (#80000000)
+            
             setColor(Color.parseColor("#80000000"))
             setStroke(1, Color.parseColor("#40FFFFFF"))
         }
@@ -235,7 +235,7 @@ class AppDockManager(
                 }
             }
 
-            // Find the position after workspace toggle
+            
             var insertIndex = 1
             for (i in 0 until appDock.childCount) {
                 val child = appDock.getChildAt(i)
@@ -420,8 +420,8 @@ class AppDockManager(
                 if (isWorkspaceActive) {
                     val bg = GradientDrawable().apply {
                         cornerRadius = 1000f
-                        setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
-                        setStroke(2, Color.parseColor("#8FBCBB")) // Keep Nord7 stroke
+                        setColor(Color.parseColor("#80000000")) 
+                        setStroke(2, Color.parseColor("#8FBCBB")) 
                     }
                     container.background = bg
                 } else {
@@ -583,7 +583,7 @@ class AppDockManager(
             val isWork = state == PomodoroManager.STATE_WORK
             val bg = GradientDrawable().apply {
                 cornerRadius = 1000f
-                setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
+                setColor(Color.parseColor("#80000000")) 
                 setStroke(2, if (isWork) Color.parseColor("#BF616A") else Color.parseColor("#A3BE8C"))
             }
             container.background = bg
@@ -673,8 +673,8 @@ class AppDockManager(
             if (isFocusMode) {
                 val bg = GradientDrawable().apply {
                     cornerRadius = 1000f
-                    setColor(Color.parseColor("#80000000")) // Translucent black (50% alpha) to match widgets
-                    setStroke(2, Color.parseColor("#5E81AC")) // Keep Nord10 stroke
+                    setColor(Color.parseColor("#80000000")) 
+                    setStroke(2, Color.parseColor("#5E81AC")) 
                 }
                 container.background = bg
             } else {

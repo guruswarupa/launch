@@ -113,7 +113,7 @@ class ScreenRecordingService : Service() {
             screenDensity = metrics.densityDpi
         }
 
-        // Adjust dimensions to be even (required by some encoders)
+        
         if (screenWidth % 2 != 0) screenWidth--
         if (screenHeight % 2 != 0) screenHeight--
 
@@ -161,7 +161,7 @@ class ScreenRecordingService : Service() {
         val fileName = "ScreenRecord_$timeStamp.mp4"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Use MediaStore API (no MANAGE_EXTERNAL_STORAGE needed)
+            
             val contentValues = android.content.ContentValues().apply {
                 put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, fileName)
                 put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
@@ -191,7 +191,7 @@ class ScreenRecordingService : Service() {
                 prepare()
             }
         } else {
-            // Legacy fallback for pre-Q devices
+            
             val videoDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "LaunchRecordings")
             if (!videoDir.exists()) videoDir.mkdirs()
             val videoFile = File(videoDir, fileName)
@@ -230,7 +230,7 @@ class ScreenRecordingService : Service() {
         mediaProjection?.stop()
         mediaProjection = null
 
-        // Finalize MediaStore entry so the video is visible
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             recordingUri?.let { uri ->
                 try {

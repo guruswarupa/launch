@@ -12,7 +12,7 @@
     android:layout_marginBottom="6dp"
     android:padding="12dp">
 
-    <!-- Top row: Small app icon and time -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -40,7 +40,7 @@
             android:textSize="10sp" />
     </LinearLayout>
 
-    <!-- Big thumbnail - square with padding -->
+    
     <ImageView
         android:id="@+id/notification_big_picture"
         android:layout_width="match_parent"
@@ -52,7 +52,7 @@
         android:background="@color/card_background"
         android:visibility="gone" />
 
-    <!-- Media name below thumbnail -->
+    
     <TextView
         android:id="@+id/notification_title"
         android:layout_width="match_parent"
@@ -79,7 +79,7 @@
         android:gravity="center"
         android:visibility="gone" />
 
-    <!-- Centered action icons (smaller) -->
+    
     <LinearLayout
         android:id="@+id/notification_actions_container"
         android:layout_width="match_parent"
@@ -94,7 +94,7 @@
         android:paddingBottom="4dp">
     </LinearLayout>
 
-    <!-- Reply container (expanded) -->
+    
     <LinearLayout
         android:id="@+id/notification_reply_container"
         android:layout_width="match_parent"

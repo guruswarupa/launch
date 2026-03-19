@@ -21,8 +21,8 @@ class PomodoroManager(
         const val STATE_WORK = "work"
         const val STATE_BREAK = "break"
         
-        const val WORK_DURATION = 25 * 60 * 1000L // 25 minutes
-        const val BREAK_DURATION = 5 * 60 * 1000L // 5 minutes
+        const val WORK_DURATION = 25 * 60 * 1000L 
+        const val BREAK_DURATION = 5 * 60 * 1000L 
     }
 
     private var currentTimer: CountDownTimer? = null
@@ -109,14 +109,14 @@ class PomodoroManager(
         val currentTime = System.currentTimeMillis()
         
         if (currentTime >= endTime) {
-            // If it expired while app was away, transition to next state
+            
             if (state == STATE_WORK) {
                 startBreakSession()
             } else {
                 startWorkSession()
             }
         } else {
-            // Resume the current timer
+            
             startTimer(endTime - currentTime, state)
         }
     }

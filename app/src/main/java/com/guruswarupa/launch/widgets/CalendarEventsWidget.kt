@@ -57,7 +57,7 @@ class CalendarEventsWidget(
     private lateinit var calendarViewContainer: ViewGroup
     
     private val events: MutableList<CalendarEvent> = mutableListOf()
-    private val allEvents: MutableList<CalendarEvent> = mutableListOf() // All events for calendar view
+    private val allEvents: MutableList<CalendarEvent> = mutableListOf() 
     private lateinit var adapter: CalendarEventAdapter
     private var isCalendarView = false
     private var calendarView: CalendarEventsCalendarView? = null
@@ -71,7 +71,7 @@ class CalendarEventsWidget(
             if (isInitialized && hasCalendarPermission()) {
                 updateEvents()
             }
-            // Update every 5 minutes
+            
             handler.postDelayed(this, 300000)
         }
     }
@@ -105,11 +105,11 @@ class CalendarEventsWidget(
             toggleView()
         }
         
-        // Initialize calendar view
+        
         initializeCalendarView()
         
-        // Widget visibility is controlled by the widget configuration system
-        // Always show content when initialized (container visibility is controlled externally)
+        
+        
         if (hasCalendarPermission()) {
             setupWithPermission()
         } else {
@@ -140,12 +140,12 @@ class CalendarEventsWidget(
         
         val displayDate = parsedDate?.let { displayFormat.format(it) } ?: date
         
-        // Deduplicate events by title and date to avoid showing same event multiple times
-        // Festivals often appear in multiple calendars (Google, Samsung, etc.) with different event IDs
-        // So we deduplicate by title + date instead of event ID
+        
+        
+        
         val uniqueEvents = dayEvents.distinctBy { event ->
             val cal = Calendar.getInstance().apply { timeInMillis = event.startTime }
-            // Use title + date as unique key (normalize title to handle case differences)
+            
             "${event.title.lowercase().trim()}_${cal.get(Calendar.YEAR)}_${cal.get(Calendar.MONTH)}_${cal.get(Calendar.DAY_OF_MONTH)}"
         }
         
@@ -180,13 +180,13 @@ class CalendarEventsWidget(
         isCalendarView = !isCalendarView
         
         if (isCalendarView) {
-            // Show calendar, hide list
+            
             listViewContainer.visibility = View.GONE
             calendarViewContainer.visibility = View.VISIBLE
             viewToggleButton.text = context.getString(R.string.calendar_view_list)
             calendarView?.updateEvents(allEvents)
         } else {
-            // Show list, hide calendar
+            
             listViewContainer.visibility = View.VISIBLE
             calendarViewContainer.visibility = View.GONE
             viewToggleButton.text = context.getString(R.string.calendar_view_calendar)
@@ -222,12 +222,12 @@ class CalendarEventsWidget(
                     Manifest.permission.READ_CALENDAR
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                // Show explanation dialog
+                
                 android.app.AlertDialog.Builder(context, R.style.CustomDialogTheme)
                     .setTitle("Calendar Permission")
                     .setMessage("This permission allows the launcher to display your upcoming calendar events. The data is only used locally on your device.")
                     .setPositiveButton("Grant Permission") { _, _ ->
-                        // Permission request will be handled by the activity
+                        
                         if (context is androidx.fragment.app.FragmentActivity) {
                             androidx.core.app.ActivityCompat.requestPermissions(
                                 context,
@@ -240,7 +240,7 @@ class CalendarEventsWidget(
                     .show()
             }
         } else {
-            // If not an activity, open settings
+            
             openSettings()
         }
     }
@@ -264,12 +264,12 @@ class CalendarEventsWidget(
         }
         
         try {
-            // Load all events for calendar view (next 3 months) - this includes everything
+            
             val allNewEvents = loadAllEvents()
             allEvents.clear()
             allEvents.addAll(allNewEvents)
             
-            // Filter upcoming events for list view (next 2 days) from all events
+            
             val now = System.currentTimeMillis()
             val twoDaysFromNow = now + (2 * 24 * 60 * 60 * 1000)
             val upcomingEvents = allNewEvents.filter { event ->
@@ -280,7 +280,7 @@ class CalendarEventsWidget(
             events.addAll(upcomingEvents)
             adapter.notifyDataSetChanged()
             
-            // Update calendar view
+            
             calendarView?.updateEvents(allEvents)
             
             if (events.isEmpty() && !isCalendarView) {
@@ -300,9 +300,9 @@ class CalendarEventsWidget(
     
     private fun loadAllEvents(): List<CalendarEvent> {
         val eventsList = mutableListOf<CalendarEvent>()
-        val seenEvents = mutableSetOf<String>() // For deduplication
+        val seenEvents = mutableSetOf<String>() 
         
-        // Use Instances table to properly handle recurring events
+        
         val projection = arrayOf(
             CalendarContract.Instances.EVENT_ID,
             CalendarContract.Instances.TITLE,
@@ -315,12 +315,12 @@ class CalendarEventsWidget(
         )
         
         val now = System.currentTimeMillis()
-        // Load events from 1 year ago to 2 years ahead to show all festivals and events
-        val oneYearAgo = now - (365 * 24 * 60 * 60 * 1000L) // 1 year ago
-        val twoYearsFromNow = now + (730 * 24 * 60 * 60 * 1000L) // 2 years in milliseconds
         
-        // When using Instances URI with appendPath, time filtering is already done
-        // No need for selection/selectionArgs for time range
+        val oneYearAgo = now - (365 * 24 * 60 * 60 * 1000L) 
+        val twoYearsFromNow = now + (730 * 24 * 60 * 60 * 1000L) 
+        
+        
+        
         val sortOrder = "${CalendarContract.Instances.BEGIN} ASC"
         
         val uri: Uri = CalendarContract.Instances.CONTENT_URI.buildUpon()
@@ -330,12 +330,12 @@ class CalendarEventsWidget(
         
         var cursor: Cursor? = null
         try {
-            // Query all calendars including birthdays and custom calendars
+            
             cursor = context.contentResolver.query(
                 uri,
                 projection,
-                null, // No selection - get all events from all calendars
-                null, // No selection args
+                null, 
+                null, 
                 sortOrder
             )
             
@@ -359,7 +359,7 @@ class CalendarEventsWidget(
                     val calendarId = it.getLong(calendarIdIndex)
                     val calendarDisplayName = it.getString(calendarDisplayNameIndex) ?: ""
                     
-                    // Detect festivals - check if calendar name contains festival/holiday keywords
+                    
                     val isFestival = calendarDisplayName.lowercase().let { name ->
                         name.contains("festival") || name.contains("holiday") || 
                         name.contains("holidays") || name.contains("festivals") ||
@@ -368,12 +368,12 @@ class CalendarEventsWidget(
                         name.contains("christian") || name.contains("national")
                     }
                     
-                    // Handle all-day events (birthdays)
-                    // Instances table returns all-day events in local timezone already
-                    // Just ensure they're at midnight for consistent display
+                    
+                    
+                    
                     if (allDay) {
-                        // All-day events from Instances are already in local timezone
-                        // Just normalize to start of day (midnight) for consistent display
+                        
+                        
                         val cal = Calendar.getInstance()
                         cal.timeInMillis = startTime
                         cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -382,18 +382,18 @@ class CalendarEventsWidget(
                         cal.set(Calendar.MILLISECOND, 0)
                         startTime = cal.timeInMillis
                         
-                        // End time is start of next day
+                        
                         cal.add(Calendar.DAY_OF_MONTH, 1)
                         endTime = cal.timeInMillis
                     }
                     
-                    // Create unique key for deduplication (title + date)
-                    // Festivals often appear in multiple calendars with different event IDs
-                    // So we deduplicate by title + date instead of event ID
+                    
+                    
+                    
                     val cal = Calendar.getInstance().apply { timeInMillis = startTime }
                     val dateKey = "${title.lowercase().trim()}_${cal.get(Calendar.YEAR)}_${cal.get(Calendar.MONTH)}_${cal.get(Calendar.DAY_OF_MONTH)}"
                     
-                    // Skip if we've already seen this exact event (same title on same date)
+                    
                     if (!seenEvents.contains(dateKey)) {
                         seenEvents.add(dateKey)
                         eventsList.add(
@@ -412,7 +412,7 @@ class CalendarEventsWidget(
                 }
             }
         } catch (_: SecurityException) {
-            // Permission denied
+            
             setupWithoutPermission()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -435,7 +435,7 @@ class CalendarEventsWidget(
             if (resolvedIntent != null) {
                 context.startActivity(calendarIntent)
             } else {
-                // Fallback to generic calendar view
+                
                 context.startActivity(intent)
             }
         } catch (_: Exception) {
@@ -502,11 +502,11 @@ class CalendarEventAdapter(
         
         holder.titleText.text = event.title
         
-        // Set color: red for festivals, blue for others
+        
         val titleColor = if (event.isFestival) {
-            ContextCompat.getColor(holder.itemView.context, R.color.nord11) // Red
+            ContextCompat.getColor(holder.itemView.context, R.color.nord11) 
         } else {
-            ContextCompat.getColor(holder.itemView.context, R.color.nord9) // Blue
+            ContextCompat.getColor(holder.itemView.context, R.color.nord9) 
         }
         holder.titleText.setTextColor(titleColor)
         
@@ -519,7 +519,7 @@ class CalendarEventAdapter(
         val startTime = Date(event.startTime)
         val timeString = timeFormat.format(startTime)
         
-        // Show relative time for today/tomorrow
+        
         val now = Calendar.getInstance()
         val eventDate = Calendar.getInstance().apply { time = startTime }
         

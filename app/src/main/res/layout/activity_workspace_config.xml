@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -11,14 +11,14 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay for better text visibility -->
+    
     <View
         android:id="@+id/theme_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66000000"/>
 
-    <!-- Content Container -->
+    
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -31,7 +31,7 @@
             android:padding="24dp"
             android:gravity="center_horizontal">
 
-            <!-- Title -->
+            
             <TextView
                 android:id="@+id/title_text"
                 android:layout_width="wrap_content"
@@ -44,7 +44,7 @@
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="32dp"/>
 
-            <!-- Workspaces Section -->
+            
             <LinearLayout
                 android:id="@+id/workspaces_container"
                 android:layout_width="match_parent"
@@ -74,7 +74,7 @@
 
             </LinearLayout>
 
-            <!-- Create Button -->
+            
             <Button
                 android:id="@+id/create_workspace_button"
                 android:layout_width="match_parent"

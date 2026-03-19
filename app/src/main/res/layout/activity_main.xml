@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Main Content -->
+    
     <FrameLayout
         android:id="@+id/main_content"
         android:layout_width="match_parent"
@@ -12,7 +12,7 @@
         android:clipChildren="false"
         android:clipToPadding="false">
 
-        <!-- Wallpaper Background -->
+        
         <ImageView
             android:id="@+id/wallpaper_background"
             android:layout_width="match_parent"
@@ -20,21 +20,21 @@
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
 
-        <!-- Translucency Overlay -->
+        
         <View
             android:id="@+id/background_translucency_overlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="#00000000"/>
 
-        <!-- Hidden scroll view kept for gesture handler padding/inset adjustments -->
+        
         <androidx.core.widget.NestedScrollView
             android:id="@+id/main_scroll_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:visibility="gone" />
 
-        <!-- Fixed UI Stack -->
+        
         <LinearLayout
             android:id="@+id/main_content_stack"
             android:layout_width="match_parent"
@@ -49,7 +49,7 @@
             android:focusableInTouchMode="true"
             android:descendantFocusability="beforeDescendants">
 
-            <!-- Dummy focus holder -->
+            
             <View
                 android:layout_width="0dp"
                 android:layout_height="0dp"
@@ -58,7 +58,7 @@
                 <requestFocus />
             </View>
 
-            <!-- Combined Widget Section -->
+            
             <LinearLayout
                 android:id="@+id/top_widget_container"
                 android:layout_width="match_parent"
@@ -69,7 +69,7 @@
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/widget_background">
 
-                <!-- Time Widget -->
+                
                 <TextView
                     android:id="@+id/time_widget"
                     android:layout_width="match_parent"
@@ -81,7 +81,7 @@
                     android:letterSpacing="0.05"
                     android:paddingTop="8dp" />
 
-                <!-- Date Widget -->
+                
                 <TextView
                     android:id="@+id/date_widget"
                     android:layout_width="match_parent"
@@ -92,7 +92,7 @@
                     android:fontFamily="sans-serif-light"
                     android:paddingTop="8dp" />
 
-                <!-- Weather Widget -->
+                
                 <LinearLayout
                     android:id="@+id/weather_widget"
                     android:layout_width="match_parent"
@@ -117,7 +117,7 @@
                         android:fontFamily="sans-serif-light"/>
                 </LinearLayout>
 
-                <!-- Battery Section -->
+                
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -125,7 +125,7 @@
                     android:paddingTop="12dp"
                     android:gravity="center">
 
-                    <!-- Battery Widget -->
+                    
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -145,7 +145,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Search Box -->
+            
             <LinearLayout
                 android:id="@+id/search_container"
                 android:layout_width="match_parent"
@@ -194,7 +194,7 @@
                     android:contentDescription="Voice Search" />
             </LinearLayout>
 
-            <!-- App Dock -->
+            
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -210,7 +210,7 @@
                     android:gravity="center"
                     android:paddingEnd="16dp"/>
             </HorizontalScrollView>
-            <!-- App List (RecyclerView) -->
+            
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/app_list"
                 android:layout_width="match_parent"
@@ -221,8 +221,8 @@
                 android:clipChildren="false" />
         </LinearLayout>
 
-        <!-- Fast Scroller: Positioned dynamically in ActivityInitializer to avoid mic button -->
-        <!-- Increased width to provide a larger capture area and prevent bubble clipping -->
+        
+        
         <com.guruswarupa.launch.ui.views.FastScroller
             android:id="@+id/fast_scroller"
             android:layout_width="200dp"
@@ -238,7 +238,7 @@
 
     </FrameLayout>
 
-    <!-- Sidebar Drawer for Widgets (Left Drawer) -->
+    
     <FrameLayout
         android:id="@+id/widgets_drawer"
         android:layout_width="match_parent"
@@ -248,7 +248,7 @@
         android:clickable="true"
         android:focusable="true">
 
-        <!-- Wallpaper Background for Drawer -->
+        
         <ImageView
             android:id="@+id/drawer_wallpaper_background"
             android:layout_width="match_parent"
@@ -256,7 +256,7 @@
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
 
-        <!-- Translucency Overlay for Widgets Drawer -->
+        
         <View
             android:id="@+id/widgets_drawer_translucency_overlay"
             android:layout_width="match_parent"
@@ -268,7 +268,7 @@
             android:layout_height="match_parent"
             android:background="@drawable/drawer_widgets_overlay" />
 
-        <!-- Settings Header -->
+        
         <LinearLayout
             android:id="@+id/widget_settings_header"
             android:layout_width="match_parent"
@@ -323,7 +323,7 @@
                 android:contentDescription="Configure Widgets" />
         </LinearLayout>
 
-        <!-- Scrollable Content -->
+        
         <androidx.core.widget.NestedScrollView
             android:id="@+id/widgets_drawer_scroll"
             android:layout_width="match_parent"
@@ -341,7 +341,7 @@
                 android:paddingEnd="0dp"
                 android:paddingBottom="16dp">
 
-            <!-- Empty State Message -->
+            
             <LinearLayout
                 android:id="@+id/widgets_empty_state"
                 android:layout_width="match_parent"
@@ -393,7 +393,7 @@
                     android:alpha="0.78" />
             </LinearLayout>
 
-            <!-- Notifications Widget -->
+            
             <LinearLayout
                 android:id="@+id/notifications_widget_main_container"
                 android:layout_width="match_parent"
@@ -412,7 +412,7 @@
 
             </LinearLayout>
 
-            <!-- Calendar Events Widget -->
+            
             <LinearLayout
                 android:id="@+id/calendar_events_widget_container"
                 android:layout_width="match_parent"
@@ -424,7 +424,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Countdown Widget -->
+            
             <LinearLayout
                 android:id="@+id/countdown_widget_container"
                 android:layout_width="match_parent"
@@ -436,7 +436,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Physical Activity Widget -->
+            
             <LinearLayout
                 android:id="@+id/physical_activity_widget_container"
                 android:layout_width="match_parent"
@@ -448,7 +448,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Compass Widget -->
+            
             <LinearLayout
                 android:id="@+id/compass_widget_container"
                 android:layout_width="match_parent"
@@ -460,7 +460,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Pressure Widget -->
+            
             <LinearLayout
                 android:id="@+id/pressure_widget_container"
                 android:layout_width="match_parent"
@@ -472,7 +472,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Temperature Widget -->
+            
             <LinearLayout
                 android:id="@+id/temperature_widget_container"
                 android:layout_width="match_parent"
@@ -484,7 +484,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Network Stats Widget -->
+            
             <LinearLayout
                 android:id="@+id/network_stats_widget_container"
                 android:layout_width="match_parent"
@@ -496,7 +496,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Device Info Widget -->
+            
             <LinearLayout
                 android:id="@+id/device_info_widget_container"
                 android:layout_width="match_parent"
@@ -508,7 +508,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Year Progress Widget -->
+            
             <LinearLayout
                 android:id="@+id/year_progress_widget_container"
                 android:layout_width="match_parent"
@@ -520,7 +520,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- GitHub Contributions Widget -->
+            
             <LinearLayout
                 android:id="@+id/github_contributions_widget_container"
                 android:layout_width="match_parent"
@@ -532,7 +532,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Weekly Usage Widget -->
+            
             <LinearLayout
                 android:id="@+id/weekly_usage_widget"
                 android:layout_width="match_parent"
@@ -572,7 +572,7 @@
                     android:visibility="gone" />
             </LinearLayout>
 
-            <!-- Noise Decibel Widget -->
+            
             <LinearLayout
                 android:id="@+id/noise_decibel_widget_container"
                 android:layout_width="match_parent"
@@ -584,7 +584,7 @@
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp" />
 
-            <!-- Workout Widget -->
+            
             <LinearLayout
                 android:id="@+id/workout_widget_main_container"
                 android:layout_width="match_parent"
@@ -603,7 +603,7 @@
 
             </LinearLayout>
 
-            <!-- Calculator Widget -->
+            
             <LinearLayout
                 android:id="@+id/calculator_widget_main_container"
                 android:layout_width="match_parent"
@@ -639,7 +639,7 @@
 
             </LinearLayout>
 
-            <!-- To Do Widget -->
+            
             <LinearLayout
                 android:id="@+id/todo_widget_main_container"
                 android:layout_width="match_parent"
@@ -689,7 +689,7 @@
 
             </LinearLayout>
 
-            <!-- Finance Widget -->
+            
             <LinearLayout
                 android:id="@+id/finance_widget"
                 android:layout_width="match_parent"
@@ -701,7 +701,7 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Header -->
+                
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -726,7 +726,7 @@
                         android:paddingHorizontal="8dp" />
                 </LinearLayout>
 
-                <!-- Balance Card -->
+                
                 <LinearLayout
                     android:id="@+id/balance_card"
                     android:layout_width="match_parent"
@@ -772,7 +772,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Input Section -->
+                
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -807,7 +807,7 @@
                         android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- Action Buttons -->
+                
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -847,7 +847,7 @@
         </androidx.core.widget.NestedScrollView>
     </FrameLayout>
 
-    <!-- Right Drawer for Wallpaper Only -->
+    
     <FrameLayout
         android:id="@+id/wallpaper_drawer"
         android:layout_width="match_parent"
@@ -856,7 +856,7 @@
         android:clickable="true"
         android:focusable="true">
 
-        <!-- Wallpaper Image View -->
+        
         <ImageView
             android:id="@+id/right_drawer_wallpaper"
             android:layout_width="match_parent"
@@ -864,7 +864,7 @@
             android:scaleType="centerCrop"
             android:layout_gravity="center"/>
 
-        <!-- Clock Art Container -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

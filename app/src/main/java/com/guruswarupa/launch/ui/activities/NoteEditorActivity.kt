@@ -38,8 +38,8 @@ class NoteEditorActivity : VaultBaseActivity() {
         
         vaultManager = EncryptedFolderManager(this)
         
-        // If vault is locked, we can't do anything here.
-        // Usually we are started from EncryptedVaultActivity which handles unlocking.
+        
+        
         if (!vaultManager.isUnlocked()) {
             Toast.makeText(this, "Vault is locked", Toast.LENGTH_SHORT).show()
             finish()
@@ -71,7 +71,7 @@ class NoteEditorActivity : VaultBaseActivity() {
 
     private fun setupWallpaper() {
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
-        // Unified overlay color (dark themed by default)
+        
         val overlayColorRes = R.color.note_editor_overlay
         wallpaperOverlay.setBackgroundColor(ContextCompat.getColor(this, overlayColorRes))
     }

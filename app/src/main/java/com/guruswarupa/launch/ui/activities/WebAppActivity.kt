@@ -51,15 +51,15 @@ class WebAppActivity : AppCompatActivity() {
     
     private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isNotEmpty()) {
-            // Grant URI permissions temporarily
+            
             uris.forEach { uri ->
                 try {
                     contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 } catch (_: SecurityException) {
-                    // Permission may already be granted or not available
+                    
                 }
             }
-            // Pass the URIs back to the WebView
+            
             fileUploadCallback?.onReceiveValue(uris.toTypedArray())
         } else {
             fileUploadCallback?.onReceiveValue(null)
@@ -81,20 +81,20 @@ class WebAppActivity : AppCompatActivity() {
         )
         setContentView(R.layout.activity_web_app)
 
-        // Validate again after UI is set up
+        
         if (appName.isBlank() || url.isBlank()) {
             finish()
             return
         }
         
-        // Set dynamic label for recent apps to show web app name
+        
         title = appName
         
-        // Load and set web app icon for recent apps
+        
         WebAppIconFetcher.loadIcon(this, url) { drawable ->
             if (drawable != null) {
                 try {
-                    // Convert drawable to bitmap for task description using KTX
+                    
                     val bitmap = createBitmap(
                         drawable.intrinsicWidth.coerceAtLeast(1),
                         drawable.intrinsicHeight.coerceAtLeast(1)
@@ -103,7 +103,7 @@ class WebAppActivity : AppCompatActivity() {
                         drawable.draw(this)
                     }
                     
-                    // Use deprecated constructor that accepts bitmap (works on all APIs)
+                    
                     @Suppress("DEPRECATION")
                     val taskDescription = ActivityManager.TaskDescription(
                         appName,
@@ -112,7 +112,7 @@ class WebAppActivity : AppCompatActivity() {
                     )
                     setTaskDescription(taskDescription)
                 } catch (_: Exception) {
-                    // Ignore if icon loading fails
+                    
                 }
             }
         }
@@ -139,7 +139,7 @@ class WebAppActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
             mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            // Enable media capture support
+            
             mediaPlaybackRequiresUserGesture = false
             allowFileAccess = true
             allowContentAccess = true
@@ -174,17 +174,17 @@ class WebAppActivity : AppCompatActivity() {
                 filePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: FileChooserParams?
             ): Boolean {
-                // Cancel any pending upload
+                
                 fileUploadCallback?.onReceiveValue(null)
                 fileUploadCallback = filePathCallback
                 
-                // Determine accept type from params
+                
                 val acceptTypes = fileChooserParams?.acceptTypes ?: arrayOf("*/*")
                 val isVideo = acceptTypes.any { it.startsWith("video/") }
                 val isImage = acceptTypes.any { it.startsWith("image/") || it == "*/*" }
                 
                 try {
-                    // Launch media picker
+                    
                     val mimeType = when {
                         isVideo -> "video/*"
                         isImage -> "image/*"
@@ -200,7 +200,7 @@ class WebAppActivity : AppCompatActivity() {
             }
         }
         
-        // Set window insets listener after views are initialized
+        
         val root = findViewById<View>(R.id.web_app_root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -253,7 +253,7 @@ class WebAppActivity : AppCompatActivity() {
 
         webView.loadUrl(url)
 
-        // Handle back press using modern API
+        
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (customView != null) {
@@ -273,7 +273,7 @@ class WebAppActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        // Pause JavaScript execution, video playback, and other activities
+        
         if (::webView.isInitialized) {
             webView.onPause()
         }
@@ -281,7 +281,7 @@ class WebAppActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Resume JavaScript execution and other activities
+        
         if (::webView.isInitialized) {
             webView.onResume()
         }
@@ -289,29 +289,29 @@ class WebAppActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Stop loading and release some resources
+        
         if (::webView.isInitialized) {
             webView.stopLoading()
         }
     }
 
     override fun onDestroy() {
-        // Exit fullscreen and clean up custom view
+        
         exitFullscreen()
         
-        // Properly destroy WebView to prevent memory leaks
+        
         if (::webView.isInitialized) {
-            // Stop any ongoing operations
+            
             webView.stopLoading()
-            // Clear navigation history
+            
             webView.clearHistory()
-            // Remove all views from WebView
+            
             webView.removeAllViews()
-            // Destroy WebView (this will also clear internal references)
+            
             webView.destroy()
         }
         
-        // Clean up file upload callback
+        
         fileUploadCallback = null
         
         super.onDestroy()

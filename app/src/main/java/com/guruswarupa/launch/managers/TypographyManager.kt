@@ -74,7 +74,7 @@ object TypographyManager {
             
             if (fontColor != null) {
                 view.setTextColor(fontColor)
-                // Apply same color to hint with some transparency
+                
                 val alpha = Color.alpha(fontColor)
                 val hintAlpha = (alpha * 0.6f).toInt()
                 val hintColor = Color.argb(hintAlpha, Color.red(fontColor), Color.green(fontColor), Color.blue(fontColor))

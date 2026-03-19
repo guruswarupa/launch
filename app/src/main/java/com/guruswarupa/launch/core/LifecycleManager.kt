@@ -17,16 +17,16 @@ import com.guruswarupa.launch.models.MainActivityViews
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 import com.guruswarupa.launch.widgets.WidgetThemeManager
 
-/**
- * Manages activity lifecycle operations.
- * Extracted from MainActivity to reduce complexity.
- */
+
+
+
+
 class LifecycleManager(
     private val activity: FragmentActivity,
     private val handler: Handler,
     private val sharedPreferences: android.content.SharedPreferences
 ) {
-    // Dependencies (initialized via setters)
+    
     private var systemBarManager: SystemBarManager? = null
     private var appLockManager: AppLockManager? = null
     private var notificationsWidget: NotificationsWidget? = null
@@ -54,7 +54,7 @@ class LifecycleManager(
     private var appTimerManager: AppTimerManager? = null
     private var hiddenAppManager: HiddenAppManager? = null
     
-    // Callbacks
+    
     var onResumeCallbacks: MutableList<() -> Unit> = mutableListOf()
     var onPauseCallbacks: MutableList<() -> Unit> = mutableListOf()
     var onBatteryUpdate: (() -> Unit)? = null
@@ -92,33 +92,33 @@ class LifecycleManager(
     private var isBlockingBackGesture = false
     
     fun onResume() {
-        // Ensure system bars stay transparent
+        
         systemBarManager?.makeSystemBarsTransparent()
         
-        // Clear app lock authentication timeout when returning to launcher
+        
         appLockManager?.clearAuthTimeout()
         
-        // Update notifications widget when activity resumes
+        
         notificationsWidget?.updateNotifications()
         
-        // Refresh wallpaper when returning from Settings (in case it was changed)
+        
         wallpaperManagerHelper?.let {
             it.clearCache()
             it.setWallpaperBackground(forceReload = true)
         }
         
-        // Update gesture exclusion when activity resumes
+        
         if (!isBlockingBackGesture) {
             gestureHandler?.updateGestureExclusion()
         }
         
-        // Reapply focus mode state
+        
         appDockManager?.let {
             onFocusModeApply?.invoke(it.getCurrentMode())
             it.refreshWorkspaceToggle()
         }
 
-        // Theme check
+        
         widgetThemeManager?.let { themeManager ->
             themeManager.checkAndUpdateThemeIfNeeded(
                 todoManager = todoManager,
@@ -130,17 +130,17 @@ class LifecycleManager(
             )
         }
 
-        // Clear search box focus
+        
         views?.let { 
             if (it.isSearchBoxInitialized()) {
                 it.searchBox.clearFocus()
             }
         }
 
-        // Resume widgets
+        
         widgetLifecycleCoordinator?.onResume()
         
-        // Refresh app list with consolidated delay
+        
         handler.postDelayed({
             if (!activity.isFinishing && !activity.isDestroyed) {
                 hiddenAppManager?.forceRefresh()
@@ -151,19 +151,19 @@ class LifecycleManager(
             }
         }, 500)
         
-        // Start widget managers
+        
         widgetManager?.onStart()
         deviceInfoWidget?.onResume()
         networkStatsWidget?.onResume()
         
-        // Refresh usage stats permission button and load data if permission granted
+        
         usageStatsDisplayManager?.refreshPermissionButton()
         
-        // Update time/date
+        
         val isPowerSaverMode = sharedPreferences.getBoolean("power_saver_mode", false)
         timeDateManager?.startUpdates(isPowerSaverMode)
         
-        // Lightweight background tasks
+        
         usageStatsManager?.invalidateCache()
         
         handler.postDelayed({
@@ -192,15 +192,15 @@ class LifecycleManager(
     fun onPause() {
         timeDateManager?.stopUpdates()
         
-        // Save todo items
+        
         todoManager?.saveTodoItems()
         
-        // Stop widget manager listening
+        
         widgetManager?.onStop()
         deviceInfoWidget?.onPause()
         networkStatsWidget?.onPause()
 
-        // Pause widgets
+        
         widgetLifecycleCoordinator?.onPause()
         
         onPauseCallbacks.forEach { it.invoke() }
@@ -209,7 +209,7 @@ class LifecycleManager(
     fun onDestroy() {
         wallpaperManagerHelper?.cleanup()
         broadcastReceiverManager?.unregisterReceivers()
-        // Shutdown background executor properly
+        
         backgroundExecutor?.let { exec ->
             if (!exec.isShutdown) {
                 exec.shutdown()
@@ -232,9 +232,9 @@ class LifecycleManager(
         cleanup()
     }
     
-    /**
-     * Cleanup method to cancel pending handler callbacks and prevent memory leaks
-     */
+    
+
+
     fun cleanup() {
         handler.removeCallbacksAndMessages(null)
     }

@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- Highlight View - Shows a cutout around the target view -->
+    
     <View
         android:id="@+id/tutorial_highlight"
         android:layout_width="wrap_content"
@@ -14,7 +14,7 @@
         android:background="@drawable/tutorial_highlight"
         android:elevation="10dp" />
 
-    <!-- Text Container -->
+    
     <LinearLayout
         android:id="@+id/tutorial_text_container"
         android:layout_width="match_parent"
@@ -49,7 +49,7 @@
             android:lineSpacingExtra="4dp"
             android:layout_marginBottom="24dp" />
 
-        <!-- Button Container for Skip/Next -->
+        
         <LinearLayout
             android:id="@+id/tutorial_buttons_container"
             android:layout_width="match_parent"
@@ -83,7 +83,7 @@
                 android:paddingVertical="12dp" />
         </LinearLayout>
 
-        <!-- Got It Button (shown only on last step) -->
+        
         <Button
             android:id="@+id/tutorial_got_it"
             android:layout_width="match_parent"

@@ -103,17 +103,17 @@ class AppAdapter(
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
     private var grayscaleIconsEnabled = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
     
-    /**
-     * Called by FastScroller when fast scrolling starts/stops.
-     */
+    
+
+
     fun setFastScrollingState(isScrolling: Boolean) {
         isFastScrolling = isScrolling
         
-        // Cancel any pending debounce
+        
         fastScrollDebounceRunnable?.let { fastScrollDebounceHandler.removeCallbacks(it) }
         
         if (!isScrolling) {
-            // After fast scrolling stops, wait a bit then refresh visible icons
+            
             fastScrollDebounceRunnable = Runnable {
                 forceRefreshVisibleIcons()
             }
@@ -121,12 +121,12 @@ class AppAdapter(
         }
     }
     
-    /**
-     * Forces refresh of currently visible icons after fast scrolling stops.
-     */
+    
+
+
     private fun forceRefreshVisibleIcons() {
-        // This will be called from FastScroller via forceRebindViewHolder
-        // The actual refresh happens when FastScroller calls forceRebindViewHolder for each visible item
+        
+        
     }
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
@@ -134,7 +134,7 @@ class AppAdapter(
         override fun compareTo(other: PriorityRunnable): Int = other.priority.compareTo(this.priority)
     }
     
-    // Wrapper task that can be tracked and cancelled - implements Comparable for PriorityBlockingQueue
+    
     private class TrackedTask(
         private val priorityRunnable: PriorityRunnable
     ) : Runnable, Comparable<TrackedTask>, Future<Boolean> {
@@ -150,7 +150,7 @@ class AppAdapter(
         }
         
         override fun compareTo(other: TrackedTask): Int {
-            // Delegate comparison to the wrapped PriorityRunnable
+            
             return this.priorityRunnable.compareTo(other.priorityRunnable)
         }
         
@@ -163,12 +163,12 @@ class AppAdapter(
         override fun isCancelled(): Boolean = isCancelled
         override fun isDone(): Boolean = isDone
         
-        // These methods are not needed for our use case but required by Future interface
+        
         override fun get(): Boolean? = null
         override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
     }
     
-    // Track pending tasks per package to avoid redundant work and save RAM
+    
     private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
     private val pendingLabelTasks = ConcurrentHashMap<String, Future<*>>()
 
@@ -322,15 +322,15 @@ class AppAdapter(
 
     }
     
-    /**
-     * Forces a rebind of a view holder to refresh icon loading.
-     * Called after fast scrolling stops to ensure visible icons are properly loaded.
-     */
+    
+
+
+
     fun forceRebindViewHolder(viewHolder: ViewHolder, position: Int) {
         if (position < 0 || position >= appList.size) return
         
-        // Call onBindViewHolder to refresh the view
-        // This will check the cache and load icons if they're now available
+        
+        
         onBindViewHolder(viewHolder, position)
     }
     
@@ -383,7 +383,7 @@ class AppAdapter(
             if (holder != null && holder.appIcon != null && iconCache.containsKey(packageName)) {
                 val icon = iconCache[packageName]
                 (context as? Activity)?.runOnUiThread {
-                    // Robust verification: check position, tag, and view identity
+                    
                     val currentPosition = holder.bindingAdapterPosition
                     val currentTag = holder.itemView.tag
                     if (currentPosition != RecyclerView.NO_POSITION && 
@@ -398,10 +398,10 @@ class AppAdapter(
             return
         }
         
-        // Cancel any pending task for this package to avoid redundant work
+        
         pendingIconTasks[packageName]?.cancel(true)
         
-        // Use execute instead of submit to avoid FutureTask wrapping (PriorityBlockingQueue needs Comparable)
+        
         val priorityRunnable = PriorityRunnable(priority) {
             try {
                 if (!iconCache.containsKey(packageName)) {
@@ -410,16 +410,16 @@ class AppAdapter(
                     
                     if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
-                            // Extra robust verification during fast scrolling
-                            // Check: position, tag, and that the view hasn't been recycled
+                            
+                            
                             val currentPosition = holder.bindingAdapterPosition
                             val currentTag = holder.itemView.tag
                             
-                            // Only update if ALL checks pass:
-                            // 1. Position is valid
-                            // 2. Position hasn't changed
-                            // 3. Tag matches package name (view wasn't recycled for different app)
-                            // 4. Tag is not null (view is properly initialized)
+                            
+                            
+                            
+                            
+                            
                             if (currentPosition != RecyclerView.NO_POSITION && 
                                 currentPosition == position && 
                                 currentTag != null && 
@@ -433,12 +433,12 @@ class AppAdapter(
             } catch (_: Exception) {}
         }
         
-        // Track with a wrapper that we can cancel
+        
         val trackedTask = TrackedTask(priorityRunnable)
         iconPreloadExecutor.execute(trackedTask)
         pendingIconTasks[packageName] = trackedTask
         
-        // Clean up completed/cancelled tasks periodically
+        
         if (pendingIconTasks.size > 100) {
             pendingIconTasks.entries.removeAll { it.value.isDone }
         }
@@ -487,18 +487,18 @@ class AppAdapter(
             return
         }
         
-        // Only apply expensive operations if view is being recycled (has old data)
+        
         val needsRefresh = holder.itemView.tag != null && holder.itemView.tag != packageName
         
         if (needsRefresh) {
-            // Re-apply typography only when needed
+            
             TypographyManager.applyToView(holder.itemView)
             
-            // Apply icon shape style programmatically
+            
             holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
         }
         
-        // Always apply icon size to ensure correct display
+        
         val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
         val currentParams = holder.appIcon?.layoutParams
         if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
@@ -509,16 +509,16 @@ class AppAdapter(
         }
         
         if (needsRefresh) {
-            // Clear old icon immediately when recycling to prevent showing wrong icons
+            
             holder.appIcon?.setImageDrawable(null)
         }
         
         holder.appIcon?.background = null
         holder.itemView.elevation = 0f
-        // Tag the view with package name to track correct icon assignment during recycling
+        
         holder.itemView.tag = packageName
 
-        // Control app name visibility based on preference in grid mode
+        
         if (isGridMode) {
             val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
@@ -546,7 +546,7 @@ class AppAdapter(
                                 if (drawable != null) {
                                     contactPhotoCache[contactName] = drawable
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.itemView.tag.toString() == contactName) { // Verify with tag
+                                        if (holder.itemView.tag.toString() == contactName) { 
                                             holder.appIcon?.setImageDrawable(drawable)
                                             applyIconVisualState(packageName, holder.appIcon)
                                         }
@@ -774,7 +774,7 @@ class AppAdapter(
             }
 
             else -> {
-                // Special handling for internal launcher activities to ensure correct names
+                
                 val activityName = appInfo.activityInfo.name
                 if (packageName == activity.packageName) {
                     when {
@@ -794,7 +794,7 @@ class AppAdapter(
                                 applyIconVisualState(packageName, holder.appIcon)
                             } else {
                                 holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
-                                // Use highest priority for visible items
+                                
                                 val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
                                 submitIconLoadTask(appInfo, priority, holder, position)
                             }
@@ -849,7 +849,7 @@ class AppAdapter(
                         return@setOnClickListener
                     }
                     
-                    // Handle internal launcher activities specifically (like SettingsActivity)
+                    
                     val intent = if (packageName == activity.packageName) {
                         Intent().apply {
                             component = ComponentName(packageName, appInfo.activityInfo.name)
@@ -913,12 +913,12 @@ class AppAdapter(
     override fun getItemCount(): Int = appList.size
 
     private fun loadLabelAsync(holder: ViewHolder, position: Int, appInfo: ResolveInfo, packageName: String) {
-        if (labelCache.containsKey(packageName)) return // Already cached
+        if (labelCache.containsKey(packageName)) return 
         
-        // Cancel any pending label task for this package
+        
         pendingLabelTasks[packageName]?.cancel(true)
         
-        // Use a Runnable wrapper that we can track
+        
         val labelTask = object : Runnable, Future<Boolean> {
             @Volatile private var isDone = false
             @Volatile private var isCancelled = false
@@ -962,7 +962,7 @@ class AppAdapter(
         executor.execute(labelTask)
         pendingLabelTasks[packageName] = labelTask
         
-        // Clean up completed tasks periodically
+        
         if (pendingLabelTasks.size > 50) {
             pendingLabelTasks.entries.removeAll { it.value.isDone }
         }
@@ -1163,9 +1163,9 @@ class AppAdapter(
             }
             
             listView?.let { lv ->
-                // Apply immediately
+                
                 try { for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i)) } catch (_: Exception) {}
-                // Apply again after layout to catch all items
+                
                 lv.post { 
                     try { 
                         for (i in 0 until lv.childCount) { 
@@ -1287,7 +1287,7 @@ class AppAdapter(
             Intent(activity, WebAppActivity::class.java).apply {
                 putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, name)
                 putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
-                // Always create new task for each web app
+                
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
                          Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
                          Intent.FLAG_ACTIVITY_MULTIPLE_TASK)

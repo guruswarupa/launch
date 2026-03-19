@@ -11,9 +11,9 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
-/**
- * Manages audio recording and decibel calculation for noise analysis
- */
+
+
+
 class NoiseDecibelManager(@Suppress("unused") private val context: android.content.Context) {
     
     private var audioRecord: AudioRecord? = null
@@ -26,7 +26,7 @@ class NoiseDecibelManager(@Suppress("unused") private val context: android.conte
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val BUFFER_SIZE_MULTIPLIER = 2
-        private const val UPDATE_INTERVAL_MS = 100L // Update every 100ms
+        private const val UPDATE_INTERVAL_MS = 100L 
     }
     
     private val recordingRunnable = object : Runnable {
@@ -39,16 +39,16 @@ class NoiseDecibelManager(@Suppress("unused") private val context: android.conte
         }
     }
     
-    /**
-     * Sets listener for decibel changes
-     */
+    
+
+
     fun setOnDecibelChangedListener(listener: (Double) -> Unit) {
         onDecibelChangedListener = listener
     }
     
-    /**
-     * Starts recording audio and calculating decibels
-     */
+    
+
+
     fun startRecording(): Boolean {
         if (isRecording) return true
         
@@ -94,9 +94,9 @@ class NoiseDecibelManager(@Suppress("unused") private val context: android.conte
         }
     }
     
-    /**
-     * Stops recording
-     */
+    
+
+
     fun stopRecording() {
         isRecording = false
         handler.removeCallbacks(recordingRunnable)
@@ -106,13 +106,13 @@ class NoiseDecibelManager(@Suppress("unused") private val context: android.conte
             audioRecord?.release()
             audioRecord = null
         } catch (_: Exception) {
-            // Ignore errors during stop
+            
         }
     }
     
-    /**
-     * Calculates current decibel level from audio buffer
-     */
+    
+
+
     private fun calculateDecibel(): Double {
         val currentAudioRecord = this.audioRecord ?: return 0.0
         
@@ -132,33 +132,33 @@ class NoiseDecibelManager(@Suppress("unused") private val context: android.conte
                 return 0.0
             }
             
-            // Calculate RMS (Root Mean Square)
+            
             var sum = 0.0
             for (i in 0 until readSize) {
                 sum += (buffer[i] * buffer[i]).toDouble()
             }
             val rms = sqrt(sum / readSize)
             
-            // Convert to decibels
-            // Reference value is typically 1.0 for normalized audio
-            // For 16-bit audio, max value is 32767
+            
+            
+            
             val referenceValue = 32767.0
             val db = if (rms > 0) {
                 20 * log10(rms / referenceValue)
             } else {
-                -96.0 // Minimum decibel value for silence
+                -96.0 
             }
             
-            // Clamp to reasonable range (0-120 dB)
+            
             return max(0.0, min(120.0, db + 96.0))
         } catch (_: Exception) {
             return 0.0
         }
     }
     
-    /**
-     * Checks if microphone is available
-     */
+    
+
+
     fun hasMicrophone(): Boolean {
         return try {
             val bufferSize = AudioRecord.getMinBufferSize(
@@ -172,14 +172,14 @@ class NoiseDecibelManager(@Suppress("unused") private val context: android.conte
         }
     }
     
-    /**
-     * Gets current recording state
-     */
+    
+
+
     fun isRecording(): Boolean = isRecording
     
-    /**
-     * Cleanup resources
-     */
+    
+
+
     fun cleanup() {
         stopRecording()
         onDecibelChangedListener = null

@@ -23,9 +23,9 @@ import com.guruswarupa.launch.receivers.ScreenOffAdminReceiver
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 import com.guruswarupa.launch.services.LaunchNotificationListenerService
 
-/**
- * Manages all permission requests for the launcher
- */
+
+
+
 class PermissionManager(
     private val activity: androidx.fragment.app.FragmentActivity,
     private val sharedPreferences: SharedPreferences
@@ -44,14 +44,14 @@ class PermissionManager(
         const val DEFAULT_LAUNCHER_REQUEST = 1200
     }
     
-    // Flag to prevent multiple simultaneous permission requests
+    
     private var isRequestingPermissions = false
     
-    /**
-     * Request contacts permission
-     */
+    
+
+
     fun requestContactsPermission(onGranted: () -> Unit = {}) {
-        // Prevent multiple simultaneous requests
+        
         if (isRequestingPermissions) return
         
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_CONTACTS)
@@ -71,9 +71,9 @@ class PermissionManager(
         }
     }
     
-    /**
-     * Request SMS permission
-     */
+    
+
+
     fun requestSmsPermission() {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.SEND_SMS)
             != PackageManager.PERMISSION_GRANTED
@@ -89,9 +89,9 @@ class PermissionManager(
         }
     }
     
-    /**
-     * Request call phone permission
-     */
+    
+
+
     @Suppress("unused")
     fun requestCallPhonePermission() {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CALL_PHONE)
@@ -105,11 +105,11 @@ class PermissionManager(
         }
     }
     
-    /**
-     * Request usage stats permission
-     */
+    
+
+
     fun requestUsageStatsPermission(usageStatsManager: AppUsageStatsManager, onComplete: () -> Unit = {}) {
-        // Prevent multiple simultaneous requests
+        
         if (isRequestingPermissions) return
         
         if (!usageStatsManager.hasUsageStatsPermission()) {
@@ -119,7 +119,7 @@ class PermissionManager(
                     .setTitle("Usage Stats Permission")
                     .setMessage("To show app usage time, please grant usage access permission.")
                     .setPositiveButton("Grant") { _, _ ->
-                        // Mark that we're waiting for the user to return from settings
+                        
                         sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", true) }
                         isRequestingPermissions = false
                         val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
@@ -145,9 +145,9 @@ class PermissionManager(
         }
     }
 
-    /**
-     * Checks if the app is currently the default launcher
-     */
+    
+
+
     fun isDefaultLauncher(): Boolean {
         val intent = Intent(Intent.ACTION_MAIN)
         intent.addCategory(Intent.CATEGORY_HOME)
@@ -160,9 +160,9 @@ class PermissionManager(
         return resolveInfo?.activityInfo?.packageName == activity.packageName
     }
 
-    /**
-     * Request to set as default launcher using system popup
-     */
+    
+
+
     fun requestDefaultLauncher(onComplete: () -> Unit = {}) {
         if (isDefaultLauncher()) {
             onComplete()
@@ -176,8 +176,8 @@ class PermissionManager(
                 val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
                 @Suppress("DEPRECATION")
                 activity.startActivityForResult(intent, DEFAULT_LAUNCHER_REQUEST)
-                // We call onComplete here as the activity result will be handled asynchronously 
-                // or the user will return to MainActivity
+                
+                
                 onComplete()
             } else {
                 onComplete()
@@ -191,18 +191,18 @@ class PermissionManager(
         }
     }
     
-    /**
-     * Checks if Device Admin is enabled for screen off functionality
-     */
+    
+
+
     fun isDeviceAdminActive(): Boolean {
         val devicePolicyManager = activity.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         val componentName = ComponentName(activity, ScreenOffAdminReceiver::class.java)
         return devicePolicyManager.isAdminActive(componentName)
     }
 
-    /**
-     * Request Device Admin permission
-     */
+    
+
+
     fun requestDeviceAdminPermission() {
         val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setTitle(activity.getString(R.string.request_device_admin_title))
@@ -213,7 +213,7 @@ class PermissionManager(
                     putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
                     putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, activity.getString(R.string.device_admin_description))
                 }
-                // Using deprecated method for backward compatibility
+                
                 @Suppress("DEPRECATION")
                 activity.startActivityForResult(intent, DEVICE_ADMIN_REQUEST)
             }
@@ -223,9 +223,9 @@ class PermissionManager(
         fixDialogTextColors(dialog)
     }
 
-    /**
-     * Checks if Accessibility Service is enabled
-     */
+    
+
+
     fun isAccessibilityServiceEnabled(): Boolean {
         val expectedComponentName = ComponentName(activity, ScreenLockAccessibilityService::class.java)
         val enabledServices = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
@@ -243,9 +243,9 @@ class PermissionManager(
         return false
     }
 
-    /**
-     * Request Accessibility Service permission
-     */
+    
+
+
     fun requestAccessibilityPermission() {
         val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setTitle(activity.getString(R.string.accessibility_permission_title))
@@ -260,9 +260,9 @@ class PermissionManager(
         fixDialogTextColors(dialog)
     }
 
-    /**
-     * Checks if Notification Policy access is enabled (for DND features)
-     */
+    
+
+
     fun isNotificationPolicyAccessGranted(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -271,9 +271,9 @@ class PermissionManager(
         return false
     }
 
-    /**
-     * Request Notification Policy access permission
-     */
+    
+
+
     fun requestNotificationPolicyPermission() {
         val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setTitle(activity.getString(R.string.notification_policy_permission_title))
@@ -288,9 +288,9 @@ class PermissionManager(
         fixDialogTextColors(dialog)
     }
 
-    /**
-     * Checks if Notification Listener service is enabled
-     */
+    
+
+
     fun isNotificationListenerServiceEnabled(): Boolean {
         val enabledServices = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             ?: return false
@@ -308,9 +308,9 @@ class PermissionManager(
         return false
     }
 
-    /**
-     * Request Notification Listener service permission
-     */
+    
+
+
     fun requestNotificationListenerPermission() {
         val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setTitle(activity.getString(R.string.notification_listener_permission_title))
@@ -333,9 +333,9 @@ class PermissionManager(
         } catch (_: Exception) {}
     }
     
-    /**
-     * Request notification permission (Android 13+)
-     */
+    
+
+
     fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS)
@@ -349,9 +349,9 @@ class PermissionManager(
         }
     }
     
-    /**
-     * Request storage/media permission for wallpaper setting
-     */
+    
+
+
     fun requestStoragePermission(onGranted: () -> Unit = {}) {
         val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Manifest.permission.READ_MEDIA_IMAGES
@@ -375,9 +375,9 @@ class PermissionManager(
         }
     }
     
-    /**
-     * Request activity recognition permission for physical activity tracking
-     */
+    
+
+
     fun requestActivityRecognitionPermission(onGranted: () -> Unit = {}) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACTIVITY_RECOGNITION)
@@ -393,7 +393,7 @@ class PermissionManager(
                 }
             }
         } else {
-            // Permission not required before Android 10
+            
             onGranted()
             return
         }
@@ -405,9 +405,9 @@ class PermissionManager(
         }
     }
     
-    /**
-     * Request microphone permission for audio recording (used by noise decibel widget)
-     */
+    
+
+
     @Suppress("unused")
     fun requestMicrophonePermission() {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)
@@ -415,14 +415,14 @@ class PermissionManager(
             ActivityCompat.requestPermissions(
                 activity,
                 arrayOf(Manifest.permission.RECORD_AUDIO),
-                VOICE_SEARCH_REQUEST // Reuse voice search request code since it's the same permission
+                VOICE_SEARCH_REQUEST 
             )
         }
     }
     
-    /**
-     * Handle permission result
-     */
+    
+
+
     fun handlePermissionResult(
         requestCode: Int,
         @Suppress("unused") permissions: Array<String>,
@@ -433,7 +433,7 @@ class PermissionManager(
         onStorageGranted: () -> Unit = {},
         onActivityRecognitionGranted: () -> Unit = {}
     ) {
-        // Reset the permission request flag
+        
         isRequestingPermissions = false
         
         when (requestCode) {
@@ -484,7 +484,7 @@ class PermissionManager(
                 }
             }
             VOICE_SEARCH_REQUEST -> {
-                // Permission handled by the caller who requested it
+                
             }
             NOTIFICATION_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

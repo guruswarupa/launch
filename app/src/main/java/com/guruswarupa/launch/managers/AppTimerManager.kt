@@ -32,7 +32,7 @@ class AppTimerManager(private val context: Context) {
     private var currentPackageName: String? = null
     private val backgroundExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var currentDialog: AlertDialog? = null // Track if dialog is showing
+    private var currentDialog: AlertDialog? = null 
     private val usageStatsManager = AppUsageStatsManager(context)
 
     companion object {
@@ -59,7 +59,7 @@ class AppTimerManager(private val context: Context) {
 
     fun setDailyLimit(packageName: String, limit: Long) {
         prefs.edit { putLong(PREF_DAILY_LIMIT_PREFIX + packageName, limit) }
-        usageStatsManager.invalidateCache() // Invalidate cache so UI reflects change immediately
+        usageStatsManager.invalidateCache() 
     }
 
     fun isSessionTimerEnabled(packageName: String): Boolean {
@@ -78,11 +78,11 @@ class AppTimerManager(private val context: Context) {
             imageView.colorFilter = filter
             imageView.alpha = 0.5f
         } else {
-            // Explicitly clear all filters and reset alpha
+            
             imageView.colorFilter = null
             imageView.clearColorFilter()
             imageView.alpha = 1.0f
-            // Some versions of Android might need the drawable's filter cleared too if it was mutated
+            
             imageView.drawable?.clearColorFilter()
         }
     }
@@ -154,7 +154,7 @@ class AppTimerManager(private val context: Context) {
     }
 
     fun showTimerDialog(appName: String, onTimerSet: (Long) -> Unit) {
-        // Prevent multiple dialogs from opening - if one is already showing, ignore
+        
         if (currentDialog?.isShowing == true) {
             return
         }
@@ -164,7 +164,7 @@ class AppTimerManager(private val context: Context) {
         val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Set timer for $appName")
             .setItems(options) { _, which ->
-                currentDialog = null // Clear reference when dialog is dismissed via item selection
+                currentDialog = null 
                 when (which) {
                     0 -> onTimerSet(TIMER_1_MIN)
                     1 -> onTimerSet(TIMER_5_MIN)
@@ -174,17 +174,17 @@ class AppTimerManager(private val context: Context) {
                 }
             }
             .setNegativeButton("Cancel") { d, _ ->
-                currentDialog = null // Clear reference when dialog is dismissed
+                currentDialog = null 
                 d.dismiss()
             }
             .setOnDismissListener {
-                currentDialog = null // Clear reference when dialog is dismissed
+                currentDialog = null 
             }
             .show()
         
-        currentDialog = dialog // Store reference to track if showing
+        currentDialog = dialog 
         
-        // Fix dialog items text color to theme-aware color
+        
         fixDialogItemsTextColor(dialog)
     }
     
@@ -193,25 +193,25 @@ class AppTimerManager(private val context: Context) {
             val textColor = ContextCompat.getColor(context, R.color.text)
             val listView = dialog.listView
             if (listView != null) {
-                // Post on main thread after dialog is shown to ensure views are inflated
+                
                 listView.post {
                     try {
-                        // Fix all existing items
+                        
                         for (i in 0 until listView.childCount) {
                             val itemView = listView.getChildAt(i)
                             if (itemView is TextView) {
                                 itemView.setTextColor(textColor)
                             } else if (itemView is ViewGroup) {
-                                // Search for TextView in the view hierarchy
+                                
                                 findTextViewsAndSetColor(itemView, textColor)
                             }
                         }
                     } catch (_: Exception) {
-                        // Ignore
+                        
                     }
                 }
                 
-                // Also try after a small delay in case items load asynchronously
+                
                 mainHandler.postDelayed({
                     try {
                         for (i in 0 until listView.childCount) {
@@ -223,12 +223,12 @@ class AppTimerManager(private val context: Context) {
                             }
                         }
                     } catch (_: Exception) {
-                        // Ignore
+                        
                     }
                 }, 100)
             }
         } catch (_: Exception) {
-            // If we can't fix it, that's okay - at least try
+            
         }
     }
     
@@ -275,7 +275,7 @@ class AppTimerManager(private val context: Context) {
 
     fun startTimer(packageName: String, duration: Long) {
         if (duration == NO_TIMER) {
-            // No timer, just launch the app
+            
             launchApp(packageName)
             return
         }
@@ -285,19 +285,19 @@ class AppTimerManager(private val context: Context) {
 
         currentTimer = object : CountDownTimer(duration, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                // Write to SharedPreferences in background to prevent UI freezing
+                
                 backgroundExecutor.execute {
                     prefs.edit { putLong("timer_remaining_$packageName", millisUntilFinished) }
                 }
             }
 
             override fun onFinish() {
-                // Clean up timer state
+                
                 backgroundExecutor.execute {
                     prefs.edit { remove("timer_remaining_$packageName") }
                 }
                 
-                // Return to launcher and close app on main thread
+                
                 mainHandler.post {
                     Toast.makeText(context, "Time's up! Closing app and returning to launcher", Toast.LENGTH_SHORT).show()
                     returnToLauncher(packageName)
@@ -307,7 +307,7 @@ class AppTimerManager(private val context: Context) {
             }
         }.start()
 
-        // Launch the app
+        
         launchApp(packageName)
     }
 
@@ -325,10 +325,10 @@ class AppTimerManager(private val context: Context) {
 
     fun returnToLauncher(packageName: String) {
         try {
-            // Get the launcher's package name (this app)
+            
             val launcherPackageName = context.packageName
             
-            // Try to directly launch the launcher's MainActivity
+            
             try {
                 val launcherIntent = context.packageManager.getLaunchIntentForPackage(launcherPackageName)
                 if (launcherIntent != null) {
@@ -339,17 +339,17 @@ class AppTimerManager(private val context: Context) {
                                           Intent.FLAG_ACTIVITY_SINGLE_TOP
                     context.startActivity(launcherIntent)
                     
-                    // Wait for launcher to come to foreground, then kill the app
+                    
                     mainHandler.postDelayed({
                         forceCloseApp(packageName)
                     }, 500)
                     return
                 }
             } catch (_: Exception) {
-                // Fall through to HOME intent
+                
             }
             
-            // Fallback: Use HOME intent
+            
             val intent = Intent(Intent.ACTION_MAIN)
             intent.addCategory(Intent.CATEGORY_HOME)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
@@ -358,12 +358,12 @@ class AppTimerManager(private val context: Context) {
                           Intent.FLAG_ACTIVITY_CLEAR_TOP
             context.startActivity(intent)
             
-            // Wait for launcher to come to foreground, then kill the app
+            
             mainHandler.postDelayed({
                 forceCloseApp(packageName)
             }, 500)
         } catch (_: Exception) {
-            // Last resort: simpler HOME intent
+            
             try {
                 val intent = Intent(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_HOME)
@@ -374,67 +374,67 @@ class AppTimerManager(private val context: Context) {
                     forceCloseApp(packageName)
                 }, 500)
             } catch (_: Exception) {
-                // Ignore
+                
             }
         }
     }
     
     private fun forceCloseApp(packageName: String) {
-        // Run in background thread to avoid blocking
+        
         backgroundExecutor.execute {
             try {
                 val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                     ?: return@execute
                 
-                // Kill all background processes for this package
-                // Since we've already brought launcher to foreground, the app should be in background
+                
+                
                 activityManager.killBackgroundProcesses(packageName)
                 
-                // Try multiple times to ensure it's killed
+                
                 mainHandler.postDelayed({
                     try {
                         activityManager.killBackgroundProcesses(packageName)
                     } catch (_: Exception) {
-                        // Ignore
+                        
                     }
                 }, 300)
                 
-                // Try to remove from recent tasks if possible
+                
                 try {
-                    // Try using getRecentTasks (may require special permission)
+                    
                     @Suppress("DEPRECATION")
                     val recentTasks = activityManager.getRecentTasks(50, ActivityManager.RECENT_WITH_EXCLUDED)
                     for (taskInfo in recentTasks) {
                         val baseIntent = taskInfo.baseIntent
                         val component = baseIntent.component
                         if (component != null && component.packageName == packageName) {
-                            // Try to remove this task
+                            
                             try {
-                                // Kill processes first
+                                
                                 activityManager.killBackgroundProcesses(packageName)
                             } catch (_: Exception) {
-                                // Ignore - we don't have permission to manipulate tasks
+                                
                             }
                         }
                     }
                 } catch (_: SecurityException) {
-                    // getRecentTasks requires special permission, that's okay
-                    // killBackgroundProcesses should still work
+                    
+                    
                 } catch (_: Exception) {
-                    // Ignore other exceptions
+                    
                 }
 
             } catch (_: SecurityException) {
-                // If we have no permission, at least the app is in background
-                // Android will manage it
+                
+                
                 try {
                     val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                     activityManager?.killBackgroundProcesses(packageName)
                 } catch (_: Exception) {
-                    // Ignore
+                    
                 }
             } catch (_: Exception) {
-                // Ignore
+                
             }
         }
     }
@@ -443,7 +443,7 @@ class AppTimerManager(private val context: Context) {
         currentTimer?.cancel()
         currentTimer = null
         currentPackageName?.let { packageName ->
-            // Clean up in background
+            
             backgroundExecutor.execute {
                 prefs.edit { remove("timer_remaining_$packageName") }
             }
@@ -452,12 +452,12 @@ class AppTimerManager(private val context: Context) {
     }
 
     fun cleanup() {
-        // Cancel any running timer
+        
         currentTimer?.cancel()
         currentTimer = null
         currentDialog?.dismiss()
         currentDialog = null
-        // Shutdown executor
+        
         if (!backgroundExecutor.isShutdown) {
             backgroundExecutor.shutdown()
             try {

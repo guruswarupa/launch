@@ -33,34 +33,34 @@ class WorkspacesAppsAdapter(
         val packageName = app.activityInfo.packageName
         val packageManager = holder.itemView.context.packageManager
         
-        // Set app name
+        
         try {
             holder.appName.text = app.loadLabel(packageManager).toString()
         } catch (_: Exception) {
             holder.appName.text = packageName
         }
         
-        // Set app icon
+        
         try {
             holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
         } catch (_: Exception) {
             holder.appIcon.setImageDrawable(null)
         }
         
-        // Remove listener before setting state to avoid triggering during recycling
+        
         holder.appCheckbox.setOnCheckedChangeListener(null)
         
-        // Set checkbox state based on current selection
+        
         holder.appCheckbox.isChecked = selectedPackages.contains(packageName)
         
-        // Set listener after state is set
+        
         holder.appCheckbox.setOnCheckedChangeListener { _, isChecked ->
             if (selectedPackages.contains(packageName) != isChecked) {
                 onSelectionChanged(packageName, isChecked)
             }
         }
         
-        // Handle item click (toggle checkbox)
+        
         holder.itemView.setOnClickListener {
             val newState = !holder.appCheckbox.isChecked
             holder.appCheckbox.isChecked = newState

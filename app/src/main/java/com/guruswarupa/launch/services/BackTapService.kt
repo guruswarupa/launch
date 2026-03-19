@@ -20,10 +20,10 @@ import com.guruswarupa.launch.managers.ServiceNotificationManager
 import com.guruswarupa.launch.managers.TorchManager
 import com.guruswarupa.launch.models.Constants
 
-/**
- * Foreground service that detects back tap gestures in the background
- * and performs configured actions when detected.
- */
+
+
+
+
 class BackTapService : Service() {
     
     private var backTapDetector: BackTapDetector? = null
@@ -38,7 +38,7 @@ class BackTapService : Service() {
         getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
     
-    // Action types
+    
     private var doubleTapAction = ACTION_SOUND_TOGGLE
     
     companion object {
@@ -92,21 +92,21 @@ class BackTapService : Service() {
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
         val sensitivity = prefs.getInt(Constants.Prefs.BACK_TAP_SENSITIVITY, 5)
         
-        // Load independent actions for double tap
-        // Default to user's requested values if not set
+        
+        
         doubleTapAction = prefs.getString(Constants.Prefs.BACK_TAP_DOUBLE_ACTION, ACTION_SOUND_TOGGLE) ?: ACTION_SOUND_TOGGLE
         
         backTapDetector?.updateSensitivity(sensitivity)
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // CRITICAL: Call startForeground IMMEDIATELY and UNCONDITIONALLY as the first operation
-        // This MUST happen within 5 seconds to avoid ForegroundServiceDidNotStartInTimeException
+        
+        
         try {
             startForegroundServiceStatus()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start foreground service", e)
-            // If we can't start foreground, we must stop the service
+            
             stopSelf()
             return START_NOT_STICKY
         }
@@ -194,7 +194,7 @@ class BackTapService : Service() {
     
     private fun handleBackTapAction(tapCount: Int) {
         try {
-            // We only care about 2 or more taps now, and we use the doubleTapAction
+            
             if (tapCount < 2) return
             val action = doubleTapAction
             

@@ -42,7 +42,7 @@ class TemperatureWidget(
             if (isInitialized && temperatureManager.hasTemperatureSensor()) {
                 updateDisplay()
             }
-            handler.postDelayed(this, 2000) // Update every 2 seconds
+            handler.postDelayed(this, 2000) 
         }
     }
     
@@ -132,15 +132,15 @@ class TemperatureWidget(
     
     private fun updateTemperatureDisplay(temperature: Float) {
         val df = DecimalFormat("#.#")
-        val selectedUnit = weatherManager.getTemperatureUnit() // This method needs to be made public
+        val selectedUnit = weatherManager.getTemperatureUnit() 
         
         if (selectedUnit == "fahrenheit") {
-            // Show Fahrenheit as main temperature
+            
             val fahrenheit = temperatureManager.getTemperatureInFahrenheit()
             temperatureText.text = context.getString(R.string.temperature_f_format, df.format(fahrenheit))
             fahrenheitText.text = context.getString(R.string.temperature_c_format, df.format(temperature))
         } else {
-            // Show Celsius as main temperature (default)
+            
             temperatureText.text = context.getString(R.string.temperature_c_format, df.format(temperature))
             val fahrenheit = temperatureManager.getTemperatureInFahrenheit()
             fahrenheitText.text = context.getString(R.string.temperature_f_format, df.format(fahrenheit))

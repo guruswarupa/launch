@@ -88,25 +88,25 @@ class CalendarAdapter(
     private fun updateDays() {
         days.clear()
         
-        // Get first day of month
+        
         val firstDayOfMonth = calendar.clone() as Calendar
         firstDayOfMonth.set(Calendar.DAY_OF_MONTH, 1)
         val firstDayOfWeek = firstDayOfMonth.get(Calendar.DAY_OF_WEEK)
         
-        // Get number of days in month
+        
         val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
         
-        // Calculate offset - Sunday = 1, Monday = 2, etc.
-        // We want Sunday to be first column (index 0)
+        
+        
         val startOffset = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
         repeat(startOffset) {
             days.add(DayItem(day = null, hasWorkout = false, isToday = false, dateString = null))
         }
         
-        // Get all workout dates from all exercises
+        
         val allWorkoutDates = exercises.flatMap { it.workoutDates }.toSet()
         
-        // Add days of month
+        
         val currentDate = Calendar.getInstance()
         val today = currentDate.get(Calendar.DAY_OF_MONTH)
         val currentMonth = currentDate.get(Calendar.MONTH)
@@ -149,7 +149,7 @@ class CalendarAdapter(
         val dayItem = days[position]
         
         if (dayItem.day == null) {
-            // Empty cell
+            
             holder.dayText.text = ""
             holder.dayText.visibility = View.INVISIBLE
             holder.workoutIndicator.visibility = View.GONE
@@ -159,21 +159,21 @@ class CalendarAdapter(
             holder.dayText.text = dayItem.day.toString()
             holder.dayText.visibility = View.VISIBLE
             
-            // Show workout indicator
+            
             if (dayItem.hasWorkout) {
                 holder.workoutIndicator.visibility = View.VISIBLE
             } else {
                 holder.workoutIndicator.visibility = View.GONE
             }
             
-            // Highlight today with a nice colored border
+            
             if (dayItem.isToday) {
                 holder.itemView.setBackgroundResource(R.drawable.today_highlight)
             } else {
                 holder.itemView.background = null
             }
             
-            // Make clickable if it has workout data
+            
             if (dayItem.hasWorkout && dayItem.dateString != null) {
                 holder.itemView.setOnClickListener {
                     val dateStr = dayItem.dateString

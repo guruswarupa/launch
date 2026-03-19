@@ -32,12 +32,12 @@ class DeviceInfoWidget(
     private val deviceInfoManager = DeviceInfoManager(context)
     private val handler = Handler(Looper.getMainLooper())
     
-    // Auto-update runnable
+    
     private val updateRunnable = object : Runnable {
         override fun run() {
             if (isInitialized) {
                 updateDisplay()
-                handler.postDelayed(this, 5000) // Update every 5 seconds
+                handler.postDelayed(this, 5000) 
             }
         }
     }
@@ -61,7 +61,7 @@ class DeviceInfoWidget(
         hardwareText = widgetView.findViewById(R.id.hardware_text)
         kernelText = widgetView.findViewById(R.id.kernel_text)
 
-        // Initial update
+        
         cpuModelText.text = deviceInfoManager.getCpuModel()
         androidVersionText.text = deviceInfoManager.getAndroidVersion()
         hardwareText.text = deviceInfoManager.getHardwareInfo()
@@ -69,7 +69,7 @@ class DeviceInfoWidget(
         
         updateDisplay()
         
-        // Start auto-updates
+        
         handler.post(updateRunnable)
 
         isInitialized = true
@@ -78,7 +78,7 @@ class DeviceInfoWidget(
     private fun updateDisplay() {
         uptimeText.text = deviceInfoManager.getUptime()
         
-        // RAM
+        
         val (usedRam, totalRam) = deviceInfoManager.getRamUsage()
         val usedRamGb = deviceInfoManager.formatBytes(usedRam)
         val totalRamGb = deviceInfoManager.formatBytes(totalRam)
@@ -88,7 +88,7 @@ class DeviceInfoWidget(
             ramProgressBar.progress = ((usedRam.toDouble() / totalRam.toDouble()) * 100).toInt()
         }
         
-        // Storage
+        
         val (usedStorage, totalStorage) = deviceInfoManager.getStorageUsage()
         val usedStorageGb = deviceInfoManager.formatBytes(usedStorage)
         val totalStorageGb = deviceInfoManager.formatBytes(totalStorage)
@@ -98,7 +98,7 @@ class DeviceInfoWidget(
             storageProgressBar.progress = ((usedStorage.toDouble() / totalStorage.toDouble()) * 100).toInt()
         }
         
-        // CPU Temp
+        
         val temp = deviceInfoManager.getCpuTemperature()
         if (temp > 0) {
             cpuTempText.text = context.getString(R.string.cpu_temp_format, temp)

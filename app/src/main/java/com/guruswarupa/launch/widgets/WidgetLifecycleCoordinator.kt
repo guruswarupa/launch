@@ -1,9 +1,9 @@
 package com.guruswarupa.launch.widgets
 
-/**
- * Coordinates the lifecycle of multiple widgets by delegating onResume, onPause and onDestroy calls.
- * Also serves as a registry for all widget instances.
- */
+
+
+
+
 class WidgetLifecycleCoordinator {
     lateinit var calculatorWidget: CalculatorWidget
     lateinit var notificationsWidget: NotificationsWidget
@@ -20,7 +20,7 @@ class WidgetLifecycleCoordinator {
     lateinit var networkStatsWidget: NetworkStatsWidget
     lateinit var deviceInfoWidget: DeviceInfoWidget
 
-    // Initialization check helpers
+    
     fun isNotificationsWidgetInitialized() = ::notificationsWidget.isInitialized
     fun isPhysicalActivityWidgetInitialized() = ::physicalActivityWidget.isInitialized
     fun isCompassWidgetInitialized() = ::compassWidget.isInitialized
@@ -43,9 +43,9 @@ class WidgetLifecycleCoordinator {
 
     private val widgets = mutableListOf<WidgetWrapper>()
 
-    /**
-     * Register a widget for lifecycle management
-     */
+    
+
+
     fun register(
         isInitializedCheck: () -> Boolean,
         onResumeAction: () -> Unit,
@@ -73,9 +73,9 @@ class WidgetLifecycleCoordinator {
         widgets.add(wrapper)
     }
 
-    /**
-     * Setup default lifecycle registrations for all widgets
-     */
+    
+
+
     fun setupDefaultLifecycle() {
         widgets.clear()
         register({ ::physicalActivityWidget.isInitialized }, { physicalActivityWidget.onResume() }, { physicalActivityWidget.onPause() }, { physicalActivityWidget.cleanup() })
@@ -88,27 +88,27 @@ class WidgetLifecycleCoordinator {
         register({ ::githubContributionWidget.isInitialized }, { githubContributionWidget.onResume() }, { githubContributionWidget.onPause() }, { githubContributionWidget.cleanup() })
     }
 
-    /**
-     * Call onResume on all registered widgets that are initialized
-     */
+    
+
+
     fun onResume() {
         widgets.forEach { widget ->
             widget.onResume()
         }
     }
 
-    /**
-     * Call onPause on all registered widgets that are initialized
-     */
+    
+
+
     fun onPause() {
         widgets.forEach { widget ->
             widget.onPause()
         }
     }
 
-    /**
-     * Call onDestroy on all registered widgets that are initialized
-     */
+    
+
+
     fun onDestroy() {
         widgets.forEach { widget ->
             widget.onDestroy()

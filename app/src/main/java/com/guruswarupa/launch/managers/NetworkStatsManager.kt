@@ -29,15 +29,15 @@ class NetworkStatsManager {
         
         executor.execute {
             try {
-                // 1. Latency Test
+                
                 onProgress("Measuring latency...")
                 val (ping, jitter) = measurePing()
                 
-                // 2. Download Test
+                
                 onProgress("Measuring download speed...")
                 val downloadSpeed = measureDownloadSpeed()
                 
-                // 3. Upload Test
+                
                 onProgress("Measuring upload speed...")
                 val uploadSpeed = measureUploadSpeed()
 
@@ -61,7 +61,7 @@ class NetworkStatsManager {
         repeat(count) {
             val start = System.currentTimeMillis()
             try {
-                // Using Socket connection as isReachable often fails on Android without ICMP privileges
+                
                 val socket = java.net.Socket()
                 socket.connect(java.net.InetSocketAddress(host, 53), 1000)
                 val end = System.currentTimeMillis()
@@ -76,7 +76,7 @@ class NetworkStatsManager {
 
         val avgPing = pings.average().toLong()
         
-        // Calculate Jitter (average deviation from the mean)
+        
         var jitterSum = 0.0
         for (p in pings) {
             jitterSum += abs(p - avgPing)
@@ -88,14 +88,14 @@ class NetworkStatsManager {
 
     private fun measureDownloadSpeed(): Float {
         val urls = listOf(
-            "https://speed.cloudflare.com/__down?bytes=10485760", // 10MB Cloudflare
+            "https://speed.cloudflare.com/__down?bytes=10485760", 
             "https://dl.google.com/android/repository/platform-tools-latest-linux.zip",
             "https://speedtest.tele2.net/10MB.zip"
         )
         
         for (fileUrl in urls) {
             var totalBytesRead = 0L
-            val maxDuration = 5000L // 5 seconds max
+            val maxDuration = 5000L 
             
             try {
                 val url = URL(fileUrl)
@@ -156,7 +156,7 @@ class NetworkStatsManager {
                 connection.connectTimeout = 5000
                 connection.readTimeout = 7000
                 
-                // Use chunked mode to avoid huge buffer allocation and allow early termination
+                
                 connection.setChunkedStreamingMode(0) 
                 connection.setRequestProperty("Content-Type", "application/octet-stream")
                 connection.setRequestProperty("User-Agent", "Mozilla/5.0")
@@ -171,14 +171,14 @@ class NetworkStatsManager {
                 while (System.currentTimeMillis() - startTime < maxDuration) {
                     outputStream.write(buffer)
                     totalBytesWritten += bufferSize
-                    // Cap at 50MB for safety
+                    
                     if (totalBytesWritten > 50 * 1024 * 1024) break
                 }
                 
                 outputStream.flush()
                 outputStream.close()
                 
-                // Finalize connection and get response code
+                
                 val responseCode = connection.responseCode
                 val endTime = System.currentTimeMillis()
                 connection.disconnect()
@@ -243,9 +243,9 @@ class NetworkStatsManager {
         return String.format(Locale.getDefault(), "%.1f GB", gb)
     }
     
-    /**
-     * Cleanup method to shutdown executor and prevent memory leaks
-     */
+    
+
+
     fun cleanup() {
         executor.shutdown()
     }

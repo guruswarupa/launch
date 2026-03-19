@@ -11,9 +11,9 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import com.guruswarupa.launch.managers.WidgetConfigurationManager
 import com.guruswarupa.launch.R
-/**
- * Dialog for showing full widget preview
- */
+
+
+
 class WidgetPreviewDialog(
     context: Context,
     private val widgetInfo: WidgetConfigurationManager.WidgetInfo,
@@ -33,7 +33,7 @@ class WidgetPreviewDialog(
         setContentView(R.layout.dialog_widget_preview)
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         
-        // Initialize views
+        
         previewImage = findViewById(R.id.dialog_preview_image)
         loadingProgress = findViewById(R.id.dialog_loading_progress)
         widgetName = findViewById(R.id.dialog_widget_name)
@@ -41,11 +41,11 @@ class WidgetPreviewDialog(
         closeButton = findViewById(R.id.btn_close)
         enableButton = findViewById(R.id.btn_enable)
         
-        // Set widget info
+        
         widgetName.text = widgetInfo.name
         widgetDescription.text = getWidgetDescription(widgetInfo.id)
         
-        // Update enable button text based on current state
+        
         val isEnabled = widgetInfo.enabled
         enableButton.text = if (isEnabled) "Disable" else "Enable"
         enableButton.setBackgroundResource(
@@ -53,10 +53,10 @@ class WidgetPreviewDialog(
             else R.drawable.dialog_preview_primary_button
         )
         
-        // Load preview
+        
         loadPreview()
         
-        // Set up button listeners
+        
         closeButton.setOnClickListener {
             dismiss()
         }
@@ -113,10 +113,10 @@ class WidgetPreviewDialog(
             context: Context,
             widgetInfo: WidgetConfigurationManager.WidgetInfo,
             previewManager: WidgetPreviewManager,
-            onActionClicked: (Boolean) -> Unit  // true for enable, false for disable
+            onActionClicked: (Boolean) -> Unit  
         ) {
             val dialog = WidgetPreviewDialog(context, widgetInfo, previewManager) {
-                onActionClicked(!widgetInfo.enabled) // Invert current state
+                onActionClicked(!widgetInfo.enabled) 
             }
             dialog.show()
         }

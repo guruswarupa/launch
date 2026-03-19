@@ -5,9 +5,9 @@ import android.content.Intent
 import android.provider.Settings
 import android.os.Build
 
-/**
- * Helper class to provide Android system settings search functionality
- */
+
+
+
 object AndroidSettingsHelper {
     
     data class SettingInfo(
@@ -17,14 +17,14 @@ object AndroidSettingsHelper {
         val searchKeywords: List<String> = emptyList()
     )
     
-    /**
-     * Returns a comprehensive list of Android system settings with searchable keywords
-     */
+    
+
+
     @SuppressLint("InlinedApi")
     fun getAllSystemSettings(): List<SettingInfo> {
         val settingsList = mutableListOf<SettingInfo>()
         
-        // Wi-Fi Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Wi-Fi",
@@ -34,7 +34,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Bluetooth Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Bluetooth",
@@ -44,7 +44,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Data Usage Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Data Usage",
@@ -54,7 +54,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Mobile Network Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Mobile Network",
@@ -64,7 +64,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Airplane Mode Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Airplane Mode",
@@ -74,7 +74,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Sound Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Sound",
@@ -84,7 +84,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Display Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Display",
@@ -94,7 +94,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Notification Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Notifications",
@@ -104,7 +104,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Location Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Location",
@@ -114,7 +114,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Security Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Security",
@@ -124,7 +124,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Privacy Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Privacy",
@@ -134,7 +134,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Accessibility Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Accessibility",
@@ -144,7 +144,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Storage Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Storage",
@@ -154,7 +154,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Battery Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Battery",
@@ -164,7 +164,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Applications Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Applications",
@@ -174,7 +174,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Developer Options
+        
         settingsList.add(
             SettingInfo(
                 title = "Developer Options",
@@ -184,7 +184,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Date & Time Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Date & Time",
@@ -194,7 +194,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Language & Input Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Language & Input",
@@ -204,7 +204,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Accounts Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "Accounts",
@@ -214,7 +214,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // About Phone Settings
+        
         settingsList.add(
             SettingInfo(
                 title = "About Phone",
@@ -224,7 +224,7 @@ object AndroidSettingsHelper {
             )
         )
         
-        // Additional settings based on Android version
+        
         settingsList.add(
             SettingInfo(
                 title = "Data Saver",
@@ -245,7 +245,7 @@ object AndroidSettingsHelper {
             )
         }
         
-        // Add digital wellbeing for newer Android versions
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             settingsList.add(
                 SettingInfo(
@@ -260,9 +260,9 @@ object AndroidSettingsHelper {
         return settingsList
     }
     
-    /**
-     * Search for settings that match the given query
-     */
+    
+
+
     fun searchSettings(query: String): List<SettingInfo> {
         val lowerQuery = query.lowercase().trim()
         if (lowerQuery.isEmpty()) return emptyList()
@@ -274,16 +274,16 @@ object AndroidSettingsHelper {
         }
     }
     
-    /**
-     * Create an intent to open the specified system setting
-     */
+    
+
+
     fun createSettingsIntent(settingAction: String): Intent {
         return try {
             Intent(settingAction).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         } catch (_: Exception) {
-            // Fallback to general settings if the specific action isn't available
+            
             Intent(Settings.ACTION_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }

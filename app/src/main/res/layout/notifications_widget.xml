@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Header -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -45,7 +45,7 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <!-- Notification List -->
+    
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/notifications_recycler_view"
         android:layout_width="match_parent"
@@ -55,7 +55,7 @@
         android:paddingTop="4dp"
         android:paddingBottom="4dp" />
 
-    <!-- Empty State / Permission Prompt -->
+    
     <LinearLayout
         android:id="@+id/notifications_empty_state"
         android:layout_width="match_parent"

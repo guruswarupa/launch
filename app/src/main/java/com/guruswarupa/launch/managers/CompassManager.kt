@@ -88,9 +88,9 @@ class CompassManager(context: Context) : SensorEventListener {
         }
     }
     
-    /**
-     * Cleanup method to unregister sensor listeners and prevent memory leaks
-     */
+    
+
+
     fun cleanup() {
         stopTracking()
         onDirectionChanged = null
@@ -120,7 +120,7 @@ class CompassManager(context: Context) : SensorEventListener {
     }
     
     private fun updateOrientationAngles() {
-        // Get rotation matrix from accelerometer and magnetometer readings
+        
         SensorManager.getRotationMatrix(
             rotationMatrix,
             null,
@@ -128,15 +128,15 @@ class CompassManager(context: Context) : SensorEventListener {
             magnetometerReading
         )
         
-        // Get orientation angles (azimuth, pitch, roll)
+        
         SensorManager.getOrientation(rotationMatrix, orientationAngles)
         
-        // Azimuth is the angle around the Z axis (0 to 2π)
-        // Convert from radians to degrees and normalize to 0-360
+        
+        
         val azimuth = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
         val normalizedAzimuth = ((azimuth + 360) % 360)
         
-        if (abs(normalizedAzimuth - currentAzimuth) > 1f) { // Only update if change is significant
+        if (abs(normalizedAzimuth - currentAzimuth) > 1f) { 
             currentAzimuth = normalizedAzimuth
             onDirectionChanged?.invoke(currentAzimuth)
         }

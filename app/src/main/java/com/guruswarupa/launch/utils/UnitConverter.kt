@@ -5,7 +5,7 @@ import java.math.RoundingMode
 
 object UnitConverter {
     
-    // Length conversions (to meters)
+    
     fun convertLength(value: BigDecimal, from: String, to: String): BigDecimal {
         val toMeters = when (from.lowercase()) {
             "mm" -> value.divide(BigDecimal(1000), 20, RoundingMode.HALF_UP)
@@ -32,7 +32,7 @@ object UnitConverter {
         }
     }
     
-    // Area conversions (to square meters)
+    
     fun convertArea(value: BigDecimal, from: String, to: String): BigDecimal {
         val toSqMeters = when (from.lowercase()) {
             "mm²" -> value.divide(BigDecimal(1000000), 20, RoundingMode.HALF_UP)
@@ -61,7 +61,7 @@ object UnitConverter {
         }
     }
     
-    // Temperature conversions
+    
     fun convertTemperature(value: BigDecimal, from: String, to: String): BigDecimal {
         val toCelsius = when (from.uppercase()) {
             "C" -> value
@@ -78,7 +78,7 @@ object UnitConverter {
         }
     }
     
-    // Volume conversions (to liters)
+    
     fun convertVolume(value: BigDecimal, from: String, to: String): BigDecimal {
         val toLiters = when (from.lowercase()) {
             "ml" -> value.divide(BigDecimal(1000), 20, RoundingMode.HALF_UP)
@@ -105,7 +105,7 @@ object UnitConverter {
         }
     }
     
-    // Mass conversions (to kilograms)
+    
     fun convertMass(value: BigDecimal, from: String, to: String): BigDecimal {
         val toKg = when (from.lowercase()) {
             "mg" -> value.divide(BigDecimal(1000000), 20, RoundingMode.HALF_UP)
@@ -128,7 +128,7 @@ object UnitConverter {
         }
     }
     
-    // Data conversions (to bytes)
+    
     fun convertData(value: BigDecimal, from: String, to: String): BigDecimal {
         val toBytes = when (from.uppercase()) {
             "B" -> value
@@ -149,7 +149,7 @@ object UnitConverter {
         }
     }
     
-    // Speed conversions (to m/s)
+    
     fun convertSpeed(value: BigDecimal, from: String, to: String): BigDecimal {
         val toMps = when (from.lowercase()) {
             "m/s" -> value
@@ -170,7 +170,7 @@ object UnitConverter {
         }
     }
     
-    // Time conversions (to seconds)
+    
     fun convertTime(value: BigDecimal, from: String, to: String): BigDecimal {
         val toSeconds = when (from.lowercase()) {
             "ms" -> value.divide(BigDecimal(1000), 20, RoundingMode.HALF_UP)

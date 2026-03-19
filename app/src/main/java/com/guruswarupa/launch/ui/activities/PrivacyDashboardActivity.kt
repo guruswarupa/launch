@@ -32,7 +32,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
     private lateinit var adapter: PrivacyDashboardAdapter
     private lateinit var searchBox: EditText
     
-    // Summary views
+    
     private lateinit var statTotalValue: TextView
     private lateinit var statCriticalValue: TextView
     private lateinit var statSideloadedValue: TextView
@@ -61,7 +61,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -99,7 +99,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
     }
     
     private fun setupTheme() {
-        // Apply dynamic translucency instead of hardcoded overlay color
+        
         applyBackgroundTranslucency()
         setupWallpaper()
     }
@@ -152,7 +152,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
                         else -> 0
                     }
 
-                    // Detect sideloaded apps
+                    
                     @Suppress("DEPRECATION")
                     val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         try {
@@ -210,7 +210,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
                 R.id.chip_location -> app.grantedPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION) || 
                                      app.grantedPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
                 R.id.chip_sideloaded -> app.isSideloaded
-                else -> true // chip_all or no selection
+                else -> true 
             }
             
             matchesQuery && matchesChip

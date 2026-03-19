@@ -9,7 +9,7 @@ data class ThemeOption(
 ) {
     companion object {
         val PREDEFINED_THEMES = listOf(
-            // Landscape
+            
             ThemeOption(
                 "stardust", 
                 "Deep Stardust", 
@@ -65,7 +65,7 @@ data class ThemeOption(
                 "Landscape"
             ),
             
-            // City
+            
             ThemeOption(
                 "cyber",
                 "Cyber City",
@@ -97,7 +97,7 @@ data class ThemeOption(
                 "City"
             ),
 
-            // Abstract
+            
             ThemeOption(
                 "lavender",
                 "Lavender Mist",
@@ -129,7 +129,7 @@ data class ThemeOption(
                 "Abstract"
             ),
 
-            // Minimal
+            
             ThemeOption(
                 "nordic",
                 "Nordic Ice",
@@ -162,7 +162,7 @@ data class ThemeOption(
                 isDark = false
             ),
 
-            // Space
+            
             ThemeOption(
                 "nebula",
                 "Cosmic Nebula",
@@ -182,7 +182,7 @@ data class ThemeOption(
                 "Space"
             ),
 
-            // Retro
+            
             ThemeOption(
                 "pixel_sunset",
                 "8-Bit Sunset",
@@ -202,7 +202,7 @@ data class ThemeOption(
                 "Retro"
             ),
 
-            // Nature
+            
             ThemeOption(
                 "monstera",
                 "Monstera Leaf",
@@ -222,7 +222,7 @@ data class ThemeOption(
                 "Nature"
             ),
 
-            // Architecture
+            
             ThemeOption(
                 "eiffel",
                 "Eiffel Tower",
@@ -248,7 +248,7 @@ data class ThemeOption(
                 "Architecture"
             ),
 
-            // Planets
+            
             ThemeOption(
                 "mercury",
                 "Mercury",

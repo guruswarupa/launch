@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <!-- History Section -->
+    
     <LinearLayout
         android:id="@+id/history_section"
         android:layout_width="match_parent"
@@ -49,7 +49,7 @@
             android:nestedScrollingEnabled="false" />
     </LinearLayout>
 
-    <!-- Mode Selector -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -91,7 +91,7 @@
             android:textColor="@color/widget_text" />
     </LinearLayout>
 
-    <!-- Display -->
+    
     <EditText
         android:id="@+id/calculator_display"
         android:layout_width="match_parent"
@@ -107,7 +107,7 @@
         android:text="0"
         android:layout_marginBottom="16dp" />
 
-    <!-- Scientific Functions Panel -->
+    
     <GridLayout
         android:id="@+id/scientific_panel"
         android:layout_width="match_parent"
@@ -229,7 +229,7 @@
             android:textColor="@color/widget_text" />
     </GridLayout>
 
-    <!-- Converter Panel -->
+    
     <LinearLayout
         android:id="@+id/converter_panel"
         android:layout_width="match_parent"
@@ -238,7 +238,7 @@
         android:visibility="gone"
         android:layout_marginBottom="8dp">
 
-        <!-- Converter Type Toggle -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -269,7 +269,7 @@
                 android:textColor="@color/widget_text" />
         </LinearLayout>
 
-        <!-- Unit Converter Section -->
+        
         <LinearLayout
             android:id="@+id/unit_converter_section"
             android:layout_width="match_parent"
@@ -345,7 +345,7 @@
                 android:text="0" />
         </LinearLayout>
 
-        <!-- Base Converter Section -->
+        
         <LinearLayout
             android:id="@+id/base_converter_section"
             android:layout_width="match_parent"
@@ -507,7 +507,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Button Grid -->
+    
     <GridLayout
         android:id="@+id/button_grid"
         android:layout_width="match_parent"
@@ -517,7 +517,7 @@
         android:alignmentMode="alignMargins"
         android:columnOrderPreserved="false">
 
-        <!-- Row 1: Clear, Backspace, Divide, Multiply -->
+        
         <Button
             android:id="@+id/btn_clear"
             android:layout_width="0dp"
@@ -562,7 +562,7 @@
             android:textColor="@color/widget_text"
             android:background="@drawable/button_neutral_ripple" />
 
-        <!-- Row 2: 7, 8, 9, Subtract -->
+        
         <Button
             android:id="@+id/btn_7"
             android:layout_width="0dp"
@@ -607,7 +607,7 @@
             android:textColor="@color/widget_text"
             android:background="@drawable/button_neutral_ripple" />
 
-        <!-- Row 3: 4, 5, 6, Add -->
+        
         <Button
             android:id="@+id/btn_4"
             android:layout_width="0dp"
@@ -652,7 +652,7 @@
             android:textColor="@color/widget_text"
             android:background="@drawable/button_neutral_ripple" />
 
-        <!-- Row 4: 1, 2, 3, Equals -->
+        
         <Button
             android:id="@+id/btn_1"
             android:layout_width="0dp"
@@ -698,7 +698,7 @@
             android:textColor="@color/widget_text"
             android:background="@drawable/button_neutral_ripple" />
 
-        <!-- Row 5: 0, Decimal -->
+        
         <Button
             android:id="@+id/btn_0"
             android:layout_width="0dp"

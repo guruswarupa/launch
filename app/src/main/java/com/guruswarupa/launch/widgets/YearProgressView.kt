@@ -19,9 +19,9 @@ class YearProgressView @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rectF = RectF()
     
-    // Colors for different activity levels (using Nord palette)
-    private val colorCompleted = Color.parseColor("#A3BE8C")  // Nord green for completed days
-    private val colorRemaining = Color.parseColor("#ECEFF4")  // Nord light for remaining days
+    
+    private val colorCompleted = Color.parseColor("#A3BE8C")  
+    private val colorRemaining = Color.parseColor("#ECEFF4")  
     
     private var daysInYear = 365
     private var currentDayOfYear = 1
@@ -45,12 +45,12 @@ class YearProgressView @JvmOverloads constructor(
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
         
-        // Calculate cell size based on available width
+        
         val availableWidth = width - paddingStart - paddingEnd
-        val columns = 53 // 53 weeks in a year
+        val columns = 53 
         cellSize = (availableWidth - (columns - 1) * spacing) / columns
         
-        // Calculate height based on 7 rows (days of week)
+        
         val rows = 7
         val calculatedHeight = (rows * cellSize + (rows - 1) * spacing + paddingTop + paddingBottom).toInt()
         
@@ -63,7 +63,7 @@ class YearProgressView @JvmOverloads constructor(
         val startX = paddingStart.toFloat()
         val startY = paddingTop.toFloat()
         
-        // Draw each day as a cell
+        
         for (day in 1..daysInYear) {
             val position = getCellPosition(day)
             if (position != null) {
@@ -71,11 +71,11 @@ class YearProgressView @JvmOverloads constructor(
                 val x = startX + col * (cellSize + spacing)
                 val y = startY + row * (cellSize + spacing)
                 
-                // Determine color based on whether the day has passed
+                
                 val color = if (day <= currentDayOfYear) {
-                    colorCompleted // Dark green for completed days
+                    colorCompleted 
                 } else {
-                    colorRemaining // Light gray for future days
+                    colorRemaining 
                 }
                 
                 paint.color = color
@@ -84,33 +84,33 @@ class YearProgressView @JvmOverloads constructor(
             }
         }
         
-        // Draw current day indicator
+        
         val currentPos = getCellPosition(currentDayOfYear)
         if (currentPos != null) {
             val (row, col) = currentPos
             val x = startX + col * (cellSize + spacing)
             val y = startY + row * (cellSize + spacing)
             
-            // Draw a border around current day
+            
             paint.color = Color.WHITE
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = 3f
             rectF.set(x - 1, y - 1, x + cellSize + 1, y + cellSize + 1)
             canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, paint)
             
-            // Reset paint
+            
             paint.style = Paint.Style.FILL
         }
     }
     
     private fun getCellPosition(dayOfYear: Int): Pair<Int, Int>? {
-        // Convert day of year to position in grid
-        // This is a simplified approach - in a real implementation,
-        // you'd want to properly map dates to weeks and days of week
+        
+        
+        
         val week = (dayOfYear - 1) / 7
         val dayOfWeek = (dayOfYear - 1) % 7
         
-        // Limit to 53 weeks max
+        
         if (week >= 53) return null
         
         return Pair(dayOfWeek, week)
@@ -121,7 +121,7 @@ class YearProgressView @JvmOverloads constructor(
         invalidate()
     }
     
-    // Get progress information
+    
     fun getProgressInfo(): ProgressInfo {
         val percentage = (currentDayOfYear.toDouble() / daysInYear.toDouble() * 100).toInt()
         val daysRemaining = daysInYear - currentDayOfYear

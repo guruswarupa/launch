@@ -11,10 +11,10 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.core.PermissionManager
 
-/**
- * Handles voice search functionality.
- * Extracted from MainActivity to reduce complexity.
- */
+
+
+
+
 class VoiceSearchManager(
     private val activity: FragmentActivity,
     private val packageManager: android.content.pm.PackageManager
@@ -76,10 +76,10 @@ class VoiceSearchManager(
         }
     }
 
-    /**
-     * Triggers the system's voice command assistant (Google Assistant or Gemini).
-     * This is the "free" integration that leverages the system's built-in capabilities.
-     */
+    
+
+
+
     fun triggerSystemAssistant() {
         val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -92,7 +92,7 @@ class VoiceSearchManager(
                 Toast.makeText(activity, "Could not launch system assistant", Toast.LENGTH_SHORT).show()
             }
         } else {
-            // Fallback for devices without a dedicated voice command activity
+            
             val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }

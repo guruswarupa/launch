@@ -12,15 +12,15 @@ import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import java.util.Collections
 
-/**
- * Manages a single consolidated notification for all Launch background services.
- */
+
+
+
 object ServiceNotificationManager {
     private const val CHANNEL_ID = "launch_services_channel"
     private const val CHANNEL_NAME = "Launch Background Services"
     const val NOTIFICATION_ID = 1000
 
-    // Use a synchronized set for thread safety
+    
     private val activeServices = Collections.synchronizedSet(mutableSetOf<String>())
     private var isChannelCreated = false
 

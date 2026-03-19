@@ -35,7 +35,7 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
         workspaces.removeAll { it.id == workspaceId }
         saveAllWorkspaces(workspaces)
         
-        // If deleted workspace was active, clear active workspace
+        
         if (getActiveWorkspaceId() == workspaceId) {
             setActiveWorkspaceId(null)
         }
@@ -120,10 +120,10 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
         return activeWorkspace?.appPackageNames?.contains(packageName) ?: true
     }
     
-    /**
-     * Get all apps that are already assigned to any workspace
-     * @param excludeWorkspaceId If provided, apps from this workspace will be excluded from the result
-     */
+    
+
+
+
     fun getAppsInWorkspaces(excludeWorkspaceId: String? = null): Set<String> {
         val allWorkspaces = getAllWorkspaces()
         val appsInWorkspaces = mutableSetOf<String>()

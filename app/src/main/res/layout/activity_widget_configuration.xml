@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -12,7 +12,7 @@
         android:contentDescription="Background"
         android:scaleType="centerCrop" />
 
-    <!-- Semi-transparent overlay for better text visibility -->
+    
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
@@ -27,7 +27,7 @@
         android:paddingHorizontal="16dp"
         android:paddingBottom="16dp">
 
-        <!-- Title & Header -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -89,7 +89,7 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Search Bar Section (No outer card) -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -127,7 +127,7 @@
 
         </LinearLayout>
 
-        <!-- Category Label -->
+        
         <TextView
             android:id="@+id/widgets_header"
             android:layout_width="match_parent"
@@ -140,7 +140,7 @@
             android:layout_marginBottom="8dp"
             android:layout_marginStart="12dp"/>
 
-        <!-- Instruction Text (Moved below enabled widgets text) -->
+        
         <TextView
             android:id="@+id/instruction_text"
             android:layout_width="match_parent"
@@ -153,7 +153,7 @@
             android:textSize="13sp"
             android:lineSpacingExtra="2dp" />
 
-        <!-- Widgets List Card -->
+        
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="0dp"

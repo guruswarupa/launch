@@ -7,9 +7,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Manages time and date display updates
- */
+
+
+
 class TimeDateManager(
     private val timeTextView: TextView,
     private val dateTextView: TextView,
@@ -21,7 +21,7 @@ class TimeDateManager(
     private var timeFormat = createMainTimeFormat(use24HourFormat)
     private val dateFormat = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
     
-    // Artistic formats for right drawer
+    
     private var artisticTimeFormat = createDrawerTimeFormat(use24HourFormat)
     private val artisticDateFormat = SimpleDateFormat("EEEE, dd MMM", Locale.getDefault())
     
@@ -37,7 +37,7 @@ class TimeDateManager(
         override fun run() {
             updateTime()
             updateDate()
-            handler.postDelayed(this, 30000) // Update every 30 seconds
+            handler.postDelayed(this, 30000) 
         }
     }
     

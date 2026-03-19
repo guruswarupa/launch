@@ -34,11 +34,11 @@ class FastScroller @JvmOverloads constructor(
     private val extraVerticalPadding = 48f * density
     private var currentColor = Color.WHITE
 
-    private var currentAlpha = 1f // Always visible
+    private var currentAlpha = 1f 
     private var waveProgress = 0f
     private var waveAnimator: ValueAnimator? = null
     
-    // Track touch position for wave animation origin
+    
     private var touchX = 0f
 
     private var trackTop = 0f
@@ -139,18 +139,18 @@ class FastScroller @JvmOverloads constructor(
                 val adapter = recyclerView.adapter as? AppAdapter
                 when (newState) {
                     RecyclerView.SCROLL_STATE_DRAGGING -> {
-                        // User started scrolling
+                        
                         adapter?.setFastScrollingState(true)
                     }
                     RecyclerView.SCROLL_STATE_SETTLING -> {
-                        // Fast scroll in progress
+                        
                         adapter?.setFastScrollingState(true)
                     }
                     RecyclerView.SCROLL_STATE_IDLE -> {
-                        // Scrolling stopped
+                        
                         if (previousState != RecyclerView.SCROLL_STATE_IDLE) {
                             adapter?.setFastScrollingState(false)
-                            // Force refresh visible icons after a short delay
+                            
                             if (!isSliding) {
                                 forceRefreshVisibleIcons()
                             }
@@ -161,14 +161,14 @@ class FastScroller @JvmOverloads constructor(
             }
         })
         
-        // Initial sync if the recycler view is already populated
+        
         rv.post { updateScrollIndex() }
     }
     
-    /**
-     * Forces a refresh of visible item icons after scrolling stops.
-     * This helps ensure icons load properly after fast scrolling with the fast scroller.
-     */
+    
+
+
+
     private fun forceRefreshVisibleIcons() {
         val rv = recyclerView ?: return
         val layoutManager = rv.layoutManager as? LinearLayoutManager ?: return
@@ -180,14 +180,14 @@ class FastScroller @JvmOverloads constructor(
         
         val adapter = rv.adapter as? AppAdapter ?: return
         
-        // Notify adapter to rebind visible items to refresh icons
-        // Use a small delay to ensure layout is stable
+        
+        
         rv.postDelayed({
             for (pos in firstVisiblePos..lastVisiblePos) {
                 if (pos < adapter.itemCount) {
                     rv.findViewHolderForAdapterPosition(pos)?.let { viewHolder ->
-                        // Force rebind by calling onBindViewHolder directly
-                        // This will check cache and reload icons if needed
+                        
+                        
                         if (viewHolder is AppAdapter.ViewHolder) {
                             adapter.forceRebindViewHolder(viewHolder, pos)
                         }
@@ -209,7 +209,7 @@ class FastScroller @JvmOverloads constructor(
 
         var newIndex = -1
         
-        // Find both favorites separators
+        
         var favoritesStartSeparatorIndex = -1
         var favoritesEndSeparatorIndex = -1
         for (i in appList.indices) {
@@ -222,22 +222,22 @@ class FastScroller @JvmOverloads constructor(
             }
         }
 
-        // Check if we're in the favorites section (between start and end separators)
+        
         val isInFavoritesSection = if (favoritesStartSeparatorIndex != -1 && favoritesEndSeparatorIndex != -1) {
             firstVisiblePos >= favoritesStartSeparatorIndex && firstVisiblePos < favoritesEndSeparatorIndex
         } else if (favoritesStartSeparatorIndex != -1) {
-            // Only start separator exists (no end separator yet)
+            
             firstVisiblePos >= favoritesStartSeparatorIndex
         } else {
             false
         }
 
         if (isInFavoritesSection) {
-            // In favorites section - always show star
+            
             newIndex = alphabet.indexOf("★")
         } else {
-            // Outside favorites section - find the correct letter
-            // Scan backwards from firstVisiblePos to find the nearest letter separator
+            
+            
             for (i in firstVisiblePos downTo 0) {
                 val currentApp = appList[i]
                 if (currentApp.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
@@ -250,7 +250,7 @@ class FastScroller @JvmOverloads constructor(
                 }
             }
             
-            // If no letter separator found, use the first visible app's label
+            
             if (newIndex == -1) {
                 val label = adapter.getAppLabel(firstVisiblePos)
                 if (label.isNotEmpty()) {
@@ -328,12 +328,12 @@ class FastScroller @JvmOverloads constructor(
             interpolator = OvershootInterpolator(1.8f)
             addUpdateListener { animator ->
                 waveProgress = animator.animatedValue as Float
-                // Animate alpha based on wave progress for smooth fade in/out
+                
                 currentAlpha = if (to > 0f) {
-                    // Fading in
+                    
                     (waveProgress * 1.2f).coerceIn(0f, 1f)
                 } else {
-                    // Fading out
+                    
                     ((1f - waveProgress) * 1.2f).coerceIn(0f, 1f)
                 }
                 invalidate()
@@ -345,7 +345,7 @@ class FastScroller @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         trackX = width - paddingEnd - 2f * density
-        // Initialize touchX to trackX so wave fades from right when not touching
+        
         touchX = trackX
         trackTop = paddingTop + extraVerticalPadding
         trackBottom = height - paddingBottom - extraVerticalPadding
@@ -354,9 +354,9 @@ class FastScroller @JvmOverloads constructor(
     }
 
     private fun updateWaveShader() {
-        // Wave now animates from touch position towards the track
+        
         val startX = (touchX - maxWaveDepth).coerceAtLeast(0f)
-        // Darker gradient for better visibility on dark backgrounds
+        
         val startColor = ColorUtils.setAlphaComponent(currentColor, 120)
         val endColor = ColorUtils.setAlphaComponent(currentColor, 0)
         val shader = LinearGradient(
@@ -372,7 +372,7 @@ class FastScroller @JvmOverloads constructor(
 
         val fadeAlpha = (currentAlpha * 255).toInt().coerceIn(0, 255)
         
-        // Very subtle track line
+        
         canvas.drawLine(trackX, trackTop, trackX, trackBottom, trackPaint)
 
         val baseOffset = (letterPaint.descent() + letterPaint.ascent()) / 2
@@ -385,7 +385,7 @@ class FastScroller @JvmOverloads constructor(
 
             val paintToUse = if (isSelected || i == scrollIndex) selectedLetterPaint else letterPaint
             
-            // Improved alpha values for better dark theme visibility
+            
             val alpha = if (isSelected || i == scrollIndex) 255 else (fadeAlpha * 0.5f).toInt()
             paintToUse.alpha = alpha
             
@@ -396,11 +396,11 @@ class FastScroller @JvmOverloads constructor(
             }
             
             if (isSelected) {
-                // Enhanced halo effect for better visibility on dark backgrounds
+                
                 haloPaint.alpha = (fadeAlpha * 0.4f).toInt()
                 canvas.drawCircle(textX, y, 18f * density * waveProgress, haloPaint)
                 
-                // Add subtle glow around selected letter
+                
                 glowPaint.alpha = (fadeAlpha * 0.3f).toInt()
                 canvas.drawCircle(textX, y, 22f * density * waveProgress, glowPaint)
             }
@@ -435,17 +435,17 @@ class FastScroller @JvmOverloads constructor(
         if (selectedIndex < 0 || waveProgress <= 0f) return
         val centerY = (trackTop + letterSpacing * selectedIndex).coerceIn(trackTop, trackBottom)
         val radius = previewRadius * waveProgress
-        // Adjusted bubble position for wider FastScroller - moves more left when expanding
+        
         val bubbleX = trackX - 140f * density - (120f * density * (1f - waveProgress))
         
-        // Enhanced soft shadow for better depth on dark backgrounds
+        
         val shadowPaint = Paint(previewPaint).apply {
             maskFilter = BlurMaskFilter(20f * density, BlurMaskFilter.Blur.NORMAL)
             alpha = (fadeAlpha * 0.3f).toInt()
         }
         canvas.drawCircle(bubbleX, centerY, radius + 6f * density, shadowPaint)
         
-        // Add a subtle inner glow/halo effect
+        
         val haloPaintLocal = Paint(previewPaint).apply {
             maskFilter = BlurMaskFilter(8f * density, BlurMaskFilter.Blur.NORMAL)
             alpha = (fadeAlpha * 0.4f).toInt()
@@ -474,7 +474,7 @@ class FastScroller @JvmOverloads constructor(
                 val touchThreshold = width - 64f * density
                 if (x < touchThreshold) return false
                 
-                // Store exact touch X position for wave animation origin
+                
                 touchX = x
                 
                 isSliding = true
@@ -495,10 +495,10 @@ class FastScroller @JvmOverloads constructor(
             MotionEvent.ACTION_CANCEL -> {
                 isSliding = false
                 selectedIndex = -1
-                // Reset touchX to trackX for smooth fade out
+                
                 touchX = trackX
                 animateWaveProgress(0f)
-                updateScrollIndex() // Sync back to scroll position after touch
+                updateScrollIndex() 
                 parent?.requestDisallowInterceptTouchEvent(false)
                 return true
             }
@@ -525,8 +525,8 @@ class FastScroller @JvmOverloads constructor(
         if (letter == "★") {
             targetPosition = 0
         } else {
-            // Find the start of the alphabetical list section (after favorites end)
-            // Search for favorites_end_separator to skip ALL favorites
+            
+            
             var searchStartIndex = 0
             for (i in appList.indices) {
                 if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
@@ -536,7 +536,7 @@ class FastScroller @JvmOverloads constructor(
                 }
             }
             
-            // If favorites_end_separator not found, try favorites_separator
+            
             if (searchStartIndex == 0) {
                 for (i in appList.indices) {
                     if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 

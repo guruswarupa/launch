@@ -8,18 +8,18 @@
     <dimen name="dock_padding_horizontal">16dp</dimen>
     <dimen name="dock_padding_vertical">8dp</dimen>
     <dimen name="min_drawer_width">320dp</dimen>
-    <!-- Search bar margin dimensions -->
+    
     <dimen name="search_top_margin_when_widget_hidden">48dp</dimen>
     <dimen name="main_content_stack_top_padding">32dp</dimen>
     <dimen name="main_content_stack_bottom_padding">12dp</dimen>
     <dimen name="widget_status_bar_clearance">20dp</dimen>
     <dimen name="search_bar_top_margin_pinned">24dp</dimen>
     <dimen name="search_container_bottom_margin">8dp</dimen>
-    <!-- GitHub Contribution Graph Dimensions -->
+    
     <dimen name="contribution_cell_size">12dp</dimen>
     <dimen name="contribution_cell_spacing">2dp</dimen>
     <dimen name="contribution_cell_radius">2dp</dimen>
-    <!-- Note editor spacing -->
+    
     <dimen name="note_editor_horizontal_padding">20dp</dimen>
     <dimen name="note_editor_section_spacing">18dp</dimen>
     <dimen name="note_editor_top_bar_height">72dp</dimen>

@@ -10,9 +10,9 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.managers.BatteryManager
 
-/**
- * Manages initialization and setup of all widgets
- */
+
+
+
 class WidgetSetupManager(
     private val activity: MainActivity,
     private val usageStatsManager: AppUsageStatsManager,
@@ -21,26 +21,26 @@ class WidgetSetupManager(
 ) {
     
     fun setupBatteryAndUsage() {
-        // Updated: Screen time display removed from main layout to improve privacy and battery
+        
         val batteryPercentageTextView = activity.findViewById<TextView>(R.id.battery_percentage)
 
-        // Get battery percentage using BatteryManager
+        
         val batteryManager = BatteryManager(activity)
         batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
     }
     
     fun setupWeather(weatherIcon: ImageView, weatherText: TextView) {
-        // Try to load cached weather first, otherwise show placeholder
+        
         weatherManager.updateWeather(weatherIcon, weatherText)
         
-        // Add click listeners to refresh weather when tapped
+        
         val weatherClickListener = View.OnClickListener {
             weatherManager.updateWeather(weatherIcon, weatherText)
         }
         weatherIcon.setOnClickListener(weatherClickListener)
         weatherText.setOnClickListener(weatherClickListener)
 
-        // Add long click listener to show API settings
+        
         val weatherLongClickListener = View.OnLongClickListener {
             weatherManager.showWeatherSettings(weatherIcon, weatherText)
             true
@@ -141,8 +141,8 @@ class WidgetSetupManager(
     }
     
     fun setupWeeklyUsageWidget() {
-        // The weekly usage graph is managed by UsageStatsDisplayManager
-        // This method exists for consistency with other widget setup methods
+        
+        
     }
     
     fun setupGithubContributionWidget(sharedPreferences: android.content.SharedPreferences): GithubContributionWidget {

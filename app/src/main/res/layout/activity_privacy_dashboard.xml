@@ -154,7 +154,7 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Search Bar Section - Removed outer card tint -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

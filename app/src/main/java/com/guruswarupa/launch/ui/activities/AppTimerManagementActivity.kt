@@ -32,11 +32,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
-/**
- * Activity for managing app timer limits across all installed apps.
- * Users can view all apps with timers set and modify their daily limits.
- * Loading is optimized using background threads and batch processing to prevent UI lag.
- */
+
+
+
+
+
 class AppTimerManagementActivity : ComponentActivity() {
 
     private lateinit var recyclerView: RecyclerView
@@ -45,7 +45,7 @@ class AppTimerManagementActivity : ComponentActivity() {
     private lateinit var loadingProgressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -79,9 +79,9 @@ class AppTimerManagementActivity : ComponentActivity() {
         recyclerView.alpha = 0f
 
         lifecycleScope.launch {
-            // Fetch apps and usage stats in background to avoid blocking main thread
+            
             val apps = withContext(Dispatchers.IO) {
-                // Fetch usage for all apps in one go to avoid N queries later
+                
                 val usageMap = dailyUsageManager.getTodayUsageMap()
                 
                 val pm = packageManager
@@ -106,7 +106,7 @@ class AppTimerManagementActivity : ComponentActivity() {
                     }.sortedBy { it.name.lowercase() }
             }
             
-            // Update UI on main thread
+            
             loadingProgressBar.visibility = View.GONE
             recyclerView.alpha = 1.0f
             recyclerView.adapter = AppTimerAdapter(apps.toMutableList())

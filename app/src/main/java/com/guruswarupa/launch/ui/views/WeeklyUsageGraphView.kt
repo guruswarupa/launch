@@ -24,7 +24,7 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
     private var touchDownX: Float = 0f
     private var touchDownY: Float = 0f
     private var touchedCardIndex: Int = -1
-    private val tapThreshold = 50f // Maximum distance for a tap (in pixels)
+    private val tapThreshold = 50f 
     
     private val cardPaint = Paint().apply {
         isAntiAlias = true
@@ -62,7 +62,7 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         strokeWidth = 1f
     }
 
-    // Preallocate objects to avoid allocations during onDraw
+    
     private val reusableRectF = RectF()
     private val shadowPaint = Paint().apply {
         isAntiAlias = true
@@ -140,7 +140,7 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         }
 
         if (dataToUse.isEmpty()) {
-            // Draw "No data" message
+            
             instructionPaint.textSize = 32f
             canvas.drawText(
                 "No usage data available",
@@ -156,22 +156,22 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         val cardHeight = 100f
         val topPadding = 4f
         
-        // Start drawing from top with minimal spacing
+        
         val startY = topPadding
         
-        // Draw each day card vertically
+        
         dataToUse.forEachIndexed { dayIndex, (day, appUsages) ->
             val cardY = startY + (dayIndex * (cardHeight + cardSpacing))
             val cardRight = width - padding
             val cardBottom = cardY + cardHeight
             
-            // Calculate total usage for this day
+            
             val totalUsage = appUsages.values.sum()
             
-            // Set card RectF
+            
             reusableRectF.set(padding, cardY, cardRight, cardBottom)
             
-            // Draw subtle shadow (only in dark mode or if appropriate)
+            
             val isNightMode = (resources.configuration.uiMode and 
                 android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -183,23 +183,23 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
                 )
             }
             
-            // Draw card background
+            
             canvas.drawRoundRect(reusableRectF, 14f, 14f, cardPaint)
             canvas.drawRoundRect(reusableRectF, 14f, 14f, cardStrokePaint)
             
-            // Draw day name
+            
             dayTextPaint.textAlign = Paint.Align.LEFT
             dayTextPaint.textSize = 36f
             val dayY = cardY + cardHeight / 2f - 15f
             canvas.drawText(day, padding + 24f, dayY, dayTextPaint)
             
-            // Draw usage time in hours
+            
             val usageText = formatUsageTimeInHours(totalUsage)
             timeTextPaint.textAlign = Paint.Align.RIGHT
             timeTextPaint.textSize = 28f
             canvas.drawText(usageText, cardRight - 24f, dayY + 8f, timeTextPaint)
             
-            // Draw subtle divider line
+            
             val dividerY = cardY + cardHeight - 1f
             canvas.drawLine(padding + 24f, dividerY, cardRight - 24f, dividerY, dividerPaint)
         }
@@ -228,7 +228,7 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
                 touchDownY = event.y
                 touchedCardIndex = -1
                 
-                // Check which card was touched
+                
                 dataToUse.forEachIndexed { dayIndex, _ ->
                     val cardY = topPadding + (dayIndex * (cardHeight + cardSpacing))
                     val cardRight = width - padding
@@ -244,13 +244,13 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
             }
             
             MotionEvent.ACTION_UP -> {
-                // Only trigger if it was a tap (not a swipe)
+                
                 if (touchedCardIndex >= 0) {
                     val deltaX = abs(event.x - touchDownX)
                     val deltaY = abs(event.y - touchDownY)
                     val distance = sqrt((deltaX * deltaX + deltaY * deltaY).toDouble()).toFloat()
                     
-                    // If the touch moved less than the threshold, it's a tap
+                    
                     if (distance < tapThreshold) {
                         val (day, appUsages) = dataToUse[touchedCardIndex]
                         onDaySelected?.invoke(day, appUsages)

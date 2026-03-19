@@ -12,9 +12,9 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 
-/**
- * Manages daily usage limits and tracking for apps.
- */
+
+
+
 @Suppress("unused")
 class DailyUsageManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("daily_usage_prefs", Context.MODE_PRIVATE)
@@ -27,61 +27,61 @@ class DailyUsageManager(private val context: Context) {
         private const val PREF_TIMER_ENABLED_PREFIX = "timer_enabled_"
     }
 
-    /**
-     * Check if daily usage timer is enabled for an app
-     */
+    
+
+
     fun isTimerEnabled(packageName: String): Boolean {
         return prefs.getBoolean("${PREF_TIMER_ENABLED_PREFIX}$packageName", false)
     }
 
-    /**
-     * Enable or disable daily usage timer for an app
-     */
+    
+
+
     fun setTimerEnabled(packageName: String, enabled: Boolean) {
         prefs.edit { putBoolean("${PREF_TIMER_ENABLED_PREFIX}$packageName", enabled) }
     }
 
-    /**
-     * Get daily usage limit for an app in milliseconds
-     */
+    
+
+
     fun getDailyLimit(packageName: String): Long {
         return prefs.getLong("${PREF_DAILY_LIMIT_PREFIX}$packageName", 0L)
     }
 
-    /**
-     * Set daily usage limit for an app in milliseconds
-     */
+    
+
+
     fun setDailyLimit(packageName: String, limitMs: Long) {
         prefs.edit { putLong("${PREF_DAILY_LIMIT_PREFIX}$packageName", limitMs) }
     }
 
-    /**
-     * Get today's usage for an app in milliseconds
-     */
+    
+
+
     fun getTodayUsage(packageName: String): Long {
         resetIfNewDay()
         return appUsageStatsManager.getAppUsageTime(packageName)
     }
 
-    /**
-     * Get usage for all apps for today in a single efficient call.
-     */
+    
+
+
     fun getTodayUsageMap(): Map<String, Long> {
         resetIfNewDay()
         return appUsageStatsManager.getUsageMapForToday()
     }
 
-    /**
-     * Record app usage (called when app is launched or becomes foreground)
-     */
+    
+
+
     fun recordAppUsage(packageName: String) {
         resetIfNewDay()
         prefs.edit { putLong("last_used_$packageName", System.currentTimeMillis()) }
     }
 
-    /**
-     * Check if app can be launched (hasn't exceeded daily limit)
-     */
+    
+
+
     fun canLaunchApp(packageName: String): Boolean {
         if (!isTimerEnabled(packageName)) {
             return true
@@ -96,9 +96,9 @@ class DailyUsageManager(private val context: Context) {
         return usage < limit
     }
 
-    /**
-     * Get remaining time for today in milliseconds
-     */
+    
+
+
     fun getRemainingTime(packageName: String): Long {
         if (!isTimerEnabled(packageName)) {
             return Long.MAX_VALUE
@@ -113,9 +113,9 @@ class DailyUsageManager(private val context: Context) {
         return maxOf(0L, limit - usage)
     }
 
-    /**
-     * Format time in milliseconds to readable string
-     */
+    
+
+
     fun formatTime(ms: Long): String {
         if (ms == Long.MAX_VALUE) {
             return "Unlimited"
@@ -132,9 +132,9 @@ class DailyUsageManager(private val context: Context) {
         }
     }
 
-    /**
-     * Show dialog to set daily limit for an app
-     */
+    
+
+
     fun showSetLimitDialog(packageName: String, appName: String, onLimitSet: (Long) -> Unit) {
         val currentLimit = getDailyLimit(packageName)
         val input = EditText(context).apply {
@@ -170,9 +170,9 @@ class DailyUsageManager(private val context: Context) {
             .show()
     }
 
-    /**
-     * Reset usage data if it's a new day
-     */
+    
+
+
     private fun resetIfNewDay() {
         val today = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 0)
@@ -196,16 +196,16 @@ class DailyUsageManager(private val context: Context) {
         }
     }
 
-    /**
-     * Reset usage for a specific app
-     */
+    
+
+
     fun resetUsage(packageName: String) {
         prefs.edit { remove("${PREF_DAILY_USAGE_PREFIX}$packageName") }
     }
 
-    /**
-     * Get all apps with timers enabled
-     */
+    
+
+
     fun getAppsWithTimers(): Set<String> {
         val apps = mutableSetOf<String>()
         val allPrefs = prefs.all

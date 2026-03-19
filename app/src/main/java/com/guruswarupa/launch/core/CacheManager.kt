@@ -13,16 +13,16 @@ import java.io.FileOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
-/**
- * Manages caching of app lists and metadata for performance optimization
- */
+
+
+
 class CacheManager(
     context: Context,
     private val packageManager: PackageManager,
     private val backgroundExecutor: java.util.concurrent.ExecutorService
 ) {
     companion object {
-        private const val CACHE_DURATION = 300000L // 5 minutes
+        private const val CACHE_DURATION = 300000L 
     }
 
     private val appListCacheFile: File = File(context.cacheDir, "app_list_cache.dat")
@@ -36,14 +36,14 @@ class CacheManager(
     private var metadataLoaded = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    /**
-     * Get app list version based on installed packages and their timestamps.
-     * Uses getInstalledPackages() which is faster than querying intent activities one by one.
-     */
+    
+
+
+
     fun getAppListVersion(): String {
         return try {
             val packages = packageManager.getInstalledPackages(0)
-            // Use sum of update times and package count as a version identifier
+            
             var maxUpdateTime = 0L
             for (pkg in packages) {
                 if (pkg.lastUpdateTime > maxUpdateTime) {
@@ -57,9 +57,9 @@ class CacheManager(
     }
 
 
-    /**
-     * Check if version matches current system state.
-     */
+    
+
+
     fun isVersionCurrent(): Boolean {
         val currentVersion = getAppListVersion()
         val cachedVersion = try {
@@ -73,9 +73,9 @@ class CacheManager(
     }
 
 
-    /**
-     * Check if cache is valid (exists and not expired)
-     */
+    
+
+
     fun isCacheValid(): Boolean {
         if (!appListCacheFile.exists()) return false
 
@@ -89,9 +89,9 @@ class CacheManager(
         return cacheAge < CACHE_DURATION
     }
 
-    /**
-     * Load app list from persistent cache
-     */
+    
+
+
     fun loadAppListFromCache(): List<ResolveInfo> {
         return try {
             if (!appListCacheFile.exists()) return emptyList()
@@ -99,13 +99,13 @@ class CacheManager(
             val cacheData = appListCacheFile.readText().lines().filter { it.isNotBlank() }
             if (cacheData.isEmpty()) return emptyList()
 
-            // Optimization: Query all launcher activities once instead of resolveActivity in a loop
+            
             val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
             val allApps = packageManager.queryIntentActivities(mainIntent, 0)
             
-            // Create a map for quick lookup
+            
             val appMap = allApps.associateBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
 
             val apps = mutableListOf<ResolveInfo>()
@@ -113,8 +113,8 @@ class CacheManager(
                 appMap[line]?.let { apps.add(it) }
             }
 
-            // Fallback: if cache-based filtering resulted in empty list but we have apps,
-            // return all apps so the UI isn't empty.
+            
+            
             if (apps.isEmpty() && allApps.isNotEmpty()) {
                 return allApps
             }
@@ -125,9 +125,9 @@ class CacheManager(
         }
     }
 
-    /**
-     * Save app list to persistent cache
-     */
+    
+
+
     fun saveAppListToCache(apps: List<ResolveInfo>) {
         backgroundExecutor.execute {
             try {
@@ -137,7 +137,7 @@ class CacheManager(
                 appListCacheFile.writeText(cacheData.joinToString("\n"))
                 appListCacheTimeFile.writeText(System.currentTimeMillis().toString())
 
-                // Save version
+                
                 val version = getAppListVersion()
                 appListVersionFile.writeText(version)
                 cachedAppListVersion = version
@@ -146,9 +146,9 @@ class CacheManager(
         }
     }
 
-    /**
-     * Load app metadata from persistent cache
-     */
+    
+
+
     @Suppress("UNCHECKED_CAST")
     fun loadAppMetadataFromCache(): Map<String, AppMetadata> {
         return try {
@@ -171,10 +171,10 @@ class CacheManager(
         }
     }
 
-    /**
-     * Load app metadata asynchronously in background.
-     * Calls onLoaded on the main thread when complete.
-     */
+    
+
+
+
     fun loadAppMetadataFromCacheAsync(onLoaded: (() -> Unit)? = null) {
         if (metadataLoaded) {
             onLoaded?.invoke()
@@ -188,9 +188,9 @@ class CacheManager(
         }
     }
 
-    /**
-     * Save app metadata to persistent cache
-     */
+    
+
+
     fun saveAppMetadataToCache(metadata: Map<String, AppMetadata>) {
         backgroundExecutor.execute {
             try {
@@ -204,9 +204,9 @@ class CacheManager(
         }
     }
 
-    /**
-     * Pre-load app metadata (labels) in background
-     */
+    
+
+
     fun preloadAppMetadata(apps: List<ResolveInfo>) {
         backgroundExecutor.execute {
             try {
@@ -229,7 +229,7 @@ class CacheManager(
                             )
                         }
                     } catch (_: Exception) {
-                        // Handle errors silently
+                        
                     }
                 }
                 
@@ -240,9 +240,9 @@ class CacheManager(
         }
     }
     
-    /**
-     * Clear all cache files
-     */
+    
+
+
     fun clearCache() {
         try {
             if (appListCacheFile.exists()) appListCacheFile.delete()
@@ -255,21 +255,21 @@ class CacheManager(
         }
     }
     
-    /**
-     * Get metadata cache (for read access)
-     */
+    
+
+
     fun getMetadataCache(): Map<String, AppMetadata> = appMetadataCache
     
-    /**
-     * Update metadata cache
-     */
+    
+
+
     fun updateMetadataCache(packageName: String, metadata: AppMetadata) {
         appMetadataCache[packageName] = metadata
     }
     
-    /**
-     * Remove metadata for a package
-     */
+    
+
+
     fun removeMetadata(packageName: String) {
         appMetadataCache.remove(packageName)
     }

@@ -38,7 +38,7 @@ class FocusModeAppAdapter(
         holder.appIcon.setImageDrawable(appInfo.loadIcon(packageManager))
         holder.appName.text = appInfo.loadLabel(packageManager)
         
-        // CRITICAL: Remove listener before setting state to prevent recycle glitch
+        
         holder.appCheckbox.setOnCheckedChangeListener(null)
         holder.appCheckbox.isChecked = selectedApps.contains(packageName)
 
@@ -53,7 +53,7 @@ class FocusModeAppAdapter(
         holder.itemView.setOnClickListener {
             val newState = !holder.appCheckbox.isChecked
             holder.appCheckbox.isChecked = newState
-            // Listener above will handle the set update
+            
         }
     }
 

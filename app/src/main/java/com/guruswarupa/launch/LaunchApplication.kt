@@ -61,14 +61,14 @@ class LaunchApplication : Application() {
     private fun initServices() {
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
         
-        // Start Screen Dimmer if enabled
+        
         val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
         if (isDimmerEnabled && Settings.canDrawOverlays(this)) {
             val dimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
             ScreenDimmerService.startService(this, dimLevel)
         }
         
-        // Start Night Mode if enabled
+        
         val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
         if (isNightModeEnabled && Settings.canDrawOverlays(this)) {
             val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
@@ -85,7 +85,7 @@ class LaunchApplication : Application() {
             } catch (e: Exception) {
                 Log.e("LaunchApplication", "Failed to send crash report", e)
             } finally {
-                // Let the default handler deal with the crash (log it and terminate)
+                
                 defaultHandler?.uncaughtException(thread, throwable)
             }
         }
@@ -113,7 +113,7 @@ class LaunchApplication : Application() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        // We check if there's an app to handle the intent to avoid another crash
+        
         if (intent.resolveActivity(packageManager) != null) {
             startActivity(intent)
         }

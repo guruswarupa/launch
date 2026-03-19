@@ -29,10 +29,10 @@ import org.json.JSONObject
 import java.util.concurrent.Executors
 import java.util.zip.ZipInputStream
 
-/**
- * Activity that shows prominent disclosure for app data collection.
- * Required by Google Play User Data policy for collecting installed applications information.
- */
+
+
+
+
 class AppDataDisclosureActivity : AppCompatActivity() {
     
     private val backgroundExecutor = Executors.newSingleThreadExecutor()
@@ -52,9 +52,9 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
         
-        // Check if user has already consented
+        
         if (prefs.getBoolean("app_data_consent_given", false)) {
-            // Already consented, proceed to main app
+            
             startMainActivity()
             return
         }
@@ -63,7 +63,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         setupWallpaper()
         startWelcomeAnimation()
 
-        // Handle back press - user must make a choice before proceeding
+        
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val importRoot = findViewById<LinearLayout>(R.id.import_root)
@@ -72,7 +72,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
                     importRoot.visibility = View.GONE
                     disclosureRoot.visibility = View.VISIBLE
                 }
-                // Otherwise do nothing: prominent disclosure cannot be dismissed by back button
+                
             }
         })
     }
@@ -91,18 +91,18 @@ class AppDataDisclosureActivity : AppCompatActivity() {
 
         titleText.text = getString(R.string.app_data_disclosure_title)
         
-        // Use Html.fromHtml for better formatting
+        
         messageText.text = Html.fromHtml(getString(R.string.app_data_disclosure_message), Html.FROM_HTML_MODE_COMPACT)
         
         linksText.text = Html.fromHtml(getString(R.string.data_disclosure_links), Html.FROM_HTML_MODE_COMPACT)
         linksText.movementMethod = LinkMovementMethod.getInstance()
         
         acceptButton.setOnClickListener {
-            // Save consent
+            
             val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
             prefs.edit { putBoolean("app_data_consent_given", true) }
             
-            // Show Import Page
+            
             disclosureRoot.animate()
                 .alpha(0f)
                 .scaleX(0.95f)
@@ -126,7 +126,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         }
         
         declineButton.setOnClickListener {
-            // User declined - close app
+            
             finishAffinity()
         }
 
@@ -189,14 +189,14 @@ class AppDataDisclosureActivity : AppCompatActivity() {
                                             }
                                         }
                                     }
-                                    // Ensure consent is still marked as given after import
+                                    
                                     putBoolean("app_data_consent_given", true)
-                                    // Reset permission denial flags so permissions can be requested again
+                                    
                                     putBoolean("contacts_permission_denied", false)
                                     putBoolean("usage_stats_permission_denied", false)
-                                    // Reset initial_permissions_asked to ensure fresh permission flow
+                                    
                                     putBoolean("initial_permissions_asked", false)
-                                    // Clear any pending usage stats return flag
+                                    
                                     putBoolean("waiting_for_usage_stats_return", false)
                                 }
                             }
@@ -219,7 +219,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         val welcomeSubtitle = findViewById<TextView>(R.id.welcome_subtitle)
         val disclosureRoot = findViewById<LinearLayout>(R.id.disclosure_root)
 
-        // 1. "Welcome" text spring-in animation
+        
         welcomeText.animate()
             .alpha(1f)
             .scaleX(1f)
@@ -230,7 +230,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
             .setStartDelay(400)
             .start()
 
-        // 2. Subtitle fade-in with a slight upward slide
+        
         welcomeSubtitle.translationY = 20f
         welcomeSubtitle.animate()
             .alpha(1f)
@@ -240,9 +240,9 @@ class AppDataDisclosureActivity : AppCompatActivity() {
             .setStartDelay(1000)
             .start()
 
-        // 3. Sequential Transition (Apple-style "Zoom through")
+        
         handler.postDelayed({
-            // Zoom Welcome out (towards the user)
+            
             welcomeContainer.animate()
                 .alpha(0f)
                 .scaleX(1.5f)
@@ -252,7 +252,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
                 .withEndAction {
                     welcomeContainer.visibility = View.GONE
                     
-                    // Reveal Disclosure Content with a subtle zoom-in
+                    
                     disclosureRoot.visibility = View.VISIBLE
                     disclosureRoot.alpha = 0f
                     disclosureRoot.scaleX = 0.95f

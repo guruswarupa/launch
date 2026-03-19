@@ -45,21 +45,21 @@ class TransactionAdapter(
         val transaction = transactions[position]
         val context = holder.itemView.context
         
-        // Set type
+        
         val isIncome = transaction.type == "income"
         val typeLabel = context.getString(if (isIncome) R.string.income else R.string.expense)
         holder.typeText.text = typeLabel
         
-        // Set description or default text
+        
         holder.descriptionText.text = transaction.description.ifEmpty { typeLabel }
         
-        // Set date and time
+        
         val date = Date(transaction.timestamp)
         val dateStr = dateFormat.format(date)
         val timeStr = timeFormat.format(date)
         holder.dateText.text = context.getString(R.string.date_time_divider_format, dateStr, timeStr)
         
-        // Set amount with proper formatting
+        
         val absAmount = kotlin.math.abs(transaction.amount)
         holder.amountText.text = if (isIncome) {
             context.getString(R.string.transaction_amount_income_format, currencySymbol, absAmount)

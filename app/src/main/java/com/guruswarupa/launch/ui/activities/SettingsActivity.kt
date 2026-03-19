@@ -102,7 +102,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -114,7 +114,7 @@ class SettingsActivity : ComponentActivity() {
 
         selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "stardust") ?: "stardust"
 
-        // Always show system wallpaper on startup as per user request
+        
         setupWallpaper(null)
 
         setupAppearanceSection()
@@ -153,11 +153,11 @@ class SettingsActivity : ComponentActivity() {
 
                         val wm = WallpaperManager.getInstance(this@SettingsActivity)
                         try {
-                            // Try the direct crop-and-set intent
+                            
                             val intent = wm.getCropAndSetWallpaperIntent(uri)
                             startActivity(intent)
                         } catch (e: Exception) {
-                            // Fallback to ATTACH_DATA
+                            
                             val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
                                 addCategory(Intent.CATEGORY_DEFAULT)
                                 setDataAndType(uri, "image/*")
@@ -242,7 +242,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Show app names in grid toggle
+        
         val showAppNameInSection = findViewById<LinearLayout>(R.id.show_app_name_in_grid_section)
         val showAppNameSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.show_app_name_in_grid_switch)
         showAppNameInSection.isVisible = selectedStyle == "grid"
@@ -255,7 +255,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Update visibility of app name toggle when switching between grid and list
+        
         gridBtn.setOnClickListener {
             selectedStyle = "grid"
             updateDisplayStyleButtons(gridBtn, listBtn, "grid")
@@ -274,7 +274,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Icons
+        
         val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
         val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
         val iconVal = findViewById<TextView>(R.id.icon_size_value)
@@ -295,7 +295,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         val currentSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
-        iconSeek.max = 60 // 36 to 96
+        iconSeek.max = 60 
         iconSeek.progress = currentSize - 36
         iconVal.text = "${currentSize}dp"
         iconSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -316,7 +316,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Default Home Page
+        
         val homePageSpinner = findViewById<Spinner>(R.id.default_home_page_spinner)
         val pages = arrayOf("Widgets (Left)", "Home (Center)", "Wallpaper (Right)")
         homePageSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, pages).apply {
@@ -332,7 +332,7 @@ class SettingsActivity : ComponentActivity() {
             override fun onNothingSelected(p: AdapterView<*>) {}
         }
 
-        // Wallpaper Blur Section
+        
         val wallHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
         val wallContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallArrow = findViewById<TextView>(R.id.wallpaper_arrow)
@@ -341,7 +341,7 @@ class SettingsActivity : ComponentActivity() {
 
         setupThemeSelection()
 
-        // Typography
+        
         val typoHeader = findViewById<LinearLayout>(R.id.typography_header)
         val typoContent = findViewById<LinearLayout>(R.id.typography_content)
         val typoArrow = findViewById<TextView>(R.id.typography_arrow)
@@ -356,7 +356,7 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
-        // Background Translucency
+        
         val translucencySeek = findViewById<SeekBar>(R.id.background_translucency_seekbar)
         val translucencyValue = findViewById<TextView>(R.id.background_translucency_value)
         val currentTranslucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
@@ -368,7 +368,7 @@ class SettingsActivity : ComponentActivity() {
         translucencySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
                 translucencyValue.text = "$p%"
-                // Apply translucency immediately for live preview
+                
                 val alpha = (p * 255 / 100).coerceIn(0, 255)
                 val color = Color.argb(alpha, 0, 0, 0)
                 findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
@@ -389,7 +389,7 @@ class SettingsActivity : ComponentActivity() {
         container.removeAllViews()
 
         if (selectedThemeCategory == null) {
-            // Show Category Cards - Dynamically fetch categories from PREDEFINED_THEMES
+            
             val categories = ThemeOption.PREDEFINED_THEMES.map { it.category }.distinct()
 
             val scrollContainer = HorizontalScrollView(this).apply {
@@ -410,7 +410,7 @@ class SettingsActivity : ComponentActivity() {
 
                 name.text = category
 
-                // Highlight if selected
+                
                 val isSelected = ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
 
                 if (isSelected) {
@@ -421,7 +421,7 @@ class SettingsActivity : ComponentActivity() {
                     card.strokeWidth = 0
                 }
 
-                // Find a preview image for the category
+                
                 val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
                 if (firstThemeInCategory != null) {
                     WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
@@ -435,7 +435,7 @@ class SettingsActivity : ComponentActivity() {
             }
             applyBtn.isVisible = false
         } else {
-            // Show Themes in Selected Category
+            
             val category = selectedThemeCategory!!
 
             val contentRow = LinearLayout(this).apply {
@@ -491,18 +491,18 @@ class SettingsActivity : ComponentActivity() {
                     selectedThemeId = theme.id
                     prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
                     setupThemeSelection()
-                    setupWallpaper(theme.id) // Demo preview
+                    setupWallpaper(theme.id) 
                     hasUnsavedThemeChanges = true
                     notifySettingsChanged()
                 }
                 row.addView(themeView)
             }
 
-            // Ensure button visibility is correct based on currently selected theme in this category
+            
             applyBtn.isVisible = themes.any { it.id == selectedThemeId }
         }
 
-        // Re-set the listener since we re-calculate logic but keep the button reference
+        
         applyBtn.setOnClickListener {
             hasUnsavedThemeChanges = false
             triggerWallpaperPicker(selectedThemeId)
@@ -854,11 +854,11 @@ class SettingsActivity : ComponentActivity() {
 
         val scale = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
 
-        // Prepare font style lists including downloaded fonts
+        
         val baseStyV = mutableListOf("default", "serif", "monospace", "condensed", "rounded", "casual", "cursive")
         val baseStyL = mutableListOf("Modern Sans", "Classic Serif", "Dev Mono", "Clean Condensed", "Soft Rounded", "Casual Hand", "Creative Script")
 
-        // Add downloaded fonts to the dropdown lists
+        
         DownloadableFontManager.getFontOptions().forEach { font ->
             if (DownloadableFontManager.isDownloaded(this, font.styleKey)) {
                 baseStyV.add(font.styleKey)
@@ -888,7 +888,7 @@ class SettingsActivity : ComponentActivity() {
         if (selectedIndex >= 0) {
             styS.setSelection(selectedIndex)
         } else {
-            // Font was uninstalled, reset to default
+            
             prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
             styS.setSelection(0)
             TypographyManager.applyToActivity(this)
@@ -918,53 +918,53 @@ class SettingsActivity : ComponentActivity() {
         }
 
         val colL = arrayOf(
-            "Pure White",      // Default white text
-            "Electric Purple", // Bright purple
-            "Neon Pink",       // Vibrant pink
-            "Solar Gold",      // Golden yellow
-            "Emerald Mist",    // Soft emerald green
-            "Arctic Frost",    // Light icy blue
-            "Midnight Teal",   // Deep teal tone
-            "Cyan Accent",     // Bright cyan
-            "Nord Mint",       // Nordic mint green
-            "Lavender",        // Soft lavender purple
-            "Orange Glow",     // Warm orange glow
+            "Pure White",      
+            "Electric Purple", 
+            "Neon Pink",       
+            "Solar Gold",      
+            "Emerald Mist",    
+            "Arctic Frost",    
+            "Midnight Teal",   
+            "Cyan Accent",     
+            "Nord Mint",       
+            "Lavender",        
+            "Orange Glow",     
 
-            "Sky Blue",        // Clear bright sky blue
-            "Soft Coral",      // Light coral red
-            "Lime Glow",       // Bright lime green
-            "Ice Blue",        // Pale icy blue
-            "Rose Pink",       // Soft rose pink
-            "Bright Amber",    // Strong amber yellow
-            "Mint Green",      // Fresh mint green
-            "Violet Glow",     // Bright glowing violet
-            "Aqua Light",      // Light aqua cyan
-            "Peach Light"      // Soft peach tone
+            "Sky Blue",        
+            "Soft Coral",      
+            "Lime Glow",       
+            "Ice Blue",        
+            "Rose Pink",       
+            "Bright Amber",    
+            "Mint Green",      
+            "Violet Glow",     
+            "Aqua Light",      
+            "Peach Light"      
         )
 
         val colV = arrayOf(
-            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, // Pure White
-            "#FF7C3AED", // Electric Purple
-            "#FFEC4899", // Neon Pink
-            "#FFF59E0B", // Solar Gold
-            "#FF10B981", // Emerald Mist
-            "#FF93C5FD", // Arctic Frost
-            "#FF0F766E", // Midnight Teal
-            "#FF03DAC5", // Cyan Accent
-            "#FF8FBCBB", // Nord Mint
-            "#FFB48EAD", // Lavender
-            "#FFD08770", // Orange Glow
+            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, 
+            "#FF7C3AED", 
+            "#FFEC4899", 
+            "#FFF59E0B", 
+            "#FF10B981", 
+            "#FF93C5FD", 
+            "#FF0F766E", 
+            "#FF03DAC5", 
+            "#FF8FBCBB", 
+            "#FFB48EAD", 
+            "#FFD08770", 
 
-            "#FF60A5FA", // Sky Blue
-            "#FFF87171", // Soft Coral
-            "#FFA3E635", // Lime Glow
-            "#FFBAE6FD", // Ice Blue
-            "#FFF472B6", // Rose Pink
-            "#FFFBBF24", // Bright Amber
-            "#FF6EE7B7", // Mint Green
-            "#FFA78BFA", // Violet Glow
-            "#FF67E8F9", // Aqua Light
-            "#FFFDA4AF"  // Peach Light
+            "#FF60A5FA", 
+            "#FFF87171", 
+            "#FFA3E635", 
+            "#FFBAE6FD", 
+            "#FFF472B6", 
+            "#FFFBBF24", 
+            "#FF6EE7B7", 
+            "#FFA78BFA", 
+            "#FF67E8F9", 
+            "#FFFDA4AF"  
         )
         colS.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, colL, colV).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         colS.setSelection(colV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)).coerceAtLeast(0))
@@ -1007,14 +1007,14 @@ class SettingsActivity : ComponentActivity() {
                     if (prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == opt.styleKey) {
                         prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
                     }
-                    // Refresh the typography settings UI to update the spinner
+                    
                     setupTypographySettings()
                     updateDownloadableFontsList(cont)
                 } else {
                     btn.text = "Fetching…"
                     DownloadableFontManager.requestFont(this, opt.styleKey) { success ->
                         handler.post {
-                            // Refresh the typography settings UI to update the spinner
+                            
                             setupTypographySettings()
                             updateDownloadableFontsList(cont)
                         }
@@ -1252,9 +1252,9 @@ class SettingsActivity : ComponentActivity() {
     }
 }
 
-/**
- * Custom ArrayAdapter that applies theme color or specific item colors to spinner items
- */
+
+
+
 class ThemedArrayAdapter(
     context: Context,
     private val resource: Int,
@@ -1279,7 +1279,7 @@ class ThemedArrayAdapter(
             val color = if (itemColors != null && position < itemColors.size) {
                 val colorStr = itemColors[position]
                 if (colorStr == Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT) {
-                    // For default adaptive, use white or some neutral color for the preview
+                    
                     Color.WHITE
                 } else {
                     try { Color.parseColor(colorStr) } catch (e: Exception) { Color.WHITE }

@@ -8,10 +8,10 @@ import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
 import java.util.concurrent.Executor
 
-/**
- * Manages contact loading and caching.
- * Extracted from MainActivity to reduce complexity.
- */
+
+
+
+
 class ContactManager(
     private val context: Context,
     private val contentResolver: ContentResolver,
@@ -19,10 +19,10 @@ class ContactManager(
 ) {
     private val contactsList: MutableList<String> = mutableListOf()
     
-    /**
-     * Loads contacts from the device if permission is granted.
-     * @param onComplete Callback with the loaded contacts list
-     */
+    
+
+
+
     fun loadContacts(onComplete: ((List<String>) -> Unit)? = null) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) 
             != PackageManager.PERMISSION_GRANTED) {
@@ -50,7 +50,7 @@ class ContactManager(
                     }
                 }
                 
-                // Sort contacts in background thread
+                
                 tempContactsList.sort()
                 
                 contactsList.clear()
@@ -58,21 +58,21 @@ class ContactManager(
                 
                 onComplete?.invoke(ArrayList(contactsList))
             } catch (e: Exception) {
-                // Log error and return empty list
+                
                 e.printStackTrace()
                 onComplete?.invoke(emptyList())
             }
         }
     }
     
-    /**
-     * Eagerly loads contacts on app start if permission is already granted.
-     * This ensures contacts are available immediately for search.
-     */
+    
+
+
+
     fun loadContactsEagerly() {
         loadContacts { loadedList ->
-            // Contacts are now loaded and ready to use
-            // No additional action needed as they're stored in contactsList
+            
+            
         }
     }
     

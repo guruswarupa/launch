@@ -17,10 +17,10 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.ui.activities.SettingsActivity
 import kotlin.math.abs
 
-/**
- * Page-aware tutorial flow for the launcher pager:
- * widgets page -> home page -> wallpaper page.
- */
+
+
+
+
 class FeatureTutorialManager(
     private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences

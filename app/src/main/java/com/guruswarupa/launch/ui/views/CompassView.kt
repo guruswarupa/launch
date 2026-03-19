@@ -20,14 +20,14 @@ class CompassView @JvmOverloads constructor(
     private var directionName: String = "N"
     private var accuracy: Int = SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM
     
-    // Gradient colors
-    private val outerRingColor = "#5E81AC".toColorInt() // nord10 - Deeper blue
-    private val innerRingColor = "#81A1C1".toColorInt() // nord9 - Medium blue
-    private val cardinalColor = "#ECEFF4".toColorInt() // nord6 - Light text
-    private val intermediateColor = "#88C0D0".toColorInt() // nord8 - Light blue
-    private val northMarkerColor = "#BF616A".toColorInt() // nord11 - Red accent
-    private val centerGradientStart = "#88C0D0".toColorInt() // nord8 - Light blue
-    private val centerGradientEnd = "#5E81AC".toColorInt() // nord10 - Deep blue
+    
+    private val outerRingColor = "#5E81AC".toColorInt() 
+    private val innerRingColor = "#81A1C1".toColorInt() 
+    private val cardinalColor = "#ECEFF4".toColorInt() 
+    private val intermediateColor = "#88C0D0".toColorInt() 
+    private val northMarkerColor = "#BF616A".toColorInt() 
+    private val centerGradientStart = "#88C0D0".toColorInt() 
+    private val centerGradientEnd = "#5E81AC".toColorInt() 
     
     private val compassRingPaint = Paint().apply {
         isAntiAlias = true
@@ -112,7 +112,7 @@ class CompassView @JvmOverloads constructor(
         isAntiAlias = true
         style = Paint.Style.STROKE
         strokeWidth = 8f
-        color = "#EBCB8B".toColorInt() // nord13 yellow
+        color = "#EBCB8B".toColorInt() 
         strokeCap = Paint.Cap.ROUND
     }
 
@@ -120,10 +120,10 @@ class CompassView @JvmOverloads constructor(
     private val textBounds = Rect()
     
     private val directionColors = intArrayOf(
-        "#BF616A".toColorInt(), // N - Red
-        "#88C0D0".toColorInt(), // E - Blue
-        "#A3BE8C".toColorInt(), // S - Green
-        "#D08770".toColorInt()  // W - Orange
+        "#BF616A".toColorInt(), 
+        "#88C0D0".toColorInt(), 
+        "#A3BE8C".toColorInt(), 
+        "#D08770".toColorInt()  
     )
     private val directions = arrayOf("N", "E", "S", "W")
     private val angles = floatArrayOf(0f, 90f, 180f, 270f)
@@ -169,7 +169,7 @@ class CompassView @JvmOverloads constructor(
             Shader.TileMode.CLAMP
         )
         
-        // Add outer glow effect
+        
         val outerGlowShader = RadialGradient(
             centerX, centerY, radius + 15f,
             Color.TRANSPARENT,
@@ -177,7 +177,7 @@ class CompassView @JvmOverloads constructor(
             Shader.TileMode.CLAMP
         )
         
-        // Combine shaders
+        
         backgroundShader = ComposeShader(
             backgroundShader!!, outerGlowShader, PorterDuff.Mode.ADD
         )
@@ -195,7 +195,7 @@ class CompassView @JvmOverloads constructor(
         
         if (radius <= 0) return
 
-        // Draw background circle with gradient
+        
         backgroundPaint.shader = backgroundShader
         canvas.drawCircle(centerX, centerY, radius + 5f, backgroundPaint)
 
@@ -204,28 +204,28 @@ class CompassView @JvmOverloads constructor(
             return
         }
         
-        // Rotate canvas to show current direction (negative because we want compass to rotate)
+        
         canvas.withRotation(-azimuth, centerX, centerY) {
-            // Draw outer ring with glow effect
+            
             compassRingPaint.color = outerRingColor
             compassRingPaint.strokeWidth = 8f
             canvas.drawCircle(centerX, centerY, radius, compassRingPaint)
 
-            // Draw inner decorative ring
+            
             innerRingPaint.color = innerRingColor
             innerRingPaint.strokeWidth = 2f
             canvas.drawCircle(centerX, centerY, radius * 0.92f, innerRingPaint)
 
-            // Draw middle ring
+            
             canvas.drawCircle(centerX, centerY, radius * 0.75f, innerRingPaint)
 
-            // Draw tick marks with varying sizes
+            
             for (i in 0 until 72) {
                 val angle = i * 5f
                 val angleRad = Math.toRadians(angle.toDouble())
 
-                val isMajor = i % 6 == 0 // Every 30 degrees
-                val isMedium = i % 3 == 0 // Every 15 degrees
+                val isMajor = i % 6 == 0 
+                val isMedium = i % 3 == 0 
 
                 val startRadius = when {
                     isMajor -> radius * 0.88f
@@ -252,16 +252,16 @@ class CompassView @JvmOverloads constructor(
                 canvas.drawLine(startX, startY, endX, endY, tickPaint)
             }
 
-            // Draw cardinal directions with enhanced styling
+            
             for (i in directions.indices) {
                 val angle = Math.toRadians(angles[i].toDouble())
                 val x = centerX + radius * 0.82f * sin(angle).toFloat()
                 val y = centerY - radius * 0.82f * cos(angle).toFloat()
 
-                // Draw background circle for cardinal direction
+                
                 canvas.drawCircle(x, y, 28f, cardinalBgPaint)
 
-                // Draw direction text with color
+                
                 cardinalPaint.color = directionColors[i]
                 cardinalPaint.textSize = 38f
                 cardinalPaint.getTextBounds(directions[i], 0, directions[i].length, textBounds)
@@ -273,7 +273,7 @@ class CompassView @JvmOverloads constructor(
                 )
             }
 
-            // Draw intermediate directions
+            
             for (i in intermediateDirections.indices) {
                 val angle = Math.toRadians(intermediateAngles[i].toDouble())
                 val x = centerX + radius * 0.78f * sin(angle).toFloat()
@@ -290,7 +290,7 @@ class CompassView @JvmOverloads constructor(
             }
         }
         
-        // Draw north marker (fixed at top, doesn't rotate) with shadow
+        
         val markerY = centerY - radius - 8f
         markerPath.reset()
         markerPath.moveTo(centerX, markerY - 2f)
@@ -306,19 +306,19 @@ class CompassView @JvmOverloads constructor(
         markerPath.close()
         canvas.drawPath(markerPath, markerPaint)
         
-        // Draw center circle with gradient
+        
         directionPaint.shader = centerShader
         directionPaint.style = Paint.Style.FILL
         canvas.drawCircle(centerX, centerY, 35f, directionPaint)
         
-        // Draw center circle border
+        
         directionPaint.shader = null
         directionPaint.style = Paint.Style.STROKE
         directionPaint.color = outerRingColor
         directionPaint.strokeWidth = 3f
         canvas.drawCircle(centerX, centerY, 35f, directionPaint)
         
-        // Draw current direction text (doesn't rotate) with enhanced styling
+        
         textPaint.textSize = 64f
         textPaint.color = Color.WHITE
         textPaint.getTextBounds(directionName, 0, directionName.length, textBounds)
@@ -329,7 +329,7 @@ class CompassView @JvmOverloads constructor(
             textPaint
         )
         
-        // Draw azimuth value below with smaller text
+        
         textPaint.textSize = 28f
         val azimuthText = "${azimuth.toInt()}°"
         textPaint.getTextBounds(azimuthText, 0, azimuthText.length, textBounds)
@@ -345,7 +345,7 @@ class CompassView @JvmOverloads constructor(
         val path = Path()
         val size = radius * 0.6f
         
-        // Draw an "8" figure (lemniscate)
+        
         for (i in 0..100) {
             val t = (i / 100f) * 2 * PI.toFloat()
             val scale = 2 / (3 - cos(2 * t))
@@ -359,7 +359,7 @@ class CompassView @JvmOverloads constructor(
         
         canvas.drawPath(path, calibrationPaint)
         
-        // Draw moving dot on the path
+        
         val dotT = calibrationPhase
         val dotScale = 2 / (3 - cos(2 * dotT))
         val dotX = centerX + dotScale * cos(dotT) * size

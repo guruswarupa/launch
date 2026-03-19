@@ -46,14 +46,14 @@ class NoiseDecibelWidget(
     
     private val updateRunnable = object : Runnable {
         override fun run() {
-            // Periodic check to ensure recording is still active if it should be
+            
             if (isInitialized && !noiseManager.isRecording()) {
                 val isEnabled = sharedPreferences.getBoolean(PREF_NOISE_ENABLED, false)
                 if (isEnabled && hasMicrophonePermission() && noiseManager.hasMicrophone()) {
                     noiseManager.startRecording()
                 }
             }
-            handler.postDelayed(this, 1000) // Check every second
+            handler.postDelayed(this, 1000) 
         }
     }
     
@@ -89,7 +89,7 @@ class NoiseDecibelWidget(
             requestMicrophonePermission()
         }
         
-        // Ensure widget is disabled by default - explicitly set to false if not already set
+        
         if (!sharedPreferences.contains(PREF_NOISE_ENABLED)) {
             sharedPreferences.edit { putBoolean(PREF_NOISE_ENABLED, false) }
         }
@@ -112,13 +112,13 @@ class NoiseDecibelWidget(
             widgetContainer.visibility = View.VISIBLE
             toggleButton.setText(R.string.noise_button_disable)
             
-            // Check permission first
+            
             if (!hasMicrophonePermission()) {
                 setupWithoutPermission()
                 return
             }
             
-            // Check if microphone is available
+            
             if (noiseManager.hasMicrophone()) {
                 setupWithMicrophone()
             } else {
@@ -181,12 +181,12 @@ class NoiseDecibelWidget(
                     Manifest.permission.RECORD_AUDIO
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                // Show explanation dialog
+                
                 android.app.AlertDialog.Builder(context, R.style.CustomDialogTheme)
                     .setTitle("Microphone Permission")
                     .setMessage("This permission allows the launcher to measure ambient noise levels in decibels. The data is only used locally on your device.")
                     .setPositiveButton("Grant Permission") { _, _ ->
-                        // Permission request will be handled by the activity
+                        
                         androidx.core.app.ActivityCompat.requestPermissions(
                             context,
                             arrayOf(Manifest.permission.RECORD_AUDIO),
@@ -197,7 +197,7 @@ class NoiseDecibelWidget(
                     .show()
             }
         } else {
-            // If not a FragmentActivity, open settings
+            
             openSettings()
         }
     }
@@ -216,7 +216,7 @@ class NoiseDecibelWidget(
     private fun updateDecibelDisplay(decibel: Double) {
         decibelText.text = context.getString(R.string.decibel_format, df.format(decibel))
         
-        // Update noise level text and color based on decibel value
+        
         val levelRes = when {
             decibel < 30 -> R.string.noise_level_quiet
             decibel < 50 -> R.string.noise_level_moderate
@@ -234,7 +234,7 @@ class NoiseDecibelWidget(
         noiseLevelText.setText(levelRes)
         noiseLevelText.setTextColor(ContextCompat.getColor(context, colorRes))
         
-        // Update indicator bar width (0-100% based on 0-120 dB range)
+        
         val indicatorWidth = (decibel / 120.0).coerceIn(0.0, 1.0)
         val parentWidth = decibelIndicator.parent as? View
         parentWidth?.let { parent ->
@@ -242,7 +242,7 @@ class NoiseDecibelWidget(
             layoutParams.width = (parent.width * indicatorWidth).toInt()
             decibelIndicator.layoutParams = layoutParams
             
-            // Update indicator color based on level
+            
             decibelIndicator.setBackgroundColor(ContextCompat.getColor(context, colorRes))
         }
     }

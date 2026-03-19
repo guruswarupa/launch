@@ -8,9 +8,9 @@ import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * Manages widget visibility and ordering in the drawer
- */
+
+
+
 class WidgetConfigurationManager(
     private val context: Context,
     private val sharedPreferences: SharedPreferences
@@ -19,7 +19,7 @@ class WidgetConfigurationManager(
         private const val PREF_WIDGET_ORDER = "widget_order"
         private const val PREFS_SYSTEM_WIDGETS_KEY = "saved_widgets"
         
-        // Widget IDs that correspond to container IDs in the layout
+        
         val IN_APP_WIDGETS = listOf(
             WidgetInfo("notifications_widget_container", "Notifications", false),
             WidgetInfo("calendar_events_widget_container", "Calendar Events", false),
@@ -53,9 +53,9 @@ class WidgetConfigurationManager(
         val appName: String? = null
     )
     
-    /**
-     * Get the current widget configuration including saved order and available system providers
-     */
+    
+
+
     fun getWidgetConfiguration(): List<WidgetInfo> {
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null)
         val savedWidgetsList = mutableListOf<WidgetInfo>()
@@ -78,14 +78,14 @@ class WidgetConfigurationManager(
             } catch (_: Exception) {}
         }
         
-        // Get current system widgets that are already bound
+        
         val boundSystemWidgets = getBoundSystemWidgets()
         val boundIds = boundSystemWidgets.map { it.id }.toSet()
         
-        // Filter out system widgets from saved list that are no longer bound
+        
         val result = savedWidgetsList.filter { !it.isSystemWidget || boundIds.contains(it.id) }.toMutableList()
         
-        // Add new bound system widgets that aren't in the result list yet
+        
         val currentIds = result.map { it.id }.toSet()
         boundSystemWidgets.forEach { systemWidget ->
             if (!currentIds.contains(systemWidget.id)) {
@@ -93,15 +93,15 @@ class WidgetConfigurationManager(
             }
         }
         
-        // Add any missing in-app widgets
+        
         IN_APP_WIDGETS.forEach { defaultWidget ->
             if (!currentIds.contains(defaultWidget.id)) {
                 result.add(defaultWidget)
             }
         }
         
-        // Now add all available system providers that are NOT currently bound
-        // This allows users to "enable" new system widgets from the list
+        
+        
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val installedProviders = try { appWidgetManager.installedProviders } catch (_: Exception) { emptyList() }
         
@@ -128,12 +128,12 @@ class WidgetConfigurationManager(
             }
         }
         
-        // Keep enabled widgets in their saved order so the drawer still respects how the user arranged them.
-        // Separate disabled widgets by type so system vs custom stay grouped below.
+        
+        
         val enabledWidgets = result.filter { it.enabled }
         val customDisabled = result.filter { !it.enabled && !it.isSystemWidget }.sortedBy { it.name }
         
-        // Arrange system widgets based on app name in ascending order
+        
         val systemDisabled = result.filter { !it.enabled && it.isSystemWidget }
             .sortedWith(
                 compareBy<WidgetInfo> { it.appName ?: "" }
@@ -154,16 +154,16 @@ class WidgetConfigurationManager(
         }
     }
 
-    /**
-     * Get the current widget order (only for already added/active widgets)
-     */
+    
+
+
     fun getWidgetOrder(): List<WidgetInfo> {
         return getWidgetConfiguration().filter { !it.isProvider }
     }
     
-    /**
-     * Fetches already bound system widgets from SharedPreferences
-     */
+    
+
+
     private fun getBoundSystemWidgets(): List<WidgetInfo> {
         val widgetsJson = sharedPreferences.getString(PREFS_SYSTEM_WIDGETS_KEY, null) ?: return emptyList()
         val systemWidgets = mutableListOf<WidgetInfo>()
@@ -178,7 +178,7 @@ class WidgetConfigurationManager(
                 val className = json.optString("providerClass", "")
 
                 
-                // Verify widget still exists
+                
                 val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
                 if (info != null) {
                     val id = "system_widget_$appWidgetId"
@@ -199,13 +199,13 @@ class WidgetConfigurationManager(
         return systemWidgets
     }
     
-    /**
-     * Save widget order and visibility
-     */
+    
+
+
     fun saveWidgetOrder(widgets: List<WidgetInfo>) {
         val jsonArray = JSONArray()
         widgets.forEach { widget ->
-            // We only save active instances, not the "provider templates"
+            
             if (!widget.isProvider) {
                 val jsonObject = JSONObject()
                 jsonObject.put("id", widget.id)
@@ -223,9 +223,9 @@ class WidgetConfigurationManager(
         }
     }
     
-    /**
-     * Check if a widget is enabled
-     */
+    
+
+
     fun isWidgetEnabled(widgetId: String): Boolean {
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null) ?: return false
         try {

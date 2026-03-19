@@ -12,25 +12,25 @@ import com.guruswarupa.launch.handlers.GestureCoordinator
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/**
- * Detects back tap gestures using the linear accelerometer sensor.
- * Optimized for "light movement" (taps) and ignores vigorous shakes or slow lifts.
- */
+
+
+
+
 class BackTapDetector(
     context: Context,
     private val onBackTap: (Int) -> Unit
 ) : SensorEventListener {
     
     private val sensorManager: SensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    // Prefer Linear Acceleration sensor as it filters out gravity
+    
     private var sensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) 
         ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     
     private var tapThreshold = 6.0f 
-    private var maxTapThreshold = 18.0f // If movement is more vigorous than this, it's likely a shake, not a tap
+    private var maxTapThreshold = 18.0f 
     
-    private val tapTimeWindow = 450L // Window to complete a double tap
-    private val minTimeBetweenTaps = 220L // Increased to prevent lift-to-wake or tilt triggers
+    private val tapTimeWindow = 450L 
+    private val minTimeBetweenTaps = 220L 
     
     private var lastTapTime = 0L
     private var tapCount = 0
@@ -40,7 +40,7 @@ class BackTapDetector(
     private var isListening = false
     private var isUsingLinearAcc = sensor?.type == Sensor.TYPE_LINEAR_ACCELERATION
     
-    // For accelerometer fallback: track last values to calculate delta (jerk)
+    
     private var lastX = 0f
     private var lastY = 0f
     private var lastZ = 0f
@@ -53,7 +53,7 @@ class BackTapDetector(
         if (isListening) return
         
         sensor?.let {
-            // Using SENSOR_DELAY_GAME for improved battery life over FASTEST
+            
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
             isListening = true
         }
@@ -67,33 +67,33 @@ class BackTapDetector(
     }
     
     fun updateSensitivity(sensitivity: Int) {
-        // Map 1-10 to thresholds. 
-        // Significantly increased base values to handle "too sensitive" feedback.
-        // Sensitivity 1 (least) should be very hard to trigger.
+        
+        
+        
         val baseMin = if (isUsingLinearAcc) 4.0f else 12.0f
         val baseMax = if (isUsingLinearAcc) 25.0f else 40.0f
         
-        // sensitivity 10 (most sensitive) -> baseMin
-        // sensitivity 1 (least sensitive) -> baseMax
+        
+        
         tapThreshold = baseMax - (sensitivity.coerceIn(1, 10) - 1) * ((baseMax - baseMin) / 9f)
         
-        // Narrower window for taps: max threshold is lower to avoid overlapping with shake gestures
-        // A shake is typically > 15-45. If maxTapThreshold is too high (e.g. 100), 
-        // every shake move counts as a tap.
+        
+        
+        
         maxTapThreshold = tapThreshold * 2.2f 
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event == null) return
         
-        // Skip processing if we are in a gesture cooldown period
+        
         if (GestureCoordinator.isInCooldown()) {
             tapCount = 0
             return
         }
         
         val currentTime = System.currentTimeMillis()
-        if (currentTime - lastUpdateTime < 10) return // Sample at ~100Hz
+        if (currentTime - lastUpdateTime < 10) return 
         
         val x = event.values[0]
         val y = event.values[1]
@@ -117,11 +117,11 @@ class BackTapDetector(
         lastY = y
         lastZ = z
         
-        // Back taps should have a significant Z component (hitting the back of the phone)
-        // We require at least 60% of the movement to be on the Z axis to filter out side-to-side lifts
+        
+        
         val isMostlyZ = zAcceleration > (acceleration * 0.6f)
         
-        // Light movement detection: must be above tapThreshold but below maxTapThreshold (shake territory)
+        
         if (acceleration > tapThreshold && acceleration < maxTapThreshold && isMostlyZ) {
             val now = System.currentTimeMillis()
             
@@ -135,14 +135,14 @@ class BackTapDetector(
                 if (tapCount >= 2) {
                     onBackTap(2)
                     tapCount = 0
-                    // Longer post-trigger cooldown
+                    
                     lastTapTime = now + 300 
                 } else {
                     lastTapTime = now
                 }
             }
         } else if (acceleration >= maxTapThreshold) {
-            // Movement is too vigorous, likely a shake. Reset tap counter immediately.
+            
             tapCount = 0
         }
         

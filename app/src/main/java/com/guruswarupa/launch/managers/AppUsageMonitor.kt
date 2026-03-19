@@ -20,7 +20,7 @@ class AppUsageMonitor : Service() {
 
     companion object {
         private const val SERVICE_NAME = "App Usage Monitor"
-        private const val POLLING_INTERVAL_MS = 3000L // Check every 3 seconds for battery efficiency
+        private const val POLLING_INTERVAL_MS = 3000L 
     }
 
     override fun onCreate() {
@@ -52,7 +52,7 @@ class AppUsageMonitor : Service() {
         monitoringRunnable = object : Runnable {
             override fun run() {
                 checkForegroundAppUsage()
-                // Schedule next check
+                
                 handler.postDelayed(this, POLLING_INTERVAL_MS)
             }
         }
@@ -62,7 +62,7 @@ class AppUsageMonitor : Service() {
     private fun checkForegroundAppUsage() {
         val currentApp = getForegroundApp()
         
-        // Don't act if the foreground app is our launcher or system UI
+        
         if (currentApp != null && currentApp != packageName && 
             !currentApp.startsWith("com.android.systemui")) {
             
@@ -77,7 +77,7 @@ class AppUsageMonitor : Service() {
 
     private fun getForegroundApp(): String? {
         val time = System.currentTimeMillis()
-        // Query usage stats for the last minute to find the most recently used app
+        
         val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 60 * 1000, time)
         
         if (stats != null) {

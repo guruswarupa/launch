@@ -18,7 +18,7 @@ abstract class VaultBaseActivity : AppCompatActivity() {
 
     private var lastInteractionTime: Long = 0
     private val inactiveTimeoutRunnable = Runnable {
-        // Auto-lock after inactivity timeout
+        
         EncryptedFolderManager(this).lock()
         finish()
     }
@@ -36,12 +36,12 @@ abstract class VaultBaseActivity : AppCompatActivity() {
     private fun initializeAutoLock() {
         updateLastInteractionTime()
         
-        // Register receiver to detect screen off events
+        
         screenOffReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == Intent.ACTION_SCREEN_OFF) {
                     EncryptedFolderManager(this@VaultBaseActivity).lock()
-                    finish() // Lock vault when screen turns off
+                    finish() 
                 }
             }
         }
@@ -51,12 +51,12 @@ abstract class VaultBaseActivity : AppCompatActivity() {
     private fun updateLastInteractionTime() {
         lastInteractionTime = System.currentTimeMillis()
         
-        // Cancel any pending timeout checks
+        
         handler.removeCallbacks(inactiveTimeoutRunnable)
         
-        // Schedule a new timeout check if auto-lock is enabled
+        
         if (isAutoLockEnabled()) {
-            val timeoutDuration = getTimeoutDurationMinutes() * 60 * 1000L // Convert minutes to milliseconds
+            val timeoutDuration = getTimeoutDurationMinutes() * 60 * 1000L 
             handler.postDelayed(inactiveTimeoutRunnable, timeoutDuration)
         }
     }
@@ -66,7 +66,7 @@ abstract class VaultBaseActivity : AppCompatActivity() {
     }
     
     private fun getTimeoutDurationMinutes(): Int {
-        return prefs.getInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 1) // Default to 1 minute
+        return prefs.getInt(Constants.Prefs.VAULT_TIMEOUT_DURATION, 1) 
     }
     
     override fun onResume() {
@@ -76,14 +76,14 @@ abstract class VaultBaseActivity : AppCompatActivity() {
     
     override fun onPause() {
         super.onPause()
-        // Don't remove the callback here since we want the timeout to continue running
+        
     }
     
     override fun onDestroy() {
         super.onDestroy()
         activeVaultActivities--
         
-        // If this is the last vault activity and it's finishing (not rotating), lock the vault
+        
         if (activeVaultActivities <= 0 && isFinishing) {
             EncryptedFolderManager(this).lock()
         }
@@ -92,7 +92,7 @@ abstract class VaultBaseActivity : AppCompatActivity() {
         screenOffReceiver?.let { unregisterReceiver(it) }
     }
     
-    // Method to be called when user interacts with the UI
+    
     override fun onUserInteraction() {
         super.onUserInteraction()
         updateLastInteractionTime()

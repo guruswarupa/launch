@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -13,14 +13,14 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay for better text visibility -->
+    
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66000000"/>
 
-    <!-- Content Container -->
+    
     <ScrollView
         android:id="@+id/settings_scroll_view"
         android:layout_width="match_parent"
@@ -37,7 +37,7 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="60dp">
 
-            <!-- Title & Header -->
+            
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -61,7 +61,7 @@
                     android:shadowRadius="6"/>
             </LinearLayout>
 
-            <!-- Appearance Category -->
+            
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -73,7 +73,7 @@
                 android:layout_marginBottom="12dp"
                 android:layout_marginStart="12dp"/>
 
-            <!-- Display Style Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -337,7 +337,7 @@
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
 
-                        <!-- Default Home Page Option -->
+                        
                         <LinearLayout
                             android:id="@+id/default_home_page_section"
                             android:layout_width="match_parent"
@@ -361,7 +361,7 @@
                                 android:layout_height="48dp"/>
                         </LinearLayout>
 
-                        <!-- App Highlighting / Scrim Option -->
+                        
                         <LinearLayout
                             android:id="@+id/background_translucency_section"
                             android:layout_width="match_parent"
@@ -408,7 +408,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Wallpaper Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -527,7 +527,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Typography Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -716,7 +716,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Widgets Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -792,7 +792,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Search Engine Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -865,7 +865,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Features Category -->
+            
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -877,7 +877,7 @@
                 android:layout_marginBottom="12dp"
                 android:layout_marginStart="12dp"/>
 
-            <!-- Quick Actions Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -941,7 +941,7 @@
                         android:paddingHorizontal="16dp"
                         android:paddingBottom="16dp">
 
-                        <!-- Accessibility Shortcut -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -985,7 +985,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Back Tap Gestures -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1066,7 +1066,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Shake for Torch -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1140,7 +1140,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Extra Dimmer -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1210,7 +1210,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Night Mode -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1266,7 +1266,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Flip to DND -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1304,7 +1304,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
             
-            <!-- App Timer Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1380,7 +1380,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
             
-            <!-- Security Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1477,7 +1477,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Web Apps Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1553,7 +1553,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Maintenance Category -->
+            
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1565,7 +1565,7 @@
                 android:layout_marginBottom="12dp"
                 android:layout_marginStart="12dp"/>
 
-            <!-- System Maintenance Actions Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1743,7 +1743,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Permissions & Support Card (Launcher Info) -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1840,7 +1840,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Support & Info Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1962,7 +1962,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Final Footer Info -->
+            
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

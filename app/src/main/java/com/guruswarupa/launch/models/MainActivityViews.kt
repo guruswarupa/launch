@@ -11,9 +11,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.ui.views.FastScroller
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 
-/**
- * Holder for all MainActivity view references.
- */
+
+
+
 class MainActivityViews {
     lateinit var recyclerView: RecyclerView
     lateinit var fastScroller: FastScroller

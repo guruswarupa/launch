@@ -9,14 +9,14 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Main row with checkbox, text, and delete button -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <!-- Priority indicator -->
+        
         <View
             android:id="@+id/priority_indicator"
             android:layout_width="3dp"
@@ -97,7 +97,7 @@
 
     </LinearLayout>
 
-    <!-- Days of week indicators for recurring tasks -->
+    
     <LinearLayout
         android:id="@+id/days_container"
         android:layout_width="match_parent"

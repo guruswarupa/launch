@@ -31,22 +31,22 @@ object DialogStyler {
         val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
         val themeColor = TypographyManager.getConfiguredFontColor(context) ?: Color.WHITE
         
-        // Apply translucency to dialog background
+        
         applyDialogTranslucency(dialog, prefs)
 
         dialog.setOnShowListener {
-            // Style Title - Try multiple possible IDs for different Android versions/themes
+            
             val titleView = dialog.findViewById<TextView>(context.resources.getIdentifier("alertTitle", "id", "android"))
                 ?: dialog.findViewById<TextView>(android.R.id.title)
             
             titleView?.setTextColor(themeColor)
 
-            // Style Buttons
+            
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(themeColor)
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.parseColor("#B0B0B0"))
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Color.parseColor("#B0B0B0"))
             
-            // Style list items (for item selection dialogs like icon shape, focus mode, workspace)
+            
             dialog.listView?.let { listView ->
                 for (i in 0 until listView.childCount) {
                     val itemView = listView.getChildAt(i)
@@ -66,9 +66,9 @@ object DialogStyler {
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(color))
     }
 
-    /**
-     * Creates an adapter for AlertDialog list items that uses theme color
-     */
+    
+
+
     fun createThemedTextAdapter(context: Context, items: Array<String>): ArrayAdapter<String> {
         val themeColor = TypographyManager.getConfiguredFontColor(context) ?: Color.WHITE
         return object : ArrayAdapter<String>(context, android.R.layout.select_dialog_item, items) {

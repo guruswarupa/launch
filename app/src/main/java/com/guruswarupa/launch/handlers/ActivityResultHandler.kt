@@ -11,10 +11,10 @@ import com.guruswarupa.launch.managers.WallpaperManagerHelper
 import com.guruswarupa.launch.managers.WidgetManager
 import com.guruswarupa.launch.utils.VoiceCommandHandler
 
-/**
- * Handles all activity result callbacks.
- * Extracted from MainActivity to reduce complexity.
- */
+
+
+
+
 class ActivityResultHandler(
     private val activity: FragmentActivity,
     private val searchBox: AutoCompleteTextView,
@@ -61,7 +61,7 @@ class ActivityResultHandler(
             searchBox.setText(result)
             searchBox.setSelection(result.length)
             
-            // Pass the voice result to handleCommand if handler is available
+            
             voiceCommandHandler?.handleCommand(result)
         }
     }

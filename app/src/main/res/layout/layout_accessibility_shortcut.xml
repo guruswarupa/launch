@@ -38,14 +38,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <!-- Sliders Section -->
+                
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:paddingHorizontal="4dp">
 
-                    <!-- Brightness -->
+                    
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -73,7 +73,7 @@
                             android:paddingEnd="12dp"/>
                     </LinearLayout>
 
-                    <!-- Media Volume -->
+                    
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -101,7 +101,7 @@
                             android:paddingEnd="12dp"/>
                     </LinearLayout>
 
-                    <!-- Ring/Vibrate Volume -->
+                    
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -129,7 +129,7 @@
                             android:paddingEnd="12dp"/>
                     </LinearLayout>
 
-                    <!-- Alarm Volume -->
+                    
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -172,14 +172,14 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Dynamic Shortcuts Grid -->
+                
                 <GridLayout
                     android:id="@+id/shortcuts_grid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:columnCount="3"
                     android:alignmentMode="alignMargins">
-                    <!-- Items added dynamically -->
+                    
                 </GridLayout>
             </LinearLayout>
         </ScrollView>

@@ -40,7 +40,7 @@ class PermissionsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -92,7 +92,7 @@ class PermissionsActivity : ComponentActivity() {
         list.add(PermItem("Overlay", "Screen dimming tools", Settings.canDrawOverlays(this), type = "OVERLAY"))
         list.add(PermItem("Accessibility", "Double tap lock", hasAccessibility(), type = "ACCESSIBILITY"))
         
-        // Add activity recognition for Android 10+
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             list.add(PermItem("Physical Activity", "Track steps and distance", check(Manifest.permission.ACTIVITY_RECOGNITION), Manifest.permission.ACTIVITY_RECOGNITION))
         }
@@ -117,7 +117,7 @@ class PermissionsActivity : ComponentActivity() {
             "OVERLAY" -> startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()))
             "ACCESSIBILITY" -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             "NORMAL" -> {
-                // For runtime permissions, we take them to app info where they can toggle permissions
+                
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.fromParts("package", packageName, null)
                 }
@@ -153,7 +153,7 @@ class PermissionsActivity : ComponentActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        // Refresh the permissions list to show updated state
+        
         setupPermissionsList()
     }
 

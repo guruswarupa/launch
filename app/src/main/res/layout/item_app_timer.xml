@@ -19,14 +19,14 @@
         android:gravity="center_vertical"
         android:padding="12dp">
 
-        <!-- App Icon -->
+        
         <ImageView
             android:id="@+id/app_icon"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:contentDescription="App Icon"/>
 
-        <!-- App Info -->
+        
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -34,7 +34,7 @@
             android:layout_marginStart="12dp"
             android:orientation="vertical">
 
-            <!-- App Name -->
+            
             <TextView
                 android:id="@+id/app_name"
                 android:layout_width="wrap_content"
@@ -46,7 +46,7 @@
                 android:maxLines="1"
                 android:ellipsize="end"/>
 
-            <!-- Daily Limit -->
+            
             <TextView
                 android:id="@+id/app_limit"
                 android:layout_width="wrap_content"
@@ -58,7 +58,7 @@
                 android:maxLines="1"
                 android:ellipsize="end"/>
 
-            <!-- Usage Time -->
+            
             <TextView
                 android:id="@+id/app_usage"
                 android:layout_width="wrap_content"
@@ -73,7 +73,7 @@
 
         </LinearLayout>
 
-        <!-- Toggle Switch -->
+        
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/timer_switch"
             android:layout_width="wrap_content"

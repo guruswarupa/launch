@@ -61,7 +61,7 @@ class WorkoutWidget(rootView: View) {
         exercisesRecyclerView.layoutManager = LinearLayoutManager(context)
         exercisesRecyclerView.adapter = adapter
         
-        // Setup swipe to delete and drag to reorder
+        
         setupSwipeToDelete()
         setupDragToReorder()
         
@@ -129,13 +129,13 @@ class WorkoutWidget(rootView: View) {
         isCalendarView = !isCalendarView
         
         if (isCalendarView) {
-            // Show calendar, hide list
+            
             listViewContainer.visibility = View.GONE
             calendarViewContainer.visibility = View.VISIBLE
             (viewToggleButton as Button).text = context.getString(R.string.workout_list)
             calendarView?.updateExercises(exercises)
         } else {
-            // Show list, hide calendar
+            
             listViewContainer.visibility = View.VISIBLE
             calendarViewContainer.visibility = View.GONE
             (viewToggleButton as Button).text = context.getString(R.string.workout_calendar)
@@ -147,14 +147,14 @@ class WorkoutWidget(rootView: View) {
         val lastReset = prefs.getString(LAST_RESET_DATE_KEY, null)
         
         if (lastReset != today && lastReset != null) {
-            // Reset all exercises for new day
+            
             exercises.forEach { it.resetToday() }
             prefs.edit { putString(LAST_RESET_DATE_KEY, today) }
             saveExercises()
             adapter.notifyItemRangeChanged(0, exercises.size)
             updateStats()
         } else if (lastReset == null) {
-            // First time - just set the date
+            
             prefs.edit { putString(LAST_RESET_DATE_KEY, today) }
         }
     }
@@ -200,7 +200,7 @@ class WorkoutWidget(rootView: View) {
                     showDeleteConfirmDialog(exercise) {
                         deleteExercise(exercise)
                     }
-                    adapter.notifyItemChanged(position) // Restore view
+                    adapter.notifyItemChanged(position) 
                 }
             }
             
@@ -208,7 +208,7 @@ class WorkoutWidget(rootView: View) {
                 super.onSelectedChanged(viewHolder, actionState)
                 if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
                     viewHolder?.itemView?.alpha = 0.7f
-                    // Disable menu button during drag
+                    
                     if (viewHolder is WorkoutAdapter.WorkoutViewHolder) {
                         viewHolder.menuButton.isEnabled = false
                     }
@@ -218,7 +218,7 @@ class WorkoutWidget(rootView: View) {
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
                 viewHolder.itemView.alpha = 1.0f
-                // Re-enable menu button after drag
+                
                 if (viewHolder is WorkoutAdapter.WorkoutViewHolder) {
                     viewHolder.menuButton.isEnabled = true
                 }
@@ -228,7 +228,7 @@ class WorkoutWidget(rootView: View) {
     }
     
     private fun setupDragToReorder() {
-        // Already handled in setupSwipeToDelete with onMove
+        
     }
     
     private fun showAddExerciseDialog() {
@@ -237,7 +237,7 @@ class WorkoutWidget(rootView: View) {
         val presetsContainer = dialogView.findViewById<ViewGroup>(R.id.presets_container)
         val typeTime = dialogView.findViewById<android.widget.RadioButton>(R.id.type_time)
         
-        // Fix input colors
+        
         val textColor = ContextCompat.getColor(context, R.color.text)
         val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
         customInput.setTextColor(textColor)
@@ -274,7 +274,7 @@ class WorkoutWidget(rootView: View) {
                     }
                     background = AppCompatResources.getDrawable(context, R.drawable.button_neutral_ripple)
                     setPadding(16, 12, 16, 12)
-                    // Set preset button text color based on theme
+                    
                     setTextColor(textColor)
                     setOnClickListener {
                         val type = if (typeTime.isChecked) ExerciseType.TIME else ExerciseType.REPS
@@ -309,7 +309,7 @@ class WorkoutWidget(rootView: View) {
         updateUI()
         adapter.notifyItemInserted(exercises.size - 1)
         exercisesRecyclerView.smoothScrollToPosition(exercises.size - 1)
-        // Update calendar view if visible
+        
         if (isCalendarView) {
             calendarView?.updateExercises(exercises)
         }
@@ -322,7 +322,7 @@ class WorkoutWidget(rootView: View) {
         if (index != -1) {
             adapter.notifyItemChanged(index)
             updateStats()
-            // Update calendar view if visible
+            
             if (isCalendarView) {
                 calendarView?.updateExercises(exercises)
             }
@@ -337,7 +337,7 @@ class WorkoutWidget(rootView: View) {
             updateUI()
             adapter.notifyItemRemoved(index)
             updateStats()
-            // Update calendar view if visible
+            
             if (isCalendarView) {
                 calendarView?.updateExercises(exercises)
             }
@@ -432,7 +432,7 @@ class WorkoutWidget(rootView: View) {
     }
     
     private fun updateStats() {
-        // For stats, show total reps for reps exercises, and total time for time exercises
+        
         val repsExercises = exercises.filter { it.type == ExerciseType.REPS }
         val timeExercises = exercises.filter { it.type == ExerciseType.TIME }
         
@@ -458,10 +458,10 @@ class WorkoutWidget(rootView: View) {
         totalTodayText.text = statsText
         exercisesCountText.text = exercises.size.toString()
         
-        // Update streak
+        
         updateStreak()
         
-        // Update weekly total
+        
         updateWeeklyTotal()
     }
     
@@ -470,13 +470,13 @@ class WorkoutWidget(rootView: View) {
         val lastStreakDate = prefs.getString(LAST_STREAK_DATE_KEY, null)
         var currentStreak = prefs.getInt(STREAK_KEY, 0)
         
-        // Check if user worked out today
+        
         val workedOutToday = exercises.any { it.todayCount > 0 }
         
         if (lastStreakDate == today) {
-            // Already updated today, keep current streak
+            
         } else if (lastStreakDate != null) {
-            // Check if yesterday was worked out (for streak continuation)
+            
             val yesterday = getYesterdayDate()
             val workedOutYesterday = exercises.any { 
                 it.workoutDates.contains(yesterday) || it.lastWorkoutDate == yesterday
@@ -484,10 +484,10 @@ class WorkoutWidget(rootView: View) {
             
             if (workedOutToday) {
                 if (workedOutYesterday || lastStreakDate == yesterday) {
-                    // Continue streak
+                    
                     currentStreak++
                 } else {
-                    // New streak starting
+                    
                     currentStreak = 1
                 }
                 prefs.edit {
@@ -495,7 +495,7 @@ class WorkoutWidget(rootView: View) {
                     putString(LAST_STREAK_DATE_KEY, today)
                 }
             } else if (lastStreakDate != yesterday) {
-                // Streak broken
+                
                 currentStreak = 0
                 prefs.edit {
                     putInt(STREAK_KEY, 0)
@@ -503,7 +503,7 @@ class WorkoutWidget(rootView: View) {
                 }
             }
         } else {
-            // First time - initialize
+            
             if (workedOutToday) {
                 currentStreak = 1
                 prefs.edit {
@@ -546,7 +546,7 @@ class WorkoutWidget(rootView: View) {
             .sumOf { exercise ->
                 weekDates.sumOf { date ->
                     if (exercise.workoutDates.contains(date)) {
-                        // For weekly total, we'll use today's count if it's today, otherwise estimate
+                        
                         if (date == getCurrentDate()) exercise.todayCount else exercise.bestDay
                     } else 0
                 }
@@ -617,7 +617,7 @@ class WorkoutWidget(rootView: View) {
             adapter.notifyItemRangeChanged(0, exercises.size)
             updateStats()
             
-            // Update calendar view if it exists
+            
             calendarView?.updateExercises(exercises)
         } catch (_: Exception) {
         }
@@ -640,7 +640,7 @@ class WorkoutAdapter(
         val increment5Button: View = itemView.findViewById(R.id.increment_5_button)
         val menuButton: TextView = itemView.findViewById(R.id.exercise_menu_button)
         
-        // Time-based views
+        
         val repsLayout: View = itemView.findViewById(R.id.reps_layout)
         val timeLayout: View = itemView.findViewById(R.id.time_layout)
         val stopwatchDisplay: TextView = itemView.findViewById(R.id.stopwatch_display)
@@ -663,12 +663,12 @@ class WorkoutAdapter(
         val context = holder.itemView.context
         holder.exerciseNameText.text = exercise.name
         
-        // Clean up previous stopwatch
+        
         holder.stopwatch?.cleanup()
         holder.stopwatch = null
         
         if (exercise.type == ExerciseType.TIME) {
-            // Show time-based layout
+            
             holder.repsLayout.visibility = View.GONE
             holder.timeLayout.visibility = View.VISIBLE
             
@@ -679,7 +679,7 @@ class WorkoutAdapter(
             holder.totalCountText.text = context.getString(R.string.workout_total_format, exercise.getTotalDisplayValue())
             holder.bestTimeText.text = context.getString(R.string.workout_best_format, exercise.getBestDisplayValue())
             
-            // Setup stopwatch
+            
             holder.stopwatch = WorkoutStopwatch(
                 holder.stopwatchDisplay,
                 holder.stopwatchStartStop,
@@ -688,7 +688,7 @@ class WorkoutAdapter(
                 onIncrementClick(exercise, seconds)
             }
         } else {
-            // Show reps-based layout
+            
             holder.repsLayout.visibility = View.VISIBLE
             holder.timeLayout.visibility = View.GONE
             
@@ -698,7 +698,7 @@ class WorkoutAdapter(
             holder.totalCountText.text = context.getString(R.string.workout_total_format, exercise.getTotalDisplayValue())
             holder.bestDayText.text = context.getString(R.string.workout_best_format, exercise.getBestDisplayValue())
             
-            // Animate count change
+            
             val animation = AnimationUtils.loadAnimation(holder.itemView.context, android.R.anim.fade_in)
             holder.todayCountText.startAnimation(animation)
             
@@ -715,7 +715,7 @@ class WorkoutAdapter(
             }
         }
         
-        // Menu button click instead of long-press
+        
         holder.menuButton.setOnClickListener {
             workoutWidget.showExerciseOptions(exercise)
         }

@@ -24,10 +24,10 @@ class TodoAlarmReceiver : BroadcastReceiver() {
         val intervalMinutes = intent.getIntExtra("interval_minutes", 0)
         val intervalStartTime = intent.getStringExtra("interval_start_time")
 
-        // Create notification channel for Android O+
+        
         createNotificationChannel(context)
 
-        // Create intent to open MainActivity when notification is tapped
+        
         val mainIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -38,7 +38,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Determine priority based on todo priority
+        
         val notificationPriority = when (priorityName) {
             "HIGH" -> NotificationCompat.PRIORITY_HIGH
             "MEDIUM" -> NotificationCompat.PRIORITY_DEFAULT
@@ -46,7 +46,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             else -> NotificationCompat.PRIORITY_DEFAULT
         }
 
-        // Build notification
+        
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Todo Reminder")
@@ -65,25 +65,25 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             )
             .build()
 
-        // Show notification
+        
         try {
             with(NotificationManagerCompat.from(context)) {
                 notify(requestCode, notification)
             }
             
-            // Reschedule next alarm if this is an interval-based todo
+            
             if (isIntervalBased && intervalMinutes > 0 && intervalStartTime != null) {
                 rescheduleIntervalAlarm(context, todoText, todoCategory, priorityName, requestCode, intervalMinutes, intervalStartTime)
             }
         } catch (_: SecurityException) {
-            // Handle case where notification permission is not granted
-            // This will be handled by requesting permission in MainActivity
+            
+            
         }
     }
     
-    /**
-     * Reschedule the next interval alarm
-     */
+    
+
+
     private fun rescheduleIntervalAlarm(
         context: Context,
         todoText: String,
@@ -98,10 +98,10 @@ class TodoAlarmReceiver : BroadcastReceiver() {
         val calendar = Calendar.getInstance()
         val currentTimeInMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
         
-        // Calculate next alarm time (current time + interval)
+        
         var nextAlarmTimeInMinutes = currentTimeInMinutes + intervalMinutes
         
-        // If next alarm is tomorrow, add a day
+        
         if (nextAlarmTimeInMinutes >= 24 * 60) {
             calendar.add(Calendar.DAY_OF_YEAR, 1)
             nextAlarmTimeInMinutes -= 24 * 60

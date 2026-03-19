@@ -21,7 +21,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
 
     override fun onDestroy() {
         try {
-            // Clear instance before calling super to prevent issues
+            
             instance = null
             isListenerConnected = false
         } catch (_: Exception) {
@@ -40,7 +40,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         try {
             super.onListenerDisconnected()
         } catch (e: Exception) {
-            // Ignore errors during disconnection - system is managing the lifecycle
+            
             Log.w(TAG, "Error during listener disconnection", e)
         }
     }
@@ -49,7 +49,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         try {
             if (isListenerConnected) {
                 super.onNotificationPosted(sbn)
-                // Notify widget to update
+                
                 updateWidget()
             }
         } catch (_: Exception) {
@@ -60,7 +60,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         try {
             if (isListenerConnected) {
                 super.onNotificationRemoved(sbn)
-                // Notify widget to update
+                
                 updateWidget()
             }
         } catch (_: Exception) {
@@ -88,12 +88,12 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         }
     }
     
-    // Helper method to cancel notification using package, tag and id
+    
     @Suppress("unused", "DEPRECATION")
     fun dismissNotification(pkg: String, tag: String?, id: Int) {
         try {
             if (isListenerConnected) {
-                // Use cancelNotification to dismiss from system
+                
                 cancelNotification(pkg, tag, id)
             }
         } catch (e: SecurityException) {
@@ -102,7 +102,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         }
     }
     
-    // Reliable method using notification key
+    
     fun dismissNotificationByKey(key: String) {
         try {
             if (isListenerConnected) {

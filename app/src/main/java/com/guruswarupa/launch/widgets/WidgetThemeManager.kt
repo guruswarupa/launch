@@ -24,11 +24,11 @@ class WidgetThemeManager(
         searchTypeButton: ImageButton? = null,
         appDockManager: AppDockManager? = null
     ) {
-        // Select appropriate background drawables - always use the "dark" (glass) look now
+        
         val widgetBackground = R.drawable.widget_background
         val emptyStateBackground = R.drawable.drawer_widgets_empty_state_bg
         
-        // Apply backgrounds to all widget containers
+        
         activity.findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.notifications_widget_container)?.parent?.let { parent ->
             if (parent is View) parent.setBackgroundResource(widgetBackground)
@@ -56,16 +56,16 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.widget_config_button)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(emptyStateBackground)
         
-        // Apply theme to search box - always use white text and icons
+        
         searchBox?.let { sb ->
             val searchBg = R.drawable.search_box_transparent_bg
             val textColor = android.graphics.Color.WHITE
             val hintColor = android.graphics.Color.WHITE
             
-            // Apply background to search container if initialized, otherwise to searchBox
+            
             searchContainer?.let { sc ->
                 sc.setBackgroundResource(searchBg)
-                sb.background = null // Keep EditText background transparent
+                sb.background = null 
             } ?: run {
                 sb.setBackgroundResource(searchBg)
             }
@@ -74,23 +74,23 @@ class WidgetThemeManager(
             sb.setHintTextColor(hintColor)
             TypographyManager.applyToView(sb)
             
-            // Tint search icons - always white
+            
             val iconColor = android.graphics.Color.WHITE
             sb.compoundDrawablesRelative[0]?.setTint(iconColor)
             voiceSearchButton?.setColorFilter(iconColor)
             searchTypeButton?.setColorFilter(iconColor)
         }
         
-        // Weather icon - always white
+        
         activity.findViewById<ImageView>(R.id.weather_icon)?.setColorFilter(android.graphics.Color.WHITE)
         
-        // Update dock icons
+        
         appDockManager?.updateDockIcons()
     }
     
-    /**
-     * Checks if the UI mode has changed and updates widget backgrounds if needed.
-     */
+    
+
+
     fun checkAndUpdateThemeIfNeeded(
         todoManager: TodoManager? = null, 
         appDockManager: AppDockManager? = null,
@@ -99,7 +99,7 @@ class WidgetThemeManager(
         voiceSearchButton: ImageButton? = null,
         searchTypeButton: ImageButton? = null
     ) {
-        // Even if UI mode changes, we re-apply the same single theme to ensure everything stays consistent
+        
         apply(
             searchBox = searchBox,
             searchContainer = searchContainer,
@@ -107,7 +107,7 @@ class WidgetThemeManager(
             searchTypeButton = searchTypeButton,
             appDockManager = appDockManager
         )
-        // Notify todo manager of theme change
+        
         todoManager?.onThemeChanged()
     }
 }

@@ -95,21 +95,21 @@ class ActivityCalendarAdapter(
     private fun updateDays() {
         days.clear()
         
-        // Get first day of month
+        
         val firstDayOfMonth = calendar.clone() as Calendar
         firstDayOfMonth.set(Calendar.DAY_OF_MONTH, 1)
         val firstDayOfWeek = firstDayOfMonth.get(Calendar.DAY_OF_WEEK)
         
-        // Get number of days in month
+        
         val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
         
-        // Calculate offset - Sunday = 1, Monday = 2, etc.
+        
         val startOffset = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
         repeat(startOffset) {
             days.add(DayItem(day = null))
         }
         
-        // Add days of month
+        
         val currentDate = Calendar.getInstance()
         val today = currentDate.get(Calendar.DAY_OF_MONTH)
         val currentMonth = currentDate.get(Calendar.MONTH)
@@ -152,7 +152,7 @@ class ActivityCalendarAdapter(
         val dayItem = days[position]
         
         if (dayItem.day == null) {
-            // Empty cell
+            
             holder.dayText.text = ""
             holder.dayText.visibility = View.INVISIBLE
             holder.workoutIndicator.visibility = View.GONE
@@ -162,21 +162,21 @@ class ActivityCalendarAdapter(
             holder.dayText.text = dayItem.day.toString()
             holder.dayText.visibility = View.VISIBLE
             
-            // Show activity indicator
+            
             if (dayItem.hasActivity) {
                 holder.workoutIndicator.visibility = View.VISIBLE
             } else {
                 holder.workoutIndicator.visibility = View.GONE
             }
             
-            // Highlight today with a nice colored border
+            
             if (dayItem.isToday) {
                 holder.itemView.setBackgroundResource(R.drawable.today_highlight)
             } else {
                 holder.itemView.background = null
             }
             
-            // Make clickable if it has activity data
+            
             if (dayItem.hasActivity && dayItem.dateString != null && dayItem.activityData != null) {
                 holder.itemView.setOnClickListener {
                     onDayClick?.invoke(dayItem.dateString, dayItem.activityData)

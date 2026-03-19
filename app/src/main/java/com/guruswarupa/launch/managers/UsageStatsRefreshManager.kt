@@ -8,18 +8,18 @@ import java.util.concurrent.Executor
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 
-/**
- * Handles battery and usage stats refresh operations.
- * Extracted from MainActivity to reduce complexity.
- */
+
+
+
+
 class UsageStatsRefreshManager(
     private val activity: FragmentActivity,
     private val backgroundExecutor: Executor,
     private val usageStatsManager: AppUsageStatsManager
 ) {
-    /**
-     * Safely execute a task on the background executor.
-     */
+    
+
+
     private fun safeExecute(task: Runnable): Boolean {
         if (activity.isFinishing || activity.isDestroyed) {
             return false
@@ -33,9 +33,9 @@ class UsageStatsRefreshManager(
         }
     }
 
-    /**
-     * Updates battery information in background.
-     */
+    
+
+
     fun updateBatteryInBackground() {
         safeExecute {
             val batteryManager = BatteryManager(activity)
@@ -46,11 +46,11 @@ class UsageStatsRefreshManager(
         }
     }
 
-    /**
-     * Updates usage information in background.
-     * Deprecated: Usage is now only calculated on demand for specific apps.
-     */
+    
+
+
+
     fun updateUsageInBackground() {
-        // No-op: Screen time widget removed from main layout
+        
     }
 }

@@ -20,7 +20,7 @@ data class AppPrivacyInfo(
     val appName: String,
     val icon: Drawable,
     val grantedPermissions: List<String>,
-    val severity: Int, // 0: Trace/Low, 1: Medium, 2: High
+    val severity: Int, 
     val isSideloaded: Boolean = false,
     var isExpanded: Boolean = false
 )
@@ -107,9 +107,9 @@ class PrivacyDashboardAdapter(
             holder.permissionCount.text = app.grantedPermissions.size.toString()
             
             val color = when (app.severity) {
-                2 -> 0xFFFF4444.toInt() // High - Red
-                1 -> 0xFFFFBB33.toInt() // Medium - Orange/Yellow
-                else -> 0xFF99CC00.toInt() // Low - Green
+                2 -> 0xFFFF4444.toInt() 
+                1 -> 0xFFFFBB33.toInt() 
+                else -> 0xFF99CC00.toInt() 
             }
             holder.permissionCount.setTextColor(color)
         }

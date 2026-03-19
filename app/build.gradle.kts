@@ -17,8 +17,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // Optimization: keep only English resources. 
-        // Density stripping is handled automatically when you build an App Bundle (.aab)
+        
+        
         resConfigs("en")
     }
 

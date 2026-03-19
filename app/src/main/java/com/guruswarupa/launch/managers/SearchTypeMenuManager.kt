@@ -8,10 +8,10 @@ import androidx.appcompat.view.ContextThemeWrapper
 import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.R
 
-/**
- * Manages the search type selection popup menu for the search type button.
- * Handles menu creation, item selection, and button icon updates.
- */
+
+
+
+
 class SearchTypeMenuManager(
     private val context: Context,
     private val searchTypeButton: ImageButton,
@@ -19,20 +19,20 @@ class SearchTypeMenuManager(
     private val isFocusModeActive: () -> Boolean
 ) {
     
-    /**
-     * Sets up the search type button click listener and popup menu functionality.
-     */
+    
+
+
     fun setup() {
         searchTypeButton.setOnClickListener { view ->
             showSearchTypeMenu(view)
         }
     }
     
-    /**
-     * Shows the search type selection popup menu.
-     */
+    
+
+
     private fun showSearchTypeMenu(anchor: View) {
-        // Create popup with custom translucent style
+        
         val popup = createTranslucentPopupMenu(anchor)
         popup.menu.add(0, 0, 0, context.getString(R.string.search_mode_all))
         popup.menu.add(0, 1, 1, context.getString(R.string.search_mode_apps))
@@ -40,7 +40,7 @@ class SearchTypeMenuManager(
         popup.menu.add(0, 3, 3, context.getString(R.string.search_mode_files))
         popup.menu.add(0, 4, 4, context.getString(R.string.search_mode_maps))
         
-        // Only show web, Play Store, and YouTube options if not in focus mode
+        
         if (!isFocusModeActive()) {
             popup.menu.add(0, 5, 5, context.getString(R.string.search_mode_web))
             popup.menu.add(0, 6, 6, context.getString(R.string.search_mode_playstore))
@@ -55,25 +55,25 @@ class SearchTypeMenuManager(
                 3 -> AppSearchManager.SearchMode.FILES
                 4 -> AppSearchManager.SearchMode.MAPS
                 5 -> {
-                    // Only reachable if not in focus mode
+                    
                     if (isFocusModeActive()) {
-                        AppSearchManager.SearchMode.ALL  // fallback if somehow accessed in focus mode
+                        AppSearchManager.SearchMode.ALL  
                     } else {
                         AppSearchManager.SearchMode.WEB
                     }
                 }
                 6 -> {
-                    // Only reachable if not in focus mode
+                    
                     if (isFocusModeActive()) {
-                        AppSearchManager.SearchMode.ALL  // fallback if somehow accessed in focus mode
+                        AppSearchManager.SearchMode.ALL  
                     } else {
                         AppSearchManager.SearchMode.PLAYSTORE
                     }
                 }
                 7 -> {
-                    // Only reachable if not in focus mode
+                    
                     if (isFocusModeActive()) {
-                        AppSearchManager.SearchMode.ALL  // fallback if somehow accessed in focus mode
+                        AppSearchManager.SearchMode.ALL  
                     } else {
                         AppSearchManager.SearchMode.YOUTUBE
                     }
@@ -86,7 +86,7 @@ class SearchTypeMenuManager(
                 appSearchManager.setSearchMode(mode)
             }
             
-            // Update button icon based on selected mode
+            
             updateButtonIcon(mode)
             
             true
@@ -95,9 +95,9 @@ class SearchTypeMenuManager(
         applyThemeColorToPopupMenu(popup)
     }
     
-    /**
-     * Updates the search type button icon based on the selected search mode.
-     */
+    
+
+
     private fun updateButtonIcon(mode: AppSearchManager.SearchMode) {
         val iconRes = when (mode) {
             AppSearchManager.SearchMode.APPS -> R.drawable.ic_apps_grid_icon
@@ -112,26 +112,26 @@ class SearchTypeMenuManager(
         searchTypeButton.setImageResource(iconRes)
     }
     
-    /**
-     * Creates a PopupMenu with translucent background.
-     */
+    
+
+
     private fun createTranslucentPopupMenu(anchor: View): PopupMenu {
-        // Create with custom theme wrapper that ensures translucent style
+        
         val wrapper = ContextThemeWrapper(context, R.style.Theme_Launch)
         val popup = PopupMenu(wrapper, anchor)
         
-        // Apply translucent background using multiple approaches
+        
         try {
-            // Approach 1: Direct field access
+            
             val popupField = popup.javaClass.getDeclaredField("mPopup")
             popupField.isAccessible = true
             val menuPopupHelper = popupField.get(popup)
             val cls = menuPopupHelper.javaClass
             
-            // Set the translucent background drawable
+            
             val backgroundDrawable = ContextCompat.getDrawable(context, R.drawable.menu_background)
             
-            // Try multiple methods to set the background
+            
             val methodsToTry = listOf(
                 "setBackgroundDrawable" to arrayOf(android.graphics.drawable.Drawable::class.java),
                 "setDropDownBackgroundDrawable" to arrayOf(android.graphics.drawable.Drawable::class.java)
@@ -145,11 +145,11 @@ class SearchTypeMenuManager(
                     backgroundSet = true
                     break
                 } catch (_: Exception) {
-                    // Continue trying other methods
+                    
                 }
             }
             
-            // Approach 2: If direct methods fail, try accessing the popup window
+            
             if (!backgroundSet) {
                 try {
                     val popupWindowField = cls.getDeclaredField("mPopup")
@@ -162,23 +162,23 @@ class SearchTypeMenuManager(
                 } catch (_: Exception) {}
             }
             
-            // Approach 3: Set style if available
+            
             try {
                 cls.getMethod("setPopupStyle", Int::class.java)
                     .invoke(menuPopupHelper, R.style.PopupMenuStyle)
             } catch (_: Exception) {}
             
         } catch (_: Exception) {
-            // If all reflection approaches fail, at least the theme wrapper should provide some styling
-            // The popup will still use the theme's popupMenuStyle attribute
+            
+            
         }
         
         return popup
     }
     
-    /**
-     * Applies theme color to popup menu items
-     */
+    
+
+
     private fun applyThemeColorToPopupMenu(popup: PopupMenu) {
         try {
             val themeColor = TypographyManager.getConfiguredFontColor(context) ?: ContextCompat.getColor(context, R.color.white)
@@ -187,7 +187,7 @@ class SearchTypeMenuManager(
             val menuPopupHelper = popupField.get(popup)
             val cls = menuPopupHelper.javaClass
             
-            // Get the list view
+            
             val listViewFieldNames = arrayOf("mDropDownList", "mPopup", "mListView")
             var listView: android.widget.ListView? = null
             
@@ -203,16 +203,16 @@ class SearchTypeMenuManager(
                 } catch (_: NoSuchFieldException) {}
             }
             
-            // Apply theme color to list items
+            
             listView?.let { lv ->
-                // Apply immediately
+                
                 for (i in 0 until lv.childCount) {
                     val itemView = lv.getChildAt(i)
                     if (itemView is android.widget.TextView) {
                         itemView.setTextColor(themeColor)
                     }
                 }
-                // Post to ensure items are rendered
+                
                 lv.post {
                     for (i in 0 until lv.childCount) {
                         val itemView = lv.getChildAt(i)

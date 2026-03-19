@@ -53,19 +53,19 @@ class PhysicalActivityWidget(
             if (isInitialized && activityManager.hasActivityRecognitionPermission()) {
                 updateDisplay()
             }
-            handler.postDelayed(this, 10000) // Update every 10 seconds for better responsiveness
+            handler.postDelayed(this, 10000) 
         }
     }
     
     fun initialize() {
         if (isInitialized) return
         
-        // Inflate the widget layout
+        
         val inflater = LayoutInflater.from(context)
         widgetView = inflater.inflate(R.layout.widget_physical_activity, container, false)
         container.addView(widgetView)
         
-        // Initialize views
+        
         stepsText = widgetView.findViewById(R.id.steps_text)
         distanceText = widgetView.findViewById(R.id.distance_text)
         permissionButton = widgetView.findViewById(R.id.request_permission_button)
@@ -74,12 +74,12 @@ class PhysicalActivityWidget(
         statsViewContainer = widgetView.findViewById(R.id.stats_view_container)
         calendarViewContainer = widgetView.findViewById(R.id.calendar_view_container)
         
-        // Stats container is already in stats_view_container in the layout
         
-        // Initialize activity manager
+        
+        
         activityManager = PhysicalActivityManager(context)
         activityManager.initializeAsync {
-            // Check permission and setup UI once initialized
+            
             if (activityManager.hasActivityRecognitionPermission()) {
                 setupWithPermission()
             } else {
@@ -87,13 +87,13 @@ class PhysicalActivityWidget(
             }
         }
         
-        // Setup toggle button
+        
         viewToggleButton.setOnClickListener {
             toggleView()
         }
 
         calibrationButton.setOnClickListener {
-            // Check if data looks corrupted and offer reset option
+            
             val activityData = activityManager.getTodayActivity()
             if (activityData.steps > 100000 || activityData.distanceKm > 100.0) {
                 showResetDataDialog()
@@ -102,7 +102,7 @@ class PhysicalActivityWidget(
             }
         }
         
-        // Initialize calendar view
+        
         initializeCalendarView()
         
         isInitialized = true
@@ -132,31 +132,31 @@ class PhysicalActivityWidget(
         
         val displayDate = parsedDate?.let { displayFormat.format(it) } ?: date
         
-        // Inflate dialog layout
+        
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_hourly_activity, null)
         
-        // Get views
+        
         val titleText = dialogView.findViewById<TextView>(R.id.dialog_title)
         val totalStepsText = dialogView.findViewById<TextView>(R.id.total_steps_text)
         val totalDistanceText = dialogView.findViewById<TextView>(R.id.total_distance_text)
         val hourlyChart = dialogView.findViewById<HourlyStepsChartView>(R.id.hourly_chart)
         val hourlyStatsContainer = dialogView.findViewById<LinearLayout>(R.id.hourly_stats_container)
         
-        // Set title
+        
         titleText.text = displayDate
         
-        // Set summary stats
+        
         val df = DecimalFormat("#.##")
         val stepsFormatted = String.format(Locale.getDefault(), "%,d", activityData.steps)
         val distanceFormatted = df.format(activityData.distanceKm)
         totalStepsText.text = stepsFormatted
         totalDistanceText.text = context.getString(R.string.distance_km_format, distanceFormatted)
         
-        // Get hourly data
+        
         val hourlyData = activityManager.getHourlyActivityForDate(date)
         hourlyChart.setHourlyData(hourlyData)
         
-        // Populate hourly stats list
+        
         hourlyStatsContainer.removeAllViews()
         val textColor = ContextCompat.getColor(context, R.color.text)
         val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
@@ -191,7 +191,7 @@ class PhysicalActivityWidget(
             }
         }
         
-        // Show dialog
+        
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setView(dialogView)
             .setPositiveButton("Close", null)
@@ -202,13 +202,13 @@ class PhysicalActivityWidget(
         isCalendarView = !isCalendarView
         
         if (isCalendarView) {
-            // Show calendar, hide stats
+            
             statsViewContainer.visibility = View.GONE
             calendarViewContainer.visibility = View.VISIBLE
             viewToggleButton.text = context.getString(R.string.stats)
             calendarView?.refreshData()
         } else {
-            // Show stats, hide calendar
+            
             statsViewContainer.visibility = View.VISIBLE
             calendarViewContainer.visibility = View.GONE
             viewToggleButton.text = context.getString(R.string.calendar)
@@ -220,19 +220,19 @@ class PhysicalActivityWidget(
         viewToggleButton.visibility = View.VISIBLE
         calibrationButton.visibility = View.VISIBLE
         
-        // Start foreground service for background tracking
+        
         startTrackingService()
         
-        // Start tracking in widget (for immediate display)
+        
         activityManager.startTracking()
         
-        // Initial update with delay to ensure data is loaded
+        
         handler.postDelayed({
             updateDisplay()
         }, 1000)
         
-        // Start periodic updates
-        handler.postDelayed(updateRunnable, 5000) // First update after 5 seconds
+        
+        handler.postDelayed(updateRunnable, 5000) 
     }
     
     private fun startTrackingService() {
@@ -254,11 +254,11 @@ class PhysicalActivityWidget(
         permissionButton.visibility = View.VISIBLE
         viewToggleButton.visibility = View.GONE
         calibrationButton.visibility = View.GONE
-        // Show stats container but with default/empty values
+        
         statsViewContainer.visibility = View.VISIBLE
         calendarViewContainer.visibility = View.GONE
         
-        // Set default values
+        
         stepsText.text = context.getString(R.string.zero_steps)
         distanceText.text = context.getString(R.string.zero_distance)
         
@@ -266,7 +266,7 @@ class PhysicalActivityWidget(
             requestPermission()
         }
         
-        // Check if permission was previously denied
+        
         val permissionDenied = sharedPreferences.getBoolean("activity_recognition_permission_denied", false)
         if (permissionDenied) {
             permissionButton.text = context.getString(R.string.enable_in_settings)
@@ -283,12 +283,12 @@ class PhysicalActivityWidget(
                     android.Manifest.permission.ACTIVITY_RECOGNITION
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                // Show explanation dialog
+                
                 AlertDialog.Builder(context, R.style.CustomDialogTheme)
                     .setTitle("Physical Activity Permission")
                     .setMessage("This permission allows the launcher to track your steps and distance walked. The data is stored locally on your device and helps you monitor your daily physical activity.")
                     .setPositiveButton("Grant Permission") { _, _ ->
-                        // Permission request will be handled by the activity
+                        
                         if (context is FragmentActivity) {
                             ActivityCompat.requestPermissions(
                                 context,
@@ -310,7 +310,7 @@ class PhysicalActivityWidget(
             }
             context.startActivity(intent)
         } catch (_: Exception) {
-            // Handle error
+            
         }
     }
     
@@ -323,7 +323,7 @@ class PhysicalActivityWidget(
         
         val activityData = activityManager.getTodayActivity()
         
-        // Animate count update if desired, for now just set text
+        
         val df = DecimalFormat("#.##")
         val stepsFormatted = String.format(Locale.getDefault(), "%,d", activityData.steps)
         val distanceFormatted = df.format(activityData.distanceKm)
@@ -331,7 +331,7 @@ class PhysicalActivityWidget(
         stepsText.text = context.getString(R.string.steps_format, stepsFormatted)
         distanceText.text = context.getString(R.string.distance_km_format, distanceFormatted)
         
-        // Refresh calendar if visible
+        
         if (isCalendarView) {
             calendarView?.refreshData()
         }
@@ -439,7 +439,7 @@ class PhysicalActivityWidget(
     
     fun onPause() {
         handler.removeCallbacks(updateRunnable)
-        // Keep service tracking, but stop widget internal tracking
+        
         if (isInitialized) {
             activityManager.stopTracking()
         }

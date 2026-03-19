@@ -18,10 +18,10 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 
-/**
- * Hosts the left widgets screen, the launcher home screen, and the right wallpaper screen
- * inside a horizontally swipeable container.
- */
+
+
+
+
 class ScreenPagerManager(
     private val activity: FragmentActivity,
     private val drawerLayout: DrawerLayout
@@ -180,7 +180,7 @@ class ScreenPagerManager(
                 v.performClick()
             }
             gestureDetector.onTouchEvent(event)
-            true // Consume touches on wallpaper page to enable double tap detection
+            true 
         }
     }
 
@@ -322,9 +322,9 @@ class ScreenPagerManager(
         pageChangeListener?.invoke(page)
     }
 
-    /**
-     * Gets the user-defined default home page from preferences.
-     */
+    
+
+
     fun getDefaultPage(): Page {
         val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
         val defaultPageIndex = prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)
@@ -335,14 +335,14 @@ class ScreenPagerManager(
         }
     }
 
-    /**
-     * Returns the currently active page.
-     */
+    
+
+
     fun getCurrentPage(): Page = currentPage
 
-    /**
-     * Re-scrolls to the user-defined default home page.
-     */
+    
+
+
     fun openDefaultHomePage(animated: Boolean = true) {
         scrollToPage(getDefaultPage(), animated)
     }

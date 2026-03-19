@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <!-- Header -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -44,7 +44,7 @@
             android:minWidth="80dp" />
     </LinearLayout>
 
-    <!-- Compass Container -->
+    
     <LinearLayout
         android:id="@+id/compass_container"
         android:layout_width="match_parent"
@@ -54,7 +54,7 @@
         android:gravity="center"
         android:visibility="gone">
 
-        <!-- Compass View with enhanced shadow effect -->
+        
         <FrameLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -68,7 +68,7 @@
                 android:layout_gravity="center" />
         </FrameLayout>
 
-        <!-- Direction Display Card -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -123,7 +123,7 @@
                 android:letterSpacing="0.02" />
         </LinearLayout>
 
-        <!-- No Sensor Message -->
+        
         <TextView
             android:id="@+id/no_sensor_text"
             android:layout_width="wrap_content"

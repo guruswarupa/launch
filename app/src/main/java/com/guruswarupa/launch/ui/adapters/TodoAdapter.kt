@@ -55,7 +55,7 @@ class TodoAdapter(
 
         holder.todoCheckBox.isChecked = todoItem.isChecked
 
-        // Set priority indicator drawable
+        
         val priorityDrawable = when (todoItem.priority) {
             TodoItem.Priority.HIGH -> ContextCompat.getDrawable(context, R.drawable.priority_high)
             TodoItem.Priority.MEDIUM -> ContextCompat.getDrawable(context, R.drawable.priority_medium)
@@ -63,7 +63,7 @@ class TodoAdapter(
         }
         holder.priorityIndicator.background = priorityDrawable
 
-        // Show task text with strikethrough if completed
+        
         holder.todoText.text = todoItem.text
         if (todoItem.isChecked) {
             holder.todoText.paintFlags = holder.todoText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
@@ -71,7 +71,7 @@ class TodoAdapter(
             holder.todoText.paintFlags = holder.todoText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
         }
 
-        // Show category with better formatting
+        
         if (todoItem.category.isNotEmpty() && todoItem.category != "General") {
             holder.categoryText.text = todoItem.category
             holder.categoryText.visibility = View.VISIBLE
@@ -79,7 +79,7 @@ class TodoAdapter(
             holder.categoryText.visibility = View.GONE
         }
 
-        // Show due time if set
+        
         if (todoItem.dueTime != null) {
             holder.dueTimeText.text = context.getString(R.string.todo_due_format, todoItem.dueTime)
             holder.dueTimeText.visibility = View.VISIBLE
@@ -87,7 +87,7 @@ class TodoAdapter(
             holder.dueTimeText.visibility = View.GONE
         }
 
-        // Show interval info if interval-based
+        
         if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
             val intervalLabel = when (todoItem.recurrenceInterval) {
                 30 -> context.getString(R.string.todo_every_30_min)
@@ -111,23 +111,23 @@ class TodoAdapter(
             holder.intervalText.visibility = View.GONE
         }
 
-        // Show days of week for recurring tasks with cleaner styling
+        
         if (todoItem.isRecurring && todoItem.selectedDays.isNotEmpty()) {
             holder.daysContainer.visibility = View.VISIBLE
 
             holder.dayViews.forEachIndexed { index, dayView ->
-                val dayOfWeek = index + 1 // 1=Sunday, 2=Monday, etc.
+                val dayOfWeek = index + 1 
                 if (todoItem.selectedDays.contains(dayOfWeek)) {
-                    // Use theme-appropriate colors for selected days
-                    val selectedBgColor = ContextCompat.getColor(context, R.color.nord8) // Light blue
+                    
+                    val selectedBgColor = ContextCompat.getColor(context, R.color.nord8) 
                     dayView.setBackgroundColor(selectedBgColor)
                     dayView.setTextColor(ContextCompat.getColor(context, R.color.white))
                 } else {
-                    // Use theme-appropriate colors for unselected days
+                    
                     val unselectedBgColor = if (isNightMode(context)) {
-                        ContextCompat.getColor(context, R.color.nord3) // Darker gray for dark mode
+                        ContextCompat.getColor(context, R.color.nord3) 
                     } else {
-                        ContextCompat.getColor(context, R.color.nord2) // Lighter gray for light mode
+                        ContextCompat.getColor(context, R.color.nord2) 
                     }
                     val unselectedTextColor = ContextCompat.getColor(context, R.color.text_secondary)
                     dayView.setBackgroundColor(unselectedBgColor)
@@ -138,24 +138,24 @@ class TodoAdapter(
             holder.daysContainer.visibility = View.GONE
         }
 
-        // Handle checkbox changes
+        
         holder.todoCheckBox.setOnCheckedChangeListener { _, isChecked ->
             todoItem.isChecked = isChecked
 
             if (isChecked && todoItem.isRecurring) {
                 if (todoItem.isIntervalBased()) {
-                    // For interval-based, store timestamp
+                    
                     todoItem.lastCompletedDate = System.currentTimeMillis().toString()
                 } else {
-                    // For day-based, store date string
+                    
                     todoItem.lastCompletedDate = getCurrentDateString()
                 }
             } else if (!isChecked && todoItem.isRecurring && todoItem.isIntervalBased()) {
-                // Reset timestamp when unchecked for interval-based tasks
+                
                 todoItem.lastCompletedDate = null
             }
 
-            // Update strike-through text immediately
+            
             if (isChecked) {
                 holder.todoText.paintFlags = holder.todoText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             } else {
@@ -165,7 +165,7 @@ class TodoAdapter(
             onTaskStateChanged()
         }
 
-        // Handle delete button
+        
         holder.deleteButton.setOnClickListener {
             onDeleteClick(todoItem)
         }

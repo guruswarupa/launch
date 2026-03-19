@@ -19,7 +19,7 @@ class HourlyStepsChartView @JvmOverloads constructor(
     private val chartPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
-        color = "#88A3BE".toColorInt() // nord7
+        color = "#88A3BE".toColorInt() 
     }
     
     private val gridPaint = Paint().apply {
@@ -57,7 +57,7 @@ class HourlyStepsChartView @JvmOverloads constructor(
     
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = 400.dpToPx() // Fixed height for chart
+        val height = 400.dpToPx() 
         setMeasuredDimension(width, height)
     }
     
@@ -65,7 +65,7 @@ class HourlyStepsChartView @JvmOverloads constructor(
         super.onDraw(canvas)
         
         if (hourlyData.isEmpty()) {
-            // Draw "No data" message
+            
             textPaint.textSize = 32f
             textPaint.color = "#666666".toColorInt()
             canvas.drawText(
@@ -85,25 +85,25 @@ class HourlyStepsChartView @JvmOverloads constructor(
         val chartRight = padding + chartWidth
         val chartBottom = topPadding + chartHeight
         
-        // Find max steps for scaling
+        
         val maxSteps = hourlyData.maxOfOrNull { it.steps }?.coerceAtLeast(100) ?: 100
         
-        // Draw grid lines
+        
         val gridLines = 5
         for (i in 0..gridLines) {
             val y = topPadding + (chartHeight / gridLines) * i
             canvas.drawLine(padding, y, chartRight, y, gridPaint)
         }
         
-        // Draw vertical grid lines for hours
-        val hourInterval = 4 // Show grid every 4 hours
+        
+        val hourInterval = 4 
         for (hour in 0..24 step hourInterval) {
             val x = padding + (chartWidth / 24f) * hour
             canvas.drawLine(x, topPadding, x, chartBottom, gridPaint)
         }
         
-        // Draw chart bars
-        val barWidth = chartWidth / 24f * 0.7f // 70% of hour width for spacing
+        
+        val barWidth = chartWidth / 24f * 0.7f 
         val barSpacing = chartWidth / 24f * 0.3f
         
         hourlyData.forEachIndexed { index, data ->
@@ -116,11 +116,11 @@ class HourlyStepsChartView @JvmOverloads constructor(
             val barLeft = x
             val barRight = x + barWidth
             
-            // Draw bar
+            
             barRect.set(barLeft, barTop, barRight, chartBottom)
             canvas.drawRoundRect(barRect, 4f, 4f, chartPaint)
             
-            // Draw value on top of bar if significant
+            
             if (data.steps > 0 && barHeight > 30f) {
                 valueTextPaint.textAlign = Paint.Align.CENTER
                 canvas.drawText(
@@ -132,8 +132,8 @@ class HourlyStepsChartView @JvmOverloads constructor(
             }
         }
         
-        // Draw hour labels at bottom
-        for (hour in 0..23 step 2) { // Show every 2 hours
+        
+        for (hour in 0..23 step 2) { 
             val x = padding + (chartWidth / 24f) * hour + chartWidth / 48f
             val hourLabel = if (hour == 0) "12 AM" else if (hour < 12) "$hour AM" else if (hour == 12) "12 PM" else "${hour - 12} PM"
             canvas.drawText(
@@ -144,7 +144,7 @@ class HourlyStepsChartView @JvmOverloads constructor(
             )
         }
         
-        // Draw Y-axis labels (steps)
+        
         for (i in 0..gridLines) {
             val value = maxSteps - (maxSteps / gridLines) * i
             val y = topPadding + (chartHeight / gridLines) * i

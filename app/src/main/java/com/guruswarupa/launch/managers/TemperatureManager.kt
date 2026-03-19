@@ -14,7 +14,7 @@ class TemperatureManager(context: Context) : SensorEventListener {
     private var temperatureSensor: Sensor? = null
     private var isListening = false
     
-    private var currentTemperature: Float = 0f // in Celsius
+    private var currentTemperature: Float = 0f 
     private var onTemperatureChanged: ((Float) -> Unit)? = null
     
     companion object {
@@ -26,10 +26,10 @@ class TemperatureManager(context: Context) : SensorEventListener {
     }
     
     private fun initializeSensor() {
-        // Try ambient temperature first (more accurate)
+        
         temperatureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE)
         
-        // Fallback to device temperature if ambient not available
+        
         if (temperatureSensor == null) {
             @Suppress("DEPRECATION")
             temperatureSensor = sensorManager.getDefaultSensor(Sensor.TYPE_TEMPERATURE)
@@ -76,9 +76,9 @@ class TemperatureManager(context: Context) : SensorEventListener {
         }
     }
     
-    /**
-     * Cleanup method to unregister sensor listeners and prevent memory leaks
-     */
+    
+
+
     fun cleanup() {
         stopTracking()
         onTemperatureChanged = null
@@ -94,14 +94,14 @@ class TemperatureManager(context: Context) : SensorEventListener {
             else -> return
         }
         
-        if (abs(temperature - currentTemperature) > 0.1f) { // Only update if change is significant
+        if (abs(temperature - currentTemperature) > 0.1f) { 
             currentTemperature = temperature
             onTemperatureChanged?.invoke(currentTemperature)
         }
     }
     
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Not critical for temperature readings
+        
     }
     
     fun getCurrentTemperature(): Float {

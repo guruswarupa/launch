@@ -4,7 +4,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <!-- Header -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -45,7 +45,7 @@
             android:paddingVertical="10dp" />
     </LinearLayout>
 
-    <!-- Stats Container -->
+    
     <LinearLayout
         android:id="@+id/workout_stats_container"
         android:layout_width="match_parent"
@@ -54,7 +54,7 @@
         android:padding="16dp"
         android:layout_marginBottom="16dp">
 
-        <!-- Top Row: Today and Exercises -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -119,7 +119,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Bottom Row: Streak and Weekly -->
+        
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -190,7 +190,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- List View Container -->
+    
     <LinearLayout
         android:id="@+id/list_view_container"
         android:layout_width="match_parent"
@@ -207,14 +207,14 @@
             android:paddingBottom="4dp" />
     </LinearLayout>
 
-    <!-- Calendar View Container -->
+    
     <FrameLayout
         android:id="@+id/calendar_view_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone" />
 
-    <!-- Empty State -->
+    
     <LinearLayout
         android:id="@+id/workout_empty_state"
         android:layout_width="match_parent"

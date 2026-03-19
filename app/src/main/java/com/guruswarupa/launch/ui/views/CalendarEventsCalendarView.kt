@@ -106,44 +106,44 @@ class CalendarEventsCalendarAdapter(
     private fun updateDays() {
         days.clear()
         
-        // Get first day of month
+        
         val firstDayOfMonth = calendar.clone() as Calendar
         firstDayOfMonth.set(Calendar.DAY_OF_MONTH, 1)
         val firstDayOfWeek = firstDayOfMonth.get(Calendar.DAY_OF_WEEK)
         
-        // Get number of days in month
+        
         val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
         
-        // Calculate offset - Sunday = 1, Monday = 2, etc.
-        // We want Sunday to be first column (index 0)
+        
+        
         val startOffset = (firstDayOfWeek - Calendar.SUNDAY + 7) % 7
         repeat(startOffset) {
             days.add(DayItem(day = null, hasEvents = false, isToday = false, dateString = null, events = emptyList()))
         }
         
-        // Get events for this month
+        
         val monthEvents = events.filter { event ->
             val eventCalendar = Calendar.getInstance().apply { timeInMillis = event.startTime }
             eventCalendar.get(Calendar.YEAR) == calendar.get(Calendar.YEAR) &&
             eventCalendar.get(Calendar.MONTH) == calendar.get(Calendar.MONTH)
         }
         
-        // Deduplicate events by title and date before grouping
-        // Festivals often appear in multiple calendars with different event IDs
-        // So we deduplicate by title + date instead of event ID
+        
+        
+        
         val uniqueMonthEvents = monthEvents.distinctBy { event ->
             val eventCalendar = Calendar.getInstance().apply { timeInMillis = event.startTime }
-            // Use title + date as unique key (normalize title to handle case differences)
+            
             "${event.title.lowercase().trim()}_${eventCalendar.get(Calendar.YEAR)}_${eventCalendar.get(Calendar.MONTH)}_${eventCalendar.get(Calendar.DAY_OF_MONTH)}"
         }
         
-        // Group events by day
+        
         val eventsByDay = uniqueMonthEvents.groupBy { event ->
             val eventCalendar = Calendar.getInstance().apply { timeInMillis = event.startTime }
             eventCalendar.get(Calendar.DAY_OF_MONTH)
         }
         
-        // Add days of month
+        
         val currentDate = Calendar.getInstance()
         val today = currentDate.get(Calendar.DAY_OF_MONTH)
         val currentMonth = currentDate.get(Calendar.MONTH)
@@ -162,7 +162,7 @@ class CalendarEventsCalendarAdapter(
     }
     
     private fun formatDate(year: Int, month: Int, day: Int): String {
-        // Format: yyyy-MM-dd to match calendar query format
+        
         return String.format(Locale.getDefault(), "%d-%02d-%02d", year, month, day)
     }
     
@@ -190,7 +190,7 @@ class CalendarEventsCalendarAdapter(
         val dayItem = days[position]
         
         if (dayItem.day == null) {
-            // Empty cell
+            
             holder.dayText.text = ""
             holder.dayText.visibility = View.INVISIBLE
             holder.eventIndicator.visibility = View.GONE
@@ -201,38 +201,38 @@ class CalendarEventsCalendarAdapter(
             holder.dayText.text = dayItem.day.toString()
             holder.dayText.visibility = View.VISIBLE
             
-            // Show event indicators: blue for custom events, red for festivals
+            
             val hasFestival = dayItem.events.any { it.isFestival }
             val hasCustomEvent = dayItem.events.any { !it.isFestival }
             
-            // Show blue indicator for custom events (top-right)
+            
             if (hasCustomEvent) {
                 holder.eventIndicator.visibility = View.VISIBLE
                 holder.eventIndicator.setBackgroundColor(
-                    ContextCompat.getColor(holder.itemView.context, R.color.nord9) // Blue
+                    ContextCompat.getColor(holder.itemView.context, R.color.nord9) 
                 )
             } else {
                 holder.eventIndicator.visibility = View.GONE
             }
             
-            // Show red indicator for festivals (top-left)
+            
             if (hasFestival) {
                 holder.festivalIndicator.visibility = View.VISIBLE
                 holder.festivalIndicator.setBackgroundColor(
-                    ContextCompat.getColor(holder.itemView.context, R.color.nord11) // Red
+                    ContextCompat.getColor(holder.itemView.context, R.color.nord11) 
                 )
             } else {
                 holder.festivalIndicator.visibility = View.GONE
             }
             
-            // Highlight today with a nice colored border
+            
             if (dayItem.isToday) {
                 holder.itemView.setBackgroundResource(R.drawable.today_highlight)
             } else {
                 holder.itemView.background = null
             }
             
-            // Make clickable if it has events or is today
+            
             if (dayItem.dateString != null) {
                 holder.itemView.setOnClickListener {
                     if (dayItem.hasEvents) {

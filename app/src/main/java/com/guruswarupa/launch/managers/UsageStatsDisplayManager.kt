@@ -17,9 +17,9 @@ import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
-/**
- * Manages usage stats display: weekly graph, daily dialogs, and refresh logic
- */
+
+
+
 class UsageStatsDisplayManager(
     private val activity: MainActivity,
     private val usageStatsManager: AppUsageStatsManager,
@@ -33,12 +33,12 @@ class UsageStatsDisplayManager(
     private lateinit var permissionButton: Button
     
     init {
-        // Setup weekly usage graph callback
+        
         weeklyUsageGraph.onDaySelected = { day, appUsages ->
             showDailyUsageDialog(day, appUsages)
         }
         
-        // Initialize permission button
+        
         initializePermissionButton()
     }
     
@@ -48,7 +48,7 @@ class UsageStatsDisplayManager(
             requestUsageStatsPermission()
         }
         
-        // Update button visibility based on permission status
+        
         updatePermissionButtonVisibility()
     }
     
@@ -61,14 +61,14 @@ class UsageStatsDisplayManager(
     }
     
     private fun requestUsageStatsPermission() {
-        // Directly take to the permission page (no dialog needed since user clicked the button)
+        
         val intent = android.content.Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
         activity.startActivity(intent)
     }
     
-    /**
-     * Refresh the permission button visibility (call after returning from settings)
-     */
+    
+
+
     fun refreshPermissionButton() {
         updatePermissionButtonVisibility()
         if (usageStatsManager.hasUsageStatsPermission()) {
@@ -110,9 +110,9 @@ class UsageStatsDisplayManager(
     
     @SuppressLint("NotifyDataSetChanged")
     fun refreshUsageStats() {
-        // Clear adapter cache to force refresh
+        
         adapter.clearUsageCache()
-        // Only refresh visible items for better performance
+        
         handler.postDelayed({
             val layoutManager = recyclerView.layoutManager
             if (layoutManager is LinearLayoutManager) {
@@ -137,18 +137,18 @@ class UsageStatsDisplayManager(
         val appUsageList = dialogView.findViewById<RecyclerView>(R.id.app_usage_list)
         val closeButton = dialogView.findViewById<Button>(R.id.close_button)
         
-        // Set day title
+        
         dayTitle.text = day
         
-        // Calculate and display total time
+        
         val totalUsage = appUsages.values.sum()
         val totalTimeText = formatUsageTimeForDialog(totalUsage)
         totalTime.text = activity.getString(R.string.total_usage_format, totalTimeText)
         
-        // Set pie chart data
+        
         pieChart.setAppUsageData(appUsages)
         
-        // Setup RecyclerView with app usage list
+        
         val sortedApps = appUsages.toList().sortedByDescending { it.second }
         val totalUsageFloat = totalUsage.toFloat()
         val appUsageItems = sortedApps.mapIndexed { index, (appName, usage) ->
@@ -160,7 +160,7 @@ class UsageStatsDisplayManager(
         appUsageList.layoutManager = LinearLayoutManager(activity)
         appUsageList.adapter = AppUsageAdapter(appUsageItems)
         
-        // Create and show dialog
+        
         val dialog = android.app.AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setView(dialogView)
             .create()
