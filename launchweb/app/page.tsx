@@ -1,162 +1,379 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { documentationContent } from './docs-content';
 
-const features = [
+// Documentation navigation structure
+const docsNavigation = [
   {
-    title: "Unified search bar",
-    detail:
-      "Query apps, contacts, settings, files, Maps, Play Store, YouTube, or the browser and get instant auto-complete alongside quick math results.",
-    icon: "⌁",
-    accent: "from-slate-500/70 via-slate-600/70 to-slate-700/70",
+    category: 'Getting Started',
+    items: [
+      { id: 'introduction', label: 'Introduction', icon: '📱' },
+      { id: 'installation', label: 'Installation & Setup', icon: '⚙️' },
+      { id: 'permissions', label: 'Required Permissions', icon: '🔐' },
+    ]
   },
   {
-    title: "Focus mode & Pomodoro",
-    detail:
-      "Start 15m–4h focus sessions with optional Do Not Disturb, lock the drawer, and let the Pomodoro timer cycle work/break sessions automatically.",
-    icon: "⏱",
-    accent: "from-purple-500/70 via-fuchsia-500/70 to-pink-500/70",
+    category: 'Core Features',
+    items: [
+      { id: 'search-bar', label: 'Unified Search Bar', icon: '⌁' },
+      { id: 'focus-mode', label: 'Focus Mode & Pomodoro', icon: '⏱' },
+      { id: 'productivity-widgets', label: 'Productivity Widgets', icon: '⚙' },
+      { id: 'app-lock', label: 'App Lock & Timers', icon: '🔐' },
+      { id: 'hidden-apps', label: 'Hidden Apps & Workspaces', icon: '🗂' },
+      { id: 'control-center', label: 'Control Center', icon: '🧭' },
+      { id: 'app-management', label: 'Smart App Management', icon: '📊' },
+      { id: 'voice-commands', label: 'Voice Commands', icon: '🎤' },
+      { id: 'finance-tracker', label: 'Finance Tracker', icon: '💰' },
+      { id: 'sensors', label: 'Advanced Sensors', icon: '🧲' },
+      { id: 'torch', label: 'Shake to Torch', icon: '🔦' },
+      { id: 'apk-sharing', label: 'APK Sharing', icon: '📦' },
+      { id: 'gestures', label: 'Gesture Controls', icon: '🤏' },
+      { id: 'customization', label: 'Deep Customization', icon: '🎨' },
+      { id: 'privacy-dashboard', label: 'Privacy Dashboard', icon: '🛡' },
+      { id: 'web-apps', label: 'Web Apps Support', icon: '🌐' },
+      { id: 'speed-test', label: 'Network Speed Test', icon: '⚡' },
+      { id: 'github-widget', label: 'GitHub Contributions', icon: '📈' },
+    ]
   },
   {
-    title: "Productivity widgets",
-    detail:
-      "All-in-one productivity hub: calculator (basic, scientific, converters) with history, countdown timers synced to calendar events, todo list with due times/priority/recurring tasks, notification center with swipe-to-dismiss, weather powered by Open-Meteo, and persistent preferences.",
-    icon: "⚙",
-    accent: "from-amber-500/70 via-amber-400/70 to-amber-300/70",
-  },
-  {
-    title: "App lock & timers",
-    detail:
-      "Protect apps with a PIN or biometrics, throttle usage with timers and daily limits, and see icons dim automatically once a cap is reached.",
-    icon: "🔐",
-    accent: "from-indigo-500/70 via-blue-500/70 to-cyan-500/70",
-  },
-  {
-    title: "Hidden apps & workspaces",
-    detail:
-      "Hide stash apps, keep favorites at the top, and activate workspace filters so each screen only surfaces the apps you want right now.",
-    icon: "🗂",
-    accent: "from-emerald-500/70 via-teal-500/70 to-sky-500/70",
-  },
-  {
-    title: "Control Center shortcuts",
-    detail:
-      "Quickly reorder toggles for Wi‑Fi, DND, audio profiles, QR scanner, screenshot, and more so the lock screen control center mirrors your workflow.",
-    icon: "🧭",
-    accent: "from-rose-500/70 via-red-500/70 to-orange-500/70",
-  },
-  {
-    title: "Smart app management",
-    detail:
-      "Apps sorted by usage frequency with rarely used apps grouped alphabetically. Weekly usage graph, interactive pie charts, and one-tap uninstall via long press.",
-    icon: "📊",
-    accent: "from-green-500/70 via-emerald-500/70 to-teal-500/70",
-  },
-  {
-    title: "Voice commands",
-    detail:
-      "Hands-free control with voice commands. Call contacts, send messages, open apps, search the web, or uninstall apps—just speak naturally.",
-    icon: "🎤",
-    accent: "from-violet-500/70 via-purple-500/70 to-fuchsia-500/70",
-  },
-  {
-    title: "Finance tracker",
-    detail:
-      "Track income and expenses with notes, view recent transaction history, and monitor monthly savings. Lightweight and offline-first.",
-    icon: "💰",
-    accent: "from-yellow-500/70 via-amber-500/70 to-orange-500/70",
-  },
-  {
-    title: "Advanced sensors",
-    detail:
-      "Built-in compass, atmospheric pressure monitor, temperature sensor, noise decibel analyzer, and workout tracker for fitness metrics.",
-    icon: "🧲",
-    accent: "from-teal-500/70 via-cyan-500/70 to-blue-500/70",
-  },
-  {
-    title: "Shake to toggle torch",
-    detail:
-      "Shake device twice to toggle flashlight instantly. Works in background, battery efficient, and active only when screen is on.",
-    icon: "🔦",
-    accent: "from-orange-500/70 via-amber-500/70 to-yellow-500/70",
-  },
-  {
-    title: "APK sharing",
-    detail:
-      "Share installed APKs via Bluetooth, email, or messaging apps. Access from app context menu or dock for quick sharing.",
-    icon: "📦",
-    accent: "from-pink-500/70 via-rose-500/70 to-red-500/70",
-  },
-  {
-    title: "Gesture controls",
-    detail:
-      "Tap widgets for quick actions, long press icons for uninstall/share/rename, swipe notifications to dismiss, and customizable gesture shortcuts.",
-    icon: "🤏",
-    accent: "from-indigo-500/70 via-purple-500/70 to-pink-500/70",
-  },
-  {
-    title: "Deep customization",
-    detail:
-      "Grid or list layout, adjustable columns, custom themes, wallpapers, font styles/colors, icon sizes, background translucency, and 24-hour clock format.",
-    icon: "🎨",
-    accent: "from-pink-500/70 via-purple-500/70 to-indigo-500/70",
-  },
-  {
-    title: "Privacy dashboard",
-    detail:
-      "Complete privacy hub showing which apps have sensitive permissions. Track camera, microphone, location, contacts, and storage access with one-tap permission management.",
-    icon: "🛡",
-    accent: "from-cyan-500/70 via-blue-500/70 to-indigo-500/70",
-  },
-  {
-    title: "Web apps support",
-    detail:
-      "Add any website as a PWA-style app. Browse with built-in WebView, custom address bar, and full-screen mode. Access your favorite sites like native apps.",
-    icon: "🌐",
-    accent: "from-blue-500/70 via-sky-500/70 to-cyan-500/70",
-  },
-  {
-    title: "Network speed test",
-    detail:
-      "Built-in speed test widget measuring download/upload speeds, ping, and jitter. Track mobile and WiFi data usage with real-time network statistics.",
-    icon: "⚡",
-    accent: "from-green-500/70 via-lime-500/70 to-emerald-500/70",
-  },
-  {
-    title: "GitHub contributions",
-    detail:
-      "Visual GitHub contribution graph showing your commit activity. Track total contributions, current streak, and longest streak with yearly overview.",
-    icon: "📈",
-    accent: "from-gray-500/70 via-slate-500/70 to-zinc-500/70",
+    category: 'Reference',
+    items: [
+      { id: 'gestures-guide', label: 'Gestures Guide', icon: '👆' },
+      { id: 'settings', label: 'Settings & Configuration', icon: '⚙️' },
+      { id: 'privacy-security', label: 'Privacy & Security', icon: '🔒' },
+      { id: 'faq', label: 'FAQ & Troubleshooting', icon: '❓' },
+    ]
   },
 ];
 
-const stats = [
-  { label: "Active Users", value: "1.5K+", icon: "👥" },
-  { label: "Minutes Saved Daily", value: "42", icon: "⏱️" },
-  { label: "Countries", value: "72+", icon: "🌍" },
-];
+// Simple markdown-like parser for formatting
+function formatContent(text: string) {
+  return text.split('\n').map((line, i) => {
+    // Bold text
+    const parts = line.split(/(\*\*.*?\*\*)/g);
+    const formattedParts = parts.map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
 
-const testimonials = [
-  {
-    quote:
-      "Launch keeps my commute routine tidy without hunting for apps every morning. It just feels lighter.",
-    name: "Nora, product designer",
-    avatar: "👩‍🎨",
-  },
-  {
-    quote:
-      "I needed power gestures and silence controls in one place. Launch delivers both without overloading the UI.",
-    name: "Mario, indie developer",
-    avatar: "👨‍💻",
-  },
-  {
-    quote:
-      "The focus mode and app timers have completely changed how I use my phone. I'm so much more productive now!",
-    name: "Alex, student",
-    avatar: "🧑‍🎓",
-  },
-];
+    // Handle bullet points - remove the • marker since CSS adds it
+    if (line.startsWith('• ')) {
+      const contentWithoutMarker = line.slice(2);
+      const contentParts = contentWithoutMarker.split(/(\*\*.*?\*\*)/g);
+      const formattedContentParts = contentParts.map((part, j) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={j} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      });
+      return <li key={i} className="ml-4 list-disc text-slate-300">{formattedContentParts}</li>;
+    }
+    
+    // Handle numbered lists - remove the number marker since CSS adds it
+    if (/^\d+\./.test(line)) {
+      const contentWithoutMarker = line.replace(/^\d+\.\s*/, '');
+      const contentParts = contentWithoutMarker.split(/(\*\*.*?\*\*)/g);
+      const formattedContentParts = contentParts.map((part, j) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={j} className="font-semibold text-white">{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      });
+      return <li key={i} className="ml-4 list-decimal text-slate-300">{formattedContentParts}</li>;
+    }
+    
+    // Handle headers
+    if (line.startsWith('### ')) {
+      return <h4 key={i} className="text-lg font-semibold text-white mt-4 mb-2">{formattedParts}</h4>;
+    }
+    
+    // Regular paragraph
+    return <p key={i} className="mb-2 text-slate-300">{formattedParts}</p>;
+  });
+}
+
+export default function Home() {
+  const [activeSection, setActiveSection] = useState('introduction');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isHomePage, setIsHomePage] = useState(true);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  const currentPage = documentationContent[activeSection];
+
+  // Handle touch gestures for mobile menu - only from left edge
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    const touchX = e.targetTouches[0].clientX;
+    
+    // Only allow swipe from left 20px edge of screen
+    if (touchX > 20) {
+      setTouchStartX(null);
+      return;
+    }
+    
+    setTouchStartX(touchX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (touchStartX === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const distance = touchEndX - touchStartX;
+    
+    // Swipe right to open menu (from left edge only)
+    if (distance > 30 && !mobileMenuOpen && !isHomePage) {
+      setMobileMenuOpen(true);
+    }
+    
+    // Swipe left to close menu
+    if (distance < -30 && mobileMenuOpen) {
+      setMobileMenuOpen(false);
+    }
+    
+    setTouchStartX(null);
+  };
+
+  return (
+    <div 
+      className="min-h-screen bg-[#121212] text-white"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-[#121212]/95 backdrop-blur supports-[backdrop-filter]:bg-[#121212]/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <img src="/icon.png" alt="" className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl" />
+              <div>
+                <h1 className="text-base sm:text-xl font-semibold">Launch Documentation</h1>
+                <p className="text-[10px] sm:text-xs text-slate-400">User Guide v1.0</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {!isHomePage && (
+                <button 
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="lg:hidden p-2 rounded-lg hover:bg-white/10"
+                >
+                  <span className="text-2xl">{mobileMenuOpen ? '✕' : '☰'}</span>
+                </button>
+              )}
+            </div>
+            
+            <nav className="hidden lg:flex items-center gap-6">
+              <button onClick={() => setIsHomePage(true)} className={`text-sm hover:text-white transition ${isHomePage ? 'text-white font-medium' : 'text-slate-300'}`}>Home</button>
+              <button onClick={() => setIsHomePage(false)} className={`text-sm hover:text-white transition ${!isHomePage ? 'text-white font-medium' : 'text-slate-300'}`}>Documentation</button>
+              <a href="https://play.google.com/store/apps/details?id=com.guruswarupa.launch" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-300 hover:text-white transition">Download</a>
+              <a href="https://github.com/guruswarupa/launch" target="_blank" rel="noopener noreferrer" className="text-sm text-slate-300 hover:text-white transition">GitHub</a>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {isHomePage ? (
+        /* Home Page */
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-24 sm:pt-32 pb-8 sm:pb-12">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 sm:gap-12">
+            {/* Left Column - Hero Text */}
+            <div className="space-y-6 sm:space-y-8 animate-fade-in w-full">
+              <h1 className="flex items-center gap-3 sm:gap-6 text-2xl sm:text-3xl font-semibold leading-tight text-white bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                <img src="/icon.png" alt="" className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl shadow-2xl shadow-sky-500/20 flex-shrink-0" />
+                <span className="leading-tight">Launch - Productive Launcher</span>
+              </h1>
+              <p className="text-base sm:text-lg text-slate-300 leading-relaxed max-w-xl">
+                A clean, efficient, and minimalist Android launcher built for focus and productivity.
+              </p>
+              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.guruswarupa.launch"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-3 sm:px-8 sm:py-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-white shadow-xl shadow-sky-500/30 transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-sky-500/40 w-full sm:w-auto"
+                >
+                  Download Now
+                  <span className="ml-2">→</span>
+                </a>
+                <a
+                  href="https://github.com/guruswarupa/launch"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-full border border-white/40 px-6 py-3 sm:px-8 sm:py-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-white transition-all duration-300 hover:bg-white/15 hover:border-white/60 hover:scale-110 w-full sm:w-auto"
+                >
+                  View on GitHub
+                </a>
+              </div>
+            </div>
+
+            {/* Right Column - Phone Mockup */}
+            <div className="relative mx-auto w-full flex justify-center lg:justify-start">
+              <div className="scale-90 sm:scale-100">
+                <PhoneMockup />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Documentation Page */
+        <div className="max-w-7xl mx-auto flex h-screen overflow-hidden pt-[73px]">
+          {/* Swipe indicator - visible hint on left edge */}
+          {!mobileMenuOpen && (
+            <div
+              className="fixed left-2 top-1/2 -translate-y-1/2 z-30 lg:hidden pointer-events-none flex items-center"
+              style={{ touchAction: 'none' }}
+            >
+              <span className="text-white/70 text-2xl leading-none">›</span>
+            </div>
+          )}
+          
+          {/* Sidebar Navigation */}
+          <aside className={`fixed inset-0 left-0 z-40 w-72 bg-[#121212] border-r border-white/10 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-auto lg:h-screen overflow-hidden ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} pt-[73px] lg:pt-0`}>
+            <div className="h-full overflow-y-auto p-6 space-y-8 scrollbar-hide" style={{ overflowX: 'hidden' }}>
+              {docsNavigation.map((section) => (
+                <div key={section.category}>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">{section.category}</h3>
+                  <ul className="space-y-2">
+                    {section.items.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => {
+                            setActiveSection(item.id);
+                            setMobileMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                            activeSection === item.id
+                              ? 'bg-white/10 text-white font-medium'
+                              : 'text-slate-400 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <span className="mr-2">{item.icon}</span>
+                          {item.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* Tap catcher when menu is open */}
+          {mobileMenuOpen && (
+            <div
+              className="fixed inset-0 z-30 lg:hidden bg-black/20 backdrop-blur-sm"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto scrollbar-hide" style={{ overflowX: 'hidden', overflowY: 'auto' }}>
+            <div className="max-w-4xl px-4 sm:px-6 lg:px-12 py-4 sm:py-6 lg:py-12 pb-20">
+              {currentPage ? (
+              <article className="prose prose-invert max-w-none">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-6 sm:mb-8">{currentPage.title}</h1>
+                
+                {currentPage.sections.map((section, index) => (
+                  <section key={index} className="mb-6 sm:mb-8">
+                    <h2 className="text-xl sm:text-2xl font-semibold text-white mb-3 sm:mb-4">{section.heading}</h2>
+                    <div className="text-slate-300 leading-relaxed">
+                      {formatContent(section.content)}
+                    </div>
+                  </section>
+                ))}
+
+                {/* Quick navigation */}
+                <div className="mt-12 p-6 rounded-2xl bg-gradient-to-r from-sky-500/25 via-sky-500/15 to-transparent border border-white/10">
+                  <h3 className="font-semibold text-white mb-3">Need Help?</h3>
+                  <p className="text-sm text-slate-300 mb-4">
+                    Can't find what you're looking for? Check out our FAQ or reach out to support.
+                  </p>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setActiveSection('faq')}
+                      className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition text-sm font-medium"
+                    >
+                      View FAQ
+                    </button>
+                    <a 
+                      href="https://github.com/guruswarupa/launch/issues"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-full border border-white/30 hover:bg-white/10 transition text-sm font-medium"
+                    >
+                      Report Issue
+                    </a>
+                  </div>
+                </div>
+              </article>
+            ) : (
+              <div className="text-center py-20">
+                <div className="text-6xl mb-6">🚀</div>
+                <h2 className="text-3xl font-bold text-white mb-4">Coming Soon</h2>
+                <p className="text-slate-400 text-lg">
+                  This documentation section is being written. Check back soon!
+                </p>
+                <button 
+                  onClick={() => setActiveSection('introduction')}
+                  className="mt-6 px-6 py-3 rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-semibold hover:scale-105 transition"
+                >
+                  Back to Introduction
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+        </div>
+      )}
+
+      {/* Mobile menu */}
+      {mobileMenuOpen && isHomePage && (
+        <div className="fixed inset-y-0 left-0 right-0 z-40 bg-[#121212] border-b border-white/10 lg:hidden pt-[73px]">
+          <nav className="flex flex-col p-6 space-y-4">
+            <button 
+              onClick={() => {
+                setIsHomePage(true);
+                setMobileMenuOpen(false);
+              }} 
+              className={`text-left text-base font-medium ${isHomePage ? 'text-white' : 'text-slate-300 hover:text-white'}`}
+            >
+              Home
+            </button>
+            <button 
+              onClick={() => {
+                setIsHomePage(false);
+                setMobileMenuOpen(false);
+              }} 
+              className={`text-left text-base font-medium ${!isHomePage ? 'text-white' : 'text-slate-300 hover:text-white'}`}
+            >
+              Documentation
+            </button>
+            <a 
+              href="https://play.google.com/store/apps/details?id=com.guruswarupa.launch" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-base text-slate-300 hover:text-white"
+            >
+              Download
+            </a>
+            <a 
+              href="https://github.com/guruswarupa/launch" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-base text-slate-300 hover:text-white"
+            >
+              GitHub
+            </a>
+          </nav>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Phone mockup component showing launcher interface
 function PhoneMockup() {
@@ -168,13 +385,11 @@ function PhoneMockup() {
 
   // Handle touch/swipe gestures
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    e.preventDefault();
     setTouchEnd(e.targetTouches[0].clientX);
   };
 
@@ -203,7 +418,6 @@ function PhoneMockup() {
 
   // Handle mouse drag for desktop
   const [mouseDownX, setMouseDownX] = useState(0);
-  
   const handleMouseDown = (e: React.MouseEvent) => {
     setMouseDownX(e.clientX);
   };
@@ -253,7 +467,7 @@ function PhoneMockup() {
       {/* Realistic Phone Frame - Samsung S23 Ultra style */}
       <div 
         ref={containerRef}
-        className="relative w-[260px] h-[540px] sm:w-[280px] sm:h-[580px] bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 rounded-[2rem] border-[4px] border-slate-600 shadow-2xl overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-sky-500/30 select-none touch-none cursor-grab active:cursor-grabbing"
+        className="relative w-[220px] h-[460px] sm:w-[240px] sm:h-[500px] bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 rounded-[2rem] border-[4px] border-slate-600 shadow-2xl overflow-hidden transition-all duration-500 hover:scale-105 hover:shadow-sky-500/30 select-none touch-none cursor-grab active:cursor-grabbing"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -280,16 +494,14 @@ function PhoneMockup() {
         
         {/* Screen */}
         <div 
-          className="absolute inset-0 bg-black overflow-hidden touch-none pt-5"
+          className="absolute inset-0 bg-black overflow-hidden touch-none pt-5 select-none"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onDragStart={(e) => e.preventDefault()}
         >
           {/* Screen content with swipe animation */}
-          <div className="relative w-full h-full">
-            {/* Swipe overlay hint - invisible but captures touch */}
-            <div className="absolute inset-0 z-10"></div>
-            
+          <div className="relative w-full h-full select-none pointer-events-none">
             {/* Page 1: Left - Widgets Drawer */}
             <div 
               className={`transition-all duration-500 absolute inset-0 ${
@@ -300,7 +512,7 @@ function PhoneMockup() {
                     : 'opacity-0 scale-95 translate-x-full'
               }`}
             >
-              <img src="/leftpage.jpeg" alt="Widgets Drawer" className="w-full h-full object-cover" />
+              <img src="/leftpage.jpeg" alt="Widgets Drawer" className="w-full h-full object-cover select-none pointer-events-none" draggable={false} />
             </div>
 
             {/* Page 2: Center - Home with Workspace & Focus Mode */}
@@ -313,301 +525,22 @@ function PhoneMockup() {
                     : 'opacity-0 scale-95 translate-x-full'
               }`}
             >
-              <img src="/centerpage.jpeg" alt="Home Screen" className="w-full h-full object-cover" />
+              <img src="/centerpage.jpeg" alt="Home Screen" className="w-full h-full object-cover select-none pointer-events-none" draggable={false} />
             </div>
 
-            {/* Page 3: Right - Wallpaper Picker */}
+            {/* Page 3: Right - App Drawer */}
             <div 
               className={`transition-all duration-500 absolute inset-0 ${
                 activePage === 3 
                   ? 'opacity-100 scale-100 translate-x-0' 
-                  : 'opacity-0 scale-95 translate-x-full'
+                  : activePage < 3 
+                    ? 'opacity-0 scale-95 translate-x-full' 
+                    : 'opacity-0 scale-95 -translate-x-full'
               }`}
             >
-              <img src="/rightpage.jpeg" alt="Wallpaper Picker" className="w-full h-full object-cover" />
+              <img src="/rightpage.jpeg" alt="App Drawer" className="w-full h-full object-cover select-none pointer-events-none" draggable={false} />
             </div>
           </div>
-
-          {/* Touch-sensitive overlay for better swipe detection */}
-          <div 
-            className="absolute inset-0 z-20 touch-none"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          ></div>
-
-          {/* Gesture indicator */}
-          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-white/50 rounded-full"></div>
-        </div>
-      </div>
-
-      {/* Ambient glow behind phone */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[320px] h-[600px] sm:w-[340px] sm:h-[640px] bg-gradient-to-br from-sky-500/15 to-indigo-600/15 blur-3xl -z-10 rounded-[2.5rem] animate-pulse"></div>
-    </div>
-  );
-}
-
-export default function Home() {
-  return (
-    <div className="min-h-screen bg-[#121212] text-white overflow-x-hidden">
-      {/* Gradient background overlays */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="relative isolate overflow-hidden px-6 py-8 sm:py-12 lg:px-8">
-        <div className="relative mx-auto flex max-w-7xl flex-col gap-16">
-          {/* Hero Section */}
-          <section className="grid gap-8 lg:grid-cols-2 lg:items-center min-h-[85vh] sm:min-h-[90vh]">
-            <div className="space-y-6 sm:space-y-8 order-1 animate-fade-in">
-              <h1 className="flex items-center gap-3 sm:gap-6 text-2xl font-semibold leading-tight text-white sm:text-3xl lg:text-4xl bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                <img src="/icon.png" alt="" className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-xl sm:rounded-2xl shadow-2xl shadow-sky-500/20 flex-shrink-0" />
-                <span className="leading-tight">Launch - Productive Launcher</span>
-              </h1>
-              <p className="text-base sm:text-lg text-slate-300 lg:max-w-xl leading-relaxed">
-                A clean, efficient, and minimalist Android launcher built for focus and productivity.
-              </p>
-              <div className="flex flex-wrap gap-3 sm:gap-4">
-                <a
-                  href="https://play.google.com/store/apps/details?id=com.guruswarupa.launch"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Download Launch on Google Play"
-                >
-                  <img
-                    src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png"
-                    alt="Get it on Google Play"
-                    className="h-12 sm:h-14 lg:h-16"
-                  />
-                </a>
-                <a
-                  className="inline-flex items-center justify-center rounded-full border border-white/30 px-6 py-3 sm:px-8 sm:py-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-white transition-all duration-300 hover:bg-white/10 hover:border-white/50 hover:scale-105"
-                  href="#features"
-                >
-                  See features
-                </a>
-              </div>
-              
-              {/* Trust indicators */}
-              <div className="pt-6 sm:pt-8 border-t border-white/10">
-                <p className="text-xs text-slate-400 mb-3">Trusted by users worldwide</p>
-                <a
-                  className="group inline-flex items-center gap-2 sm:gap-3 rounded-full border border-white/30 bg-white/5 px-3 py-2 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white transition hover:border-white/60 hover:bg-white/10"
-                  href="https://play.google.com/store/apps/details?id=com.guruswarupa.launch"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className="text-amber-300">★</span>
-                  <span className="text-sm font-semibold">4.9</span>
-                  <span className="text-xs uppercase tracking-[0.4em] text-slate-400 hidden sm:inline">Google Play</span>
-                </a>
-                <div className="flex flex-wrap gap-2 sm:gap-4 mt-3">
-                  <span className="text-xs text-slate-500">🔓 100% Open Source</span>
-                  <span className="text-xs text-slate-500">🚫 No Ads</span>
-                  <span className="text-xs text-slate-500">🔐 Privacy First</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Phone Mockup */}
-            <div className="order-2 flex justify-center mb-8 lg:mb-0">
-              <PhoneMockup />
-            </div>
-          </section>
-
-          {/* Features Grid */}
-          <section id="features" className="grid gap-6 sm:gap-8 lg:grid-cols-2 xl:grid-cols-3">
-            {features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className="group relative rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.02] to-transparent p-8 shadow-xl shadow-black/50 backdrop-blur-xl transition-all duration-500 hover:border-white/25 hover:bg-white/[0.12] hover:scale-[1.02] hover:shadow-2xl hover:shadow-sky-500/10 overflow-hidden"
-                style={{ animationDelay: `${index * 80}ms` }}
-              >
-                {/* Animated background glow */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.accent} opacity-0 group-hover:opacity-10 transition-opacity duration-700 blur-2xl`}></div>
-                
-                {/* Subtle shimmer effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.06] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-shimmer"></div>
-                
-                {/* Icon container with enhanced styling */}
-                <div
-                  className={`relative mb-6 h-16 w-16 sm:h-20 sm:w-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br ${feature.accent} flex items-center justify-center text-3xl sm:text-4xl shadow-2xl shadow-black/50 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 group-hover:shadow-sky-500/30 ring-1 ring-white/20 group-hover:ring-white/40`}
-                >
-                  <span className="drop-shadow-lg">{feature.icon}</span>
-                </div>
-                
-                {/* Content */}
-                <h3 className="relative text-xl sm:text-2xl font-bold text-white mb-3 tracking-tight group-hover:text-sky-200 transition-colors duration-300">{feature.title}</h3>
-                <p className="relative text-sm sm:text-base text-slate-300 leading-relaxed group-hover:text-slate-200 transition-colors duration-300">{feature.detail}</p>
-                
-                {/* Bottom accent line */}
-                <div className="absolute bottom-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              </div>
-            ))}
-          </section>
-
-          {/* Stats Section */}
-          <section className="grid gap-8 sm:gap-12 rounded-2xl sm:rounded-3xl border border-white/10 bg-gradient-to-br from-nord0/60 via-nord1/40 to-nord0/60 p-6 sm:p-8 lg:p-10 backdrop-blur-sm shadow-2xl">
-            <div className="space-y-4 sm:space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white">Maintain momentum</h2>
-                <div className="w-16 h-1 sm:w-20 sm:h-1 lg:w-24 lg:h-1 bg-gradient-to-r from-sky-500 to-indigo-600 rounded-full"></div>
-              </div>
-              <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
-                Launch learns when you most need silence and keeps your gestures consistent across devices. Focus sessions, commute quick-access, and contextual folders stay in sync so your setup is ready wherever you unlock.
-              </p>
-              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3 pt-4 sm:pt-6">
-                {stats.map((item) => (
-                  <div key={item.label} className="group space-y-3 text-left p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:scale-105">
-                    <div className="text-2xl sm:text-3xl mb-2">{item.icon}</div>
-                    <p className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">{item.value}</p>
-                    <p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-4 sm:space-y-6 rounded-xl sm:rounded-2xl border border-white/10 bg-white/[0.07] p-6 sm:p-8 text-xs sm:text-sm text-slate-300 backdrop-blur-sm">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-400 font-semibold">Testimonials</p>
-              {testimonials.map((item, idx) => (
-                <figure key={item.name} className="space-y-3 sm:space-y-4 group">
-                  <blockquote className="text-sm sm:text-base leading-relaxed text-white italic">"{item.quote}"</blockquote>
-                  <figcaption className="flex items-center gap-2 sm:gap-3">
-                    <span className="text-xl sm:text-2xl">{item.avatar}</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
-                      {item.name}
-                    </span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </section>
-
-          {/* CTA Section */}
-          <section className="flex flex-col gap-6 sm:gap-8 rounded-2xl sm:rounded-3xl border border-white/10 bg-gradient-to-r from-sky-500/25 via-sky-500/15 to-transparent p-8 sm:p-10 lg:p-12 text-center backdrop-blur-sm shadow-2xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-shimmer"></div>
-            <div className="relative z-10">
-              <p className="text-xs sm:text-sm uppercase tracking-[0.4em] text-slate-300 font-semibold">Launch early access</p>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white mt-2">Switch to a launcher that keeps you moving.</h2>
-              <p className="text-sm sm:text-base text-slate-200 max-w-2xl mx-auto mt-4 leading-relaxed">
-                Join the waiting list for early betas, deep automation recipes, and the next wave of responsive widgets we are shipping.
-              </p>
-              <div className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-6 sm:mt-8">
-                <a
-                  className="group inline-flex items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-indigo-600 px-6 py-3 sm:px-8 sm:py-4 sm:py-5 text-xs sm:text-sm font-semibold uppercase tracking-wide text-white shadow-xl shadow-sky-500/30 transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-sky-500/40"
-                  href="#"
-                >
-                  Join beta
-                  <span className="ml-2 transition-transform group-hover:translate-x-1">→</span>
-                </a>
-                <a
-                  className="inline-flex items-center justify-center rounded-full border border-white/40 px-6 py-3 sm:px-8 sm:py-4 sm:py-5 text-xs sm:text-sm font-semibold uppercase tracking-wide text-white transition-all duration-300 hover:bg-white/15 hover:border-white/60 hover:scale-110"
-                  href="#"
-                >
-                  Message the team
-                </a>
-              </div>
-            </div>
-          </section>
-
-          {/* Privacy & Permissions Section */}
-          <section className="rounded-2xl sm:rounded-3xl border border-white/10 bg-gradient-to-br from-nord0/60 via-nord1/40 to-nord0/60 p-6 sm:p-8 lg:p-10 backdrop-blur-sm shadow-2xl">
-            <div className="text-center mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white mb-2">🔐 Privacy & Permissions</h2>
-              <p className="text-base sm:text-lg text-slate-300">100% Open Source. No ads. No tracking.</p>
-            </div>
-            <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">👥</div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Contacts</h3>
-                <p className="text-sm text-slate-300">Contact search & quick actions</p>
-              </div>
-              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">📞</div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Phone</h3>
-                <p className="text-sm text-slate-300">Calling support</p>
-              </div>
-              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">💬</div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">SMS</h3>
-                <p className="text-sm text-slate-300">Messaging support</p>
-              </div>
-              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">💾</div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Storage</h3>
-                <p className="text-sm text-slate-300">Notes, wallpapers, backups</p>
-              </div>
-              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">📊</div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Usage Stats</h3>
-                <p className="text-sm text-slate-300">App usage tracking & limits (optional)</p>
-              </div>
-              <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">🔔</div>
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Notifications</h3>
-                <p className="text-sm text-slate-300">Notifications widget (optional)</p>
-              </div>
-            </div>
-            <div className="mt-6 sm:mt-8 text-center">
-              <p className="text-xs sm:text-sm text-slate-400">All advanced permissions are optional. Core launcher functionality works independently.</p>
-            </div>
-          </section>
-
-          {/* Gestures Guide Section */}
-          <section className="rounded-2xl sm:rounded-3xl border border-white/10 bg-gradient-to-br from-nord0/60 via-nord1/40 to-nord0/60 p-6 sm:p-8 lg:p-10 backdrop-blur-sm shadow-2xl">
-            <div className="text-center mb-6 sm:mb-8">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-white mb-2">🤏 Gestures Guide</h2>
-              <p className="text-base sm:text-lg text-slate-300">Quick actions at your fingertips</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="pb-3 sm:pb-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-300">Gesture</th>
-                    <th className="pb-3 sm:pb-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-300">Result</th>
-                  </tr>
-                </thead>
-                <tbody className="text-xs sm:text-sm text-slate-300">
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Tap Time Widget</td>
-                    <td className="py-3 sm:py-4">Opens Clock app</td>
-                  </tr>
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Tap Date Widget</td>
-                    <td className="py-3 sm:py-4">Opens Calendar app</td>
-                  </tr>
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Long Press Search Bar</td>
-                    <td className="py-3 sm:py-4">Opens Google in browser</td>
-                  </tr>
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Long Press App Icon</td>
-                    <td className="py-3 sm:py-4">Opens app context menu (Uninstall, Share, etc.)</td>
-                  </tr>
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Long Press Dock App</td>
-                    <td className="py-3 sm:py-4">Remove or rename app</td>
-                  </tr>
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Type in Search Bar</td>
-                    <td className="py-3 sm:py-4">Instant calculator</td>
-                  </tr>
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Long Press Focus Icon</td>
-                    <td className="py-3 sm:py-4">Enter Focus Mode setup</td>
-                  </tr>
-                  <tr className="border-b border-white/5">
-                    <td className="py-3 sm:py-4 font-semibold text-white">Shake Device (2x)</td>
-                    <td className="py-3 sm:py-4">Toggle torch/flashlight</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 sm:py-4 font-semibold text-white">Tap Weekly Usage Day</td>
-                    <td className="py-3 sm:py-4">View detailed daily usage breakdown</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
         </div>
       </div>
     </div>
