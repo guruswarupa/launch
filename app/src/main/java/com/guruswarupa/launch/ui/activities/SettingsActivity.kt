@@ -1128,6 +1128,14 @@ class SettingsActivity : ComponentActivity() {
                     zos.putNextEntry(ZipEntry("webapps.json"))
                     zos.write(webAppsJson.toByteArray())
                     zos.closeEntry()
+                    val weatherData = JSONObject().apply {
+                        put("location", prefs.getString("weather_stored_location", "") ?: "")
+                        put("city_name", prefs.getString("weather_stored_city_name", "") ?: "")
+                        put("temperature_unit", prefs.getString("weather_temperature_unit", "celsius") ?: "celsius")
+                    }
+                    zos.putNextEntry(ZipEntry("weather.json"))
+                    zos.write(weatherData.toString(2).toByteArray())
+                    zos.closeEntry()
                 }
             }
             Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
@@ -1190,6 +1198,22 @@ class SettingsActivity : ComponentActivity() {
                             "webapps.json" -> {
                                 val data = zis.bufferedReader().readText()
                                 prefs.edit { putString(Constants.Prefs.WEB_APPS, data) }
+                            }
+                            "weather.json" -> {
+                                val weatherJson = JSONObject(zis.bufferedReader().readText())
+                                prefs.edit {
+                                    val location = weatherJson.optString("location").ifBlank {
+                                        weatherJson.optString("city_name")
+                                    }
+                                    if (location.isNotBlank()) {
+                                        putString("weather_stored_location", location)
+                                        putString("weather_stored_city_name", location)
+                                    }
+                                    val unit = weatherJson.optString("temperature_unit")
+                                    if (unit.isNotBlank()) {
+                                        putString("weather_temperature_unit", unit)
+                                    }
+                                }
                             }
                         }
                         zis.closeEntry()
