@@ -94,6 +94,9 @@ class WidgetPreviewManager(private val context: Context) {
             "device_info_widget_container" -> createDeviceInfoPreview()
             "year_progress_widget_container" -> createYearProgressPreview()
             "github_contributions_widget_container" -> createGithubContributionsPreview()
+            "media_controller_widget_container" -> createMediaControllerPreview()
+            "dns_widget_container" -> createDnsPreview()
+            "note_widget_container" -> createNotePreview()
             else -> createDefaultPreview(widgetName)
         }
     }
@@ -151,6 +154,9 @@ class WidgetPreviewManager(private val context: Context) {
     private fun createDeviceInfoPreview(): Bitmap? = inflateAndCapture(R.layout.widget_device_info_preview)
     private fun createYearProgressPreview(): Bitmap? = inflateAndCapture(R.layout.widget_year_progress)
     private fun createGithubContributionsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_github_contributions)
+    private fun createMediaControllerPreview(): Bitmap? = inflateAndCapture(R.layout.widget_media_controller_preview)
+    private fun createDnsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_dns_preview)
+    private fun createNotePreview(): Bitmap? = inflateAndCapture(R.layout.widget_note_preview)
     
     private fun inflateAndCapture(layoutResId: Int): Bitmap? {
         return try {

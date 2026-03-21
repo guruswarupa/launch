@@ -3,6 +3,7 @@
     <color name="background">#121212</color> 
     <color name="text">#FFFFFF</color> 
     <color name="text_secondary">#B0B0B0</color> 
+    <color name="text_tertiary">#808080</color> 
     <color name="card_background">#80000000</color> 
     <color name="card_elevation">#333333</color>
     <color name="colorPrimary">#6200EE</color>

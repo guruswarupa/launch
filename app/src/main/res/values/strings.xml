@@ -316,4 +316,18 @@
     <string name="pomodoro_mode">Pomodoro (25/5)</string>
     <string name="pomodoro_stop_title">Stop Pomodoro?</string>
     <string name="pomodoro_stop_message">A Pomodoro session is currently active. Do you want to stop it?</string>
+
+    
+    <string name="note_icon_description">Note Icon</string>
+    <string name="notes_title">Notes</string>
+    <string name="meeting_notes_title">Meeting Notes</string>
+    <string name="meeting_notes_desc">Discuss project roadmap and...</string>
+    <string name="meeting_notes_date">Mar 20, 2025 2:30 PM</string>
+    <string name="shopping_list_title">Shopping List</string>
+    <string name="shopping_list_desc">Milk, Eggs, Bread, Butter</string>
+    <string name="shopping_list_date">Mar 19, 2025 10:15 AM</string>
+    <string name="ideas_title">Ideas</string>
+    <string name="ideas_desc">New feature concepts for app</string>
+    <string name="ideas_date">Mar 18, 2025 4:45 PM</string>
+    <string name="add_note_button_text">+ Add Note</string>
 </resources>
