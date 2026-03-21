@@ -13,9 +13,6 @@ import com.guruswarupa.launch.R
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-
-
-
 class WidgetPreviewManager(private val context: Context) {
     
     companion object {
@@ -31,22 +28,17 @@ class WidgetPreviewManager(private val context: Context) {
     }
     
     private val backgroundExecutor: ExecutorService = Executors.newFixedThreadPool(2)
-    
-    
-
 
     fun generatePreview(
         widgetId: String,
         widgetName: String,
         callback: (Bitmap?) -> Unit
     ) {
-        
         val cachedPreview = previewCache.get(widgetId)
         if (cachedPreview != null) {
             callback(cachedPreview)
             return
         }
-        
         
         backgroundExecutor.execute {
             try {
@@ -66,12 +58,8 @@ class WidgetPreviewManager(private val context: Context) {
             }
         }
     }
-    
-    
-
 
     private fun createWidgetPreview(widgetId: String, widgetName: String): Bitmap? {
-        
         if (widgetId.startsWith("system_widget_") || widgetId.startsWith("provider_")) {
             return getSystemWidgetPreview(widgetId)
         }
@@ -97,6 +85,7 @@ class WidgetPreviewManager(private val context: Context) {
             "media_controller_widget_container" -> createMediaControllerPreview()
             "dns_widget_container" -> createDnsPreview()
             "note_widget_container" -> createNotePreview()
+            "battery_health_widget_container" -> createBatteryHealthPreview()
             else -> createDefaultPreview(widgetName)
         }
     }
@@ -108,7 +97,6 @@ class WidgetPreviewManager(private val context: Context) {
             val appWidgetId = widgetId.removePrefix("system_widget_").toIntOrNull() ?: return null
             appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider
         } else {
-            
             val parts = widgetId.split("_")
             if (parts.size >= 3) {
                 ComponentName(parts[1], parts[2])
@@ -116,7 +104,6 @@ class WidgetPreviewManager(private val context: Context) {
         } ?: return null
 
         val info = appWidgetManager.installedProviders.find { it.provider == provider } ?: return null
-        
         
         val drawable = info.loadPreviewImage(context, 0) ?: info.loadIcon(context, 0)
         
@@ -157,6 +144,7 @@ class WidgetPreviewManager(private val context: Context) {
     private fun createMediaControllerPreview(): Bitmap? = inflateAndCapture(R.layout.widget_media_controller_preview)
     private fun createDnsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_dns_preview)
     private fun createNotePreview(): Bitmap? = inflateAndCapture(R.layout.widget_note_preview)
+    private fun createBatteryHealthPreview(): Bitmap? = inflateAndCapture(R.layout.widget_battery_health_preview)
     
     private fun inflateAndCapture(layoutResId: Int): Bitmap? {
         return try {
@@ -174,7 +162,6 @@ class WidgetPreviewManager(private val context: Context) {
         return try {
             val inflater = LayoutInflater.from(context)
             val previewView = inflater.inflate(R.layout.widget_default_preview, null)
-            
             
             val nameView = previewView.findViewById<android.widget.TextView>(R.id.preview_widget_name)
             nameView.text = widgetName
@@ -209,16 +196,10 @@ class WidgetPreviewManager(private val context: Context) {
         return (dp * context.resources.displayMetrics.density).toInt()
     }
     
-    
-
-
     fun clearCache() {
         previewCache.evictAll()
     }
     
-    
-
-
     fun cleanup() {
         backgroundExecutor.shutdown()
     }

@@ -8,9 +8,6 @@ import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 
-
-
-
 class WidgetConfigurationManager(
     private val context: Context,
     private val sharedPreferences: SharedPreferences
@@ -18,7 +15,6 @@ class WidgetConfigurationManager(
     companion object {
         private const val PREF_WIDGET_ORDER = "widget_order"
         private const val PREFS_SYSTEM_WIDGETS_KEY = "saved_widgets"
-        
         
         val IN_APP_WIDGETS = listOf(
             WidgetInfo("media_controller_widget_container", "Media Controller", false),
@@ -35,6 +31,7 @@ class WidgetConfigurationManager(
             WidgetInfo("calculator_widget_container", "Calculator", false),
             WidgetInfo("todo_recycler_view", "Todo List", false),
             WidgetInfo("note_widget_container", "Notes", false),
+            WidgetInfo("battery_health_widget_container", "Battery Health", false),
             WidgetInfo("finance_widget", "Finance Tracker", false),
             WidgetInfo("weekly_usage_widget", "Weekly Usage", false),
             WidgetInfo("network_stats_widget_container", "Network Stats", false),
@@ -55,9 +52,6 @@ class WidgetConfigurationManager(
         val isProvider: Boolean = false,
         val appName: String? = null
     )
-    
-    
-
 
     fun getWidgetConfiguration(): List<WidgetInfo> {
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null)
@@ -81,13 +75,10 @@ class WidgetConfigurationManager(
             } catch (_: Exception) {}
         }
         
-        
         val boundSystemWidgets = getBoundSystemWidgets()
         val boundIds = boundSystemWidgets.map { it.id }.toSet()
         
-        
         val result = savedWidgetsList.filter { !it.isSystemWidget || boundIds.contains(it.id) }.toMutableList()
-        
         
         val currentIds = result.map { it.id }.toSet()
         boundSystemWidgets.forEach { systemWidget ->
@@ -96,14 +87,11 @@ class WidgetConfigurationManager(
             }
         }
         
-        
         IN_APP_WIDGETS.forEach { defaultWidget ->
             if (!currentIds.contains(defaultWidget.id)) {
                 result.add(defaultWidget)
             }
         }
-        
-        
         
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val installedProviders = try { appWidgetManager.installedProviders } catch (_: Exception) { emptyList() }
@@ -131,11 +119,8 @@ class WidgetConfigurationManager(
             }
         }
         
-        
-        
         val enabledWidgets = result.filter { it.enabled }
         val customDisabled = result.filter { !it.enabled && !it.isSystemWidget }.sortedBy { it.name }
-        
         
         val systemDisabled = result.filter { !it.enabled && it.isSystemWidget }
             .sortedWith(
@@ -157,16 +142,10 @@ class WidgetConfigurationManager(
         }
     }
 
-    
-
-
     fun getWidgetOrder(): List<WidgetInfo> {
         return getWidgetConfiguration().filter { !it.isProvider }
     }
     
-    
-
-
     private fun getBoundSystemWidgets(): List<WidgetInfo> {
         val widgetsJson = sharedPreferences.getString(PREFS_SYSTEM_WIDGETS_KEY, null) ?: return emptyList()
         val systemWidgets = mutableListOf<WidgetInfo>()
@@ -180,8 +159,6 @@ class WidgetConfigurationManager(
                 val packageName = json.optString("providerPackage", "")
                 val className = json.optString("providerClass", "")
 
-                
-                
                 val info = appWidgetManager.getAppWidgetInfo(appWidgetId)
                 if (info != null) {
                     val id = "system_widget_$appWidgetId"
@@ -202,13 +179,9 @@ class WidgetConfigurationManager(
         return systemWidgets
     }
     
-    
-
-
     fun saveWidgetOrder(widgets: List<WidgetInfo>) {
         val jsonArray = JSONArray()
         widgets.forEach { widget ->
-            
             if (!widget.isProvider) {
                 val jsonObject = JSONObject()
                 jsonObject.put("id", widget.id)
@@ -226,9 +199,6 @@ class WidgetConfigurationManager(
         }
     }
     
-    
-
-
     fun isWidgetEnabled(widgetId: String): Boolean {
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null) ?: return false
         try {

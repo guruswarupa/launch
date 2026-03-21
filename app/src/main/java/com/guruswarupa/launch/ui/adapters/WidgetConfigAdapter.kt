@@ -43,8 +43,6 @@ class WidgetConfigAdapter(
         holder.widgetName.text = widget.name
         holder.widgetDescription.text = getWidgetDescription(widget)
         
-        
-        
         if (widget.isProvider) {
             holder.disabledOverlay.visibility = View.VISIBLE
             holder.disabledText.visibility = View.VISIBLE
@@ -57,9 +55,7 @@ class WidgetConfigAdapter(
             holder.disabledText.text = "DISABLED"
         }
         
-        
         loadPreviewImage(holder, widget)
-        
         
         holder.itemView.setOnClickListener {
             val currentPos = holder.bindingAdapterPosition
@@ -86,7 +82,6 @@ class WidgetConfigAdapter(
     }
     
     private fun loadPreviewImage(holder: WidgetViewHolder, widget: WidgetConfigurationManager.WidgetInfo) {
-        
         holder.previewImage.setImageDrawable(null)
         holder.loadingProgress.visibility = View.VISIBLE
         
@@ -95,7 +90,6 @@ class WidgetConfigAdapter(
             if (bitmap != null && !bitmap.isRecycled) {
                 holder.previewImage.setImageBitmap(bitmap)
             } else {
-                
                 holder.previewImage.setImageResource(R.drawable.ic_widget_placeholder)
             }
         }
@@ -121,12 +115,17 @@ class WidgetConfigAdapter(
             "weekly_usage_widget" -> "Usage stats"
             "network_stats_widget_container" -> "Network monitor"
             "device_info_widget_container" -> "Device info"
+            "battery_health_widget_container" -> "Battery health & info"
+            "note_widget_container" -> "Notes & reminders"
+            "media_controller_widget_container" -> "Music & media control"
+            "year_progress_widget_container" -> "Year progress tracker"
+            "github_contributions_widget_container" -> "GitHub contribution graph"
+            "dns_widget_container" -> "DNS provider info"
             else -> "Widget"
         }
     }
     
     private fun showWidgetPreview(widget: WidgetConfigurationManager.WidgetInfo) {
-        
         val activity = context as? WidgetConfigurationActivity ?: return
         
         WidgetPreviewDialog.show(context, widget, previewManager) { shouldEnable ->
@@ -135,13 +134,10 @@ class WidgetConfigAdapter(
                     activity.addSystemWidgetProvider(widget)
                 }
             } else {
-                
                 val position = widgets.indexOfFirst { w -> w.id == widget.id }
                 if (position >= 0) {
                     widgets[position] = widgets[position].copy(enabled = shouldEnable)
                     notifyItemChanged(position)
-                    
-                    
                     activity.updateWidgetState(widget.id, shouldEnable)
                 }
             }

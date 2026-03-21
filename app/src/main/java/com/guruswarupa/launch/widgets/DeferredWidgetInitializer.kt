@@ -30,7 +30,7 @@ class DeferredWidgetInitializer(
             countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
             dnsWidget = widgetSetupManager.setupDnsWidget(sharedPreferences)
             noteWidget = widgetSetupManager.setupNoteWidget(sharedPreferences)
-            
+            batteryHealthWidget = widgetSetupManager.setupBatteryHealthWidget()
             
             networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget()
             deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget()

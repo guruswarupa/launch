@@ -39,6 +39,9 @@ class WidgetVisibilityManager(
         activity.findViewById<View>(com.guruswarupa.launch.R.id.note_widget_container)?.visibility = 
             if (widgetMap["note_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
+        activity.findViewById<View>(com.guruswarupa.launch.R.id.battery_health_widget_container)?.visibility = 
+            if (widgetMap["battery_health_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
         activity.findViewById<View>(com.guruswarupa.launch.R.id.physical_activity_widget_container)?.visibility = 
             if (widgetMap["physical_activity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
@@ -98,6 +101,7 @@ class WidgetVisibilityManager(
                         "countdown_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.countdown_widget_container)
                         "dns_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.dns_widget_container)
                         "note_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.note_widget_container)
+                        "battery_health_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.battery_health_widget_container)
                         "physical_activity_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.physical_activity_widget_container)
                         "compass_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.compass_widget_container)
                         "pressure_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.pressure_widget_container)

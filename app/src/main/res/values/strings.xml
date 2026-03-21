@@ -32,7 +32,7 @@
     <string name="hide_app_plain">Hide App</string>
     <string name="grid_columns_title">Apps per row</string>
     <string name="apps_per_row_format">%1$d apps per row</string>
-    <string name="search_text"> Search...</string>
+    <string name="search_text"> Search…</string>
     
     
     <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock. This service does not collect, store, or transmit any personal data. It only performs system-level actions like screen locking and taking screenshots when explicitly triggered by user gestures.</string>
@@ -41,7 +41,7 @@
     <string name="app_data_disclosure_title">Privacy &amp; Data Disclosure</string>
     <string name="app_data_disclosure_message">To provide a functional launcher experience, Launch processes information about your installed applications. All data is stored &lt;b&gt;locally on your device&lt;/b&gt; and is never shared with third parties.&lt;br/&gt;&lt;br/&gt;&lt;b&gt;What we collect:&lt;/b&gt;&lt;br/&gt;• Package names, app names, and icons&lt;br/&gt;• Launch intent information&lt;br/&gt;&lt;br/&gt;&lt;b&gt;How we use it:&lt;/b&gt;&lt;br/&gt;• Displaying and searching your apps&lt;br/&gt;• Enabling app organization features&lt;br/&gt;By clicking \'Accept\', you agree to these data practices.</string>
     <string name="data_disclosure_links">&lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
-    <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="github_project_links">• &lt;a href="https://github.com/sponsors/guruswarupa"&gt;Sponsor on GitHub&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
     <string name="i_agree">Accept &amp; Continue</string>
     <string name="decline">Exit</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
@@ -148,8 +148,8 @@
     
     <string name="mbps_format">%1$.1f Mbps</string>
     <string name="ms_format">%1$d ms</string>
-    <string name="status_running">Running...</string>
-    <string name="status_initializing">Initializing...</string>
+    <string name="status_running">Running…</string>
+    <string name="status_initializing">Initializing…</string>
     <string name="status_completed">Test Completed</string>
     <string name="button_run_speedtest">Run Speedtest</string>
 
@@ -321,7 +321,7 @@
     <string name="note_icon_description">Note Icon</string>
     <string name="notes_title">Notes</string>
     <string name="meeting_notes_title">Meeting Notes</string>
-    <string name="meeting_notes_desc">Discuss project roadmap and...</string>
+    <string name="meeting_notes_desc">Discuss project roadmap and…</string>
     <string name="meeting_notes_date">Mar 20, 2025 2:30 PM</string>
     <string name="shopping_list_title">Shopping List</string>
     <string name="shopping_list_desc">Milk, Eggs, Bread, Butter</string>
@@ -330,4 +330,5 @@
     <string name="ideas_desc">New feature concepts for app</string>
     <string name="ideas_date">Mar 18, 2025 4:45 PM</string>
     <string name="add_note_button_text">+ Add Note</string>
+    <string name="status_not_charging">Not charging</string>
 </resources>

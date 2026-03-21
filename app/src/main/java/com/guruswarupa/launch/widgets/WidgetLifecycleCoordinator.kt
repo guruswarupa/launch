@@ -16,6 +16,7 @@ class WidgetLifecycleCoordinator {
     lateinit var noteWidget: NoteWidget
     lateinit var yearProgressWidget: YearProgressWidget
     lateinit var githubContributionWidget: GithubContributionWidget
+    lateinit var batteryHealthWidget: BatteryHealthWidget
     lateinit var networkStatsWidget: NetworkStatsWidget
     lateinit var deviceInfoWidget: DeviceInfoWidget
 
@@ -32,6 +33,7 @@ class WidgetLifecycleCoordinator {
     fun isNoteWidgetInitialized() = ::noteWidget.isInitialized
     fun isYearProgressWidgetInitialized() = ::yearProgressWidget.isInitialized
     fun isGithubContributionWidgetInitialized() = ::githubContributionWidget.isInitialized
+    fun isBatteryHealthWidgetInitialized() = ::batteryHealthWidget.isInitialized
     fun isNetworkStatsWidgetInitialized() = ::networkStatsWidget.isInitialized
     fun isDeviceInfoWidgetInitialized() = ::deviceInfoWidget.isInitialized
 
@@ -83,6 +85,7 @@ class WidgetLifecycleCoordinator {
         register({ ::countdownWidget.isInitialized }, { countdownWidget.onResume() }, { countdownWidget.onPause() }, { countdownWidget.cleanup() })
         register({ ::dnsWidget.isInitialized }, { dnsWidget.onResume() }, { dnsWidget.onPause() }, { dnsWidget.cleanup() })
         register({ ::noteWidget.isInitialized }, { noteWidget.onResume() }, { noteWidget.onPause() }, { noteWidget.cleanup() })
+        register({ ::batteryHealthWidget.isInitialized }, { batteryHealthWidget.onResume() }, { batteryHealthWidget.onPause() }, { batteryHealthWidget.cleanup() })
         register({ ::githubContributionWidget.isInitialized }, { githubContributionWidget.onResume() }, { githubContributionWidget.onPause() }, { githubContributionWidget.cleanup() })
     }
 

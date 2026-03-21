@@ -173,6 +173,13 @@ class WidgetSetupManager(
         return githubWidget
     }
     
+    fun setupBatteryHealthWidget(): BatteryHealthWidget {
+        val batteryContainer = activity.findViewById<android.widget.LinearLayout>(R.id.battery_health_widget_container)
+        val widget = BatteryHealthWidget(activity, batteryContainer)
+        widget.initialize()
+        return widget
+    }
+    
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }
