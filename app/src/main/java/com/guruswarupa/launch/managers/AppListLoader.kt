@@ -103,7 +103,7 @@ class AppListLoader(
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
-                    val cachedAppsWithWebApps = appendWebApps(cachedApps)
+                    val cachedAppsWithWebApps = appendWebApps(cachedApps).distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
                     val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                     
                     if (cachedFinalList.isNotEmpty() && adapter != null) {
@@ -142,7 +142,7 @@ class AppListLoader(
                 val focusMode = appDockManager.getCurrentMode()
                 val workspaceMode = appDockManager.isWorkspaceModeActive()
                 
-                val cachedAppsWithWebApps = appendWebApps(cachedUnsortedList!!)
+                val cachedAppsWithWebApps = appendWebApps(cachedUnsortedList!!).distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
                 val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                 
                 if (cachedFinalList.isNotEmpty() && adapter != null) {
@@ -227,7 +227,7 @@ class AppListLoader(
                     list
                 }
                 
-                val fullList = appendWebApps(unsortedList)
+                val fullList = appendWebApps(unsortedList).distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
 
                 if (fullList.isEmpty()) {
                     handler.post {
@@ -359,19 +359,25 @@ class AppListLoader(
         if (webApps.isEmpty()) return installedApps
 
         val fullList = ArrayList(installedApps)
+        val existingPackageNames = installedApps.map { "${it.activityInfo.packageName}|${it.activityInfo.name}" }.toSet()
         val now = System.currentTimeMillis()
         webApps.forEach { entry ->
             val resolveInfo = webAppManager.createResolveInfo(entry)
-            cacheManager?.updateMetadataCache(
-                resolveInfo.activityInfo.packageName,
-                AppMetadata(
-                    packageName = resolveInfo.activityInfo.packageName,
-                    activityName = resolveInfo.activityInfo.name,
-                    label = entry.name,
-                    lastUpdated = now
+            val uniqueKey = "${resolveInfo.activityInfo.packageName}|${resolveInfo.activityInfo.name}"
+            
+            // Only add web app if it doesn't already exist in the list
+            if (uniqueKey !in existingPackageNames) {
+                cacheManager?.updateMetadataCache(
+                    resolveInfo.activityInfo.packageName,
+                    AppMetadata(
+                        packageName = resolveInfo.activityInfo.packageName,
+                        activityName = resolveInfo.activityInfo.name,
+                        label = entry.name,
+                        lastUpdated = now
+                    )
                 )
-            )
-            fullList.add(resolveInfo)
+                fullList.add(resolveInfo)
+            }
         }
         return fullList
     }

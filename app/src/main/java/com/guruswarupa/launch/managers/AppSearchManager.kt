@@ -112,9 +112,12 @@ class AppSearchManager(
 
     fun updateData(newFullAppList: List<ResolveInfo>, newHomeAppList: List<ResolveInfo>, newContactsList: List<String>) {
         synchronized(dataLock) {
-            if (newFullAppList !== fullAppList) {
+            // Deduplicate to prevent showing same app multiple times
+            val deduplicatedFullAppList = newFullAppList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+            
+            if (deduplicatedFullAppList !== fullAppList) {
                 fullAppList.clear()
-                fullAppList.addAll(newFullAppList)
+                fullAppList.addAll(deduplicatedFullAppList)
             }
             homeAppList = ArrayList(newHomeAppList)
             contactsList = newContactsList

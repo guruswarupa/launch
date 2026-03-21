@@ -87,9 +87,12 @@ class AppListUIUpdater(
         if (activity.isFinishing || activity.isDestroyed) return
         
         
-        if (newFullAppList !== fullAppList) {
+        // Deduplicate full app list to prevent duplicates
+        val deduplicatedFullAppList = newFullAppList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+        
+        if (deduplicatedFullAppList !== fullAppList) {
             fullAppList.clear()
-            fullAppList.addAll(newFullAppList)
+            fullAppList.addAll(deduplicatedFullAppList)
         }
         
         
