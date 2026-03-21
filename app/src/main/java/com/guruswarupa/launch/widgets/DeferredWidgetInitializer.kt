@@ -17,6 +17,7 @@ class DeferredWidgetInitializer(
         widgetSetupManager.setupBatteryAndUsage()
         
         with(widgetLifecycleCoordinator) {
+            mediaControllerWidget = widgetSetupManager.setupMediaControllerWidget()
             notificationsWidget = widgetSetupManager.setupNotificationsWidget()
             calculatorWidget = widgetSetupManager.setupCalculatorWidget()
             workoutWidget = widgetSetupManager.setupWorkoutWidget()

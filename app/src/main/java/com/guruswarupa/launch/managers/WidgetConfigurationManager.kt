@@ -21,6 +21,7 @@ class WidgetConfigurationManager(
         
         
         val IN_APP_WIDGETS = listOf(
+            WidgetInfo("media_controller_widget_container", "Media Controller", false),
             WidgetInfo("notifications_widget_container", "Notifications", false),
             WidgetInfo("calendar_events_widget_container", "Calendar Events", false),
             WidgetInfo("countdown_widget_container", "Countdown", false),

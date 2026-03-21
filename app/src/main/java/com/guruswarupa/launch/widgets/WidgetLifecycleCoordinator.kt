@@ -1,12 +1,9 @@
 package com.guruswarupa.launch.widgets
 
-
-
-
-
 class WidgetLifecycleCoordinator {
     lateinit var calculatorWidget: CalculatorWidget
     lateinit var notificationsWidget: NotificationsWidget
+    lateinit var mediaControllerWidget: MediaControllerWidget
     lateinit var workoutWidget: WorkoutWidget
     lateinit var physicalActivityWidget: PhysicalActivityWidget
     lateinit var compassWidget: CompassWidget
@@ -22,8 +19,8 @@ class WidgetLifecycleCoordinator {
     lateinit var networkStatsWidget: NetworkStatsWidget
     lateinit var deviceInfoWidget: DeviceInfoWidget
 
-    
     fun isNotificationsWidgetInitialized() = ::notificationsWidget.isInitialized
+    fun isMediaControllerWidgetInitialized() = ::mediaControllerWidget.isInitialized
     fun isPhysicalActivityWidgetInitialized() = ::physicalActivityWidget.isInitialized
     fun isCompassWidgetInitialized() = ::compassWidget.isInitialized
     fun isPressureWidgetInitialized() = ::pressureWidget.isInitialized
@@ -46,9 +43,6 @@ class WidgetLifecycleCoordinator {
     )
 
     private val widgets = mutableListOf<WidgetWrapper>()
-
-    
-
 
     fun register(
         isInitializedCheck: () -> Boolean,
@@ -77,11 +71,9 @@ class WidgetLifecycleCoordinator {
         widgets.add(wrapper)
     }
 
-    
-
-
     fun setupDefaultLifecycle() {
         widgets.clear()
+        register({ ::mediaControllerWidget.isInitialized }, { mediaControllerWidget.refreshController() }, { })
         register({ ::physicalActivityWidget.isInitialized }, { physicalActivityWidget.onResume() }, { physicalActivityWidget.onPause() }, { physicalActivityWidget.cleanup() })
         register({ ::compassWidget.isInitialized }, { compassWidget.onResume() }, { compassWidget.onPause() }, { compassWidget.onPause() })
         register({ ::pressureWidget.isInitialized }, { pressureWidget.onResume() }, { pressureWidget.onPause() }, { pressureWidget.cleanup() })
@@ -94,26 +86,17 @@ class WidgetLifecycleCoordinator {
         register({ ::githubContributionWidget.isInitialized }, { githubContributionWidget.onResume() }, { githubContributionWidget.onPause() }, { githubContributionWidget.cleanup() })
     }
 
-    
-
-
     fun onResume() {
         widgets.forEach { widget ->
             widget.onResume()
         }
     }
 
-    
-
-
     fun onPause() {
         widgets.forEach { widget ->
             widget.onPause()
         }
     }
-
-    
-
 
     fun onDestroy() {
         widgets.forEach { widget ->

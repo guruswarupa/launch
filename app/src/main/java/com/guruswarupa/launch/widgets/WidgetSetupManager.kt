@@ -63,6 +63,13 @@ class WidgetSetupManager(
         return CalculatorWidget(calculatorView)
     }
     
+    fun setupMediaControllerWidget(): MediaControllerWidget {
+        val mediaContainer = activity.findViewById<ViewGroup>(R.id.media_controller_widget_container)
+        val mediaView = LayoutInflater.from(activity).inflate(R.layout.media_controller_widget, mediaContainer, false)
+        mediaContainer.addView(mediaView)
+        return MediaControllerWidget(activity, mediaView)
+    }
+    
     fun setupWorkoutWidget(): WorkoutWidget {
         val workoutContainer = activity.findViewById<ViewGroup>(R.id.workout_widget_container)
         val workoutView = LayoutInflater.from(activity).inflate(R.layout.workout_widget, workoutContainer, false)

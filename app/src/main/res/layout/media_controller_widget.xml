@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_background">
+
+    <TextView
+        android:id="@+id/media_track_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Not Playing"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/widget_text"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/media_artist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:textColor="@color/widget_text_secondary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:layout_marginTop="4dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <ImageButton
+            android:id="@+id/media_prev"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_skip_previous"
+            android:contentDescription="Previous"
+            android:tint="@color/widget_text" />
+
+        <ImageButton
+            android:id="@+id/media_play_pause"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_play"
+            android:contentDescription="Play/Pause"
+            android:layout_marginHorizontal="24dp"
+            android:tint="@color/widget_text" />
+
+        <ImageButton
+            android:id="@+id/media_next"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_skip_next"
+            android:contentDescription="Next"
+            android:tint="@color/widget_text" />
+    </LinearLayout>
+</LinearLayout>

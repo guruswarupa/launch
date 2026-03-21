@@ -395,6 +395,16 @@
 
             
             <LinearLayout
+                android:id="@+id/media_controller_widget_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginVertical="8dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp" />
+
+            
+            <LinearLayout
                 android:id="@+id/notifications_widget_main_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
