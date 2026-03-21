@@ -136,9 +136,11 @@ class WallpaperManagerHelper(
 
 
     fun applyBlurToViews() {
-        wallpaperBackground.setRenderEffect(null)
-        drawerWallpaperBackground?.setRenderEffect(null)
-        activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.setRenderEffect(null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            wallpaperBackground.setRenderEffect(null)
+            drawerWallpaperBackground?.setRenderEffect(null)
+            activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.setRenderEffect(null)
+        }
     }
     
     

@@ -281,8 +281,9 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     }
 
     private fun applyWallpaperBlur(imageView: ImageView) {
-        
-        imageView.setRenderEffect(null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            imageView.setRenderEffect(null)
+        }
     }
 
     private fun loadFiles() {
