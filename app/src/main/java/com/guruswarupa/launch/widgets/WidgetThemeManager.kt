@@ -35,6 +35,7 @@ class WidgetThemeManager(
         }
         activity.findViewById<View>(R.id.calendar_events_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.countdown_widget_container)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.note_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.physical_activity_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.compass_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.pressure_widget_container)?.setBackgroundResource(widgetBackground)

@@ -1640,7 +1640,7 @@
                                 android:layout_height="52dp"
                                 android:layout_weight="1"
                                 android:layout_marginEnd="6dp"
-                                android:text="Export Data"
+                                android:text="Export All Data"
                                 android:textAllCaps="false"
                                 android:background="@drawable/settings_card_background"
                                 android:textColor="@color/white"/>
@@ -1651,7 +1651,7 @@
                                 android:layout_height="52dp"
                                 android:layout_weight="1"
                                 android:layout_marginStart="6dp"
-                                android:text="Import Data"
+                                android:text="Import All Data"
                                 android:textAllCaps="false"
                                 android:background="@drawable/settings_card_background"
                                 android:textColor="@color/white"/>

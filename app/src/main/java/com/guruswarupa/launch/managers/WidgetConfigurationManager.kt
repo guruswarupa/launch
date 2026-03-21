@@ -32,6 +32,7 @@ class WidgetConfigurationManager(
             WidgetInfo("workout_widget_container", "Workout Tracker", false),
             WidgetInfo("calculator_widget_container", "Calculator", false),
             WidgetInfo("todo_recycler_view", "Todo List", false),
+            WidgetInfo("note_widget_container", "Notes", false),
             WidgetInfo("finance_widget", "Finance Tracker", false),
             WidgetInfo("weekly_usage_widget", "Weekly Usage", false),
             WidgetInfo("network_stats_widget_container", "Network Stats", false),

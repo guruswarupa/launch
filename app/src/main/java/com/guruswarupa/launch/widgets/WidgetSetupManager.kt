@@ -118,6 +118,13 @@ class WidgetSetupManager(
         countdownWidget.initialize()
         return countdownWidget
     }
+    
+    fun setupNoteWidget(sharedPreferences: android.content.SharedPreferences): NoteWidget {
+        val noteContainer = activity.findViewById<android.widget.LinearLayout>(R.id.note_widget_container)
+        val noteWidget = NoteWidget(activity, noteContainer, sharedPreferences)
+        noteWidget.initialize()
+        return noteWidget
+    }
 
     fun setupNetworkStatsWidget(): NetworkStatsWidget {
         val container = activity.findViewById<android.widget.LinearLayout>(R.id.network_stats_widget_container)

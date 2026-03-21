@@ -1136,6 +1136,21 @@ class SettingsActivity : ComponentActivity() {
                     zos.putNextEntry(ZipEntry("weather.json"))
                     zos.write(weatherData.toString(2).toByteArray())
                     zos.closeEntry()
+                    
+                    // Export notes data
+                    try {
+                        val mainActivity = com.guruswarupa.launch.MainActivity.instance
+                        if (mainActivity != null && mainActivity.isWidgetLifecycleCoordinatorInitialized() && 
+                            mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
+                            val notesJson = mainActivity.widgetLifecycleCoordinator.noteWidget.exportNotesToJson()
+                            zos.putNextEntry(ZipEntry("notes.json"))
+                            zos.write(notesJson.toByteArray())
+                            zos.closeEntry()
+                        }
+                    } catch (e: Exception) {
+                        // Notes export failed, but continue with other exports
+                        e.printStackTrace()
+                    }
                 }
             }
             Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
@@ -1213,6 +1228,24 @@ class SettingsActivity : ComponentActivity() {
                                     if (unit.isNotBlank()) {
                                         putString("weather_temperature_unit", unit)
                                     }
+                                }
+                            }
+                            "notes.json" -> {
+                                try {
+                                    val notesJsonString = zis.bufferedReader().readText()
+                                    val mainActivity = com.guruswarupa.launch.MainActivity.instance
+                                    if (mainActivity != null && mainActivity.isWidgetLifecycleCoordinatorInitialized() && 
+                                        mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
+                                        val importedCount = mainActivity.widgetLifecycleCoordinator.noteWidget.importNotesFromJson(notesJsonString)
+                                        if (importedCount > 0) {
+                                            zis.closeEntry()
+                                            entry = zis.nextEntry
+                                            return@use // Exit early to avoid duplicate closeEntry
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    // Notes import failed, but continue with other imports
+                                    e.printStackTrace()
                                 }
                             }
                         }

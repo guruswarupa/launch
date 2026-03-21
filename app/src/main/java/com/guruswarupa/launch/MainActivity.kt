@@ -48,6 +48,10 @@ import java.util.concurrent.Executors
 
 
 class MainActivity : FragmentActivity() {
+    companion object {
+        var instance: MainActivity? = null
+            private set
+    }
 
     
     internal lateinit var sharedPreferences: SharedPreferences
@@ -451,6 +455,7 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        instance = this
         AppInitializer(this).initialize()
         if (::systemBarManager.isInitialized) {
             systemBarManager.makeSystemBarsTransparent()
@@ -658,6 +663,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        instance = null
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
         }
