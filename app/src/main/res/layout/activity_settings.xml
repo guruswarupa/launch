@@ -1290,6 +1290,50 @@
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
 
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:alpha="0.05"
+                            android:background="@color/white" />
+
+                        
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Grayscale Mode"
+                                    android:textColor="@color/white"
+                                    android:textSize="15sp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Turn entire screen gray"
+                                    android:textColor="@color/white"
+                                    android:alpha="0.5"
+                                    android:textSize="11sp"/>
+                            </LinearLayout>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/grayscale_mode_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
                         <Button
                             android:id="@+id/config_control_center_button"
                             android:layout_width="match_parent"

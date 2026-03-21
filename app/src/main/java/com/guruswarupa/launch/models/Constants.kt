@@ -41,6 +41,7 @@ object Constants {
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
         const val DEFAULT_HOME_PAGE_INDEX = "default_home_page_index"
         const val WEB_APPS = "web_apps"
+        const val GRAYSCALE_MODE_ENABLED = "grayscale_mode_enabled"
         
         
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"

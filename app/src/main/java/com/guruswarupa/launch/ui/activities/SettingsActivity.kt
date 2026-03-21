@@ -537,6 +537,7 @@ class SettingsActivity : ComponentActivity() {
         setupExtraDimmer()
         setupNightMode()
         setupFlipToDnd()
+        setupGrayscaleMode()
 
         findViewById<View>(R.id.config_control_center_button).setOnClickListener {
             startActivity(Intent(this, ControlCenterConfigActivity::class.java))
@@ -830,6 +831,38 @@ class SettingsActivity : ComponentActivity() {
                 notifySettingsChanged()
             }
         }
+    }
+
+    private fun setupGrayscaleMode() {
+        val sw = findViewById<SwitchCompat>(R.id.grayscale_mode_switch)
+        sw.isChecked = prefs.getBoolean(Constants.Prefs.GRAYSCALE_MODE_ENABLED, false)
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            try {
+                Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer_enabled", if (isChecked) 1 else 0)
+                Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer", if (isChecked) 0 else -1)
+                prefs.edit { putBoolean(Constants.Prefs.GRAYSCALE_MODE_ENABLED, isChecked) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                sw.isChecked = !isChecked
+                showProtectedPermissionDialog("WRITE_SECURE_SETTINGS")
+            }
+        }
+    }
+
+    private fun showProtectedPermissionDialog(permission: String) {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Permission Required")
+            .setMessage("This feature requires the $permission permission.\n\n" +
+                    "Please run this command via ADB:\n\n" +
+                    "adb shell pm grant $packageName android.permission.$permission")
+            .setPositiveButton("Copy Command") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("ADB Command", "adb shell pm grant $packageName android.permission.$permission")
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "Command copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun setupSearchEngine() {
