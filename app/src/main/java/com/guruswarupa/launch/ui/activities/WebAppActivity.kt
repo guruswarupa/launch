@@ -51,15 +51,12 @@ class WebAppActivity : AppCompatActivity() {
     
     private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isNotEmpty()) {
-            
             uris.forEach { uri ->
                 try {
                     contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 } catch (_: SecurityException) {
-                    
                 }
             }
-            
             fileUploadCallback?.onReceiveValue(uris.toTypedArray())
         } else {
             fileUploadCallback?.onReceiveValue(null)
@@ -81,20 +78,16 @@ class WebAppActivity : AppCompatActivity() {
         )
         setContentView(R.layout.activity_web_app)
 
-        
         if (appName.isBlank() || url.isBlank()) {
             finish()
             return
         }
         
-        
         title = appName
-        
         
         WebAppIconFetcher.loadIcon(this, url) { drawable ->
             if (drawable != null) {
                 try {
-                    
                     val bitmap = createBitmap(
                         drawable.intrinsicWidth.coerceAtLeast(1),
                         drawable.intrinsicHeight.coerceAtLeast(1)
@@ -102,7 +95,6 @@ class WebAppActivity : AppCompatActivity() {
                         drawable.setBounds(0, 0, width, height)
                         drawable.draw(this)
                     }
-                    
                     
                     @Suppress("DEPRECATION")
                     val taskDescription = ActivityManager.TaskDescription(
@@ -112,7 +104,6 @@ class WebAppActivity : AppCompatActivity() {
                     )
                     setTaskDescription(taskDescription)
                 } catch (_: Exception) {
-                    
                 }
             }
         }
@@ -139,11 +130,13 @@ class WebAppActivity : AppCompatActivity() {
             builtInZoomControls = false
             displayZoomControls = false
             mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            
             mediaPlaybackRequiresUserGesture = false
             allowFileAccess = true
             allowContentAccess = true
+            setSupportMultipleWindows(false)
+            javaScriptCanOpenWindowsAutomatically = false
         }
+        
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 progressBar.progress = newProgress
@@ -174,17 +167,12 @@ class WebAppActivity : AppCompatActivity() {
                 filePathCallback: ValueCallback<Array<Uri>>?,
                 fileChooserParams: FileChooserParams?
             ): Boolean {
-                
                 fileUploadCallback?.onReceiveValue(null)
                 fileUploadCallback = filePathCallback
-                
-                
                 val acceptTypes = fileChooserParams?.acceptTypes ?: arrayOf("*/*")
                 val isVideo = acceptTypes.any { it.startsWith("video/") }
                 val isImage = acceptTypes.any { it.startsWith("image/") || it == "*/*" }
-                
                 try {
-                    
                     val mimeType = when {
                         isVideo -> "video/*"
                         isImage -> "image/*"
@@ -200,13 +188,13 @@ class WebAppActivity : AppCompatActivity() {
             }
         }
         
-        
         val root = findViewById<View>(R.id.web_app_root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(0, systemInsets.top, 0, systemInsets.bottom)
             insets
         }
+        
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 if (WebAppAdBlocker.shouldBlock(request?.url)) {
@@ -225,9 +213,18 @@ class WebAppActivity : AppCompatActivity() {
             }
 
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                val targetUrl = request?.url?.toString().orEmpty()
-                val scheme = request?.url?.scheme.orEmpty()
-                if (scheme == "http" || scheme == "https") return false
+                val targetUri = request?.url ?: return false
+                val targetUrl = targetUri.toString()
+                
+                if (WebAppAdBlocker.shouldBlock(targetUri)) {
+                    return true
+                }
+
+                val scheme = targetUri.scheme.orEmpty()
+                if (scheme == "http" || scheme == "https") {
+                    return false
+                }
+                
                 return try {
                     startActivity(Intent(Intent.ACTION_VIEW, targetUrl.toUri()))
                     true
@@ -253,7 +250,6 @@ class WebAppActivity : AppCompatActivity() {
 
         webView.loadUrl(url)
 
-        
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (customView != null) {
@@ -273,7 +269,6 @@ class WebAppActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        
         if (::webView.isInitialized) {
             webView.onPause()
         }
@@ -281,7 +276,6 @@ class WebAppActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        
         if (::webView.isInitialized) {
             webView.onResume()
         }
@@ -289,31 +283,20 @@ class WebAppActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        
         if (::webView.isInitialized) {
             webView.stopLoading()
         }
     }
 
     override fun onDestroy() {
-        
         exitFullscreen()
-        
-        
         if (::webView.isInitialized) {
-            
             webView.stopLoading()
-            
             webView.clearHistory()
-            
             webView.removeAllViews()
-            
             webView.destroy()
         }
-        
-        
         fileUploadCallback = null
-        
         super.onDestroy()
     }
 
