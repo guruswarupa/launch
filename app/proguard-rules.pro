@@ -30,3 +30,7 @@
 -keep public class * extends com.github.bumptech.glide.module.LibraryGlideModule
 -keep class com.github.bumptech.glide.GeneratedAppGlideModuleImpl
 -dontwarn com.github.bumptech.glide.load.resource.bitmap.VideoDecoder
+
+-keepclassmembers class com.guruswarupa.launch.R$layout {
+    public static ** *;
+}
