@@ -336,6 +336,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             "notifications_widget_container" -> "Quick access to recent notifications"
             "calendar_events_widget_container" -> "Upcoming calendar events and reminders"
             "countdown_widget_container" -> "Countdown timers for important events"
+            "dns_widget_container" -> "Switch between DNS providers for privacy and ad-blocking"
             "note_widget_container" -> "Create and manage quick notes"
             "physical_activity_widget_container" -> "Track steps and physical activity"
             "pressure_widget_container" -> "Atmospheric pressure monitoring"

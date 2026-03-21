@@ -119,6 +119,13 @@ class WidgetSetupManager(
         return countdownWidget
     }
     
+    fun setupDnsWidget(sharedPreferences: android.content.SharedPreferences): DnsWidget {
+        val dnsContainer = activity.findViewById<android.widget.LinearLayout>(R.id.dns_widget_container)
+        val dnsWidget = DnsWidget(activity, dnsContainer, sharedPreferences)
+        dnsWidget.initialize()
+        return dnsWidget
+    }
+    
     fun setupNoteWidget(sharedPreferences: android.content.SharedPreferences): NoteWidget {
         val noteContainer = activity.findViewById<android.widget.LinearLayout>(R.id.note_widget_container)
         val noteWidget = NoteWidget(activity, noteContainer, sharedPreferences)

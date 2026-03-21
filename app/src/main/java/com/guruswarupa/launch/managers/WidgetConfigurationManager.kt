@@ -24,6 +24,7 @@ class WidgetConfigurationManager(
             WidgetInfo("notifications_widget_container", "Notifications", false),
             WidgetInfo("calendar_events_widget_container", "Calendar Events", false),
             WidgetInfo("countdown_widget_container", "Countdown", false),
+            WidgetInfo("dns_widget_container", "DNS Provider", false),
             WidgetInfo("physical_activity_widget_container", "Physical Activity", false),
             WidgetInfo("compass_widget_container", "Compass", false),
             WidgetInfo("pressure_widget_container", "Pressure", false),

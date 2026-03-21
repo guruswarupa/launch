@@ -36,6 +36,9 @@ class WidgetVisibilityManager(
         activity.findViewById<View>(com.guruswarupa.launch.R.id.countdown_widget_container)?.visibility = 
             if (widgetMap["countdown_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
+        activity.findViewById<View>(com.guruswarupa.launch.R.id.dns_widget_container)?.visibility = 
+            if (widgetMap["dns_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        
         activity.findViewById<View>(com.guruswarupa.launch.R.id.note_widget_container)?.visibility = 
             if (widgetMap["note_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
@@ -107,6 +110,7 @@ class WidgetVisibilityManager(
                         "notifications_widget_container" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.notifications_widget_container)?.parent as? View
                         "calendar_events_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.calendar_events_widget_container)
                         "countdown_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.countdown_widget_container)
+                        "dns_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.dns_widget_container)
                         "note_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.note_widget_container)
                         "physical_activity_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.physical_activity_widget_container)
                         "compass_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.compass_widget_container)

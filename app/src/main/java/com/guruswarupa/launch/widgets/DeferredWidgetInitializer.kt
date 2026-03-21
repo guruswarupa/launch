@@ -27,6 +27,7 @@ class DeferredWidgetInitializer(
             noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
             calendarEventsWidget = widgetSetupManager.setupCalendarEventsWidget(sharedPreferences)
             countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
+            dnsWidget = widgetSetupManager.setupDnsWidget(sharedPreferences)
             noteWidget = widgetSetupManager.setupNoteWidget(sharedPreferences)
             
             

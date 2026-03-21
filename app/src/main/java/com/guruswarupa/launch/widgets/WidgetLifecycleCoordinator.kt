@@ -15,6 +15,7 @@ class WidgetLifecycleCoordinator {
     lateinit var noiseDecibelWidget: NoiseDecibelWidget
     lateinit var calendarEventsWidget: CalendarEventsWidget
     lateinit var countdownWidget: CountdownWidget
+    lateinit var dnsWidget: DnsWidget
     lateinit var noteWidget: NoteWidget
     lateinit var yearProgressWidget: YearProgressWidget
     lateinit var githubContributionWidget: GithubContributionWidget
@@ -30,6 +31,7 @@ class WidgetLifecycleCoordinator {
     fun isNoiseDecibelWidgetInitialized() = ::noiseDecibelWidget.isInitialized
     fun isCalendarEventsWidgetInitialized() = ::calendarEventsWidget.isInitialized
     fun isCountdownWidgetInitialized() = ::countdownWidget.isInitialized
+    fun isDnsWidgetInitialized() = ::dnsWidget.isInitialized
     fun isNoteWidgetInitialized() = ::noteWidget.isInitialized
     fun isYearProgressWidgetInitialized() = ::yearProgressWidget.isInitialized
     fun isGithubContributionWidgetInitialized() = ::githubContributionWidget.isInitialized
@@ -87,6 +89,7 @@ class WidgetLifecycleCoordinator {
         register({ ::noiseDecibelWidget.isInitialized }, { noiseDecibelWidget.onResume() }, { noiseDecibelWidget.onPause() }, { noiseDecibelWidget.cleanup() })
         register({ ::calendarEventsWidget.isInitialized }, { calendarEventsWidget.onResume() }, { calendarEventsWidget.onPause() }, { calendarEventsWidget.cleanup() })
         register({ ::countdownWidget.isInitialized }, { countdownWidget.onResume() }, { countdownWidget.onPause() }, { countdownWidget.cleanup() })
+        register({ ::dnsWidget.isInitialized }, { dnsWidget.onResume() }, { dnsWidget.onPause() }, { dnsWidget.cleanup() })
         register({ ::noteWidget.isInitialized }, { noteWidget.onResume() }, { noteWidget.onPause() }, { noteWidget.cleanup() })
         register({ ::githubContributionWidget.isInitialized }, { githubContributionWidget.onResume() }, { githubContributionWidget.onPause() }, { githubContributionWidget.cleanup() })
     }
