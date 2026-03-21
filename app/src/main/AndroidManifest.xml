@@ -248,6 +248,16 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".receivers.NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.guruswarupa.launch.TOGGLE_NIGHT_MODE" />
+                <action android:name="com.guruswarupa.launch.TOGGLE_DIMMER" />
+                <action android:name="com.guruswarupa.launch.TOGGLE_GRAYSCALE" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".services.ScreenLockAccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"

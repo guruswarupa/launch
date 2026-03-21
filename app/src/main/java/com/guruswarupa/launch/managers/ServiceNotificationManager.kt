@@ -10,17 +10,14 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.receivers.NotificationActionReceiver
 import java.util.Collections
-
-
-
 
 object ServiceNotificationManager {
     private const val CHANNEL_ID = "launch_services_channel"
     private const val CHANNEL_NAME = "Launch Background Services"
     const val NOTIFICATION_ID = 1000
 
-    
     private val activeServices = Collections.synchronizedSet(mutableSetOf<String>())
     private var isChannelCreated = false
 
@@ -89,6 +86,10 @@ object ServiceNotificationManager {
             else -> "Launch Services"
         }
 
+        val nightModeAction = createAction(context, NotificationActionReceiver.ACTION_TOGGLE_NIGHT_MODE, "Night", R.drawable.ic_night_mode)
+        val dimmerAction = createAction(context, NotificationActionReceiver.ACTION_TOGGLE_DIMMER, "Dim", R.drawable.ic_dimmer)
+        val grayscaleAction = createAction(context, NotificationActionReceiver.ACTION_TOGGLE_GRAYSCALE, "Gray", R.drawable.ic_grayscale)
+
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(contentText)
@@ -99,6 +100,22 @@ object ServiceNotificationManager {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setShowWhen(false)
             .setSilent(true)
+            .addAction(nightModeAction)
+            .addAction(dimmerAction)
+            .addAction(grayscaleAction)
             .build()
+    }
+
+    private fun createAction(context: Context, action: String, title: String, iconRes: Int): NotificationCompat.Action {
+        val intent = Intent(context, NotificationActionReceiver::class.java).apply {
+            this.action = action
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            action.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Action.Builder(iconRes, title, pendingIntent).build()
     }
 }
