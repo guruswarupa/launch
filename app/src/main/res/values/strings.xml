@@ -41,7 +41,7 @@
     <string name="app_data_disclosure_title">Privacy &amp; Data Disclosure</string>
     <string name="app_data_disclosure_message">To provide a functional launcher experience, Launch processes information about your installed applications. All data is stored &lt;b&gt;locally on your device&lt;/b&gt; and is never shared with third parties.&lt;br/&gt;&lt;br/&gt;&lt;b&gt;What we collect:&lt;/b&gt;&lt;br/&gt;• Package names, app names, and icons&lt;br/&gt;• Launch intent information&lt;br/&gt;&lt;br/&gt;&lt;b&gt;How we use it:&lt;/b&gt;&lt;br/&gt;• Displaying and searching your apps&lt;br/&gt;• Enabling app organization features&lt;br/&gt;By clicking \'Accept\', you agree to these data practices.</string>
     <string name="data_disclosure_links">&lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
-    <string name="github_project_links">• &lt;a href="https://github.com/sponsors/guruswarupa"&gt;Sponsor on GitHub&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch"&gt;Star the repo on GitHub&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
     <string name="i_agree">Accept &amp; Continue</string>
     <string name="decline">Exit</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
@@ -302,8 +302,28 @@
 
     
     <string name="support_project_title">Support the Project</string>
+    <string name="support_project_intro">Your support helps keep Launch ad-free, open source, and actively maintained for the long term.</string>
+    <string name="support_project_commitment">I am committed to keeping every feature free, avoiding subscriptions, and using support to improve stability, ship thoughtful updates, and maintain the app for years to come.</string>
+    <string name="support_project_prompt">Support the project</string>
     <string name="sponsor_github_link">&lt;a href="https://github.com/sponsors/guruswarupa"&gt;Sponsor on GitHub&lt;/a&gt;</string>
     <string name="buy_me_a_coffee_link">&lt;a href="https://buymeacoffee.com/guruswarupa"&gt;Buy Me a Coffee&lt;/a&gt;</string>
+    <string name="support_button_loading">Loading...</string>
+    <string name="support_button_buy">Support %1$s</string>
+    <string name="support_button_unavailable">Unavailable</string>
+    <string name="support_button_pending">Pending</string>
+    <string name="support_thank_you">Thank you for supporting ❤️</string>
+    <string name="support_thank_you_title">Thank You</string>
+    <string name="support_thank_you_message">Thank you for supporting Launch. Your contribution helps keep the app ad-free, open source, and free of subscriptions while I continue maintaining it long term.</string>
+    <string name="support_thank_you_chip_adfree">Ad-free forever</string>
+    <string name="support_thank_you_chip_open_source">Open source</string>
+    <string name="support_thank_you_chip_no_subscription">No subscription model</string>
+    <string name="support_thank_you_close">Close</string>
+    <string name="support_purchase_canceled">Support canceled</string>
+    <string name="support_purchase_pending">Your support purchase is pending approval.</string>
+    <string name="support_billing_unavailable">Google Play Billing is unavailable right now.</string>
+    <string name="support_network_error">Unable to load support options. Check your connection and try again.</string>
+    <string name="support_option_not_ready">This support option is not ready yet.</string>
+    <string name="support_purchase_failed">Unable to complete support purchase right now.</string>
     
     
     <string name="category_appearance">Appearance</string>

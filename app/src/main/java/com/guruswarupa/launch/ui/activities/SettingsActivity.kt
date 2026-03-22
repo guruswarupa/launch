@@ -20,6 +20,7 @@ import android.provider.Settings
 import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.util.TypedValue
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -37,6 +38,17 @@ import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
+import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.guruswarupa.launch.MainActivity
@@ -54,11 +66,12 @@ import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.LinkedHashMap
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-class SettingsActivity : ComponentActivity() {
+class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
     companion object {
         const val EXTRA_START_SETTINGS_TUTORIAL = "start_settings_tutorial"
     }
@@ -71,6 +84,14 @@ class SettingsActivity : ComponentActivity() {
     private var selectedThemeId: String = "stardust"
     private var selectedThemeCategory: String? = null
     private var hasUnsavedThemeChanges = false
+    private var billingClient: BillingClient? = null
+    private val supportProducts = linkedMapOf(
+        "support_49" to R.id.support_49,
+        "support_99" to R.id.support_99,
+        "support_199" to R.id.support_199,
+        "support_299" to R.id.support_299
+    )
+    private val supportProductDetails = LinkedHashMap<String, ProductDetails>()
 
     private data class SettingsTutorialStep(
         val title: String,
@@ -129,6 +150,19 @@ class SettingsActivity : ComponentActivity() {
         if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
             window.decorView.post { startSettingsTutorial() }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (billingClient?.isReady == true) {
+            queryExistingSupportPurchases()
+        }
+    }
+
+    override fun onDestroy() {
+        billingClient?.endConnection()
+        billingClient = null
+        super.onDestroy()
     }
 
     private fun triggerWallpaperPicker(themeId: String) {
@@ -619,17 +653,231 @@ class SettingsActivity : ComponentActivity() {
         val a = findViewById<TextView>(R.id.support_arrow)
         setupSectionToggle(h, c, a)
         findViewById<View>(R.id.feedback_button).setOnClickListener { sendFeedback() }
+        supportProducts.forEach { (productId, buttonId) ->
+            findViewById<Button>(buttonId).apply {
+                text = getString(R.string.support_button_loading)
+                isEnabled = false
+                setOnClickListener { launchSupportPurchase(productId) }
+            }
+        }
         findViewById<TextView>(R.id.github_links_text).apply {
             movementMethod = LinkMovementMethod.getInstance()
             text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
         }
-        findViewById<TextView>(R.id.sponsor_github_link).apply {
-            movementMethod = LinkMovementMethod.getInstance()
-            text = Html.fromHtml(getString(R.string.sponsor_github_link), Html.FROM_HTML_MODE_COMPACT)
+        initializeBilling()
+    }
+
+    private fun initializeBilling() {
+        if (billingClient?.isReady == true) {
+            querySupportProductDetails()
+            queryExistingSupportPurchases()
+            return
         }
-        findViewById<TextView>(R.id.buy_me_a_coffee_link).apply {
-            movementMethod = LinkMovementMethod.getInstance()
-            text = Html.fromHtml(getString(R.string.buy_me_a_coffee_link), Html.FROM_HTML_MODE_COMPACT)
+        if (billingClient == null) {
+            billingClient = BillingClient.newBuilder(this)
+                .setListener(this)
+                .enablePendingPurchases(
+                    PendingPurchasesParams.newBuilder()
+                        .enableOneTimeProducts()
+                        .build()
+                )
+                .enableAutoServiceReconnection()
+                .build()
+        }
+        setSupportButtonsLoading()
+        billingClient?.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(billingResult: BillingResult) {
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    querySupportProductDetails()
+                    queryExistingSupportPurchases()
+                } else {
+                    handleBillingError(billingResult, showToast = false)
+                }
+            }
+
+            override fun onBillingServiceDisconnected() {
+                setSupportButtonsUnavailable(getString(R.string.support_billing_unavailable))
+            }
+        })
+    }
+
+    private fun querySupportProductDetails() {
+        val billing = billingClient ?: return
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(
+                supportProducts.keys.map { productId ->
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(productId)
+                        .setProductType(BillingClient.ProductType.INAPP)
+                        .build()
+                }
+            )
+            .build()
+        billing.queryProductDetailsAsync(params) { billingResult, queryResult ->
+            if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
+                handleBillingError(billingResult, showToast = false)
+                return@queryProductDetailsAsync
+            }
+            runOnUiThread {
+                supportProductDetails.clear()
+                queryResult.productDetailsList.forEach { details ->
+                    supportProductDetails[details.productId] = details
+                }
+                updateSupportButtons()
+            }
+        }
+    }
+
+    private fun updateSupportButtons() {
+        supportProducts.forEach { (productId, buttonId) ->
+            val button = findViewById<Button>(buttonId)
+            val offer = supportProductDetails[productId]?.oneTimePurchaseOfferDetailsList?.firstOrNull()
+            if (offer != null) {
+                button.text = getString(R.string.support_button_buy, offer.formattedPrice)
+                button.isEnabled = true
+                button.alpha = 1f
+            } else {
+                button.text = getString(R.string.support_button_unavailable)
+                button.isEnabled = false
+                button.alpha = 0.6f
+            }
+        }
+    }
+
+    private fun setSupportButtonsLoading() {
+        supportProducts.values.forEach { buttonId ->
+            findViewById<Button>(buttonId).apply {
+                text = getString(R.string.support_button_loading)
+                isEnabled = false
+                alpha = 0.7f
+            }
+        }
+    }
+
+    private fun setSupportButtonsUnavailable(label: String) {
+        supportProducts.values.forEach { buttonId ->
+            findViewById<Button>(buttonId).apply {
+                text = label
+                isEnabled = false
+                alpha = 0.6f
+            }
+        }
+    }
+
+    private fun launchSupportPurchase(productId: String) {
+        val billing = billingClient
+        if (billing == null || !billing.isReady) {
+            initializeBilling()
+            Toast.makeText(this, getString(R.string.support_billing_unavailable), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val details = supportProductDetails[productId]
+        val offer = details?.oneTimePurchaseOfferDetailsList?.firstOrNull()
+        val offerToken = offer?.offerToken
+        if (details == null || offer == null || offerToken.isNullOrBlank()) {
+            Toast.makeText(this, getString(R.string.support_option_not_ready), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(details)
+            .setOfferToken(offerToken)
+            .build()
+        val billingResult = billing.launchBillingFlow(
+            this,
+            BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(listOf(productDetailsParams))
+                .build()
+        )
+        if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
+            handleBillingError(billingResult)
+        }
+    }
+
+    override fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
+        when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.OK -> purchases.orEmpty().forEach { handlePurchase(it, true) }
+            BillingClient.BillingResponseCode.USER_CANCELED -> {
+                Toast.makeText(this, getString(R.string.support_purchase_canceled), Toast.LENGTH_SHORT).show()
+            }
+            else -> handleBillingError(billingResult)
+        }
+    }
+
+    private fun queryExistingSupportPurchases() {
+        val billing = billingClient ?: return
+        billing.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        ) { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                purchases
+                    .filter { purchase -> purchase.products.any(supportProducts::containsKey) }
+                    .forEach { purchase -> handlePurchase(purchase, false) }
+            }
+        }
+    }
+
+    private fun handlePurchase(purchase: Purchase, notifyUser: Boolean) {
+        when (purchase.purchaseState) {
+            Purchase.PurchaseState.PURCHASED -> {
+                billingClient?.consumeAsync(
+                    ConsumeParams.newBuilder()
+                        .setPurchaseToken(purchase.purchaseToken)
+                        .build()
+                ) { result, _ ->
+                    if (result.responseCode == BillingClient.BillingResponseCode.OK && notifyUser) {
+                        runOnUiThread { showSupportThankYouDialog() }
+                    } else if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                        handleBillingError(result, showToast = notifyUser)
+                    }
+                }
+            }
+            Purchase.PurchaseState.PENDING -> {
+                if (notifyUser) {
+                    Toast.makeText(this, getString(R.string.support_purchase_pending), Toast.LENGTH_SHORT).show()
+                }
+                updatePendingSupportButtons(purchase)
+            }
+            else -> Unit
+        }
+    }
+
+    private fun showSupportThankYouDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_support_thank_you, null)
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setView(dialogView)
+            .setPositiveButton(getString(R.string.support_thank_you_close), null)
+            .show()
+    }
+
+    private fun updatePendingSupportButtons(purchase: Purchase) {
+        purchase.products.forEach { productId ->
+            val buttonId = supportProducts[productId] ?: return@forEach
+            findViewById<Button>(buttonId).apply {
+                text = getString(R.string.support_button_pending)
+                isEnabled = false
+                alpha = 0.7f
+            }
+        }
+    }
+
+    private fun handleBillingError(billingResult: BillingResult, showToast: Boolean = true) {
+        val messageRes = when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> R.string.support_billing_unavailable
+            BillingClient.BillingResponseCode.NETWORK_ERROR,
+            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE,
+            BillingClient.BillingResponseCode.SERVICE_DISCONNECTED -> R.string.support_network_error
+            BillingClient.BillingResponseCode.USER_CANCELED -> R.string.support_purchase_canceled
+            else -> R.string.support_purchase_failed
+        }
+        runOnUiThread {
+            if (messageRes == R.string.support_billing_unavailable || messageRes == R.string.support_network_error) {
+                setSupportButtonsUnavailable(getString(R.string.support_button_unavailable))
+            }
+            if (showToast) {
+                Toast.makeText(this, getString(messageRes), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
