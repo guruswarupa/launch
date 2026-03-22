@@ -1,12 +1,12 @@
 package com.guruswarupa.launch.managers
 
 import android.content.Context
-import android.content.pm.ResolveInfo
 import android.content.pm.ActivityInfo
+import android.content.pm.ResolveInfo
 import android.os.Process
 import android.os.UserManager
-import android.util.Log
 import com.guruswarupa.launch.core.CacheManager
+import java.util.Locale
 
 class AppListManager(
     private val context: Context,
@@ -17,10 +17,6 @@ class AppListManager(
     private val workspaceManager: WorkspaceManager,
     private val workProfileManager: WorkProfileManager
 ) {
-    companion object {
-        private const val TAG = "AppListManager"
-    }
-
     private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
     private val mainUserSerial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
 
@@ -69,43 +65,21 @@ class AppListManager(
     }
     
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
-        val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         val favorites = favoriteAppManager.getFavoriteApps()
         val focusMode = appDockManager.getCurrentMode()
         val workspaceMode = appDockManager.isWorkspaceModeActive()
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
-        
         val showFavoritesAtTop = !focusMode && !workspaceMode && !isWorkProfileEnabled
-        
-        val favoriteApps = if (showFavoritesAtTop) {
-            apps.filter { app ->
-                favorites.contains(app.activityInfo.packageName)
-            }
-        } else {
-            emptyList()
-        }
-        
-        val sortedFavorites = favoriteApps.sortedWith(compareBy { app ->
-            val cacheKey = "${app.activityInfo.packageName}|${app.preferredOrder}"
-            val label = metadataCache[cacheKey]?.label?.lowercase() 
-                ?: app.activityInfo.packageName.lowercase()
-            getSortKey(label)
-        })
-        
-        val sortedAllApps = apps.sortedWith(compareBy<ResolveInfo> { app ->
-            val packageName = app.activityInfo.packageName
-            val activityName = app.activityInfo.name
-            val isInternal = packageName == "com.guruswarupa.launch" && 
-                           (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
-            
-            if (isInternal) 1 else 0
-        }.thenBy { app ->
-            val cacheKey = "${app.activityInfo.packageName}|${app.preferredOrder}"
-            val label = metadataCache[cacheKey]?.label?.lowercase() 
-                ?: app.activityInfo.packageName.lowercase()
-            getSortKey(label)
-        })
-        
+        val comparator = compareBy<ResolveInfo>(
+            { if (isInternalApp(it)) 1 else 0 },
+            { getSortKey(getDisplayLabel(it).lowercase(Locale.ROOT)) },
+            { it.activityInfo.packageName },
+            { it.activityInfo.name }
+        )
+
+        val favoriteApps = if (showFavoritesAtTop) apps.filter { favorites.contains(it.activityInfo.packageName) } else emptyList()
+        val sortedFavorites = favoriteApps.sortedWith(comparator)
+        val sortedAllApps = apps.sortedWith(comparator)
         return sortedFavorites + sortedAllApps
     }
 
@@ -123,7 +97,6 @@ class AppListManager(
         if (apps.isEmpty()) return apps
         
         val favorites = favoriteAppManager.getFavoriteApps()
-        val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         val result = mutableListOf<ResolveInfo>()
         val focusMode = appDockManager.getCurrentMode()
         val workspaceMode = appDockManager.isWorkspaceModeActive()
@@ -148,10 +121,8 @@ class AppListManager(
         
         for (app in apps) {
             val packageName = app.activityInfo.packageName
-            val activityName = app.activityInfo.name
             val isFavorite = favorites.contains(packageName)
-            val isInternal = packageName == "com.guruswarupa.launch" && 
-                           (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
+            val isInternal = isInternalApp(app)
             
             if (hasFavorites && isFavorite && !processedFirstFavoriteSection) {
                 result.add(createSeparatorInfo("favorites_separator"))
@@ -166,8 +137,7 @@ class AppListManager(
             }
             
             if (!isFavorite && !isInternal) {
-                val cacheKey = "${packageName}|${app.preferredOrder}"
-                val label = metadataCache[cacheKey]?.label ?: packageName
+                val label = getDisplayLabel(app)
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
                 
@@ -176,8 +146,7 @@ class AppListManager(
                 }
                 lastLetter = effectiveLetter
             } else if (isFavorite && (isAfterFavorites || !showFavoritesSection)) {
-                val cacheKey = "${packageName}|${app.preferredOrder}"
-                val label = metadataCache[cacheKey]?.label ?: packageName
+                val label = getDisplayLabel(app)
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
                 
@@ -232,4 +201,30 @@ class AppListManager(
     
     fun getFocusMode(): Boolean = appDockManager.getCurrentMode()
     fun getWorkspaceMode(): Boolean = appDockManager.isWorkspaceModeActive()
+
+    private fun isInternalApp(app: ResolveInfo): Boolean {
+        val packageName = app.activityInfo.packageName
+        val activityName = app.activityInfo.name
+        return packageName == "com.guruswarupa.launch" &&
+            (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
+    }
+
+    private fun getDisplayLabel(app: ResolveInfo): String {
+        val packageName = app.activityInfo.packageName
+        if (WebAppManager.isWebAppPackage(packageName)) {
+            return app.activityInfo.name.ifBlank { packageName }
+        }
+
+        val cacheKey = "${packageName}|${app.preferredOrder}"
+        val cachedLabel = cacheManager?.getMetadataCache()?.get(cacheKey)?.label
+        if (!cachedLabel.isNullOrBlank()) {
+            return cachedLabel
+        }
+
+        val activityName = app.activityInfo.name
+        return when {
+            activityName.isNotBlank() && packageName.startsWith("launcher_") -> activityName
+            else -> packageName
+        }
+    }
 }

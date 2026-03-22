@@ -41,6 +41,10 @@ class AppListLoader(
     private var cachedUnsortedList: List<ResolveInfo>? = null
     private var lastCacheTime = 0L
     private val cacheDuration = 300000L 
+    private val currentUserSerial by lazy {
+        val userManager = activity.getSystemService(Context.USER_SERVICE) as UserManager
+        userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
+    }
     
     var onAppListUpdated: ((List<ResolveInfo>, List<ResolveInfo>, Boolean) -> Unit)? = null
     var onAdapterNeedsUpdate: ((Boolean) -> Unit)? = null
@@ -196,7 +200,7 @@ class AppListLoader(
                     list
                 }
                 
-                val fullList = appendWebApps(unsortedList).distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}|${it.preferredOrder}" }
+                val fullList = appendWebApps(unsortedList)
 
                 if (fullList.isEmpty()) {
                     handler.post {
@@ -289,19 +293,22 @@ class AppListLoader(
         val webApps = webAppManager.getWebApps()
         if (webApps.isEmpty()) return installedApps
 
-        val fullList = ArrayList(installedApps)
-        val existingPackageNames = installedApps.map { "${it.activityInfo.packageName}|${it.activityInfo.name}|${it.preferredOrder}" }.toSet()
+        val fullList = ArrayList<ResolveInfo>(installedApps.size + webApps.size)
+        val seenKeys = HashSet<String>(installedApps.size + webApps.size)
+        installedApps.forEach { app ->
+            val key = buildAppKey(app)
+            if (seenKeys.add(key)) {
+                fullList.add(app)
+            }
+        }
         val now = System.currentTimeMillis()
         webApps.forEach { entry ->
             val resolveInfo = webAppManager.createResolveInfo(entry)
-            // Use current user serial for web apps
-            val userManager = activity.getSystemService(Context.USER_SERVICE) as UserManager
-            val serial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
-            resolveInfo.preferredOrder = serial
+            resolveInfo.preferredOrder = currentUserSerial
             
-            val uniqueKey = "${resolveInfo.activityInfo.packageName}|${resolveInfo.activityInfo.name}|$serial"
+            val uniqueKey = buildAppKey(resolveInfo)
             
-            if (uniqueKey !in existingPackageNames) {
+            if (seenKeys.add(uniqueKey)) {
                 cacheManager?.updateMetadataCache(
                     uniqueKey,
                     AppMetadata(
@@ -315,5 +322,9 @@ class AppListLoader(
             }
         }
         return fullList
+    }
+
+    private fun buildAppKey(resolveInfo: ResolveInfo): String {
+        return "${resolveInfo.activityInfo.packageName}|${resolveInfo.activityInfo.name}|${resolveInfo.preferredOrder}"
     }
 }
