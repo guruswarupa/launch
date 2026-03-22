@@ -3,24 +3,16 @@ package com.guruswarupa.launch.managers
 import android.annotation.SuppressLint
 import android.util.Log
 import android.view.View
-import android.widget.EditText
-import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.AppAdapter
 import java.util.concurrent.Executor
-
-
-
-
 
 class FocusModeApplier(
     private val activity: FragmentActivity,
     private val backgroundExecutor: Executor,
     private val appListManager: AppListManager,
     private val appDockManager: AppDockManager,
-    private val searchBox: EditText,
-    private val voiceSearchButton: ImageButton,
     private val searchContainer: LinearLayout,
     private var adapter: AppAdapter?,
     private val fullAppList: MutableList<android.content.pm.ResolveInfo>,
@@ -29,8 +21,6 @@ class FocusModeApplier(
     private val onUpdateFastScrollerVisibility: () -> Unit
 ) {
     
-
-
     private fun safeExecute(task: Runnable): Boolean {
         if (activity.isFinishing || activity.isDestroyed) {
             return false
@@ -48,50 +38,28 @@ class FocusModeApplier(
         this.adapter = adapter
     }
 
-    
-
-
     fun applyFocusMode(isFocusMode: Boolean) {
-        
         if (activity.isFinishing || activity.isDestroyed) {
             return
         }
 
-        
         safeExecute {
             try {
                 val workspaceMode = appListManager.getWorkspaceMode()
-                val filteredOrSortedApps = if (isFocusMode) {
-                    
-                    appListManager.filterAppsByMode(fullAppList, true, workspaceMode)
-                } else {
-                    
-                    appListManager.filterAppsByMode(fullAppList, false, workspaceMode)
-                }
-
-                val finalFilteredApps = appListManager.applyFavoritesFilter(filteredOrSortedApps)
+                val finalFilteredApps = appListManager.filterAndPrepareApps(fullAppList, isFocusMode, workspaceMode)
                 val sortedFinalList = appListManager.sortAppsAlphabetically(finalFilteredApps)
-                
-                
                 val listWithSeparators = appListManager.addSeparators(sortedFinalList)
 
-                
                 activity.runOnUiThread {
                     if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread
 
-                    
                     appList.clear()
                     appList.addAll(listWithSeparators)
 
                     searchContainer.visibility = View.VISIBLE
-
-                    
                     appDockManager.lockDrawerForFocusMode(isFocusMode)
-
-                    
                     adapter?.updateAppList(listWithSeparators)
 
-                    
                     if (!activity.isFinishing) {
                         onUpdateAppSearchManager()
                         onUpdateFastScrollerVisibility()
@@ -107,9 +75,5 @@ class FocusModeApplier(
                 }
             }
         }
-    }
-    
-    private val sharedPreferences by lazy {
-        activity.getSharedPreferences("com.guruswarupa.launch.PREFS", android.content.Context.MODE_PRIVATE)
     }
 }

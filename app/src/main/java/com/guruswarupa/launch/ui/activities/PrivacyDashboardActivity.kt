@@ -76,6 +76,13 @@ class PrivacyDashboardActivity : ComponentActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = PrivacyDashboardAdapter(emptyList())
         recyclerView.adapter = adapter
+        
+        // Improve accessibility and prevent crashes during view updates
+        recyclerView.setHasFixedSize(true)
+        recyclerView.itemAnimator?.apply {
+            addDuration = 0
+            moveDuration = 0
+        }
 
         searchBox = findViewById(R.id.search_box)
         searchBox.addTextChangedListener(object : TextWatcher {

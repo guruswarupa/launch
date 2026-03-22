@@ -12,10 +12,6 @@ import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.MainActivity
 import java.util.concurrent.Executor
 
-
-
-
-
 class AppListUIUpdater(
     private val activity: MainActivity,
     private val recyclerView: RecyclerView,
@@ -33,12 +29,8 @@ class AppListUIUpdater(
         this.adapter = adapter
     }
 
-    
-
-
     fun setupCallbacks() {
         appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
-            
             val listWithSeparators = appListManager.addSeparators(sortedList)
             updateAppListUI(listWithSeparators, filteredList, isFinal)
         }
@@ -76,9 +68,6 @@ class AppListUIUpdater(
         }
     }
 
-    
-
-
     fun updateAppListUI(
         newAppList: List<ResolveInfo>,
         newFullAppList: List<ResolveInfo>,
@@ -86,8 +75,6 @@ class AppListUIUpdater(
     ) {
         if (activity.isFinishing || activity.isDestroyed) return
         
-        
-        // Deduplicate full app list to prevent duplicates
         val deduplicatedFullAppList = newFullAppList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
         
         if (deduplicatedFullAppList !== fullAppList) {
@@ -95,21 +82,15 @@ class AppListUIUpdater(
             fullAppList.addAll(deduplicatedFullAppList)
         }
         
-        
         adapter?.updateAppList(newAppList)
-        
         recyclerView.visibility = View.VISIBLE
         
         if (isFinal) {
             activity.updateFastScrollerVisibility()
         }
         
-        
         activity.updateAppSearchManager(newFullAppList, newAppList)
     }
-
-    
-
 
     fun filterAppsWithoutReload() {
         if (fullAppList.isEmpty()) {
@@ -126,8 +107,6 @@ class AppListUIUpdater(
                     val currentFullList = ArrayList(fullAppList)
                     val filteredApps = appListManager.filterAndPrepareApps(currentFullList, focusMode, workspaceMode)
                     val sortedFinalList = appListManager.sortAppsAlphabetically(filteredApps)
-                    
-                    
                     val listWithSeparators = appListManager.addSeparators(sortedFinalList)
                     
                     activity.runOnUiThread {
@@ -145,10 +124,10 @@ class AppListUIUpdater(
     }
 
     fun refreshAppsForFocusMode() {
-        appListLoader.loadApps(forceRefresh = false, fullAppList, appList, adapter)
+        appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
     }
     
     fun refreshAppsForWorkspace() {
-        appListLoader.loadApps(forceRefresh = false, fullAppList, appList, adapter)
+        appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
     }
 }

@@ -13,6 +13,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 data class AppPrivacyInfo(
@@ -28,6 +29,16 @@ data class AppPrivacyInfo(
 class PrivacyDashboardAdapter(
     private var apps: List<AppPrivacyInfo>
 ) : RecyclerView.Adapter<PrivacyDashboardAdapter.ViewHolder>() {
+
+    private val previousApps = mutableMapOf<String, AppPrivacyInfo>()
+    
+    init {
+        setHasStableIds(true)
+    }
+    
+    override fun getItemId(position: Int): Long {
+        return apps[position].packageName.hashCode().toLong()
+    }
 
     @SuppressLint("InlinedApi")
     private val permissionLabels = mapOf(
@@ -157,7 +168,45 @@ class PrivacyDashboardAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     fun updateData(newApps: List<AppPrivacyInfo>) {
-        apps = newApps
-        notifyDataSetChanged()
+        // Preserve expanded state from previous data
+        val newAppsWithState = newApps.map { newApp ->
+            previousApps[newApp.packageName]?.let { oldApp ->
+                newApp.copy(isExpanded = oldApp.isExpanded)
+            } ?: newApp
+        }
+        
+        val diffResult = DiffUtil.calculateDiff(AppPrivacyDiffCallback(apps, newAppsWithState))
+        
+        apps = newAppsWithState
+        
+        // Update cache
+        previousApps.clear()
+        newAppsWithState.forEach { previousApps[it.packageName] = it }
+        
+        // Dispatch diff results - this is safer for accessibility than notifyDataSetChanged
+        diffResult.dispatchUpdatesTo(this)
+    }
+}
+
+private class AppPrivacyDiffCallback(
+    private val oldList: List<AppPrivacyInfo>,
+    private val newList: List<AppPrivacyInfo>
+) : DiffUtil.Callback() {
+    override fun getOldListSize(): Int = oldList.size
+    override fun getNewListSize(): Int = newList.size
+
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition].packageName == newList[newItemPosition].packageName
+    }
+
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        val oldApp = oldList[oldItemPosition]
+        val newApp = newList[newItemPosition]
+        return oldApp.packageName == newApp.packageName &&
+                oldApp.appName == newApp.appName &&
+                oldApp.grantedPermissions == newApp.grantedPermissions &&
+                oldApp.severity == newApp.severity &&
+                oldApp.isSideloaded == newApp.isSideloaded &&
+                oldApp.isExpanded == newApp.isExpanded
     }
 }

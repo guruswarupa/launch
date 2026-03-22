@@ -608,6 +608,12 @@ class MainActivity : FragmentActivity() {
         }
     }
     
+    fun clearAppCacheAndReload() {
+        if (::appListLoader.isInitialized) {
+            appListLoader.loadApps(forceRefresh = true)
+        }
+    }
+    
     fun filterAppsWithoutReload() {
         if (::appListUIUpdater.isInitialized) {
             appListUIUpdater.filterAppsWithoutReload()

@@ -1,33 +1,39 @@
 package com.guruswarupa.launch.managers
 
+import android.content.Context
 import android.content.pm.ResolveInfo
 import android.content.pm.ActivityInfo
+import android.os.Process
+import android.os.UserManager
+import android.util.Log
 import com.guruswarupa.launch.core.CacheManager
 
-
-
-
-
 class AppListManager(
+    private val context: Context,
     private val appDockManager: AppDockManager,
     private val favoriteAppManager: FavoriteAppManager,
     private val hiddenAppManager: HiddenAppManager?,
-    private val cacheManager: CacheManager?
+    private val cacheManager: CacheManager?,
+    private val workspaceManager: WorkspaceManager,
+    private val workProfileManager: WorkProfileManager
 ) {
-    
-    
+    companion object {
+        private const val TAG = "AppListManager"
+    }
 
-
+    private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+    private val mainUserSerial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
 
     fun filterAndPrepareApps(
         apps: List<ResolveInfo>,
         focusMode: Boolean,
         workspaceMode: Boolean
     ): List<ResolveInfo> {
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+        
         return apps.filter { app ->
             val packageName = app.activityInfo.packageName
             val activityName = app.activityInfo.name
-            
             
             val isLauncherApp = packageName == "com.guruswarupa.launch"
             val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") || 
@@ -35,80 +41,40 @@ class AppListManager(
             
             if (isLauncherApp && !isAllowedInternalActivity) return@filter false
             
-            
-            
             if (isAllowedInternalActivity) {
                 return@filter !(focusMode && activityName.contains("SettingsActivity"))
             }
             
-            
             if (hiddenAppManager?.isAppHidden(packageName) == true) return@filter false
-            
             
             if (focusMode && appDockManager.isAppHiddenInFocusMode(packageName)) return@filter false
             
-            
             if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) return@filter false
+            
+            // Work Profile Filtering
+            val isWorkApp = app.preferredOrder != mainUserSerial
+            
+            if (isWorkProfileEnabled) {
+                // When "Work Profile" is toggled ON, ONLY show work profile apps
+                if (!isWorkApp) return@filter false
+            } else {
+                // When "Work Profile" is toggled OFF, ONLY show personal apps
+                if (isWorkApp) return@filter false
+            }
             
             true
         }
     }
     
-    
-
-
-    fun filterAppsByMode(
-        apps: List<ResolveInfo>,
-        focusMode: Boolean,
-        workspaceMode: Boolean
-    ): List<ResolveInfo> {
-        return apps.filter { app ->
-            val packageName = app.activityInfo.packageName
-            val activityName = app.activityInfo.name
-            
-            
-            val isLauncherApp = packageName == "com.guruswarupa.launch"
-            val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") || 
-                                              activityName.contains("EncryptedVaultActivity"))
-            
-            if (isLauncherApp && !isAllowedInternalActivity) return@filter false
-            
-            
-            
-            if (isAllowedInternalActivity) {
-                return@filter !(focusMode && activityName.contains("SettingsActivity"))
-            }
-            
-            
-            !(hiddenAppManager?.isAppHidden(packageName) ?: false) &&
-            (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
-            (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
-        }
-    }
-    
-    
-
-
-    fun applyFavoritesFilter(
-        apps: List<ResolveInfo>
-    ): List<ResolveInfo> {
-        return apps
-    }
-    
-    
-
-
-
-
-
-
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
         val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         val favorites = favoriteAppManager.getFavoriteApps()
         val focusMode = appDockManager.getCurrentMode()
         val workspaceMode = appDockManager.isWorkspaceModeActive()
-        val showFavoritesAtTop = !focusMode && !workspaceMode
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
         
+        // Show favorites at top only in normal personal mode
+        val showFavoritesAtTop = !focusMode && !workspaceMode && !isWorkProfileEnabled
         
         val favoriteApps = if (showFavoritesAtTop) {
             apps.filter { app ->
@@ -118,13 +84,11 @@ class AppListManager(
             emptyList()
         }
         
-        
         val sortedFavorites = favoriteApps.sortedWith(compareBy { app ->
             val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
                 ?: app.activityInfo.packageName.lowercase()
             getSortKey(label)
         })
-        
         
         val sortedAllApps = apps.sortedWith(compareBy<ResolveInfo> { app ->
             val packageName = app.activityInfo.packageName
@@ -132,21 +96,15 @@ class AppListManager(
             val isInternal = packageName == "com.guruswarupa.launch" && 
                            (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
             
-            
             if (isInternal) 1 else 0
         }.thenBy { app ->
-            
             val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
                 ?: app.activityInfo.packageName.lowercase()
             getSortKey(label)
         })
         
-        
         return sortedFavorites + sortedAllApps
     }
-
-    
-
 
     fun getSortKey(label: String): String {
         if (label.isEmpty()) return label
@@ -158,13 +116,6 @@ class AppListManager(
         }
     }
 
-    
-
-
-
-
-
-
     fun addSeparators(apps: List<ResolveInfo>): List<ResolveInfo> {
         if (apps.isEmpty()) return apps
         
@@ -173,8 +124,9 @@ class AppListManager(
         val result = mutableListOf<ResolveInfo>()
         val focusMode = appDockManager.getCurrentMode()
         val workspaceMode = appDockManager.isWorkspaceModeActive()
-        val showFavoritesSection = !focusMode && !workspaceMode
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
         
+        val showFavoritesSection = !focusMode && !workspaceMode && !isWorkProfileEnabled
         
         var hasFavorites = false
         if (showFavoritesSection) {
@@ -198,23 +150,17 @@ class AppListManager(
             val isInternal = packageName == "com.guruswarupa.launch" && 
                            (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
             
-            
             if (hasFavorites && isFavorite && !processedFirstFavoriteSection) {
                 result.add(createSeparatorInfo("favorites_separator"))
                 processedFirstFavoriteSection = true
             }
             
-            
             if (hasFavorites && !isFavorite && !isAfterFavorites && processedFirstFavoriteSection && !addedFavoritesEndSeparator) {
-                
                 result.add(createSeparatorInfo("favorites_end_separator"))
                 addedFavoritesEndSeparator = true
-                
                 lastLetter = null
                 isAfterFavorites = true
             }
-            
-            
             
             if (!isFavorite && !isInternal) {
                 val label = metadataCache[packageName]?.label ?: packageName
@@ -226,8 +172,6 @@ class AppListManager(
                 }
                 lastLetter = effectiveLetter
             } else if (isFavorite && (isAfterFavorites || !showFavoritesSection)) {
-                
-                
                 val label = metadataCache[packageName]?.label ?: packageName
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
@@ -237,8 +181,6 @@ class AppListManager(
                 }
                 lastLetter = effectiveLetter
             } else if (isInternal && lastLetter != null) {
-                
-                
                 if (lastLetter != '⚙') {
                     result.add(createSeparatorInfo("letter_separator_SYSTEM"))
                     lastLetter = '⚙'
@@ -248,11 +190,9 @@ class AppListManager(
             result.add(app)
         }
         
-        
         if (result.isNotEmpty()) {
             result.add(createSeparatorInfo("bottom_system_separator"))
         }
-        
         
         result.add(createLauncherShortcut("launcher_settings_shortcut"))
         result.add(createLauncherShortcut("launcher_vault_shortcut"))
@@ -285,13 +225,6 @@ class AppListManager(
         return ri
     }
     
-    
-
-
     fun getFocusMode(): Boolean = appDockManager.getCurrentMode()
-    
-    
-
-
     fun getWorkspaceMode(): Boolean = appDockManager.isWorkspaceModeActive()
 }

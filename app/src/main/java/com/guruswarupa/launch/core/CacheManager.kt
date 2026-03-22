@@ -2,10 +2,12 @@ package com.guruswarupa.launch.core
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.os.Handler
 import android.os.Looper
+import android.os.UserManager
 import com.guruswarupa.launch.models.AppMetadata
 import java.io.File
 import java.io.FileInputStream
@@ -13,11 +15,8 @@ import java.io.FileOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 
-
-
-
 class CacheManager(
-    context: Context,
+    private val context: Context,
     private val packageManager: PackageManager,
     private val backgroundExecutor: java.util.concurrent.ExecutorService
 ) {
@@ -36,10 +35,6 @@ class CacheManager(
     private var metadataLoaded = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    
-
-
-
     fun getAppListVersion(): String {
         return try {
             val packages = packageManager.getInstalledPackages(0)
@@ -56,10 +51,6 @@ class CacheManager(
         }
     }
 
-
-    
-
-
     fun isVersionCurrent(): Boolean {
         val currentVersion = getAppListVersion()
         val cachedVersion = try {
@@ -71,10 +62,6 @@ class CacheManager(
         }
         return currentVersion == cachedVersion
     }
-
-
-    
-
 
     fun isCacheValid(): Boolean {
         if (!appListCacheFile.exists()) return false
@@ -89,9 +76,6 @@ class CacheManager(
         return cacheAge < CACHE_DURATION
     }
 
-    
-
-
     fun loadAppListFromCache(): List<ResolveInfo> {
         return try {
             if (!appListCacheFile.exists()) return emptyList()
@@ -99,24 +83,55 @@ class CacheManager(
             val cacheData = appListCacheFile.readText().lines().filter { it.isNotBlank() }
             if (cacheData.isEmpty()) return emptyList()
 
+            // To support multiple profiles, we MUST query from LauncherApps
+            val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
             
-            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
+            val allAppsMap = mutableMapOf<String, ResolveInfo>()
+            
+            for (user in launcherApps.profiles) {
+                val serial = userManager.getSerialNumberForUser(user).toInt()
+                val apps = launcherApps.getActivityList(null, user)
+                for (app in apps) {
+                    val resolveInfo = ResolveInfo()
+                    resolveInfo.activityInfo = android.content.pm.ActivityInfo().apply {
+                        packageName = app.componentName.packageName
+                        name = app.componentName.className
+                        applicationInfo = app.applicationInfo
+                    }
+                    resolveInfo.preferredOrder = serial
+                    
+                    val key = "${resolveInfo.activityInfo.packageName}|${resolveInfo.activityInfo.name}|$serial"
+                    allAppsMap[key] = resolveInfo
+                }
             }
-            val allApps = packageManager.queryIntentActivities(mainIntent, 0)
-            
-            
-            val appMap = allApps.associateBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
 
             val apps = mutableListOf<ResolveInfo>()
             for (line in cacheData) {
-                appMap[line]?.let { apps.add(it) }
+                // Compatibility: handle old cache format without serial
+                val key = if (line.count { it == '|' } == 1) {
+                    // Try to find in any profile, preferring main user if ambiguous
+                    var found: ResolveInfo? = null
+                    val mainUserSerial = userManager.getSerialNumberForUser(android.os.Process.myUserHandle()).toInt()
+                    
+                    // First check main user
+                    found = allAppsMap["$line|$mainUserSerial"]
+                    
+                    // If not found, search all profiles
+                    if (found == null) {
+                        found = allAppsMap.values.find { "${it.activityInfo.packageName}|${it.activityInfo.name}" == line }
+                    }
+                    
+                    if (found != null) {
+                        "${found.activityInfo.packageName}|${found.activityInfo.name}|${found.preferredOrder}"
+                    } else line
+                } else line
+                
+                allAppsMap[key]?.let { apps.add(it) }
             }
 
-            
-            
-            if (apps.isEmpty() && allApps.isNotEmpty()) {
-                return allApps
+            if (apps.isEmpty() && allAppsMap.isNotEmpty()) {
+                return allAppsMap.values.toList()
             }
 
             apps
@@ -125,19 +140,15 @@ class CacheManager(
         }
     }
 
-    
-
-
     fun saveAppListToCache(apps: List<ResolveInfo>) {
         backgroundExecutor.execute {
             try {
                 val cacheData = apps.map {
-                    "${it.activityInfo.packageName}|${it.activityInfo.name}"
+                    "${it.activityInfo.packageName}|${it.activityInfo.name}|${it.preferredOrder}"
                 }
                 appListCacheFile.writeText(cacheData.joinToString("\n"))
                 appListCacheTimeFile.writeText(System.currentTimeMillis().toString())
 
-                
                 val version = getAppListVersion()
                 appListVersionFile.writeText(version)
                 cachedAppListVersion = version
@@ -145,9 +156,6 @@ class CacheManager(
             }
         }
     }
-
-    
-
 
     @Suppress("UNCHECKED_CAST")
     fun loadAppMetadataFromCache(): Map<String, AppMetadata> {
@@ -171,10 +179,6 @@ class CacheManager(
         }
     }
 
-    
-
-
-
     fun loadAppMetadataFromCacheAsync(onLoaded: (() -> Unit)? = null) {
         if (metadataLoaded) {
             onLoaded?.invoke()
@@ -188,9 +192,6 @@ class CacheManager(
         }
     }
 
-    
-
-
     fun saveAppMetadataToCache(metadata: Map<String, AppMetadata>) {
         backgroundExecutor.execute {
             try {
@@ -203,9 +204,6 @@ class CacheManager(
             }
         }
     }
-
-    
-
 
     fun preloadAppMetadata(apps: List<ResolveInfo>) {
         backgroundExecutor.execute {
@@ -229,7 +227,6 @@ class CacheManager(
                             )
                         }
                     } catch (_: Exception) {
-                        
                     }
                 }
                 
@@ -240,9 +237,6 @@ class CacheManager(
         }
     }
     
-    
-
-
     fun clearCache() {
         try {
             if (appListCacheFile.exists()) appListCacheFile.delete()
@@ -255,21 +249,12 @@ class CacheManager(
         }
     }
     
-    
-
-
     fun getMetadataCache(): Map<String, AppMetadata> = appMetadataCache
     
-    
-
-
     fun updateMetadataCache(packageName: String, metadata: AppMetadata) {
         appMetadataCache[packageName] = metadata
     }
     
-    
-
-
     fun removeMetadata(packageName: String) {
         appMetadataCache.remove(packageName)
     }

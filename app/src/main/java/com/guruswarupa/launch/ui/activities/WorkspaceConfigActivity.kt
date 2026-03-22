@@ -46,7 +46,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         
         setContentView(R.layout.activity_workspace_config)
         
-        workspaceManager = WorkspaceManager(getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
+        workspaceManager = WorkspaceManager(prefs)
         
         workspaceList = findViewById(R.id.workspace_list)
         createWorkspaceButton = findViewById(R.id.create_workspace_button)
@@ -100,7 +100,11 @@ class WorkspaceConfigActivity : ComponentActivity() {
     
     private fun loadWorkspaces() {
         val workspaces = workspaceManager.getAllWorkspaces()
-        val workspaceNames = workspaces.map { 
+        
+        // Only show user-created workspaces (work profile is now separate)
+        val allWorkspaces = workspaces
+        
+        val workspaceNames = allWorkspaces.map { 
             val appCount = it.appPackageNames.size
             "${it.name} ($appCount apps)"
         }.toTypedArray()

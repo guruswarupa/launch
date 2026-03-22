@@ -71,6 +71,8 @@ class ActivityInitializer(
             fastScroller = activity.findViewById(R.id.fast_scroller)
             fastScroller.setRecyclerView(recyclerView)
             
+            // Improve accessibility and prevent crashes during view updates
+            recyclerView.setHasFixedSize(true)
             
             val displayMetrics = activity.resources.displayMetrics
             val screenHeight = displayMetrics.heightPixels

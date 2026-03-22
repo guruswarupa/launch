@@ -50,6 +50,8 @@
     
     <string name="device_admin_label">Launch Screen Off</string>
     <string name="device_admin_description">Allows the launcher to turn off the screen when double-tapped.</string>
+    <string name="work_profile_admin_label">Launch Work Profile</string>
+    <string name="work_profile_admin_description">Allows the launcher to create and manage work profiles for separating work and personal apps.</string>
     <string name="request_device_admin_title">Enable Screen Off</string>
     <string name="request_device_admin_message">To turn off the screen with a double-tap, Launch needs Device Administrator permission.</string>
     <string name="grant_permission">Grant</string>

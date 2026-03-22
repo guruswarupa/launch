@@ -6,25 +6,29 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.ResolveInfo
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.os.UserManager
+import android.util.Log
 import android.view.GestureDetector
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.ui.activities.FocusModeConfigActivity
-import com.guruswarupa.launch.ui.activities.SettingsActivity
 import com.guruswarupa.launch.ui.activities.WorkspaceConfigActivity
 import com.guruswarupa.launch.ui.activities.EncryptedVaultActivity
+import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 import java.util.Locale
@@ -35,6 +39,10 @@ class AppDockManager(
     private val sharedPreferences: SharedPreferences,
     private val appDock: LinearLayout
 ) {
+    companion object {
+        private const val TAG = "AppDockManager"
+    }
+
     private val context: Context = activity
     private val dockIconSizePx = (20 * context.resources.displayMetrics.density).toInt()
     private val focusModeKey = "focus_mode_enabled"
@@ -45,17 +53,21 @@ class AppDockManager(
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
     private lateinit var workspaceNameText: TextView
+    private lateinit var workProfileToggle: ImageView
+    private lateinit var workProfileNameText: TextView
     private val pomodoroManager: PomodoroManager
     private var isFocusMode: Boolean = false
     private val res = context.resources
     private var timerHandler: android.os.Handler? = null
     private var timerRunnable: Runnable? = null
     private val workspaceManager: WorkspaceManager
+    private val workProfileManager: WorkProfileManager
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     init {
         isFocusMode = sharedPreferences.getBoolean(focusModeKey, false)
         workspaceManager = WorkspaceManager(sharedPreferences)
+        workProfileManager = WorkProfileManager(context, sharedPreferences)
         
         val focusModeManager = FocusModeManager(context, sharedPreferences)
         pomodoroManager = PomodoroManager(context, sharedPreferences, focusModeManager)
@@ -131,6 +143,7 @@ class AppDockManager(
 
     private fun refreshDock() {
         appDock.removeAllViews()
+        ensureWorkProfileToggle()
         ensureWorkspaceToggle()      
         ensureFocusModeToggle()      
         updateDockVisibility()
@@ -143,6 +156,9 @@ class AppDockManager(
         }
         if (::workspaceToggle.isInitialized) {
             updateWorkspaceIcon()
+        }
+        if (::workProfileToggle.isInitialized) {
+            updateWorkProfileIcon()
         }
     }
     
@@ -321,8 +337,250 @@ class AppDockManager(
         }
     }
     
+    @SuppressLint("ClickableViewAccessibility")
+    private fun ensureWorkProfileToggle() {
+        if (appDock.findViewWithTag<View>("work_profile_container") == null) {
+            val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+            val workProfileContainer = createDockItemContainer("work_profile_container")
+
+            workProfileToggle = ImageView(context).apply {
+                tag = "work_profile_toggle"
+                layoutParams = LinearLayout.LayoutParams(dockIconSizePx, dockIconSizePx)
+                isClickable = false
+                isFocusable = false
+            }
+
+            workProfileNameText = TextView(context).apply {
+                tag = "work_profile_name_text"
+                textSize = 13f
+                setTextColor(Color.WHITE)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginStart = 12
+                }
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                text = if (isWorkProfileEnabled) "Work Profile" else "Work"
+                visibility = View.VISIBLE
+                isClickable = false
+                isFocusable = false
+            }
+
+            workProfileContainer.addView(workProfileToggle)
+            workProfileContainer.addView(workProfileNameText)
+            
+            val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDown(e: MotionEvent): Boolean = true
+                override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                    if (e1 == null) return false
+                    val diffY = e2.y - e1.y
+                    val diffX = e2.x - e1.x
+                    if (abs(diffY) > abs(diffX)) {
+                        if (abs(diffY) > 50 && abs(velocityY) > 100) {
+                            if (diffY < 0) {
+                                // Swipe up - enable work profile or activate if already enabled
+                                if (!workProfileManager.isWorkProfileEnabled()) {
+                                    toggleWorkProfile()
+                                } else {
+                                    // Work profile already enabled, just refresh
+                                    updateWorkProfileIcon()
+                                    refreshAppsForWorkspace()
+                                    Toast.makeText(context, "Work Profile active", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                // Swipe down - disable work profile
+                                if (workProfileManager.isWorkProfileEnabled()) {
+                                    toggleWorkProfile()
+                                }
+                            }
+                            return true
+                        }
+                    }
+                    return false
+                }
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    toggleWorkProfile()
+                    return true
+                }
+                override fun onLongPress(e: MotionEvent) {
+                    showWorkProfileManagementDialog()
+                }
+            })
+
+            workProfileContainer.setOnTouchListener { v, event ->
+                if (gestureDetector.onTouchEvent(event)) true else {
+                    if (event.action == MotionEvent.ACTION_UP) v.performClick()
+                    false
+                }
+            }
+            
+            appDock.addView(workProfileContainer, 0)
+            updateWorkProfileIcon()
+        }
+    }
+    
     private fun toggleWorkspace() {
         showWorkspaceSelector()
+    }
+    
+    private fun toggleWorkProfile() {
+        val hasActualWorkProfile = workProfileManager.hasActualWorkProfile()
+        
+        if (workProfileManager.isWorkProfileEnabled()) {
+            workProfileManager.setWorkProfileEnabled(false)
+            updateWorkProfileIcon()
+            activity.refreshAppsForWorkspace()
+            Toast.makeText(context, "Work Profile disabled", Toast.LENGTH_SHORT).show()
+        } else {
+            if (!hasActualWorkProfile) {
+                AlertDialog.Builder(context, R.style.CustomDialogTheme)
+                    .setTitle("Create Work Profile")
+                    .setMessage("No work profile found. Would you like to create one now? This will set up a separate work space on your device.")
+                    .setPositiveButton("Create") { _, _ ->
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                workProfileManager.createWorkProfile(activity)
+                            } else {
+                                Toast.makeText(context, "Work profiles require Android 9.0 or higher", Toast.LENGTH_LONG).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Failed to create work profile: ${e.message}", Toast.LENGTH_LONG).show()
+                            Log.e(TAG, "Failed to create work profile", e)
+                        }
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            } else {
+                workProfileManager.setWorkProfileEnabled(true)
+                updateWorkProfileIcon()
+                activity.refreshAppsForWorkspace()
+                Toast.makeText(context, "Work Profile enabled", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun showWorkProfileSettings() {
+        val intent = Intent(context, WorkspaceConfigActivity::class.java)
+        context.startActivity(intent)
+    }
+    
+    private fun showWorkProfileManagementDialog() {
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+        
+        if (!isWorkProfileEnabled) {
+            AlertDialog.Builder(context, R.style.CustomDialogTheme)
+                .setTitle("Work Profile")
+                .setMessage("Create a work profile to separate your work apps from personal apps. Work profiles keep your data isolated and secure.")
+                .setPositiveButton("Create Work Profile") { _, _ ->
+                    startWorkProfileCreation()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            showManageWorkProfileDialog()
+        }
+    }
+    
+    private fun showManageWorkProfileDialog() {
+        val options = arrayOf("Manage Apps", "Remove Work Profile")
+        
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Work Profile")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showWorkProfileAppPicker()
+                    1 -> showRemoveWorkProfileDialog()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun startWorkProfileCreation() {
+        if (!workProfileManager.isWorkProfileSupported()) {
+            AlertDialog.Builder(context, R.style.CustomDialogTheme)
+                .setTitle("Not Supported")
+                .setMessage("Work profiles are not supported on this device. This feature requires Android 9.0 (Pie) or higher and device support for managed profiles.")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                workProfileManager.createWorkProfile(activity)
+            } else {
+                Toast.makeText(context, "Work profiles require Android 9.0 or higher", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to create work profile: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    private fun showWorkProfileAppPicker() {
+        val mainIntent = Intent(Intent.ACTION_MAIN, null)
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+        val pm = context.packageManager
+        
+        val allApps = pm.queryIntentActivities(mainIntent, 0)
+            .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
+            .sortedWith(compareBy<ResolveInfo> { 
+                val label = it.loadLabel(pm).toString().lowercase()
+                label.removeSuffix(" (work)")
+            }.thenBy { 
+                if (it.loadLabel(pm).toString().endsWith(" (work)")) 1 else 0
+            })
+        
+        val selectedApps = workProfileManager.getWorkProfileApps().toMutableSet()
+
+        val dialogView = activity.layoutInflater.inflate(R.layout.dialog_workspace_app_picker, null)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.app_picker_recycler_view)
+        recyclerView.layoutManager = LinearLayoutManager(context)
+        recyclerView.adapter = WorkspacesAppsAdapter(allApps, selectedApps) { packageName, isChecked ->
+            if (isChecked) {
+                workProfileManager.addAppToWorkProfile(packageName)
+            } else {
+                workProfileManager.removeAppFromWorkProfile(packageName)
+            }
+        }
+
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Select Work Profile Apps")
+            .setView(dialogView)
+            .setPositiveButton("Done", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                updateWorkProfileIcon()
+                if (workProfileManager.isWorkProfileEnabled()) {
+                    refreshAppsForWorkspace()
+                }
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+    
+    private fun showRemoveWorkProfileDialog() {
+        AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Remove Work Profile")
+            .setMessage("Removing the work profile will delete all work profile apps and data. The work profile itself will be removed from the device. This action cannot be undone.\n\nAre you sure you want to remove the work profile?")
+            .setPositiveButton("Remove") { _, _ ->
+                workProfileManager.setWorkProfileEnabled(false)
+                workProfileManager.setWorkProfileApps(emptySet())
+                workspaceManager.setActiveWorkspaceId(null)
+                updateWorkProfileIcon()
+                updateWorkspaceIcon()
+                refreshAppsForWorkspace()
+                Toast.makeText(context, "Work profile removed", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
     
     private fun showWorkspaceSelector() {
@@ -362,6 +620,7 @@ class AppDockManager(
 
     private fun cycleWorkspaces() {
         val workspaces = workspaceManager.getAllWorkspaces()
+        
         if (workspaces.isEmpty()) {
             showWorkspaceSettings()
             return
@@ -369,7 +628,7 @@ class AppDockManager(
         
         val activeId = workspaceManager.getActiveWorkspaceId()
         val currentIndex = workspaces.indexOfFirst { it.id == activeId }
-        val nextIndex = (currentIndex + 1) % workspaces.size
+        val nextIndex = if (currentIndex == -1) 0 else (currentIndex + 1) % workspaces.size
         val selectedWorkspace = workspaces[nextIndex]
         
         workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
@@ -422,6 +681,37 @@ class AppDockManager(
                         cornerRadius = 1000f
                         setColor(Color.parseColor("#80000000")) 
                         setStroke(2, Color.parseColor("#8FBCBB")) 
+                    }
+                    container.background = bg
+                } else {
+                    container.background = getGlassyBackground()
+                }
+            }
+        }
+    }
+    
+    private fun updateWorkProfileIcon() {
+        if (!::workProfileToggle.isInitialized) return
+        
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+        
+        workProfileToggle.setImageResource(
+            when {
+                !isWorkProfileEnabled -> R.drawable.ic_work_inactive
+                else -> R.drawable.ic_work_profile_active
+            }
+        )
+        
+        if (::workProfileNameText.isInitialized) {
+            workProfileNameText.text = if (isWorkProfileEnabled) "Work Profile" else "Work"
+            
+            val container = appDock.findViewWithTag<LinearLayout>("work_profile_container")
+            if (container != null) {
+                if (isWorkProfileEnabled) {
+                    val bg = GradientDrawable().apply {
+                        cornerRadius = 1000f
+                        setColor(Color.parseColor("#80000000")) 
+                        setStroke(2, Color.parseColor("#4CAF50"))
                     }
                     container.background = bg
                 } else {
