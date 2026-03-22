@@ -1,87 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardElevation="0dp"
-    app:cardBackgroundColor="@color/card_background"
-    app:cardCornerRadius="16dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="@color/outlineColor"
-    android:clickable="true"
-    android:focusable="true">
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="?attr/selectableItemBackground">
+
+    <ImageView
+        android:id="@+id/app_icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="App Icon" />
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:padding="12dp">
+        android:layout_weight="1"
+        android:orientation="vertical">
 
-        
-        <ImageView
-            android:id="@+id/app_icon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:contentDescription="App Icon"/>
-
-        
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
-            android:orientation="vertical">
-
-            
-            <TextView
-                android:id="@+id/app_name"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="App Name"
-                android:textSize="15sp"
-                android:textColor="@color/white"
-                android:fontFamily="sans-serif-medium"
-                android:maxLines="1"
-                android:ellipsize="end"/>
-
-            
-            <TextView
-                android:id="@+id/app_limit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="Limit: 1h 30m"
-                android:textSize="12sp"
-                android:textColor="@color/nord8"
-                android:maxLines="1"
-                android:ellipsize="end"/>
-
-            
-            <TextView
-                android:id="@+id/app_usage"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:text="Used: 45m"
-                android:textSize="11sp"
-                android:textColor="@color/white"
-                android:alpha="0.6"
-                android:maxLines="1"
-                android:ellipsize="end"/>
-
-        </LinearLayout>
-
-        
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/timer_switch"
+        <TextView
+            android:id="@+id/app_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            app:thumbTint="@color/nord8"
-            app:trackTint="#30FFFFFF"/>
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="App Name"
+            android:textColor="@color/text"
+            android:textSize="16sp" />
 
+        <TextView
+            android:id="@+id/app_limit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Limit: 1h 30m"
+            android:textColor="@color/nord8"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/app_usage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Used: 45m"
+            android:textColor="#B0B0B0"
+            android:textSize="12sp" />
     </LinearLayout>
 
-</com.google.android.material.card.MaterialCardView>
+    <androidx.appcompat.widget.SwitchCompat
+        android:id="@+id/timer_switch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        app:thumbTint="@color/nord8"
+        app:trackTint="#30FFFFFF" />
+
+</LinearLayout>

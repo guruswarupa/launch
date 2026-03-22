@@ -16,10 +16,12 @@ import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 data class AppPrivacyInfo(
     val packageName: String,
     val appName: String,
-    val icon: Drawable,
+    val icon: Drawable? = null,
     val grantedPermissions: List<String>,
     val severity: Int, 
     val isSideloaded: Boolean = false,
@@ -29,8 +31,12 @@ data class AppPrivacyInfo(
 class PrivacyDashboardAdapter(
     private var apps: List<AppPrivacyInfo>
 ) : RecyclerView.Adapter<PrivacyDashboardAdapter.ViewHolder>() {
+    companion object {
+        private val iconCache = ConcurrentHashMap<String, Drawable>()
+    }
 
     private val previousApps = mutableMapOf<String, AppPrivacyInfo>()
+    private val iconExecutor = Executors.newFixedThreadPool(2)
     
     init {
         setHasStableIds(true)
@@ -96,7 +102,8 @@ class PrivacyDashboardAdapter(
         val app = apps[position]
         val context = holder.itemView.context
         
-        holder.appIcon.setImageDrawable(app.icon)
+        holder.itemView.tag = app.packageName
+        bindIcon(holder, app)
         holder.appName.text = app.appName
         holder.packageName.text = app.packageName
         
@@ -185,6 +192,33 @@ class PrivacyDashboardAdapter(
         
         // Dispatch diff results - this is safer for accessibility than notifyDataSetChanged
         diffResult.dispatchUpdatesTo(this)
+    }
+
+    private fun bindIcon(holder: ViewHolder, app: AppPrivacyInfo) {
+        val cachedIcon = iconCache[app.packageName] ?: app.icon
+        if (cachedIcon != null) {
+            iconCache[app.packageName] = cachedIcon
+            holder.appIcon.setImageDrawable(cachedIcon)
+            return
+        }
+
+        holder.appIcon.setImageResource(android.R.drawable.sym_def_app_icon)
+
+        iconExecutor.execute {
+            val icon = try {
+                holder.itemView.context.packageManager.getApplicationIcon(app.packageName)
+            } catch (_: Exception) {
+                null
+            } ?: return@execute
+
+            iconCache[app.packageName] = icon
+            holder.itemView.post {
+                if (holder.bindingAdapterPosition != RecyclerView.NO_POSITION &&
+                    holder.itemView.tag == app.packageName) {
+                    holder.appIcon.setImageDrawable(icon)
+                }
+            }
+        }
     }
 }
 

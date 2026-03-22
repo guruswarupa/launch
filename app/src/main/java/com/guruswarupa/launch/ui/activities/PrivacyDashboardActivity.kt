@@ -10,12 +10,12 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
@@ -102,6 +102,8 @@ class PrivacyDashboardActivity : ComponentActivity() {
             applyFilters()
         }
 
+        findViewById<ImageButton>(R.id.privacy_dashboard_back_button).setOnClickListener { finish() }
+
         loadApps()
     }
     
@@ -147,11 +149,6 @@ class PrivacyDashboardActivity : ComponentActivity() {
                     } catch (_: Exception) {
                         packageInfo.packageName
                     }
-                    val icon = try {
-                        pm.getApplicationIcon(appInfo)
-                    } catch (_: Exception) {
-                        ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, theme)
-                    } ?: ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, theme)!!
                     
                     val severity = when {
                         granted.any { it in listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_SMS, Manifest.permission.ACCESS_FINE_LOCATION) } -> 2
@@ -176,7 +173,6 @@ class PrivacyDashboardActivity : ComponentActivity() {
                     AppPrivacyInfo(
                         packageName = packageInfo.packageName,
                         appName = appName,
-                        icon = icon,
                         grantedPermissions = granted,
                         severity = severity,
                         isSideloaded = isSideloaded
