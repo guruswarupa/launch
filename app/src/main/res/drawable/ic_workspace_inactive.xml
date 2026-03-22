@@ -10,9 +10,5 @@
     
     <item
         android:drawable="@drawable/ic_workspace_inactive_icon"
-        android:gravity="center"
-        android:left="6dp"
-        android:top="6dp"
-        android:right="6dp"
-        android:bottom="6dp" />
+        android:gravity="center" />
 </layer-list>

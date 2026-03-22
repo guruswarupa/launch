@@ -52,7 +52,6 @@ class AppDockManager(
     private lateinit var focusModeToggle: ImageView
     private lateinit var focusTimerText: TextView
     private lateinit var workspaceToggle: ImageView
-    private lateinit var workspaceNameText: TextView
     private lateinit var workProfileToggle: ImageView
     private lateinit var workProfileNameText: TextView
     private val pomodoroManager: PomodoroManager
@@ -271,7 +270,6 @@ class AppDockManager(
     @SuppressLint("ClickableViewAccessibility")
     private fun ensureWorkspaceToggle() {
         if (appDock.findViewWithTag<View>("workspace_container") == null) {
-            val isWorkspaceActive = workspaceManager.isWorkspaceModeActive()
             val workspaceContainer = createDockItemContainer("workspace_container")
 
             workspaceToggle = ImageView(context).apply {
@@ -281,26 +279,7 @@ class AppDockManager(
                 isFocusable = false
             }
 
-            workspaceNameText = TextView(context).apply {
-                tag = "workspace_name_text"
-                textSize = 13f
-                setTextColor(Color.WHITE)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    marginStart = 12
-                }
-                maxLines = 1
-                ellipsize = android.text.TextUtils.TruncateAt.END
-                text = if (isWorkspaceActive) (workspaceManager.getActiveWorkspace()?.name ?: "") else "Workspace"
-                visibility = View.VISIBLE
-                isClickable = false
-                isFocusable = false
-            }
-
             workspaceContainer.addView(workspaceToggle)
-            workspaceContainer.addView(workspaceNameText)
             
             val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
                 override fun onDown(e: MotionEvent): Boolean = true
@@ -672,23 +651,17 @@ class AppDockManager(
             if (isWorkspaceActive) R.drawable.ic_workspace_active else R.drawable.ic_workspace_inactive
         )
         
-        if (::workspaceNameText.isInitialized) {
-            val activeWorkspace = workspaceManager.getActiveWorkspace()
-            val newName = if (isWorkspaceActive) (activeWorkspace?.name ?: "") else "Workspace"
-            workspaceNameText.text = newName
-
-            val container = appDock.findViewWithTag<LinearLayout>("workspace_container")
-            if (container != null) {
-                if (isWorkspaceActive) {
-                    val bg = GradientDrawable().apply {
-                        cornerRadius = 1000f
-                        setColor(Color.parseColor("#80000000")) 
-                        setStroke(2, Color.parseColor("#8FBCBB")) 
-                    }
-                    container.background = bg
-                } else {
-                    container.background = getGlassyBackground()
+        val container = appDock.findViewWithTag<LinearLayout>("workspace_container")
+        if (container != null) {
+            if (isWorkspaceActive) {
+                val bg = GradientDrawable().apply {
+                    cornerRadius = 1000f
+                    setColor(Color.parseColor("#80000000")) 
+                    setStroke(2, Color.parseColor("#8FBCBB")) 
                 }
+                container.background = bg
+            } else {
+                container.background = getGlassyBackground()
             }
         }
     }

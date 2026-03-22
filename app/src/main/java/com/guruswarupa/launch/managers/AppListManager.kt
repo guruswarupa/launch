@@ -47,23 +47,18 @@ class AppListManager(
             
             if (hiddenAppManager?.isAppHidden(packageName) == true) return@filter false
             
-            // Work Profile Filtering - Strict separation
             val isWorkApp = app.preferredOrder != mainUserSerial
+
+            // Focus Mode takes absolute priority over Workspace and Work Profile toggle
+            if (focusMode) {
+                return@filter if (isWorkApp) true else !appDockManager.isAppHiddenInFocusMode(packageName)
+            }
             
             if (isWorkProfileEnabled) {
-                // When "Work Profile" is toggled ON, ONLY show work profile apps
                 if (!isWorkApp) return@filter false
-                // In Focus Mode, we show ALL work apps (no filtering for work apps)
             } else {
-                // When "Work Profile" is toggled OFF, ONLY show personal apps
                 if (isWorkApp) return@filter false
                 
-                // Focus Mode Logic: Filter personal apps
-                if (focusMode && appDockManager.isAppHiddenInFocusMode(packageName)) {
-                    return@filter false
-                }
-                
-                // Workspace Logic: Filter personal apps
                 if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) {
                     return@filter false
                 }
@@ -80,7 +75,6 @@ class AppListManager(
         val workspaceMode = appDockManager.isWorkspaceModeActive()
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
         
-        // Show favorites at top only in normal personal mode
         val showFavoritesAtTop = !focusMode && !workspaceMode && !isWorkProfileEnabled
         
         val favoriteApps = if (showFavoritesAtTop) {
@@ -92,7 +86,8 @@ class AppListManager(
         }
         
         val sortedFavorites = favoriteApps.sortedWith(compareBy { app ->
-            val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
+            val cacheKey = "${app.activityInfo.packageName}|${app.preferredOrder}"
+            val label = metadataCache[cacheKey]?.label?.lowercase() 
                 ?: app.activityInfo.packageName.lowercase()
             getSortKey(label)
         })
@@ -105,7 +100,8 @@ class AppListManager(
             
             if (isInternal) 1 else 0
         }.thenBy { app ->
-            val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
+            val cacheKey = "${app.activityInfo.packageName}|${app.preferredOrder}"
+            val label = metadataCache[cacheKey]?.label?.lowercase() 
                 ?: app.activityInfo.packageName.lowercase()
             getSortKey(label)
         })
@@ -116,7 +112,7 @@ class AppListManager(
     fun getSortKey(label: String): String {
         if (label.isEmpty()) return label
         val firstChar = label[0]
-        return if (firstChar.isDigit() || firstChar == '#') {
+        return if (!firstChar.isLetter()) {
             "\uFFFF$label"
         } else {
             label
@@ -170,7 +166,8 @@ class AppListManager(
             }
             
             if (!isFavorite && !isInternal) {
-                val label = metadataCache[packageName]?.label ?: packageName
+                val cacheKey = "${packageName}|${app.preferredOrder}"
+                val label = metadataCache[cacheKey]?.label ?: packageName
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
                 
@@ -179,7 +176,8 @@ class AppListManager(
                 }
                 lastLetter = effectiveLetter
             } else if (isFavorite && (isAfterFavorites || !showFavoritesSection)) {
-                val label = metadataCache[packageName]?.label ?: packageName
+                val cacheKey = "${packageName}|${app.preferredOrder}"
+                val label = metadataCache[cacheKey]?.label ?: packageName
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
                 
