@@ -47,19 +47,26 @@ class AppListManager(
             
             if (hiddenAppManager?.isAppHidden(packageName) == true) return@filter false
             
-            if (focusMode && appDockManager.isAppHiddenInFocusMode(packageName)) return@filter false
-            
-            if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) return@filter false
-            
-            // Work Profile Filtering
+            // Work Profile Filtering - Strict separation
             val isWorkApp = app.preferredOrder != mainUserSerial
             
             if (isWorkProfileEnabled) {
                 // When "Work Profile" is toggled ON, ONLY show work profile apps
                 if (!isWorkApp) return@filter false
+                // In Focus Mode, we show ALL work apps (no filtering for work apps)
             } else {
                 // When "Work Profile" is toggled OFF, ONLY show personal apps
                 if (isWorkApp) return@filter false
+                
+                // Focus Mode Logic: Filter personal apps
+                if (focusMode && appDockManager.isAppHiddenInFocusMode(packageName)) {
+                    return@filter false
+                }
+                
+                // Workspace Logic: Filter personal apps
+                if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) {
+                    return@filter false
+                }
             }
             
             true

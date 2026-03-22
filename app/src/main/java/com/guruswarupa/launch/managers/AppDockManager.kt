@@ -220,8 +220,8 @@ class AppDockManager(
                     marginStart = 12
                 }
                 gravity = Gravity.CENTER
-                text = if (isFocusMode) "" else "Focus"
-                visibility = View.VISIBLE
+                text = ""
+                visibility = if (isFocusMode || pomodoroManager.isPomodoroActive()) View.VISIBLE else View.GONE
                 isClickable = false
                 isFocusable = false
             }
@@ -362,8 +362,8 @@ class AppDockManager(
                 }
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
-                text = if (isWorkProfileEnabled) "Work Profile" else "Work"
-                visibility = View.VISIBLE
+                text = ""
+                visibility = View.GONE
                 isClickable = false
                 isFocusable = false
             }
@@ -431,6 +431,7 @@ class AppDockManager(
         if (workProfileManager.isWorkProfileEnabled()) {
             workProfileManager.setWorkProfileEnabled(false)
             updateWorkProfileIcon()
+            updateDockVisibility()
             activity.refreshAppsForWorkspace()
             Toast.makeText(context, "Work Profile disabled", Toast.LENGTH_SHORT).show()
         } else {
@@ -455,6 +456,7 @@ class AppDockManager(
             } else {
                 workProfileManager.setWorkProfileEnabled(true)
                 updateWorkProfileIcon()
+                updateDockVisibility()
                 activity.refreshAppsForWorkspace()
                 Toast.makeText(context, "Work Profile enabled", Toast.LENGTH_SHORT).show()
             }
@@ -576,6 +578,7 @@ class AppDockManager(
                 workspaceManager.setActiveWorkspaceId(null)
                 updateWorkProfileIcon()
                 updateWorkspaceIcon()
+                updateDockVisibility()
                 refreshAppsForWorkspace()
                 Toast.makeText(context, "Work profile removed", Toast.LENGTH_SHORT).show()
             }
@@ -703,7 +706,8 @@ class AppDockManager(
         )
         
         if (::workProfileNameText.isInitialized) {
-            workProfileNameText.text = if (isWorkProfileEnabled) "Work Profile" else "Work"
+            workProfileNameText.text = ""
+            workProfileNameText.visibility = View.GONE
             
             val container = appDock.findViewWithTag<LinearLayout>("work_profile_container")
             if (container != null) {
@@ -967,10 +971,16 @@ class AppDockManager(
                     setStroke(2, Color.parseColor("#5E81AC")) 
                 }
                 container.background = bg
+                if (::focusTimerText.isInitialized) {
+                    focusTimerText.visibility = View.VISIBLE
+                }
             } else {
                 container.background = getGlassyBackground()
                 if (::focusTimerText.isInitialized) {
-                    focusTimerText.text = "Focus"
+                    if (!pomodoroManager.isPomodoroActive()) {
+                        focusTimerText.text = ""
+                        focusTimerText.visibility = View.GONE
+                    }
                 }
             }
         }
@@ -991,11 +1001,28 @@ class AppDockManager(
     }
 
     private fun updateDockVisibility() {
+        val isWorkMode = workProfileManager.isWorkProfileEnabled()
+        val isFocusActive = isFocusMode || pomodoroManager.isPomodoroActive()
+
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
             when (child.tag) {
-                "focus_mode_container", "workspace_container" -> child.visibility = View.VISIBLE
-                else -> child.visibility = if (isFocusMode) View.GONE else View.VISIBLE
+                "workspace_container" -> {
+                    // Hide workspace if either Work or Focus mode is active
+                    child.visibility = if (isWorkMode || isFocusActive) View.GONE else View.VISIBLE
+                }
+                "focus_mode_container" -> {
+                    // Hide focus icon if Work mode is active
+                    child.visibility = if (isWorkMode) View.GONE else View.VISIBLE
+                }
+                "work_profile_container" -> {
+                    // Work icon is always visible (requirements say show work icon when Focus is on)
+                    child.visibility = View.VISIBLE
+                }
+                else -> {
+                    // Hide other items when Focus Mode is active
+                    child.visibility = if (isFocusActive) View.GONE else View.VISIBLE
+                }
             }
         }
     }
@@ -1030,7 +1057,8 @@ class AppDockManager(
         timerRunnable = null
         if (!pomodoroManager.isPomodoroActive()) {
             if (::focusTimerText.isInitialized) {
-                focusTimerText.text = "Focus"
+                focusTimerText.text = ""
+                focusTimerText.visibility = View.GONE
             }
         }
     }
