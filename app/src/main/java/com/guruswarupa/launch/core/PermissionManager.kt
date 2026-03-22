@@ -116,9 +116,9 @@ class PermissionManager(
             if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
                 isRequestingPermissions = true
                 val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
-                    .setTitle("Usage Stats Permission")
-                    .setMessage("To show app usage time, please grant usage access permission.")
-                    .setPositiveButton("Grant") { _, _ ->
+                    .setTitle("App Usage Statistics")
+                    .setMessage("To display your most used apps and track your digital wellbeing, Launch needs permission to access usage stats. This data is processed locally and never leaves your device.")
+                    .setPositiveButton("Grant Access") { _, _ ->
                         
                         sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", true) }
                         isRequestingPermissions = false

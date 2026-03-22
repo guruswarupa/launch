@@ -460,7 +460,6 @@ class MainActivity : FragmentActivity() {
         if (::systemBarManager.isInitialized) {
             systemBarManager.makeSystemBarsTransparent()
         }
-        hasAskedDefaultLauncherThisOpen = false
         
         
         if (::contactManager.isInitialized) {
@@ -486,11 +485,6 @@ class MainActivity : FragmentActivity() {
                     sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
                 }
             }
-        }
-        
-        
-        if (isHomeOrLauncher) {
-            hasAskedDefaultLauncherThisOpen = false
         }
     }
 
@@ -713,19 +707,6 @@ class MainActivity : FragmentActivity() {
                 }
             }
             return 
-        }
-
-        
-        if (!hasAskedDefaultLauncherThisOpen && 
-            sharedPreferences.getBoolean("initial_permissions_asked", false) && 
-            ::permissionManager.isInitialized && 
-            !permissionManager.isDefaultLauncher()) {
-            
-            hasAskedDefaultLauncherThisOpen = true
-            
-            handler.postDelayed({
-                permissionManager.requestDefaultLauncher()
-            }, 1000)
         }
     }
 
