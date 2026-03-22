@@ -84,10 +84,7 @@ class AppListUIUpdater(
         
         adapter?.updateAppList(newAppList)
         recyclerView.visibility = View.VISIBLE
-        
-        if (isFinal) {
-            activity.updateFastScrollerVisibility()
-        }
+        activity.updateFastScrollerVisibility()
         
         activity.updateAppSearchManager(newFullAppList, newAppList)
     }

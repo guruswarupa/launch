@@ -224,7 +224,11 @@ class AppListManager(
         val activityName = app.activityInfo.name
         return when {
             activityName.isNotBlank() && packageName.startsWith("launcher_") -> activityName
-            else -> packageName
+            else -> try {
+                app.loadLabel(context.packageManager).toString().ifBlank { packageName }
+            } catch (_: Exception) {
+                packageName
+            }
         }
     }
 }
