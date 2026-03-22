@@ -28,6 +28,7 @@ class MediaControllerWidget(private val context: Context, private val rootView: 
     private var activeController: MediaController? = null
     private val mediaSessionManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
     private val componentName = ComponentName(context, LaunchNotificationListenerService::class.java)
+    private var sessionListenerRegistered = false
 
     private val callback = object : MediaController.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackState?) {
@@ -39,11 +40,24 @@ class MediaControllerWidget(private val context: Context, private val rootView: 
         }
     }
 
+    private val sessionListener = MediaSessionManager.OnActiveSessionsChangedListener { controllers ->
+        val newController = controllers?.firstOrNull()
+        if (newController != activeController) {
+            activeController?.unregisterCallback(callback)
+            activeController = newController
+            newController?.registerCallback(callback)
+            
+            updateMetadata(newController?.metadata)
+            updatePlaybackState(newController?.playbackState)
+        }
+    }
+
     init {
         setupListeners()
         permissionButton.setOnClickListener {
             openNotificationSettings()
         }
+        registerSessionListener()
         refreshController()
     }
 
@@ -61,6 +75,17 @@ class MediaControllerWidget(private val context: Context, private val rootView: 
         nextBtn.setOnClickListener { activeController?.transportControls?.skipToNext() }
     }
 
+    private fun registerSessionListener() {
+        if (!sessionListenerRegistered && isNotificationListenerEnabled()) {
+            try {
+                mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, componentName)
+                sessionListenerRegistered = true
+            } catch (e: SecurityException) {
+                sessionListenerRegistered = false
+            }
+        }
+    }
+
     fun refreshController() {
         if (!isNotificationListenerEnabled()) {
             showPermissionState()
@@ -71,8 +96,12 @@ class MediaControllerWidget(private val context: Context, private val rootView: 
             permissionButton.visibility = View.GONE
             controlsLayout.visibility = View.VISIBLE
             
+            if (!sessionListenerRegistered) {
+                registerSessionListener()
+            }
+            
             val controllers = mediaSessionManager.getActiveSessions(componentName)
-            val newController = controllers.firstOrNull()
+            val newController = controllers?.firstOrNull()
             
             if (newController != activeController) {
                 activeController?.unregisterCallback(callback)

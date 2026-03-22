@@ -32,6 +32,8 @@
         
         <item name="popupMenuStyle">@style/PopupMenuStyle</item>
         <item name="android:popupMenuStyle">@style/PopupMenuStyle</item>
+
+        <item name="android:windowAnimationStyle">@style/WindowAnimations</item>
     </style>
     
     <style name="Theme.Launch.Settings" parent="Theme.Launch">
@@ -39,5 +41,10 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowShowWallpaper">true</item>
+    </style>
+
+    <style name="WindowAnimations">
+        <item name="android:windowEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_left</item>
     </style>
 </resources>
