@@ -9,6 +9,7 @@ import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
+import android.os.UserHandle
 import android.os.UserManager
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -22,7 +23,6 @@ class WorkProfileManager(
     companion object {
         private const val TAG = "WorkProfileManager"
         private const val WORK_PROFILE_ENABLED_KEY = "work_profile_enabled"
-        private const val WORK_PROFILE_APPS_KEY = "work_profile_apps"
         const val REQUEST_CODE_CREATE_WORK_PROFILE = 2000
         const val WORK_PROFILE_WORKSPACE_ID = "work_profile_workspace"
     }
@@ -37,53 +37,13 @@ class WorkProfileManager(
     }
 
     fun hasActualWorkProfile(): Boolean {
-        return try {
-            val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-            val myUserHandle = Process.myUserHandle()
-            launcherApps.profiles.any { it != myUserHandle }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking for actual work profile", e)
-            false
-        }
+        return getWorkProfileUserHandle() != null
     }
     
     fun isWorkProfileEnabled(): Boolean {
         return sharedPreferences.getBoolean(WORK_PROFILE_ENABLED_KEY, false)
     }
-    
-    fun getWorkProfileApps(): Set<String> {
-        val appsJson = sharedPreferences.getString(WORK_PROFILE_APPS_KEY, "[]") ?: "[]"
-        return try {
-            org.json.JSONArray(appsJson).let { jsonArray ->
-                (0 until jsonArray.length()).map { jsonArray.getString(it) }.toSet()
-            }
-        } catch (e: Exception) {
-            emptySet()
-        }
-    }
-    
-    fun setWorkProfileApps(apps: Set<String>) {
-        val jsonArray = org.json.JSONArray()
-        apps.forEach { jsonArray.put(it) }
-        sharedPreferences.edit { putString(WORK_PROFILE_APPS_KEY, jsonArray.toString()) }
-    }
-    
-    fun addAppToWorkProfile(packageName: String) {
-        val currentApps = getWorkProfileApps().toMutableSet()
-        currentApps.add(packageName)
-        setWorkProfileApps(currentApps)
-    }
-    
-    fun removeAppFromWorkProfile(packageName: String) {
-        val currentApps = getWorkProfileApps().toMutableSet()
-        currentApps.remove(packageName)
-        setWorkProfileApps(currentApps)
-    }
-    
-    fun isAppInWorkProfile(packageName: String): Boolean {
-        return getWorkProfileApps().contains(packageName)
-    }
-    
+
     @RequiresApi(Build.VERSION_CODES.P)
     fun createWorkProfile(activity: androidx.activity.ComponentActivity) {
         if (!isWorkProfileSupported()) {
@@ -112,8 +72,55 @@ class WorkProfileManager(
         sharedPreferences.edit { putBoolean(WORK_PROFILE_ENABLED_KEY, enabled) }
     }
     
+    fun syncWorkProfileEnabledState(): Boolean {
+        val enabled = isWorkProfileAvailableAndEnabled()
+        setWorkProfileEnabled(enabled)
+        return enabled
+    }
+
+    fun isWorkProfileAvailableAndEnabled(): Boolean {
+        val userHandle = getWorkProfileUserHandle() ?: return false
+        return !isWorkProfileQuietModeEnabled(userHandle)
+    }
+
+    fun setWorkProfileQuietMode(enabled: Boolean): Boolean {
+        val userHandle = getWorkProfileUserHandle() ?: return false
+        return try {
+            val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+            val success = userManager.requestQuietModeEnabled(!enabled, userHandle)
+            if (success) {
+                setWorkProfileEnabled(enabled)
+            }
+            success
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update work profile quiet mode", e)
+            false
+        }
+    }
+
     fun deleteWorkProfile() {
         setWorkProfileEnabled(false)
-        setWorkProfileApps(emptySet())
+    }
+
+    private fun getWorkProfileUserHandle(): UserHandle? {
+        return try {
+            val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val myUserHandle = Process.myUserHandle()
+            launcherApps.profiles.firstOrNull { it != myUserHandle }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error finding work profile user handle", e)
+            null
+        }
+    }
+
+    private fun isWorkProfileQuietModeEnabled(userHandle: UserHandle): Boolean {
+        return try {
+            val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+            val apps = launcherApps.getActivityList(null, userHandle)
+            apps.isEmpty()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking work profile quiet mode", e)
+            true
+        }
     }
 }
