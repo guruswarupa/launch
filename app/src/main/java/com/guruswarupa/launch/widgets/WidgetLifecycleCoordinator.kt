@@ -1,12 +1,9 @@
 package com.guruswarupa.launch.widgets
 
-/**
- * Coordinates the lifecycle of multiple widgets by delegating onResume, onPause and onDestroy calls.
- * Also serves as a registry for all widget instances.
- */
 class WidgetLifecycleCoordinator {
     lateinit var calculatorWidget: CalculatorWidget
     lateinit var notificationsWidget: NotificationsWidget
+    lateinit var mediaControllerWidget: MediaControllerWidget
     lateinit var workoutWidget: WorkoutWidget
     lateinit var physicalActivityWidget: PhysicalActivityWidget
     lateinit var compassWidget: CompassWidget
@@ -15,13 +12,16 @@ class WidgetLifecycleCoordinator {
     lateinit var noiseDecibelWidget: NoiseDecibelWidget
     lateinit var calendarEventsWidget: CalendarEventsWidget
     lateinit var countdownWidget: CountdownWidget
+    lateinit var dnsWidget: DnsWidget
+    lateinit var noteWidget: NoteWidget
     lateinit var yearProgressWidget: YearProgressWidget
     lateinit var githubContributionWidget: GithubContributionWidget
+    lateinit var batteryHealthWidget: BatteryHealthWidget
     lateinit var networkStatsWidget: NetworkStatsWidget
     lateinit var deviceInfoWidget: DeviceInfoWidget
 
-    // Initialization check helpers
     fun isNotificationsWidgetInitialized() = ::notificationsWidget.isInitialized
+    fun isMediaControllerWidgetInitialized() = ::mediaControllerWidget.isInitialized
     fun isPhysicalActivityWidgetInitialized() = ::physicalActivityWidget.isInitialized
     fun isCompassWidgetInitialized() = ::compassWidget.isInitialized
     fun isPressureWidgetInitialized() = ::pressureWidget.isInitialized
@@ -29,8 +29,11 @@ class WidgetLifecycleCoordinator {
     fun isNoiseDecibelWidgetInitialized() = ::noiseDecibelWidget.isInitialized
     fun isCalendarEventsWidgetInitialized() = ::calendarEventsWidget.isInitialized
     fun isCountdownWidgetInitialized() = ::countdownWidget.isInitialized
+    fun isDnsWidgetInitialized() = ::dnsWidget.isInitialized
+    fun isNoteWidgetInitialized() = ::noteWidget.isInitialized
     fun isYearProgressWidgetInitialized() = ::yearProgressWidget.isInitialized
     fun isGithubContributionWidgetInitialized() = ::githubContributionWidget.isInitialized
+    fun isBatteryHealthWidgetInitialized() = ::batteryHealthWidget.isInitialized
     fun isNetworkStatsWidgetInitialized() = ::networkStatsWidget.isInitialized
     fun isDeviceInfoWidgetInitialized() = ::deviceInfoWidget.isInitialized
 
@@ -43,9 +46,6 @@ class WidgetLifecycleCoordinator {
 
     private val widgets = mutableListOf<WidgetWrapper>()
 
-    /**
-     * Register a widget for lifecycle management
-     */
     fun register(
         isInitializedCheck: () -> Boolean,
         onResumeAction: () -> Unit,
@@ -73,11 +73,9 @@ class WidgetLifecycleCoordinator {
         widgets.add(wrapper)
     }
 
-    /**
-     * Setup default lifecycle registrations for all widgets
-     */
     fun setupDefaultLifecycle() {
         widgets.clear()
+        register({ ::mediaControllerWidget.isInitialized }, { mediaControllerWidget.refreshController() }, { })
         register({ ::physicalActivityWidget.isInitialized }, { physicalActivityWidget.onResume() }, { physicalActivityWidget.onPause() }, { physicalActivityWidget.cleanup() })
         register({ ::compassWidget.isInitialized }, { compassWidget.onResume() }, { compassWidget.onPause() }, { compassWidget.onPause() })
         register({ ::pressureWidget.isInitialized }, { pressureWidget.onResume() }, { pressureWidget.onPause() }, { pressureWidget.cleanup() })
@@ -85,30 +83,24 @@ class WidgetLifecycleCoordinator {
         register({ ::noiseDecibelWidget.isInitialized }, { noiseDecibelWidget.onResume() }, { noiseDecibelWidget.onPause() }, { noiseDecibelWidget.cleanup() })
         register({ ::calendarEventsWidget.isInitialized }, { calendarEventsWidget.onResume() }, { calendarEventsWidget.onPause() }, { calendarEventsWidget.cleanup() })
         register({ ::countdownWidget.isInitialized }, { countdownWidget.onResume() }, { countdownWidget.onPause() }, { countdownWidget.cleanup() })
+        register({ ::dnsWidget.isInitialized }, { dnsWidget.onResume() }, { dnsWidget.onPause() }, { dnsWidget.cleanup() })
+        register({ ::noteWidget.isInitialized }, { noteWidget.onResume() }, { noteWidget.onPause() }, { noteWidget.cleanup() })
+        register({ ::batteryHealthWidget.isInitialized }, { batteryHealthWidget.onResume() }, { batteryHealthWidget.onPause() }, { batteryHealthWidget.cleanup() })
         register({ ::githubContributionWidget.isInitialized }, { githubContributionWidget.onResume() }, { githubContributionWidget.onPause() }, { githubContributionWidget.cleanup() })
     }
 
-    /**
-     * Call onResume on all registered widgets that are initialized
-     */
     fun onResume() {
         widgets.forEach { widget ->
             widget.onResume()
         }
     }
 
-    /**
-     * Call onPause on all registered widgets that are initialized
-     */
     fun onPause() {
         widgets.forEach { widget ->
             widget.onPause()
         }
     }
 
-    /**
-     * Call onDestroy on all registered widgets that are initialized
-     */
     fun onDestroy() {
         widgets.forEach { widget ->
             widget.onDestroy()

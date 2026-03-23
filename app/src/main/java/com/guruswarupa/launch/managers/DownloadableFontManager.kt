@@ -109,20 +109,20 @@ object DownloadableFontManager {
             }
 
             override fun onTypefaceRequestFailed(reason: Int) {
-                // Since we use mainExecutor, this already runs on the main thread
+                
                 Toast.makeText(context, "Failed to download font: ${option.displayName}", Toast.LENGTH_SHORT).show()
                 dispatch(styleKey, false)
             }
         }
 
-        // Use the modern 6-arg signature to avoid deprecation:
-        // requestFont(Context, FontRequest, int, Executor, Executor, FontRequestCallback)
+        
+        
         FontsContractCompat.requestFont(
             context,
             request,
             Typeface.NORMAL,
-            mainExecutor, // loadingExecutor
-            mainExecutor, // callbackExecutor
+            mainExecutor, 
+            mainExecutor, 
             fontRequestCallback
         )
     }

@@ -40,10 +40,10 @@ import com.guruswarupa.launch.ui.views.FastScroller
 import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 import java.util.Locale
 
-/**
- * Handles MainActivity initialization logic.
- * Extracted from MainActivity to reduce complexity.
- */
+
+
+
+
 class ActivityInitializer(
     private val activity: FragmentActivity,
     private val sharedPreferences: android.content.SharedPreferences,
@@ -71,7 +71,9 @@ class ActivityInitializer(
             fastScroller = activity.findViewById(R.id.fast_scroller)
             fastScroller.setRecyclerView(recyclerView)
             
-            // Position FastScroller to avoid search bar/mic and start from below the app dock area
+            // Improve accessibility and prevent crashes during view updates
+            recyclerView.setHasFixedSize(true)
+            
             val displayMetrics = activity.resources.displayMetrics
             val screenHeight = displayMetrics.heightPixels
             val scrollerParams = fastScroller.layoutParams as FrameLayout.LayoutParams
@@ -79,7 +81,7 @@ class ActivityInitializer(
             scrollerParams.gravity = Gravity.BOTTOM or Gravity.END
             fastScroller.layoutParams = scrollerParams
 
-            // Disable animations to prevent "Tmp detached view" crash during rapid updates
+            
             recyclerView.itemAnimator = null
             voiceSearchButton = activity.findViewById(R.id.voice_search_button)
             appDock = activity.findViewById(R.id.app_dock)
@@ -90,11 +92,11 @@ class ActivityInitializer(
             dateTextView = activity.findViewById(R.id.date_widget)
             topWidgetContainer = activity.findViewById(R.id.top_widget_container)
             
-            // Todo components
+            
             todoRecyclerView = activity.findViewById(R.id.todo_recycler_view)
             addTodoButton = activity.findViewById(R.id.add_todo_button)
             
-            // Right Drawer Views
+            
             rightDrawerWallpaper = activity.findViewById(R.id.right_drawer_wallpaper)
             rightDrawerTime = activity.findViewById(R.id.right_drawer_time)
             rightDrawerDate = activity.findViewById(R.id.right_drawer_date)
@@ -163,22 +165,22 @@ class ActivityInitializer(
                     val scrollRange = rv.computeVerticalScrollRange()
                     val viewportHeight = rv.height
                     
-                    // Safety check: if we are at the top or nearly at the top, always show header
+                    
                     if (offset <= showThreshold && headerHidden) {
                         setHeaderVisibility(true)
                         return
                     }
 
-                    // If the header is hidden, we check if the content still needs scrolling.
-                    // If it fits entirely within the viewport, show the header again to prevent being "stuck".
+                    
+                    
                     if (headerHidden && scrollRange <= viewportHeight) {
                         setHeaderVisibility(true)
                         return
                     }
 
-                    // Directional hiding logic: only hide if scrolling down AND we have enough content to warrant it
+                    
                     if (dy > 0 && !headerHidden && offset > hideThreshold) {
-                        // Only hide if the list is substantially longer than the screen to avoid glitching on short lists
+                        
                         if (scrollRange > viewportHeight * 1.5) {
                             setHeaderVisibility(false)
                         }
@@ -189,7 +191,7 @@ class ActivityInitializer(
             }
         })
 
-        // Robust touch listener to catch "swipe down" when already at the top or stuck
+        
         recyclerView.setOnTouchListener(object : View.OnTouchListener {
             private var startY = 0f
             override fun onTouch(v: View, event: MotionEvent): Boolean {
@@ -197,21 +199,21 @@ class ActivityInitializer(
                     MotionEvent.ACTION_DOWN -> startY = event.y
                     MotionEvent.ACTION_MOVE -> {
                         val deltaY = event.y - startY
-                        // If user swipes down (deltaY > threshold) and header is hidden
+                        
                         if (deltaY > 50 && headerHidden) {
                             val offset = recyclerView.computeVerticalScrollOffset()
-                            // If we're at or near the top but can't scroll up further to trigger dy < 0
+                            
                             if (offset <= showThreshold) {
                                 setHeaderVisibility(true)
                             }
                         }
                     }
                 }
-                return false // Don't consume the touch, let RecyclerView handle scrolling
+                return false 
             }
         })
 
-        // Ensure header comes back if the list size changes (e.g. workspace switch)
+        
         recyclerView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             if (headerHidden) {
                 val scrollRange = recyclerView.computeVerticalScrollRange()
@@ -225,10 +227,10 @@ class ActivityInitializer(
         }
     }
 
-    /**
-     * Animate header and dock visibility; called from scroll or search events.
-     * Uses TransitionManager for smooth layout reflow without glitches.
-     */
+    
+
+
+
     fun setHeaderVisibility(visible: Boolean) {
         if (visible && !headerHidden) return
         if (!visible && headerHidden) return
@@ -236,7 +238,7 @@ class ActivityInitializer(
         
         val stack = views.topWidgetContainer.parent as? ViewGroup ?: return
         
-        // Use TransitionManager to handle visibility and bounds changes smoothly.
+        
         val transition = TransitionSet().apply {
             addTransition(Fade().apply {
                 addTarget(views.topWidgetContainer)
@@ -250,10 +252,10 @@ class ActivityInitializer(
         TransitionManager.beginDelayedTransition(stack, transition)
 
         views.topWidgetContainer.isVisible = visible
-        // Dock is wrapped in a HorizontalScrollView, hide the wrapper to ensure correct layout reflow
+        
         (views.appDock.parent as? View)?.isVisible = visible
         
-        // Adjust search container margin to pin it to top or restore default spacing
+        
         val targetMargin = if (visible) defaultSearchTopMargin else pinnedSearchTopMargin
         val params = views.searchContainer.layoutParams as MarginLayoutParams
         params.topMargin = targetMargin
@@ -342,13 +344,13 @@ class ActivityInitializer(
 
     fun setupDrawerLayout() {
         val drawerLayout = views.drawerLayout
-        // Set drawer to full width - use post to ensure view is laid out
+        
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
             val targetWidth = drawerWidth
 
-            // Left drawer
+            
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
@@ -381,7 +383,7 @@ class ActivityInitializer(
                 }
             }
 
-            // Right drawer
+            
             val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
             rightDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
@@ -390,7 +392,7 @@ class ActivityInitializer(
             }
         }
 
-        // Enable edge swipe for DrawerLayout
+        
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.START)
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.END)
     }

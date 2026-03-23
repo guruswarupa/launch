@@ -42,7 +42,7 @@ class PressureWidget(
             if (isInitialized && pressureManager.hasPressureSensor()) {
                 updateDisplay()
             }
-            handler.postDelayed(this, 2000) // Update every 2 seconds
+            handler.postDelayed(this, 2000) 
         }
     }
     

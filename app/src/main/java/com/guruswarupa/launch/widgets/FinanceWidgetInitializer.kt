@@ -10,9 +10,9 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.FinanceManager
 import com.guruswarupa.launch.utils.FinanceWidgetManager
 
-/**
- * Helper class to initialize the FinanceWidgetManager with a delay to avoid blocking the UI thread.
- */
+
+
+
 class FinanceWidgetInitializer(
     private val context: Context,
     private val sharedPreferences: SharedPreferences,
@@ -20,18 +20,18 @@ class FinanceWidgetInitializer(
 ) {
     private var onInitializedListener: ((FinanceWidgetManager) -> Unit)? = null
 
-    /**
-     * Sets a callback to be invoked when the FinanceWidgetManager is successfully initialized.
-     */
+    
+
+
     fun onInitialized(listener: (FinanceWidgetManager) -> Unit): FinanceWidgetInitializer {
         this.onInitializedListener = listener
         return this
     }
 
-    /**
-     * Initializes the FinanceWidgetManager after the specified delay.
-     * Finds the required views, sets up the manager, and calls initial display update.
-     */
+    
+
+
+
     fun initialize(handler: Handler) {
         handler.postDelayed({
             val activity = context as? MainActivity ?: return@postDelayed

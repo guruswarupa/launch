@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -12,21 +12,21 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay -->
+    
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/settings_overlay"/>
 
-    <!-- Content Container -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingHorizontal="24dp">
 
-        <!-- Header with Back Button and Title -->
+        
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

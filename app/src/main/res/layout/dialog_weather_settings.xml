@@ -8,26 +8,10 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Weather API Settings"
+        android:text="@string/weather_settings_title"
         android:textColor="@color/text"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="API Key"
-        style="@style/DialogFieldLabel"
-        android:layout_marginBottom="4dp" />
-
-    <EditText
-        android:id="@+id/weather_api_key_input"
-        style="@style/DialogEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter OpenWeatherMap API Key"
-        android:inputType="text"
         android:layout_marginBottom="16dp" />
 
     <TextView

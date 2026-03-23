@@ -10,7 +10,7 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Exercise Header -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -64,7 +64,7 @@
             android:focusable="true" />
     </LinearLayout>
 
-    <!-- Reps-based Exercise Layout -->
+    
     <LinearLayout
         android:id="@+id/reps_layout"
         android:layout_width="match_parent"
@@ -72,7 +72,7 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <!-- Count Display Section -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -80,7 +80,7 @@
             android:gravity="center_vertical"
             android:layout_marginBottom="16dp">
 
-            <!-- Today's Count (Large) -->
+            
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -106,7 +106,7 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Best Day -->
+            
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -133,7 +133,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Action Buttons -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -165,7 +165,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Time-based Exercise Layout -->
+    
     <LinearLayout
         android:id="@+id/time_layout"
         android:layout_width="match_parent"
@@ -173,7 +173,7 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <!-- Stopwatch Display -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -209,7 +209,7 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Stopwatch Controls -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -240,7 +240,7 @@
                 android:enabled="false" />
         </LinearLayout>
 
-        <!-- Best Time -->
+        
         <TextView
             android:id="@+id/best_time_text"
             android:layout_width="wrap_content"
@@ -253,7 +253,7 @@
             android:layout_marginTop="8dp" />
     </LinearLayout>
 
-    <!-- Swipe hint -->
+    
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

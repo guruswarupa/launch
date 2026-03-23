@@ -14,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Gravity
+import android.view.animation.AnimationUtils
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.ImageView
@@ -34,6 +35,8 @@ import androidx.core.content.FileProvider
 import android.content.ComponentName
 import android.os.Handler
 import android.os.Looper
+import android.os.UserManager
+import android.os.Process
 import androidx.core.view.size
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
@@ -58,10 +61,25 @@ class AppAdapter(
     private val context: Context
 ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
 
+    private var lastAnimatedPosition = -1
+    private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+    private val mainUserSerial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
+    
+    init {
+        setHasStableIds(true)
+    }
+    
+    override fun getItemId(position: Int): Long {
+        val item = appList[position]
+        // Use package name + activity name + serial for unique ID
+        return ("${item.activityInfo.packageName}|${item.activityInfo.name}|${item.preferredOrder}").hashCode().toLong()
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     fun updateViewMode(isGrid: Boolean) {
         if (this.isGridMode != isGrid) {
             this.isGridMode = isGrid
+            lastAnimatedPosition = -1
             notifyDataSetChanged()
         }
     }
@@ -103,17 +121,11 @@ class AppAdapter(
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
     private var grayscaleIconsEnabled = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
     
-    /**
-     * Called by FastScroller when fast scrolling starts/stops.
-     */
     fun setFastScrollingState(isScrolling: Boolean) {
         isFastScrolling = isScrolling
-        
-        // Cancel any pending debounce
         fastScrollDebounceRunnable?.let { fastScrollDebounceHandler.removeCallbacks(it) }
         
         if (!isScrolling) {
-            // After fast scrolling stops, wait a bit then refresh visible icons
             fastScrollDebounceRunnable = Runnable {
                 forceRefreshVisibleIcons()
             }
@@ -121,20 +133,13 @@ class AppAdapter(
         }
     }
     
-    /**
-     * Forces refresh of currently visible icons after fast scrolling stops.
-     */
-    private fun forceRefreshVisibleIcons() {
-        // This will be called from FastScroller via forceRebindViewHolder
-        // The actual refresh happens when FastScroller calls forceRebindViewHolder for each visible item
-    }
+    private fun forceRefreshVisibleIcons() {}
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
         override fun run() = action.run()
         override fun compareTo(other: PriorityRunnable): Int = other.priority.compareTo(this.priority)
     }
     
-    // Wrapper task that can be tracked and cancelled - implements Comparable for PriorityBlockingQueue
     private class TrackedTask(
         private val priorityRunnable: PriorityRunnable
     ) : Runnable, Comparable<TrackedTask>, Future<Boolean> {
@@ -150,7 +155,6 @@ class AppAdapter(
         }
         
         override fun compareTo(other: TrackedTask): Int {
-            // Delegate comparison to the wrapped PriorityRunnable
             return this.priorityRunnable.compareTo(other.priorityRunnable)
         }
         
@@ -162,13 +166,10 @@ class AppAdapter(
         
         override fun isCancelled(): Boolean = isCancelled
         override fun isDone(): Boolean = isDone
-        
-        // These methods are not needed for our use case but required by Future interface
         override fun get(): Boolean? = null
         override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
     }
     
-    // Track pending tasks per package to avoid redundant work and save RAM
     private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
     private val pendingLabelTasks = ConcurrentHashMap<String, Future<*>>()
 
@@ -279,7 +280,8 @@ class AppAdapter(
         if (packageName in SPECIAL_PACKAGE_NAMES) {
             return appInfo.activityInfo.name ?: ""
         }
-        return labelCache[packageName] ?: appInfo.activityInfo.name ?: packageName
+        val cacheKey = "${packageName}|${appInfo.preferredOrder}"
+        return labelCache[cacheKey] ?: appInfo.activityInfo.name ?: packageName
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -293,6 +295,7 @@ class AppAdapter(
     fun updateAppList(newAppList: List<ResolveInfo>) {
         val newItems = ArrayList(newAppList)
         val isFirstLoad = itemsRendered == 0
+        lastAnimatedPosition = -1
 
         try {
             val metadataCache = activity.cacheManager.getMetadataCache()
@@ -300,8 +303,9 @@ class AppAdapter(
                 val packageName = app.activityInfo.packageName
                 if (packageName == SEPARATOR_PACKAGE) continue
                 val cachedMetadata = metadataCache[packageName]
-                if (cachedMetadata != null && !labelCache.containsKey(packageName)) {
-                    labelCache[packageName] = cachedMetadata.label
+                val cacheKey = "${packageName}|${app.preferredOrder}"
+                if (cachedMetadata != null && !labelCache.containsKey(cacheKey)) {
+                    labelCache[cacheKey] = cachedMetadata.label
                 }
             }
         } catch (_: Exception) {}
@@ -310,27 +314,20 @@ class AppAdapter(
             val diffCallback = AppListDiffCallback(appList, newItems)
             val diffResult = DiffUtil.calculateDiff(diffCallback)
             
+            diffResult.dispatchUpdatesTo(this)
+            
             appList.clear()
             appList.addAll(newItems)
-            diffResult.dispatchUpdatesTo(this)
             
             if (isFirstLoad && newItems.isNotEmpty()) {
                 itemsRendered = newItems.size
                 executor.execute { preloadIcons(newItems.filter { it.activityInfo.packageName != SEPARATOR_PACKAGE }) }
             }
         }
-
     }
     
-    /**
-     * Forces a rebind of a view holder to refresh icon loading.
-     * Called after fast scrolling stops to ensure visible icons are properly loaded.
-     */
     fun forceRebindViewHolder(viewHolder: ViewHolder, position: Int) {
         if (position < 0 || position >= appList.size) return
-        
-        // Call onBindViewHolder to refresh the view
-        // This will check the cache and load icons if they're now available
         onBindViewHolder(viewHolder, position)
     }
     
@@ -346,13 +343,15 @@ class AppAdapter(
             if (oldItem.activityInfo.packageName == SEPARATOR_PACKAGE && newItem.activityInfo.packageName == SEPARATOR_PACKAGE) {
                 return oldItem.activityInfo.name == newItem.activityInfo.name
             }
-            return oldItem.activityInfo.packageName == newItem.activityInfo.packageName
+            return oldItem.activityInfo.packageName == newItem.activityInfo.packageName && 
+                   oldItem.preferredOrder == newItem.preferredOrder
         }
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
             val oldItem = oldList[oldItemPosition]
             val newItem = newList[newItemPosition]
             return oldItem.activityInfo.packageName == newItem.activityInfo.packageName &&
-                   oldItem.activityInfo.name == newItem.activityInfo.name
+                   oldItem.activityInfo.name == newItem.activityInfo.name &&
+                   oldItem.preferredOrder == newItem.preferredOrder
         }
     }
     
@@ -379,17 +378,18 @@ class AppAdapter(
         val packageName = app.activityInfo.packageName
         if (packageName == SEPARATOR_PACKAGE) return
         
-        if (packageName in SPECIAL_PACKAGE_NAMES || iconCache.containsKey(packageName)) {
-            if (holder != null && holder.appIcon != null && iconCache.containsKey(packageName)) {
-                val icon = iconCache[packageName]
+        val cacheKey = "${packageName}|${app.preferredOrder}"
+        
+        if (packageName in SPECIAL_PACKAGE_NAMES || iconCache.containsKey(cacheKey)) {
+            if (holder != null && holder.appIcon != null && iconCache.containsKey(cacheKey)) {
+                val icon = iconCache[cacheKey]
                 (context as? Activity)?.runOnUiThread {
-                    // Robust verification: check position, tag, and view identity
                     val currentPosition = holder.bindingAdapterPosition
                     val currentTag = holder.itemView.tag
                     if (currentPosition != RecyclerView.NO_POSITION && 
                         currentPosition == position && 
                         currentTag != null && 
-                        currentTag.toString() == packageName) {
+                        currentTag.toString() == cacheKey) {
                         holder.appIcon.setImageDrawable(icon)
                         applyIconVisualState(packageName, holder.appIcon)
                     }
@@ -398,32 +398,31 @@ class AppAdapter(
             return
         }
         
-        // Cancel any pending task for this package to avoid redundant work
-        pendingIconTasks[packageName]?.cancel(true)
+        pendingIconTasks[cacheKey]?.cancel(true)
         
-        // Use execute instead of submit to avoid FutureTask wrapping (PriorityBlockingQueue needs Comparable)
         val priorityRunnable = PriorityRunnable(priority) {
             try {
-                if (!iconCache.containsKey(packageName)) {
-                    val icon = app.loadIcon(activity.packageManager)
-                    iconCache[packageName] = icon
+                if (!iconCache.containsKey(cacheKey)) {
+                    var icon = app.loadIcon(activity.packageManager)
+                    
+                    // Badge icon if it's from work profile
+                    if (app.preferredOrder != mainUserSerial) {
+                        val userHandle = userManager.getUserForSerialNumber(app.preferredOrder.toLong())
+                        if (userHandle != null) {
+                            icon = activity.packageManager.getUserBadgedIcon(icon, userHandle)
+                        }
+                    }
+                    
+                    iconCache[cacheKey] = icon
                     
                     if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
-                            // Extra robust verification during fast scrolling
-                            // Check: position, tag, and that the view hasn't been recycled
                             val currentPosition = holder.bindingAdapterPosition
                             val currentTag = holder.itemView.tag
-                            
-                            // Only update if ALL checks pass:
-                            // 1. Position is valid
-                            // 2. Position hasn't changed
-                            // 3. Tag matches package name (view wasn't recycled for different app)
-                            // 4. Tag is not null (view is properly initialized)
                             if (currentPosition != RecyclerView.NO_POSITION && 
                                 currentPosition == position && 
                                 currentTag != null && 
-                                currentTag.toString() == packageName) {
+                                currentTag.toString() == cacheKey) {
                                 holder.appIcon.setImageDrawable(icon)
                                 applyIconVisualState(packageName, holder.appIcon)
                             }
@@ -433,12 +432,10 @@ class AppAdapter(
             } catch (_: Exception) {}
         }
         
-        // Track with a wrapper that we can cancel
         val trackedTask = TrackedTask(priorityRunnable)
         iconPreloadExecutor.execute(trackedTask)
-        pendingIconTasks[packageName] = trackedTask
+        pendingIconTasks[cacheKey] = trackedTask
         
-        // Clean up completed/cancelled tasks periodically
         if (pendingIconTasks.size > 100) {
             pendingIconTasks.entries.removeAll { it.value.isDone }
         }
@@ -477,9 +474,16 @@ class AppAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val appInfo = appList[position]
         val packageName = appInfo.activityInfo.packageName
+        val serial = appInfo.preferredOrder
+        val cacheKey = "${packageName}|${serial}"
 
-        if (packageName == SEPARATOR_PACKAGE) {
-            return
+        if (packageName == SEPARATOR_PACKAGE) return
+
+        
+        if (position > lastAnimatedPosition) {
+            val animation = AnimationUtils.loadAnimation(context, R.anim.item_fade_in)
+            holder.itemView.startAnimation(animation)
+            lastAnimatedPosition = position
         }
 
         if (WebAppManager.isWebAppPackage(packageName)) {
@@ -487,18 +491,13 @@ class AppAdapter(
             return
         }
         
-        // Only apply expensive operations if view is being recycled (has old data)
-        val needsRefresh = holder.itemView.tag != null && holder.itemView.tag != packageName
+        val needsRefresh = holder.itemView.tag != null && holder.itemView.tag != cacheKey
         
         if (needsRefresh) {
-            // Re-apply typography only when needed
             TypographyManager.applyToView(holder.itemView)
-            
-            // Apply icon shape style programmatically
             holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
         }
         
-        // Always apply icon size to ensure correct display
         val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
         val currentParams = holder.appIcon?.layoutParams
         if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
@@ -509,16 +508,13 @@ class AppAdapter(
         }
         
         if (needsRefresh) {
-            // Clear old icon immediately when recycling to prevent showing wrong icons
             holder.appIcon?.setImageDrawable(null)
         }
         
         holder.appIcon?.background = null
         holder.itemView.elevation = 0f
-        // Tag the view with package name to track correct icon assignment during recycling
-        holder.itemView.tag = packageName
+        holder.itemView.tag = cacheKey
 
-        // Control app name visibility based on preference in grid mode
         if (isGridMode) {
             val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
@@ -546,7 +542,7 @@ class AppAdapter(
                                 if (drawable != null) {
                                     contactPhotoCache[contactName] = drawable
                                     (context as? Activity)?.runOnUiThread {
-                                        if (holder.itemView.tag.toString() == contactName) { // Verify with tag
+                                        if (holder.itemView.tag.toString() == contactName) { 
                                             holder.appIcon?.setImageDrawable(drawable)
                                             applyIconVisualState(packageName, holder.appIcon)
                                         }
@@ -774,7 +770,6 @@ class AppAdapter(
             }
 
             else -> {
-                // Special handling for internal launcher activities to ensure correct names
                 val activityName = appInfo.activityInfo.name
                 if (packageName == activity.packageName) {
                     when {
@@ -787,40 +782,39 @@ class AppAdapter(
                             holder.appIcon?.setImageResource(R.drawable.ic_vault_icon)
                         }
                         else -> {
-                            holder.appName?.text = labelCache[packageName] ?: appInfo.loadLabel(activity.packageManager).toString()
-                            val cachedIcon = iconCache[packageName]
+                            holder.appName?.text = labelCache[cacheKey] ?: appInfo.loadLabel(activity.packageManager).toString()
+                            val cachedIcon = iconCache[cacheKey]
                             if (cachedIcon != null) {
                                 holder.appIcon?.setImageDrawable(cachedIcon)
                                 applyIconVisualState(packageName, holder.appIcon)
                             } else {
                                 holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
-                                // Use highest priority for visible items
                                 val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
                                 submitIconLoadTask(appInfo, priority, holder, position)
                             }
                         }
                     }
                 } else {
-                    val cachedLabel = labelCache[packageName]
+                    val cachedLabel = labelCache[cacheKey]
                     if (cachedLabel != null) {
                         holder.appName?.text = cachedLabel
                     } else {
                         if (position < 50) {
                             try {
                                 val label = appInfo.loadLabel(activity.packageManager).toString()
-                                labelCache[packageName] = label
+                                labelCache[cacheKey] = label
                                 holder.appName?.text = label
                             } catch (_: Exception) {
                                 holder.appName?.text = packageName
-                                loadLabelAsync(holder, position, appInfo, packageName)
+                                loadLabelAsync(holder, position, appInfo, packageName, cacheKey)
                             }
                         } else {
                             holder.appName?.text = packageName
-                            loadLabelAsync(holder, position, appInfo, packageName)
+                            loadLabelAsync(holder, position, appInfo, packageName, cacheKey)
                         }
                     }
 
-                    val cachedIcon = iconCache[packageName]
+                    val cachedIcon = iconCache[cacheKey]
                     if (cachedIcon != null) {
                         holder.appIcon?.setImageDrawable(cachedIcon)
                         applyIconVisualState(packageName, holder.appIcon)
@@ -844,18 +838,30 @@ class AppAdapter(
                     holder.lastClickTime = currentTime
                     
                     if (activity.appTimerManager.isAppOverDailyLimit(packageName)) {
-                        val appName = labelCache[packageName] ?: packageName
+                        val appName = labelCache[cacheKey] ?: packageName
                         Toast.makeText(activity, "Daily limit reached for $appName", Toast.LENGTH_SHORT).show()
                         return@setOnClickListener
                     }
                     
-                    // Handle internal launcher activities specifically (like SettingsActivity)
                     val intent = if (packageName == activity.packageName) {
                         Intent().apply {
                             component = ComponentName(packageName, appInfo.activityInfo.name)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
                     } else {
+                        // For work profile apps, we should use LauncherApps.startMainActivity
+                        if (serial != mainUserSerial) {
+                            val userHandle = userManager.getUserForSerialNumber(serial.toLong())
+                            if (userHandle != null) {
+                                val launcherApps = activity.getSystemService(Context.LAUNCHER_APPS_SERVICE) as android.content.pm.LauncherApps
+                                launcherApps.startMainActivity(ComponentName(packageName, activityName), userHandle, null, null)
+                                activity.runOnUiThread {
+                                    searchBox.text.clear()
+                                    activity.appSearchManager.filterAppsAndContacts("")
+                                }
+                                return@setOnClickListener
+                            }
+                        }
                         activity.packageManager.getLaunchIntentForPackage(packageName)
                     }
                     
@@ -863,7 +869,7 @@ class AppAdapter(
                         val currentCount = prefs.getInt("usage_$packageName", 0)
                         prefs.edit { putInt("usage_$packageName", currentCount + 1) }
 
-                        val appName = labelCache[packageName] ?: packageName
+                        val appName = labelCache[cacheKey] ?: packageName
                         val isSessionTimerEnabled = activity.appTimerManager.isSessionTimerEnabled(packageName)
                         
                         if (isSessionTimerEnabled) {
@@ -912,13 +918,10 @@ class AppAdapter(
 
     override fun getItemCount(): Int = appList.size
 
-    private fun loadLabelAsync(holder: ViewHolder, position: Int, appInfo: ResolveInfo, packageName: String) {
-        if (labelCache.containsKey(packageName)) return // Already cached
+    private fun loadLabelAsync(holder: ViewHolder, position: Int, appInfo: ResolveInfo, packageName: String, cacheKey: String) {
+        if (labelCache.containsKey(cacheKey)) return 
+        pendingLabelTasks[cacheKey]?.cancel(true)
         
-        // Cancel any pending label task for this package
-        pendingLabelTasks[packageName]?.cancel(true)
-        
-        // Use a Runnable wrapper that we can track
         val labelTask = object : Runnable, Future<Boolean> {
             @Volatile private var isDone = false
             @Volatile private var isCancelled = false
@@ -926,7 +929,7 @@ class AppAdapter(
             override fun run() {
                 try {
                     val label = appInfo.loadLabel(activity.packageManager).toString()
-                    labelCache[packageName] = label
+                    labelCache[cacheKey] = label
                     try {
                         activity.cacheManager.updateMetadataCache(packageName,
                             AppMetadata(packageName, appInfo.activityInfo.name, label, System.currentTimeMillis())
@@ -937,7 +940,7 @@ class AppAdapter(
                         if (holder.bindingAdapterPosition == position) holder.appName?.text = label else notifyItemChanged(position)
                     }
                 } catch (_: Exception) {
-                    labelCache[packageName] = packageName
+                    labelCache[cacheKey] = packageName
                     (context as? Activity)?.runOnUiThread {
                         if (holder.bindingAdapterPosition == position) holder.appName?.text =
                             packageName else notifyItemChanged(position)
@@ -960,9 +963,8 @@ class AppAdapter(
         }
         
         executor.execute(labelTask)
-        pendingLabelTasks[packageName] = labelTask
+        pendingLabelTasks[cacheKey] = labelTask
         
-        // Clean up completed tasks periodically
         if (pendingLabelTasks.size > 50) {
             pendingLabelTasks.entries.removeAll { it.value.isDone }
         }
@@ -973,7 +975,8 @@ class AppAdapter(
         val popupMenu = PopupMenu(activity, view, Gravity.END, 0, R.style.PopupMenuStyle)
         popupMenu.menuInflater.inflate(R.menu.app_context_menu, popupMenu.menu)
         val textColor = ContextCompat.getColor(activity, R.color.text)
-        val appName = labelCache[packageName] ?: packageName
+        val cacheKey = "${packageName}|${appInfo.preferredOrder}"
+        val appName = labelCache[cacheKey] ?: packageName
         
         val dailyLimitItem = popupMenu.menu.add(0, 100, 0, "Set Daily Limit")
         val limitSpannable = android.text.SpannableString(dailyLimitItem.title)
@@ -1066,26 +1069,8 @@ class AppAdapter(
         popupMenu.menu.add(0, 201, 1, activity.getString(R.string.edit_web_app))
         popupMenu.menu.add(0, 202, 2, activity.getString(R.string.open_in_browser))
         popupMenu.menu.add(0, 203, 3, activity.getString(R.string.remove_web_app))
-        popupMenu.menu.add(
-            0,
-            204,
-            4,
-            if (activity.favoriteAppManager.isFavoriteApp(packageName)) {
-                activity.getString(R.string.remove_from_favorites_plain)
-            } else {
-                activity.getString(R.string.add_to_favorites_plain)
-            }
-        )
-        popupMenu.menu.add(
-            0,
-            205,
-            5,
-            if (activity.hiddenAppManager.isAppHidden(packageName)) {
-                activity.getString(R.string.unhide_app_plain)
-            } else {
-                activity.getString(R.string.hide_app_plain)
-            }
-        )
+        popupMenu.menu.add(0, 204, 4, if (activity.favoriteAppManager.isFavoriteApp(packageName)) activity.getString(R.string.remove_from_favorites_plain) else activity.getString(R.string.add_to_favorites_plain))
+        popupMenu.menu.add(0, 205, 5, if (activity.hiddenAppManager.isAppHidden(packageName)) activity.getString(R.string.unhide_app_plain) else activity.getString(R.string.hide_app_plain))
 
         for (i in 0 until popupMenu.menu.size) {
             val item = popupMenu.menu.getItem(i)
@@ -1096,19 +1081,11 @@ class AppAdapter(
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
-                200 -> {
-                    openWebApp(appInfo)
-                    true
-                }
-                201 -> {
-                    activity.startActivity(Intent(activity, WebAppSettingsActivity::class.java))
-                    true
-                }
+                200 -> { openWebApp(appInfo); true }
+                201 -> { activity.startActivity(Intent(activity, WebAppSettingsActivity::class.java)); true }
                 202 -> {
                     val url = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
-                    if (url.isNotBlank()) {
-                        activity.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-                    }
+                    if (url.isNotBlank()) activity.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
                     true
                 }
                 203 -> {
@@ -1116,20 +1093,12 @@ class AppAdapter(
                     if (webApp != null) {
                         activity.webAppManager.removeWebApp(webApp.id)
                         Toast.makeText(activity, activity.getString(R.string.removed_web_app, appName), Toast.LENGTH_SHORT).show()
-                        activity.sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply {
-                            setPackage(activity.packageName)
-                        })
+                        activity.sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply { setPackage(activity.packageName) })
                     }
                     true
                 }
-                204 -> {
-                    toggleFavoriteApp(packageName, appInfo)
-                    true
-                }
-                205 -> {
-                    toggleHideApp(packageName, appInfo)
-                    true
-                }
+                204 -> { toggleFavoriteApp(packageName, appInfo); true }
+                205 -> { toggleHideApp(packageName, appInfo); true }
                 else -> false
             }
         }
@@ -1163,18 +1132,12 @@ class AppAdapter(
             }
             
             listView?.let { lv ->
-                // Apply immediately
                 try { for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i)) } catch (_: Exception) {}
-                // Apply again after layout to catch all items
                 lv.post { 
                     try { 
                         for (i in 0 until lv.childCount) { 
                             val itemView = lv.getChildAt(i)
-                            if (itemView is TextView) {
-                                itemView.setTextColor(textColor)
-                            } else if (itemView is ViewGroup) {
-                                findTextViewsAndSetColor(itemView, textColor)
-                            }
+                            if (itemView is TextView) itemView.setTextColor(textColor) else if (itemView is ViewGroup) findTextViewsAndSetColor(itemView, textColor)
                         }
                     } catch (_: Exception) {} 
                 }
@@ -1194,7 +1157,8 @@ class AppAdapter(
     }
 
     private fun shareApp(packageName: String, appInfo: ResolveInfo) {
-        val appName = labelCache[packageName] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
+        val cacheKey = "${packageName}|${appInfo.preferredOrder}"
+        val appName = labelCache[cacheKey] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
         ShareManager(activity).shareApk(packageName, appName)
     }
 
@@ -1204,7 +1168,8 @@ class AppAdapter(
     }
 
     private fun toggleFavoriteApp(packageName: String, appInfo: ResolveInfo) {
-        val appName = labelCache[packageName] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
+        val cacheKey = "${packageName}|${appInfo.preferredOrder}"
+        val appName = labelCache[cacheKey] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
         if (activity.favoriteAppManager.isFavoriteApp(packageName)) {
             activity.favoriteAppManager.removeFavoriteApp(packageName)
             Toast.makeText(activity, activity.getString(R.string.removed_from_favorites, appName), Toast.LENGTH_SHORT).show()
@@ -1217,7 +1182,8 @@ class AppAdapter(
 
     private fun toggleHideApp(packageName: String, appInfo: ResolveInfo) {
         try {
-            val appName = labelCache[packageName] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
+            val cacheKey = "${packageName}|${appInfo.preferredOrder}"
+            val appName = labelCache[cacheKey] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
             if (activity.hiddenAppManager.isAppHidden(packageName)) {
                 activity.hiddenAppManager.unhideApp(packageName)
                 Toast.makeText(activity, activity.getString(R.string.unhid_app, appName), Toast.LENGTH_SHORT).show()
@@ -1287,10 +1253,7 @@ class AppAdapter(
             Intent(activity, WebAppActivity::class.java).apply {
                 putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, name)
                 putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
-                // Always create new task for each web app
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or 
-                         Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
-                         Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             }
         )
     }

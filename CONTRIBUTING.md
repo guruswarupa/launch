@@ -150,7 +150,6 @@ For more detailed setup instructions, see [DEVELOPMENT.md](DEVELOPMENT.md).
 ### Example
 
 ```kotlin
-// Good
 private fun loadAppList() {
     val apps = packageManager.getInstalledPackages(0)
         .filter { isLaunchable(it) }
@@ -159,7 +158,6 @@ private fun loadAppList() {
     appAdapter.submitList(apps)
 }
 
-// Avoid
 private fun loadAppList() {
     var apps = packageManager.getInstalledPackages(0)
     var filtered = mutableListOf<PackageInfo>()
@@ -168,7 +166,6 @@ private fun loadAppList() {
             filtered.add(app)
         }
     }
-    // ... more complex code
 }
 ```
 

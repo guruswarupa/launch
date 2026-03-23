@@ -3,20 +3,20 @@ package com.guruswarupa.launch.models
 import java.util.Locale
 
 enum class ExerciseType {
-    REPS, // Count-based (push-ups, squats, etc.)
-    TIME  // Time-based (plank, wall sit, etc.)
+    REPS, 
+    TIME  
 }
 
 data class WorkoutExercise(
     val id: String,
     val name: String,
     val type: ExerciseType = ExerciseType.REPS,
-    var todayCount: Int = 0, // For REPS: count, For TIME: seconds
+    var todayCount: Int = 0, 
     var totalCount: Int = 0,
     var bestDay: Int = 0,
     var lastWorkoutDate: String? = null,
-    var workoutDates: Set<String> = emptySet(), // Track all dates with workouts
-    var dailyCounts: Map<String, Int> = emptyMap() // Track count for each date: date -> count
+    var workoutDates: Set<String> = emptySet(), 
+    var dailyCounts: Map<String, Int> = emptyMap() 
 ) {
     fun toJson(): String {
         val datesStr = workoutDates.joinToString(",")
@@ -33,8 +33,8 @@ data class WorkoutExercise(
             bestDay = todayCount
         }
         lastWorkoutDate = today
-        workoutDates = workoutDates + today // Add today to workout dates
-        // Store daily count
+        workoutDates = workoutDates + today 
+        
         val currentDayCount = dailyCounts[today] ?: 0
         dailyCounts = dailyCounts + (today to (currentDayCount + amount))
     }
@@ -82,13 +82,13 @@ data class WorkoutExercise(
         val today = getCurrentDate()
         val todayCountValue = todayCount
         
-        // Subtract today's count from total
+        
         totalCount -= todayCountValue
         
-        // Remove today from dailyCounts
+        
         dailyCounts = dailyCounts - today
         
-        // If today's count was the best day, recalculate bestDay from remaining daily counts
+        
         if (todayCountValue == bestDay && todayCountValue > 0) {
             bestDay = if (dailyCounts.isNotEmpty()) {
                 dailyCounts.values.maxOrNull() ?: 0
@@ -97,7 +97,7 @@ data class WorkoutExercise(
             }
         }
         
-        // Reset today's count
+        
         todayCount = 0
     }
     
@@ -130,11 +130,11 @@ data class WorkoutExercise(
         fun fromJson(json: String): WorkoutExercise? {
             val parts = json.split("|")
             if (parts.size >= 3) {
-                // Handle old format (without type) - default to REPS
+                
                 val typeStr = parts.getOrNull(2) ?: "REPS"
                 val exerciseType = if (typeStr == "TIME") ExerciseType.TIME else ExerciseType.REPS
                 
-                // Adjust indices based on whether type is present
+                
                 val todayCountIndex = if (typeStr == "TIME" || typeStr == "REPS") 3 else 2
                 val totalCountIndex = todayCountIndex + 1
                 val bestDayIndex = totalCountIndex + 1
@@ -149,7 +149,7 @@ data class WorkoutExercise(
                     emptySet()
                 }
                 
-                // Parse daily counts
+                
                 val dailyCountsStr = parts.getOrNull(dailyCountsIndex)?.takeIf { it.isNotEmpty() } ?: ""
                 val dailyCounts = if (dailyCountsStr.isNotEmpty()) {
                     dailyCountsStr.split(";").associate { entry ->

@@ -25,7 +25,7 @@ class GithubApiService(private val context: Context) {
     private val executor = Executors.newSingleThreadExecutor()
     
     fun fetchContributionData(username: String, token: String, year: Int = LocalDate.now().year): ContributionData {
-        // Fetch user's contribution data using GraphQL API for specific year
+        
         val graphqlQuery = """
             {
               user(login: "$username") {
@@ -60,7 +60,7 @@ class GithubApiService(private val context: Context) {
             connection.setRequestProperty("User-Agent", "Launch-App")
             connection.doOutput = true
             
-            // Write the POST data
+            
             val outputStream = connection.outputStream
             outputStream.write(postData.toString().toByteArray())
             outputStream.flush()
@@ -71,7 +71,7 @@ class GithubApiService(private val context: Context) {
                 val response = connection.inputStream.bufferedReader().readText()
                 val jsonResponse = JSONObject(response)
                 
-                // Parse the response
+                
                 val data = jsonResponse.getJSONObject("data")
                 val user = data.getJSONObject("user")
                 val contributionsCollection = user.getJSONObject("contributionsCollection")
@@ -79,7 +79,7 @@ class GithubApiService(private val context: Context) {
                 
                 val totalContributions = contributionCalendar.getInt("totalContributions")
                 
-                // Parse contribution weeks
+                
                 val weeksArray = contributionCalendar.getJSONArray("weeks")
                 val contributions = mutableMapOf<String, Int>()
                 
@@ -96,7 +96,7 @@ class GithubApiService(private val context: Context) {
                     }
                 }
                 
-                // Calculate streaks
+                
                 val streaks = calculateStreaks(contributions)
                 
                 return ContributionData(
@@ -116,7 +116,7 @@ class GithubApiService(private val context: Context) {
     }
     
     private fun calculateStreaks(contributions: Map<String, Int>): Pair<Int, Int> {
-        // Sort dates chronologically
+        
         val sortedDates = contributions.keys.map { LocalDate.parse(it) }.sorted()
         
         var currentStreak = 0
@@ -137,7 +137,7 @@ class GithubApiService(private val context: Context) {
             }
         }
         
-        // Check if the last sequence was the longest
+        
         if (tempStreak > maxStreak) {
             maxStreak = tempStreak
         }
@@ -145,17 +145,17 @@ class GithubApiService(private val context: Context) {
         return Pair(currentStreak, maxStreak)
     }
     
-    // Helper function to get today's contributions
+    
     fun getTodaysContributions(username: String, token: String, year: Int = LocalDate.now().year): Int {
         val today = LocalDate.now().toString()
         val data = fetchContributionData(username, token, year)
         return data.contributions[today] ?: 0
     }
     
-    // Helper function to get this week's contributions
+    
     fun getThisWeeksContributions(username: String, token: String, year: Int = LocalDate.now().year): Int {
         val data = fetchContributionData(username, token, year)
-        val thisWeekStart = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value - 1L) // Monday
+        val thisWeekStart = LocalDate.now().minusDays(LocalDate.now().dayOfWeek.value - 1L) 
         
         var weeklyTotal = 0
         for (i in 0..6) {
@@ -166,7 +166,7 @@ class GithubApiService(private val context: Context) {
         return weeklyTotal
     }
     
-    // Get available contribution years for a user
+    
     fun getAvailableContributionYears(username: String, token: String): List<Int> {
         val graphqlQuery = """
             {
@@ -193,7 +193,7 @@ class GithubApiService(private val context: Context) {
             connection.setRequestProperty("User-Agent", "Launch-App")
             connection.doOutput = true
             
-            // Write the POST data
+            
             val outputStream = connection.outputStream
             outputStream.write(postData.toString().toByteArray())
             outputStream.flush()
@@ -204,7 +204,7 @@ class GithubApiService(private val context: Context) {
                 val response = connection.inputStream.bufferedReader().readText()
                 val jsonResponse = JSONObject(response)
                 
-                // Parse the response
+                
                 val data = jsonResponse.getJSONObject("data")
                 val user = data.getJSONObject("user")
                 val contributionsCollection = user.getJSONObject("contributionsCollection")

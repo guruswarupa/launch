@@ -1,12 +1,15 @@
 package com.guruswarupa.launch.ui.activities
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,22 +33,33 @@ import com.guruswarupa.launch.utils.setDialogInputView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
-/**
- * Activity for managing app timer limits across all installed apps.
- * Users can view all apps with timers set and modify their daily limits.
- * Loading is optimized using background threads and batch processing to prevent UI lag.
- */
+
+
+
+
+
 class AppTimerManagementActivity : ComponentActivity() {
+    companion object {
+        private val iconCache = ConcurrentHashMap<String, Drawable>()
+    }
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var appTimerManager: AppTimerManager
     private lateinit var dailyUsageManager: DailyUsageManager
     private lateinit var loadingProgressBar: ProgressBar
+    private lateinit var searchBox: EditText
+    private lateinit var summaryText: TextView
+    private lateinit var emptyState: TextView
+    private lateinit var doneButton: Button
+    private lateinit var clearSearchButton: Button
+    private lateinit var adapter: AppTimerAdapter
+    private var allItems: List<AppTimerItem> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -63,15 +77,32 @@ class AppTimerManagementActivity : ComponentActivity() {
 
     private fun setupViews() {
         WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
-        findViewById<TextView>(R.id.toolbar_title).text = "Manage App Timers"
-        findViewById<View>(R.id.back_button).setOnClickListener { finish() }
 
         recyclerView = findViewById(R.id.apps_recycler_view)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        
+        adapter = AppTimerAdapter(mutableListOf())
+        recyclerView.adapter = adapter
+
         loadingProgressBar = findViewById(R.id.loading_progress) ?: ProgressBar(this).apply {
             visibility = View.GONE
         }
+        searchBox = findViewById(R.id.app_search_box)
+        summaryText = findViewById(R.id.summary_text)
+        emptyState = findViewById(R.id.empty_state)
+        doneButton = findViewById(R.id.done_button)
+        clearSearchButton = findViewById(R.id.clear_search_button)
+
+        searchBox.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                applyFilter(s?.toString().orEmpty())
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+
+        findViewById<ImageButton>(R.id.app_timers_back_button).setOnClickListener { finish() }
+        doneButton.setOnClickListener { finish() }
+        clearSearchButton.setOnClickListener { searchBox.text?.clear() }
     }
 
     private fun loadAppsList() {
@@ -79,26 +110,28 @@ class AppTimerManagementActivity : ComponentActivity() {
         recyclerView.alpha = 0f
 
         lifecycleScope.launch {
-            // Fetch apps and usage stats in background to avoid blocking main thread
             val apps = withContext(Dispatchers.IO) {
-                // Fetch usage for all apps in one go to avoid N queries later
                 val usageMap = dailyUsageManager.getTodayUsageMap()
-                
                 val pm = packageManager
-                val installedApps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
+                val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                val launcherApps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.queryIntentActivities(launcherIntent, PackageManager.ResolveInfoFlags.of(0))
                 } else {
                     @Suppress("DEPRECATION")
-                    pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                    pm.queryIntentActivities(launcherIntent, 0)
                 }
 
-                installedApps.filter { (it.flags and ApplicationInfo.FLAG_SYSTEM == 0) && it.packageName != packageName }
+                launcherApps
+                    .filter { it.activityInfo?.packageName != packageName }
+                    .distinctBy { it.activityInfo.packageName }
+                    .filter { (it.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM == 0) }
                     .map { appInfo ->
-                        val pkgName = appInfo.packageName
+                        val pkgName = appInfo.activityInfo.packageName
                         AppTimerItem(
                             name = appInfo.loadLabel(pm).toString(),
                             packageName = pkgName,
-                            icon = appInfo.loadIcon(pm),
                             limitMs = appTimerManager.getDailyLimit(pkgName),
                             usageTimeMs = usageMap[pkgName] ?: 0L,
                             enabled = dailyUsageManager.isTimerEnabled(pkgName)
@@ -106,10 +139,10 @@ class AppTimerManagementActivity : ComponentActivity() {
                     }.sortedBy { it.name.lowercase() }
             }
             
-            // Update UI on main thread
             loadingProgressBar.visibility = View.GONE
             recyclerView.alpha = 1.0f
-            recyclerView.adapter = AppTimerAdapter(apps.toMutableList())
+            allItems = apps
+            applyFilter(searchBox.text?.toString().orEmpty())
         }
     }
 
@@ -171,10 +204,28 @@ class AppTimerManagementActivity : ComponentActivity() {
         }
     }
 
+    private fun applyFilter(query: String) {
+        val trimmedQuery = query.trim()
+        val filteredItems = if (trimmedQuery.isEmpty()) {
+            allItems
+        } else {
+            allItems.filter { it.name.contains(trimmedQuery, ignoreCase = true) }
+        }
+
+        adapter.submitList(filteredItems)
+        summaryText.text = buildSummary(filteredItems)
+        emptyState.visibility = if (filteredItems.isEmpty() && allItems.isNotEmpty()) View.VISIBLE else View.GONE
+        recyclerView.visibility = if (filteredItems.isEmpty() && allItems.isNotEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun buildSummary(items: List<AppTimerItem>): String {
+        val activeTimers = items.count { it.enabled && it.limitMs > 0 }
+        return "${items.size} apps • $activeTimers active timers"
+    }
+
     private data class AppTimerItem(
         val name: String,
         val packageName: String,
-        val icon: Drawable?,
         val limitMs: Long,
         val usageTimeMs: Long,
         val enabled: Boolean
@@ -183,6 +234,10 @@ class AppTimerManagementActivity : ComponentActivity() {
     private inner class AppTimerAdapter(
         private val items: MutableList<AppTimerItem>
     ) : RecyclerView.Adapter<AppTimerAdapter.ViewHolder>() {
+
+        init {
+            setHasStableIds(true)
+        }
 
         inner class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
             val icon: ImageView = v.findViewById(R.id.app_icon)
@@ -195,11 +250,14 @@ class AppTimerManagementActivity : ComponentActivity() {
         override fun onCreateViewHolder(p: ViewGroup, t: Int) =
             ViewHolder(LayoutInflater.from(p.context).inflate(R.layout.item_app_timer, p, false))
 
+        override fun getItemId(position: Int): Long = items[position].packageName.hashCode().toLong()
+
         override fun getItemCount() = items.size
 
         override fun onBindViewHolder(h: ViewHolder, p: Int) {
             val item = items[p]
-            h.icon.setImageDrawable(item.icon)
+            h.itemView.tag = item.packageName
+            bindIcon(h, item.packageName)
             h.name.text = item.name
             h.limit.text = if (item.limitMs > 0) "Limit: ${formatTime(item.limitMs)}" else "No limit"
             h.usage.text = "Used: ${formatTime(item.usageTimeMs)}"
@@ -207,17 +265,69 @@ class AppTimerManagementActivity : ComponentActivity() {
             h.sw.setOnCheckedChangeListener(null)
             h.sw.isChecked = item.enabled
             h.sw.setOnCheckedChangeListener { _, isChecked ->
-                dailyUsageManager.setTimerEnabled(item.packageName, isChecked)
-                items[p] = items[p].copy(enabled = isChecked)
-                notifyItemChanged(p)
+                val currentPosition = h.bindingAdapterPosition
+                if (currentPosition == RecyclerView.NO_POSITION) return@setOnCheckedChangeListener
+                val currentItem = items[currentPosition]
+                dailyUsageManager.setTimerEnabled(currentItem.packageName, isChecked)
+                items[currentPosition] = currentItem.copy(enabled = isChecked)
+                notifyItemChanged(currentPosition)
             }
 
-            h.itemView.setOnClickListener { showEditLimitDialog(items[p], p) }
+            h.itemView.setOnClickListener {
+                val currentPosition = h.bindingAdapterPosition
+                if (currentPosition == RecyclerView.NO_POSITION) return@setOnClickListener
+                showEditLimitDialog(items[currentPosition], currentPosition)
+            }
         }
 
         fun updateItem(item: AppTimerItem, position: Int) {
             items[position] = item
             notifyItemChanged(position)
+            val currentQuery = searchBox.text?.toString().orEmpty()
+            allItems = allItems.map {
+                if (it.packageName == item.packageName) item else it
+            }
+            if (currentQuery.isEmpty()) {
+                summaryText.text = buildSummary(items)
+            } else {
+                applyFilter(currentQuery)
+            }
+        }
+
+        @SuppressLint("NotifyDataSetChanged")
+        fun submitList(newItems: List<AppTimerItem>) {
+            items.clear()
+            items.addAll(newItems)
+            notifyDataSetChanged()
+        }
+
+        private fun bindIcon(holder: ViewHolder, packageName: String) {
+            val cachedIcon = iconCache[packageName]
+            if (cachedIcon != null) {
+                holder.icon.setImageDrawable(cachedIcon)
+                return
+            }
+
+            holder.icon.setImageResource(android.R.drawable.sym_def_app_icon)
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                val icon = try {
+                    packageManager.getApplicationIcon(packageName)
+                } catch (_: Exception) {
+                    null
+                }
+
+                if (icon != null) {
+                    iconCache[packageName] = icon
+                }
+
+                withContext(Dispatchers.Main) {
+                    if (holder.bindingAdapterPosition != RecyclerView.NO_POSITION &&
+                        holder.itemView.tag == packageName) {
+                        holder.icon.setImageDrawable(icon ?: holder.icon.drawable)
+                    }
+                }
+            }
         }
     }
 }

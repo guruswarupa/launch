@@ -35,7 +35,7 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
         workspaces.removeAll { it.id == workspaceId }
         saveAllWorkspaces(workspaces)
         
-        // If deleted workspace was active, clear active workspace
+        
         if (getActiveWorkspaceId() == workspaceId) {
             setActiveWorkspaceId(null)
         }
@@ -43,7 +43,7 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
     
     fun getAllWorkspaces(): List<Workspace> {
         val workspacesJson = sharedPreferences.getString(WORKSPACES_KEY, "[]") ?: "[]"
-        return try {
+        val userWorkspaces = try {
             val jsonArray = JSONArray(workspacesJson)
             (0 until jsonArray.length()).mapNotNull { index ->
                 val obj = jsonArray.getJSONObject(index)
@@ -58,6 +58,9 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
         } catch (_: Exception) {
             emptyList()
         }
+        
+        // Note: Work profile workspace is now handled separately
+        return userWorkspaces
     }
     
     fun getWorkspace(workspaceId: String): Workspace? {
@@ -120,10 +123,25 @@ class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
         return activeWorkspace?.appPackageNames?.contains(packageName) ?: true
     }
     
-    /**
-     * Get all apps that are already assigned to any workspace
-     * @param excludeWorkspaceId If provided, apps from this workspace will be excluded from the result
-     */
+    fun shouldShowApp(packageName: String, workProfileManager: WorkProfileManager): Boolean {
+        val activeWorkspace = getActiveWorkspace()
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+        
+        return when {
+            // If workspace is active, app must be in that workspace
+            activeWorkspace != null && !activeWorkspace.appPackageNames.contains(packageName) -> false
+            // If work profile is enabled, show all apps (both personal and work)
+            // Work profile apps will appear with "(work)" suffix automatically from Android
+            isWorkProfileEnabled -> true
+            // Otherwise show the app
+            else -> true
+        }
+    }
+    
+    
+
+
+
     fun getAppsInWorkspaces(excludeWorkspaceId: String? = null): Set<String> {
         val allWorkspaces = getAllWorkspaces()
         val appsInWorkspaces = mutableSetOf<String>()

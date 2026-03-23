@@ -29,14 +29,14 @@ class CalculatorWidget(private val rootView: View) {
     private val historyRecyclerView: RecyclerView = rootView.findViewById(R.id.history_recycler_view)
     private val historyAdapter: CalculatorHistoryAdapter
     
-    // Mode panels
+    
     private val scientificPanel: GridLayout = rootView.findViewById(R.id.scientific_panel)
     private val converterPanel: LinearLayout = rootView.findViewById(R.id.converter_panel)
     private val unitConverterSection: LinearLayout = rootView.findViewById(R.id.unit_converter_section)
     private val baseConverterSection: LinearLayout = rootView.findViewById(R.id.base_converter_section)
     private val buttonGrid: GridLayout = rootView.findViewById(R.id.button_grid)
     
-    // Converter views
+    
     private val converterCategory: Spinner = rootView.findViewById(R.id.converter_category)
     private val converterInput: EditText = rootView.findViewById(R.id.converter_input)
     private val converterFromUnit: Spinner = rootView.findViewById(R.id.converter_from_unit)
@@ -51,10 +51,10 @@ class CalculatorWidget(private val rootView: View) {
     private var shouldResetDisplay = false
     private var isHistoryVisible = false
     private var currentMode = CalculatorMode.BASIC
-    private var isInRadians = true // true for radians, false for degrees
-    private var selectedInputBase = 10 // Default input base is decimal
+    private var isInRadians = true 
+    private var selectedInputBase = 10 
     
-    // Unit conversion data
+    
     private val unitCategories = listOf("Length", "Area", "Temperature", "Volume", "Mass", "Data", "Speed", "Time")
     private val unitMap = mapOf(
         "Length" to listOf("mm", "cm", "m", "km", "in", "ft", "yd", "mi"),
@@ -105,7 +105,7 @@ class CalculatorWidget(private val rootView: View) {
         scientificPanel.visibility = if (mode == CalculatorMode.SCIENTIFIC) View.VISIBLE else View.GONE
         converterPanel.visibility = if (mode == CalculatorMode.CONVERTER) View.VISIBLE else View.GONE
         
-        // Hide display and button grid in converter mode
+        
         if (mode == CalculatorMode.CONVERTER) {
             display.visibility = View.GONE
             buttonGrid.visibility = View.GONE
@@ -114,14 +114,14 @@ class CalculatorWidget(private val rootView: View) {
             buttonGrid.visibility = View.VISIBLE
         }
         
-        // Update button states
+        
         rootView.findViewById<Button>(R.id.btn_mode_basic).isSelected = mode == CalculatorMode.BASIC
         rootView.findViewById<Button>(R.id.btn_mode_scientific).isSelected = mode == CalculatorMode.SCIENTIFIC
         rootView.findViewById<Button>(R.id.btn_mode_converter).isSelected = mode == CalculatorMode.CONVERTER
     }
 
     private fun setupConverter() {
-        // Setup converter type toggle
+        
         rootView.findViewById<Button>(R.id.btn_converter_unit).setOnClickListener {
             showUnitConverter()
         }
@@ -129,7 +129,7 @@ class CalculatorWidget(private val rootView: View) {
             showBaseConverter()
         }
         
-        // Setup category spinner
+        
         val categoryAdapter = ArrayAdapter(rootView.context, android.R.layout.simple_spinner_item, unitCategories)
         categoryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         converterCategory.adapter = categoryAdapter
@@ -144,10 +144,10 @@ class CalculatorWidget(private val rootView: View) {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
         
-        // Show unit converter by default
+        
         showUnitConverter()
         
-        // Setup unit conversion
+        
         converterInput.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) performUnitConversion()
         }
@@ -166,7 +166,7 @@ class CalculatorWidget(private val rootView: View) {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
         
-        // Setup input base selector
+        
         rootView.findViewById<Button>(R.id.btn_input_decimal).setOnClickListener {
             selectedInputBase = 10
             updateInputBaseButtons()
@@ -188,7 +188,7 @@ class CalculatorWidget(private val rootView: View) {
             performBaseConversion()
         }
         
-        // Setup base converter output buttons
+        
         baseInput.setOnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) performBaseConversion()
         }
@@ -206,7 +206,7 @@ class CalculatorWidget(private val rootView: View) {
             convertToBase(8)
         }
         
-        // Initialize input base button states
+        
         updateInputBaseButtons()
     }
 
@@ -258,7 +258,7 @@ class CalculatorWidget(private val rootView: View) {
         }
         
         try {
-            // Convert from selected input base to decimal first
+            
             val decimalValue = when (selectedInputBase) {
                 2 -> NumberBaseConverter.binaryToDecimal(inputText)
                 8 -> NumberBaseConverter.octalToDecimal(inputText)
@@ -267,7 +267,7 @@ class CalculatorWidget(private val rootView: View) {
                 else -> 0L
             }
             
-            // Then convert from decimal to target base
+            
             val result = when (targetBase) {
                 2 -> NumberBaseConverter.decimalToBinary(decimalValue)
                 8 -> NumberBaseConverter.decimalToOctal(decimalValue)
@@ -289,7 +289,7 @@ class CalculatorWidget(private val rootView: View) {
     }
 
     private fun performBaseConversion() {
-        // Show result in decimal by default when input changes
+        
         convertToBase(10)
     }
     
@@ -308,7 +308,7 @@ class CalculatorWidget(private val rootView: View) {
     }
 
     private fun setupButtons() {
-        // Number buttons
+        
         rootView.findViewById<Button>(R.id.btn_0).setOnClickListener { appendNumber("0") }
         rootView.findViewById<Button>(R.id.btn_1).setOnClickListener { appendNumber("1") }
         rootView.findViewById<Button>(R.id.btn_2).setOnClickListener { appendNumber("2") }
@@ -320,22 +320,22 @@ class CalculatorWidget(private val rootView: View) {
         rootView.findViewById<Button>(R.id.btn_8).setOnClickListener { appendNumber("8") }
         rootView.findViewById<Button>(R.id.btn_9).setOnClickListener { appendNumber("9") }
         
-        // Operation buttons
+        
         rootView.findViewById<Button>(R.id.btn_add).setOnClickListener { setOperation("+") }
         rootView.findViewById<Button>(R.id.btn_subtract).setOnClickListener { setOperation("−") }
         rootView.findViewById<Button>(R.id.btn_multiply).setOnClickListener { setOperation("×") }
         rootView.findViewById<Button>(R.id.btn_divide).setOnClickListener { setOperation("÷") }
         
-        // Special buttons
+        
         rootView.findViewById<Button>(R.id.btn_equals).setOnClickListener { calculate() }
         rootView.findViewById<Button>(R.id.btn_decimal).setOnClickListener { appendDecimal() }
         rootView.findViewById<Button>(R.id.btn_clear).setOnClickListener { clear() }
         rootView.findViewById<Button>(R.id.btn_backspace).setOnClickListener { backspace() }
         
-        // History clear button
+        
         rootView.findViewById<Button>(R.id.btn_clear_history).setOnClickListener { clearHistory() }
         
-        // Scientific function buttons
+        
         rootView.findViewById<Button>(R.id.btn_sin).setOnClickListener { applyScientificFunction("sin") }
         rootView.findViewById<Button>(R.id.btn_cos).setOnClickListener { applyScientificFunction("cos") }
         rootView.findViewById<Button>(R.id.btn_tan).setOnClickListener { applyScientificFunction("tan") }

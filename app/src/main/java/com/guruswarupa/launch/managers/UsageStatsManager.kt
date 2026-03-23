@@ -13,14 +13,14 @@ class AppUsageStatsManager(private val context: Context) {
 
     private val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
-    // Cache for expensive operations
-    private var dailyUsageCache: Pair<String, Long>? = null // date to total usage
-    private var weeklyDataCache: Pair<Long, List<Pair<String, Long>>>? = null // timestamp to data
-    private val usageCache = mutableMapOf<String, Pair<Long, Long>>() // packageName to (usage, timestamp)
+    
+    private var dailyUsageCache: Pair<String, Long>? = null 
+    private var weeklyDataCache: Pair<Long, List<Pair<String, Long>>>? = null 
+    private val usageCache = mutableMapOf<String, Pair<Long, Long>>() 
     
     companion object {
         const val USAGE_STATS_REQUEST = 600
-        private const val CACHE_DURATION = 30000L // 30 seconds
+        private const val CACHE_DURATION = 30000L 
     }
     
     fun invalidateCache() {
@@ -29,9 +29,9 @@ class AppUsageStatsManager(private val context: Context) {
         weeklyDataCache = null
     }
     
-    /**
-     * Cleanup method to clear all caches and prevent memory leaks
-     */
+    
+
+
     fun cleanup() {
         invalidateCache()
     }
@@ -59,10 +59,10 @@ class AppUsageStatsManager(private val context: Context) {
         return Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
     }
 
-    /**
-     * Calculates foreground usage map using UsageEvents for higher accuracy.
-     * This avoids counting background services as foreground time.
-     */
+    
+
+
+
     private fun getForegroundUsageMap(startTime: Long, endTime: Long): Map<String, Long> {
         val usageMap = mutableMapOf<String, Long>()
         if (!hasUsageStatsPermission()) return usageMap
@@ -92,7 +92,7 @@ class AppUsageStatsManager(private val context: Context) {
                 }
             }
             
-            // Handle app currently in foreground if we're querying up to "now"
+            
             val now = System.currentTimeMillis()
             if (endTime >= now - 10000) {
                 for ((pkg, start) in appStartTimes) {
@@ -103,7 +103,7 @@ class AppUsageStatsManager(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            // Fallback to aggregate stats if events query fails
+            
             val statsMap = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
             return statsMap.mapValues { it.value.totalTimeInForeground }
         }
@@ -111,10 +111,10 @@ class AppUsageStatsManager(private val context: Context) {
         return usageMap
     }
 
-    /**
-     * Returns usage stats for all apps for today in a single call.
-     * This is much faster for batch processing.
-     */
+    
+
+
+
     fun getUsageMapForToday(): Map<String, Long> {
         if (!hasUsageStatsPermission()) return emptyMap()
         
@@ -134,9 +134,9 @@ class AppUsageStatsManager(private val context: Context) {
         }
     }
 
-    /**
-     * Filters out system apps and the launcher itself to show only user-relevant apps.
-     */
+    
+
+
     private fun isReportableApp(packageName: String): Boolean {
         if (packageName == "com.guruswarupa.launch" || 
             packageName == "android" || 
@@ -144,7 +144,7 @@ class AppUsageStatsManager(private val context: Context) {
             return false
         }
         
-        // Only count apps that have a launcher intent (actual apps the user interacts with)
+        
         return try {
             context.packageManager.getLaunchIntentForPackage(packageName) != null
         } catch (_: Exception) {
@@ -155,7 +155,7 @@ class AppUsageStatsManager(private val context: Context) {
     fun getAppUsageTime(packageName: String): Long {
         if (!hasUsageStatsPermission()) return 0L
 
-        // Check cache first
+        
         val currentTime = System.currentTimeMillis()
         usageCache[packageName]?.let { (cachedUsage, timestamp) ->
             if (currentTime - timestamp < CACHE_DURATION) {
@@ -173,13 +173,13 @@ class AppUsageStatsManager(private val context: Context) {
 
         val usageMap = getForegroundUsageMap(startTime, endTime)
         
-        // Populate cache for all apps to avoid redundant full-day scans for subsequent calls
+        
         usageMap.forEach { (pkg, usage) ->
             usageCache[pkg] = Pair(usage, currentTime)
         }
         
         val usage = usageMap[packageName] ?: 0L
-        // Ensure the requested package is in cache even if it has 0 usage in map
+        
         if (!usageMap.containsKey(packageName)) {
             usageCache[packageName] = Pair(0L, currentTime)
         }

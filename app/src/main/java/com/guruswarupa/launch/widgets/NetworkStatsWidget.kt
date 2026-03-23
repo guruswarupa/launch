@@ -28,12 +28,12 @@ class NetworkStatsWidget(
     private val networkStatsManager = NetworkStatsManager()
     private val handler = Handler(Looper.getMainLooper())
 
-    // Auto-update runnable for data usage
+    
     private val updateRunnable = object : Runnable {
         override fun run() {
             if (isInitialized) {
                 updateDataUsage()
-                handler.postDelayed(this, 10000) // Update every 10 seconds
+                handler.postDelayed(this, 10000) 
             }
         }
     }
@@ -65,7 +65,7 @@ class NetworkStatsWidget(
         updateDataUsage()
         isInitialized = true
         
-        // Start auto-updates
+        
         handler.post(updateRunnable)
     }
     
@@ -80,7 +80,7 @@ class NetworkStatsWidget(
         runButton.isEnabled = false
         runButton.setText(R.string.status_running)
         statusText.setText(R.string.status_initializing)
-        updateDataUsage() // Update stats before test
+        updateDataUsage() 
         
         networkStatsManager.runSpeedTest(
             callback = { result ->

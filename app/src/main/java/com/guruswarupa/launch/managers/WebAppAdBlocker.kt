@@ -26,7 +26,13 @@ object WebAppAdBlocker {
         "media.net",
         "adroll.com",
         "adform.net",
-        "yieldmo.com"
+        "yieldmo.com",
+        "taboola.com",
+        "outbrain.com",
+        "popads.net",
+        "propellerads.com",
+        "adcash.com",
+        "clickadu.com"
     )
 
     private val blockedHostSegments = setOf(
@@ -47,7 +53,10 @@ object WebAppAdBlocker {
         "moatads",
         "banner",
         "advertising",
-        "publisher"
+        "publisher",
+        "telemetry",
+        "analytics",
+        "tracking"
     )
 
     fun shouldBlock(uri: Uri?): Boolean {
@@ -57,7 +66,12 @@ object WebAppAdBlocker {
         if (blockedHostSuffixes.any { host.endsWith(it) }) return true
 
         val segments = host.split('.')
-        return segments.any { it in blockedHostSegments }
+        if (segments.any { it in blockedHostSegments }) return true
+        
+        val path = uri?.path?.lowercase(Locale.ROOT).orEmpty()
+        if (path.contains("/ads/") || path.contains("/adserver/") || path.contains("/adstream/")) return true
+
+        return false
     }
 
     fun createEmptyResponse(): WebResourceResponse {

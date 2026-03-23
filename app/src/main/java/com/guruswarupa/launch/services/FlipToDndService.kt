@@ -86,8 +86,8 @@ class FlipToDndService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // CRITICAL: Call startForeground IMMEDIATELY and UNCONDITIONALLY as the first operation
-        // This MUST happen within 5 seconds to avoid ForegroundServiceDidNotStartInTimeException
+        
+        
         try {
             startForegroundServiceStatus()
         } catch (e: Exception) {
@@ -106,12 +106,12 @@ class FlipToDndService : Service(), SensorEventListener {
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
                 val z = event.values[2]
-                // z around -9.8 m/s^2 means face down
+                
                 isFaceDown = z < -8.0
                 updateDndState()
             }
             Sensor.TYPE_PROXIMITY -> {
-                // event.values[0] < proximitySensor.getMaximumRange() means something is close
+                
                 isProximityNear = event.values[0] < (proximitySensor?.maximumRange ?: 5f)
                 updateDndState()
             }
@@ -121,7 +121,7 @@ class FlipToDndService : Service(), SensorEventListener {
     private fun updateDndState() {
         if (!notificationManager.isNotificationPolicyAccessGranted) return
 
-        // Skip DND toggle if Focus Mode is already active to avoid conflicts
+        
         val isFocusModeActive = sharedPreferences.getBoolean("focus_mode_enabled", false)
         if (isFocusModeActive) return
 
@@ -143,7 +143,7 @@ class FlipToDndService : Service(), SensorEventListener {
         try {
             sensorManager.unregisterListener(this)
             
-            // Only reset DND if Focus Mode isn't keeping it active
+            
             val isFocusModeActive = sharedPreferences.getBoolean("focus_mode_enabled", false)
             if (!isFocusModeActive && notificationManager.isNotificationPolicyAccessGranted) {
                 notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)

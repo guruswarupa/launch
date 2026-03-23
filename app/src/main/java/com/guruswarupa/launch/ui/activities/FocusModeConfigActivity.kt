@@ -38,7 +38,7 @@ class FocusModeConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -48,7 +48,7 @@ class FocusModeConfigActivity : ComponentActivity() {
 
         focusModeManager = FocusModeManager(this, getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
 
-        // Initialize views
+        
         recyclerView = findViewById(R.id.focus_mode_app_list)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
         themeOverlay = findViewById(R.id.theme_overlay)
@@ -62,7 +62,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.itemAnimator = null
 
-        // Apply theme and wallpaper
+        
         applyThemeAndWallpaper()
 
         loadApps()
@@ -71,12 +71,12 @@ class FocusModeConfigActivity : ComponentActivity() {
         recyclerView.adapter = adapter
 
         saveButton.setOnClickListener {
-            // Bulk save the selected apps
+            
             focusModeManager.updateAllowedApps(adapter.getSelectedApps())
             
             Toast.makeText(this, "Focus mode configuration saved", Toast.LENGTH_SHORT).show()
             
-            // Notify other components that settings updated
+            
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
             intent.setPackage(packageName)
             sendBroadcast(intent)
@@ -90,7 +90,7 @@ class FocusModeConfigActivity : ComponentActivity() {
     }
 
     private fun applyThemeAndWallpaper() {
-        // Set system wallpaper
+        
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
         applyBackgroundTranslucency()

@@ -1,8 +1,14 @@
 package com.guruswarupa.launch.managers
 
+import android.content.Context
+import android.content.Intent
+import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.os.Build
 import android.os.Handler
+import android.os.Process
+import android.os.UserManager
 import android.util.Log
 import android.view.View
 import android.widget.EditText
@@ -18,10 +24,6 @@ import java.util.concurrent.RejectedExecutionException
 import com.guruswarupa.launch.core.CacheManager
 import com.guruswarupa.launch.models.AppMetadata
 
-/**
- * Handles loading and caching of app lists.
- * Extracted from MainActivity to reduce complexity.
- */
 class AppListLoader(
     private val activity: MainActivity,
     private val packageManager: PackageManager,
@@ -38,15 +40,15 @@ class AppListLoader(
 ) {
     private var cachedUnsortedList: List<ResolveInfo>? = null
     private var lastCacheTime = 0L
-    private val cacheDuration = 300000L // Cache for 5 minutes
+    private val cacheDuration = 300000L 
+    private val currentUserSerial by lazy {
+        val userManager = activity.getSystemService(Context.USER_SERVICE) as UserManager
+        userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
+    }
     
-    // Callbacks: (appList, fullAppList, isFinal)
     var onAppListUpdated: ((List<ResolveInfo>, List<ResolveInfo>, Boolean) -> Unit)? = null
     var onAdapterNeedsUpdate: ((Boolean) -> Unit)? = null
     
-    /**
-     * Safely execute a task on the background executor.
-     */
     private fun safeExecute(task: Runnable): Boolean {
         if (activity.isFinishing || activity.isDestroyed) {
             return false
@@ -64,10 +66,6 @@ class AppListLoader(
         }
     }
 
-    /**
-     * Loads apps using the state from MainActivity.
-     * This is the preferred method to call from outside.
-     */
     fun loadApps(forceRefresh: Boolean = false) {
         if (activity.isFinishing || activity.isDestroyed) return
         
@@ -76,65 +74,49 @@ class AppListLoader(
     }
     
     fun loadApps(forceRefresh: Boolean = false, fullAppList: MutableList<ResolveInfo>, appList: MutableList<ResolveInfo>, adapter: AppAdapter?) {
-        // appDockManager is always initialized as it's a constructor parameter
-        
         val viewPreference = sharedPreferences.getString("view_preference", "list")
         val isGridMode = viewPreference == "grid"
         
-        // STEP 0: If forceRefresh, skip ALL cache checks and go straight to loading
         val currentTime = System.currentTimeMillis()
         if (forceRefresh) {
-            // Clear all caches immediately
             cachedUnsortedList = null
             cacheManager?.clearCache()
-            // Skip to background loading - no cache checks
         } else if (cacheManager != null && cacheManager.isCacheValid()) {
-            // STEP 0: Check persistent cache (only if not forceRefresh)
             val cachedAppsRaw = cacheManager.loadAppListFromCache()
             if (cachedAppsRaw.isNotEmpty()) {
-                // Deduplicate cached list
-                val cachedApps = cachedAppsRaw.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
-                
-                // Load metadata cache (fast deserialization)
+                val cachedApps = cachedAppsRaw.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}|${it.preferredOrder}" }
                 cacheManager.loadAppMetadataFromCache()
                 
-                // Show cached list immediately without blocking version check
                 try {
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     
-                    val cachedAppsWithWebApps = appendWebApps(cachedApps)
+                    val cachedAppsWithWebApps = appendWebApps(cachedApps).distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}|${it.preferredOrder}" }
                     val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                     
                     if (cachedFinalList.isNotEmpty() && adapter != null) {
                         val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
-                        
                         handler.post {
-                            // Pass false as isFinal because version check is pending
                             onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                         }
                         
-                        // Verify version in background (non-blocking)
                         safeExecute {
                             if (!cacheManager.isVersionCurrent()) {
                                 handler.post {
                                     if (!activity.isFinishing && !activity.isDestroyed) {
-                                        loadApps(forceRefresh = false, fullAppList, appList, adapter) // Refresh without clearing cache
+                                        loadApps(forceRefresh = false, fullAppList, appList, adapter) 
                                     }
                                 }
                             }
                         }
                         
                         updateSearchVisibility()
-                        return // Exit early - cached list shown, version check happens in background
+                        return 
                     }
-                } catch (_: Exception) {
-                    // Continue to load fresh apps
-                }
+                } catch (_: Exception) {}
             }
         }
         
-        // STEP 0.5: Show in-memory cached app list if available (fallback)
         if (!forceRefresh && cachedUnsortedList != null && 
             (currentTime - lastCacheTime) < cacheDuration && 
             fullAppList.isNotEmpty()) {
@@ -142,29 +124,22 @@ class AppListLoader(
                 val focusMode = appDockManager.getCurrentMode()
                 val workspaceMode = appDockManager.isWorkspaceModeActive()
                 
-                val cachedAppsWithWebApps = appendWebApps(cachedUnsortedList!!)
+                val cachedAppsWithWebApps = appendWebApps(cachedUnsortedList!!).distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}|${it.preferredOrder}" }
                 val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                 
                 if (cachedFinalList.isNotEmpty() && adapter != null) {
                     val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
-                    
                     handler.post {
-                        // Pass false as isFinal
                         onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                     }
                 }
-            } catch (_: Exception) {
-                // Continue to load fresh apps
-            }
+            } catch (_: Exception) {}
         }
         
-        // CRITICAL: Show UI immediately even if empty to prevent freeze
         handler.post {
-            if (activity.isFinishing || activity.isDestroyed) {
-                return@post
-            }
+            if (activity.isFinishing || activity.isDestroyed) return@post
             recyclerView.visibility = View.VISIBLE
-            // Initialize adapter if needed
+            
             if (adapter == null) {
                 recyclerView.layoutManager = if (isGridMode) {
                     GridLayoutManager(activity, activity.getPreferredGridColumns())
@@ -177,53 +152,51 @@ class AppListLoader(
         
         safeExecute {
             try {
-                // Use cached list if available and not forcing refresh
                 val unsortedList = if (!forceRefresh && 
                     cachedUnsortedList != null && 
                     (currentTime - lastCacheTime) < cacheDuration) {
                     cachedUnsortedList!!
                 } else {
-                    // Optimization #1: Use getInstalledApplications instead of queryIntentActivities
-                    // This is significantly faster on most Android versions
-                    val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
                     val list = mutableListOf<ResolveInfo>()
                     
-                    for (app in installedApps) {
-                        try {
-                            // Only include enabled apps with launch intents
-                            if (!app.enabled) continue
+                    val launcherApps = activity.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
+                    val userManager = activity.getSystemService(Context.USER_SERVICE) as UserManager
+                    
+                    // Use launcherApps.profiles for standard launcher behavior
+                    for (user in launcherApps.profiles) {
+                        val serial = userManager.getSerialNumberForUser(user).toInt()
+                        val apps = launcherApps.getActivityList(null, user)
+                        
+                        Log.d("AppListLoader", "Loading apps for user profile - Serial: $serial, App count: ${apps.size}")
+                        
+                        for (app in apps) {
+                            val packageName = app.componentName.packageName
+                            if (packageName == "com.guruswarupa.launch") continue
                             
-                            val launchIntent = packageManager.getLaunchIntentForPackage(app.packageName)
-                            if (launchIntent != null) {
-                                val resolveInfo = ResolveInfo()
-                                // Create a dummy ActivityInfo since we only need package and class name
-                                val activityInfo = android.content.pm.ActivityInfo()
-                                activityInfo.packageName = app.packageName
-                                activityInfo.name = launchIntent.component?.className ?: ""
-                                activityInfo.applicationInfo = app
-                                resolveInfo.activityInfo = activityInfo
-                                list.add(resolveInfo)
-                            }
-                        } catch (_: Exception) {
-                            // Skip apps that fail to resolve launch intent
+                            val resolveInfo = ResolveInfo()
+                            val activityInfo = android.content.pm.ActivityInfo()
+                            activityInfo.packageName = packageName
+                            activityInfo.name = app.componentName.className
+                            activityInfo.applicationInfo = app.applicationInfo
+                            
+                            resolveInfo.activityInfo = activityInfo
+                            // Store user serial in preferredOrder to distinguish work profile apps
+                            resolveInfo.preferredOrder = serial
+                            list.add(resolveInfo)
                         }
                     }
                     
                     cachedUnsortedList = list
                     lastCacheTime = currentTime
                     
-                    // Save to persistent cache in background (don't block)
                     cacheManager?.let { cm ->
                         safeExecute {
                             try {
                                 cm.saveAppListToCache(list)
-                                // Pre-load metadata in background
                                 cm.preloadAppMetadata(list)
-                            } catch (_: Exception) {
-                            }
+                            } catch (_: Exception) {}
                         }
                     }
-                    
                     list
                 }
                 
@@ -237,25 +210,14 @@ class AppListLoader(
                         recyclerView.visibility = View.VISIBLE
                     }
                 } else {
-                    val focusMode = appListManager.getFocusMode()
-                    val workspaceMode = appListManager.getWorkspaceMode()
-                    
-                    // STEP 1: Fast single-pass filtering without expensive operations
+                    val focusMode = appDockManager.getCurrentMode()
+                    val workspaceMode = appDockManager.isWorkspaceModeActive()
                     val finalAppList = appListManager.filterAndPrepareApps(fullList, focusMode, workspaceMode)
-                    
-                    // STEP 2: Sort using cached metadata for instant sorted display
                     val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
                     
-                    // Show sorted list immediately (using cache for sorting)
                     handler.post {
-                        if (activity.isFinishing || activity.isDestroyed) {
-                            return@post
-                        }
-                        
-                        // Show list immediately with cached sorting to prevent freeze
+                        if (activity.isFinishing || activity.isDestroyed) return@post
                         onAppListUpdated?.invoke(initiallySorted, fullList, false)
-                        
-                        // Optimize: Use existing adapter instead of creating new one
                         if (adapter == null) {
                             onAdapterNeedsUpdate?.invoke(isGridMode)
                         } else if (recyclerView.adapter != adapter) {
@@ -263,27 +225,18 @@ class AppListLoader(
                         }
                     }
                     
-                    // STEP 3: Refine sorting in background with fresh labels (after UI is shown)
-                    // Reduced delay from 200ms to 100ms to improve responsiveness
                     handler.postDelayed({
                         safeExecute {
                             try {
-                                // Use cached metadata, load missing ones on-demand
-                                val labelCache = mutableMapOf<String, String>()
                                 val metadataCacheInner = cacheManager?.getMetadataCache() ?: emptyMap()
-                                
-                                // Load all labels (use cache when available)
                                 finalAppList.forEach { app ->
                                     val packageName = app.activityInfo.packageName
-                                    val cached = metadataCacheInner[packageName]
-                                    if (cached != null) {
-                                        labelCache[packageName] = cached.label.lowercase()
-                                    } else {
-                                        // Load on-demand and cache
+                                    val cacheKey = "${packageName}|${app.preferredOrder}"
+                                    val cached = metadataCacheInner[cacheKey]
+                                    if (cached == null) {
                                         try {
-                                            val label = app.loadLabel(packageManager).toString().lowercase()
-                                            labelCache[packageName] = label
-                                            cacheManager?.updateMetadataCache(packageName,
+                                            val label = app.loadLabel(packageManager).toString()
+                                            cacheManager?.updateMetadataCache(cacheKey,
                                                 AppMetadata(
                                                     packageName = packageName,
                                                     activityName = app.activityInfo.name,
@@ -291,44 +244,27 @@ class AppListLoader(
                                                     lastUpdated = System.currentTimeMillis()
                                                 )
                                             )
-                                        } catch (_: Exception) {
-                                            labelCache[packageName] = packageName.lowercase()
-                                        }
+                                        } catch (_: Exception) {}
                                     }
                                 }
                                 
-                                // Final sort with all labels loaded
                                 val sortedApps = appListManager.sortAppsAlphabetically(finalAppList)
-                                
-                                // Save updated metadata cache
                                 cacheManager?.saveAppMetadataToCache(cacheManager.getMetadataCache())
                                 
-                                // Update UI with refined sort (only if different from initial)
                                 handler.post {
-                                    if (activity.isFinishing || activity.isDestroyed) {
-                                        return@post
-                                    }
-                                    
-                                    // Mark as final update
-                                    onAppListUpdated?.invoke(sortedApps, unsortedList, true)
+                                    if (activity.isFinishing || activity.isDestroyed) return@post
+                                    onAppListUpdated?.invoke(sortedApps, fullList, true)
                                 }
-                            } catch (_: Exception) {
-                            }
+                            } catch (_: Exception) {}
                         }
                     }, 100)
                 }
             } catch (e: Exception) {
                 handler.post {
-                    if (activity.isFinishing || activity.isDestroyed) {
-                        return@post
-                    }
-                    
-                    // If app list is empty, try to reload after a delay
+                    if (activity.isFinishing || activity.isDestroyed) return@post
                     if (appList.isEmpty() && !forceRefresh) {
-                        Log.w("AppListLoader", "App list is empty after error, retrying loadApps...")
                         handler.postDelayed({ loadApps(forceRefresh = true, fullAppList, appList, adapter) }, 500)
                     }
-                    
                     if (appList.isEmpty()) {
                         Toast.makeText(activity, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
@@ -336,7 +272,6 @@ class AppListLoader(
                 }
             }
         }
-        
         updateSearchVisibility()
     }
     
@@ -358,21 +293,38 @@ class AppListLoader(
         val webApps = webAppManager.getWebApps()
         if (webApps.isEmpty()) return installedApps
 
-        val fullList = ArrayList(installedApps)
+        val fullList = ArrayList<ResolveInfo>(installedApps.size + webApps.size)
+        val seenKeys = HashSet<String>(installedApps.size + webApps.size)
+        installedApps.forEach { app ->
+            val key = buildAppKey(app)
+            if (seenKeys.add(key)) {
+                fullList.add(app)
+            }
+        }
         val now = System.currentTimeMillis()
         webApps.forEach { entry ->
             val resolveInfo = webAppManager.createResolveInfo(entry)
-            cacheManager?.updateMetadataCache(
-                resolveInfo.activityInfo.packageName,
-                AppMetadata(
-                    packageName = resolveInfo.activityInfo.packageName,
-                    activityName = resolveInfo.activityInfo.name,
-                    label = entry.name,
-                    lastUpdated = now
+            resolveInfo.preferredOrder = currentUserSerial
+            
+            val uniqueKey = buildAppKey(resolveInfo)
+            
+            if (seenKeys.add(uniqueKey)) {
+                cacheManager?.updateMetadataCache(
+                    uniqueKey,
+                    AppMetadata(
+                        packageName = resolveInfo.activityInfo.packageName,
+                        activityName = resolveInfo.activityInfo.name,
+                        label = entry.name,
+                        lastUpdated = now
+                    )
                 )
-            )
-            fullList.add(resolveInfo)
+                fullList.add(resolveInfo)
+            }
         }
         return fullList
+    }
+
+    private fun buildAppKey(resolveInfo: ResolveInfo): String {
+        return "${resolveInfo.activityInfo.packageName}|${resolveInfo.activityInfo.name}|${resolveInfo.preferredOrder}"
     }
 }

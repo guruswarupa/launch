@@ -7,9 +7,9 @@ import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.handlers.ActivityInitializer
 import com.guruswarupa.launch.handlers.NavigationManager
 
-/**
- * Sets up pager-based screen navigation while preserving the existing initialization flow.
- */
+
+
+
 class DrawerManager(
     private val activity: FragmentActivity,
     private val screenPagerManager: ScreenPagerManager,
@@ -22,9 +22,9 @@ class DrawerManager(
     lateinit var navigationManager: NavigationManager
         private set
 
-    /**
-     * Sets up the DrawerLayout, listeners, and back-pressed callback.
-     */
+    
+
+
     fun setup() {
         gestureHandler.setupGestureExclusion()
         activityInitializer.setupDrawerLayout()
@@ -37,13 +37,13 @@ class DrawerManager(
             }
         }
 
-        // Setup back pressed callback
+        
         activity.onBackPressedDispatcher.addCallback(activity, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (::navigationManager.isInitialized) {
                     navigationManager.handleBackPressed {
-                        // If navigation manager says we can proceed with standard back
-                        // but it's the home screen, we usually don't want to do anything
+                        
+                        
                     }
                 }
             }

@@ -13,48 +13,40 @@ import com.guruswarupa.launch.R
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/**
- * Manages generation and caching of widget preview images
- */
 class WidgetPreviewManager(private val context: Context) {
     
     companion object {
         private const val PREVIEW_WIDTH_DP = 200
         private const val PREVIEW_HEIGHT_DP = 200
-        private const val CACHE_SIZE = 20 // Number of preview images to cache
+        private const val CACHE_SIZE = 20 
     }
     
     private val previewCache = object : LruCache<String, Bitmap>(CACHE_SIZE) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
-            return bitmap.byteCount / 1024 // Size in KB
+            return bitmap.byteCount / 1024 
         }
     }
     
     private val backgroundExecutor: ExecutorService = Executors.newFixedThreadPool(2)
-    
-    /**
-     * Generate preview for a widget
-     */
+
     fun generatePreview(
         widgetId: String,
         widgetName: String,
         callback: (Bitmap?) -> Unit
     ) {
-        // Check cache first
         val cachedPreview = previewCache.get(widgetId)
         if (cachedPreview != null) {
             callback(cachedPreview)
             return
         }
         
-        // Generate preview in background
         backgroundExecutor.execute {
             try {
                 val preview = createWidgetPreview(widgetId, widgetName)
                 if (preview != null) {
                     previewCache.put(widgetId, preview)
                 }
-                // Post result to main thread
+                
                 (context as? android.app.Activity)?.runOnUiThread {
                     callback(preview)
                 }
@@ -66,12 +58,8 @@ class WidgetPreviewManager(private val context: Context) {
             }
         }
     }
-    
-    /**
-     * Create preview bitmap for a specific widget
-     */
+
     private fun createWidgetPreview(widgetId: String, widgetName: String): Bitmap? {
-        // Handle system widgets first
         if (widgetId.startsWith("system_widget_") || widgetId.startsWith("provider_")) {
             return getSystemWidgetPreview(widgetId)
         }
@@ -94,6 +82,10 @@ class WidgetPreviewManager(private val context: Context) {
             "device_info_widget_container" -> createDeviceInfoPreview()
             "year_progress_widget_container" -> createYearProgressPreview()
             "github_contributions_widget_container" -> createGithubContributionsPreview()
+            "media_controller_widget_container" -> createMediaControllerPreview()
+            "dns_widget_container" -> createDnsPreview()
+            "note_widget_container" -> createNotePreview()
+            "battery_health_widget_container" -> createBatteryHealthPreview()
             else -> createDefaultPreview(widgetName)
         }
     }
@@ -105,7 +97,6 @@ class WidgetPreviewManager(private val context: Context) {
             val appWidgetId = widgetId.removePrefix("system_widget_").toIntOrNull() ?: return null
             appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider
         } else {
-            // provider_pkg_cls format
             val parts = widgetId.split("_")
             if (parts.size >= 3) {
                 ComponentName(parts[1], parts[2])
@@ -114,7 +105,6 @@ class WidgetPreviewManager(private val context: Context) {
 
         val info = appWidgetManager.installedProviders.find { it.provider == provider } ?: return null
         
-        // Try to load the preview image provided by the app
         val drawable = info.loadPreviewImage(context, 0) ?: info.loadIcon(context, 0)
         
         return if (drawable is BitmapDrawable) {
@@ -151,6 +141,10 @@ class WidgetPreviewManager(private val context: Context) {
     private fun createDeviceInfoPreview(): Bitmap? = inflateAndCapture(R.layout.widget_device_info_preview)
     private fun createYearProgressPreview(): Bitmap? = inflateAndCapture(R.layout.widget_year_progress)
     private fun createGithubContributionsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_github_contributions)
+    private fun createMediaControllerPreview(): Bitmap? = inflateAndCapture(R.layout.widget_media_controller_preview)
+    private fun createDnsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_dns_preview)
+    private fun createNotePreview(): Bitmap? = inflateAndCapture(R.layout.widget_note_preview)
+    private fun createBatteryHealthPreview(): Bitmap? = inflateAndCapture(R.layout.widget_battery_health_preview)
     
     private fun inflateAndCapture(layoutResId: Int): Bitmap? {
         return try {
@@ -169,7 +163,6 @@ class WidgetPreviewManager(private val context: Context) {
             val inflater = LayoutInflater.from(context)
             val previewView = inflater.inflate(R.layout.widget_default_preview, null)
             
-            // Set widget name
             val nameView = previewView.findViewById<android.widget.TextView>(R.id.preview_widget_name)
             nameView.text = widgetName
             
@@ -203,16 +196,10 @@ class WidgetPreviewManager(private val context: Context) {
         return (dp * context.resources.displayMetrics.density).toInt()
     }
     
-    /**
-     * Clear the preview cache
-     */
     fun clearCache() {
         previewCache.evictAll()
     }
     
-    /**
-     * Shutdown background executor
-     */
     fun cleanup() {
         backgroundExecutor.shutdown()
     }

@@ -3,19 +3,19 @@ package com.guruswarupa.launch.handlers
 import android.os.SystemClock
 import android.util.Log
 
-/**
- * Coordinates gestures to prevent mutual interference between Shake and Back Tap.
- * Since both services run in the same process, we can use a singleton to track triggers.
- */
+
+
+
+
 object GestureCoordinator {
     private const val TAG = "GestureCoordinator"
     private var lastTriggerTime = 0L
-    private const val MUTUAL_EXCLUSION_WINDOW = 1200L // ms
+    private const val MUTUAL_EXCLUSION_WINDOW = 1200L 
 
-    /**
-     * Call this before executing a gesture action.
-     * Returns true if the action should proceed, false if it should be ignored.
-     */
+    
+
+
+
     @Synchronized
     fun requestTrigger(): Boolean {
         val now = SystemClock.elapsedRealtime()
@@ -26,10 +26,10 @@ object GestureCoordinator {
         return true
     }
 
-    /**
-     * Returns true if any gesture action was recently triggered.
-     * Detectors can use this to skip processing during the cooldown period.
-     */
+    
+
+
+
     fun isInCooldown(): Boolean {
         return SystemClock.elapsedRealtime() - lastTriggerTime < MUTUAL_EXCLUSION_WINDOW
     }

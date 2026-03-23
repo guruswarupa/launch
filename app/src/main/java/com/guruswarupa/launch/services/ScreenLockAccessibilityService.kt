@@ -59,7 +59,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     private val focusModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.FOCUS_MODE_CHANGED") {
-                // Focus mode state changed, no action needed
+                
             }
         }
     }
@@ -87,7 +87,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             } catch (_: Exception) {}
         }
 
-        // Register receiver for focus mode changes
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(focusModeReceiver, IntentFilter("com.guruswarupa.launch.FOCUS_MODE_CHANGED"), RECEIVER_EXPORTED)
         } else {
@@ -160,7 +160,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                         val dx = abs(event.rawX - initialTouchX)
                         val dy = abs(event.rawY - initialTouchY)
                         
-                        // Only trigger menu if it wasn't a significant move
+                        
                         if (!isMoving) {
                             toggleMenu()
                         }
@@ -286,9 +286,9 @@ class ScreenLockAccessibilityService : AccessibilityService() {
 
     private fun setupMenuListeners(view: View) {
         val menuContainer = view.findViewById<View>(R.id.menu_container)
-        menuContainer?.setOnClickListener { /* Prevents closing when clicking menu itself */ }
+        menuContainer?.setOnClickListener {  }
 
-        // Brightness Control
+        
         val brightnessSeekBar = view.findViewById<SeekBar>(R.id.brightness_seekbar)
         if (Settings.System.canWrite(this)) {
             try {
@@ -321,7 +321,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Volume Controls - Media
+        
         val volumeMediaSeekBar = view.findViewById<SeekBar>(R.id.volume_media_seekbar)
         val imgVolumeMedia = view.findViewById<ImageView>(R.id.img_volume_media_icon)
         try {
@@ -346,7 +346,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             })
         } catch (_: Exception) {}
 
-        // Volume Controls - Ring
+        
         val volumeRingSeekBar = view.findViewById<SeekBar>(R.id.volume_ring_seekbar)
         val imgVolumeRing = view.findViewById<ImageView>(R.id.img_volume_ring_icon)
         try {
@@ -371,7 +371,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             })
         } catch (_: Exception) {}
 
-        // Volume Controls - Alarm
+        
         val volumeAlarmSeekBar = view.findViewById<SeekBar>(R.id.volume_alarm_seekbar)
         val imgVolumeAlarm = view.findViewById<ImageView>(R.id.img_volume_alarm_icon)
         try {
@@ -396,7 +396,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             })
         } catch (_: Exception) {}
 
-        // Dynamic Shortcuts
+        
         val grid = view.findViewById<GridLayout>(R.id.shortcuts_grid)
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
         val shortcutList = prefs.getString(Constants.Prefs.CONTROL_CENTER_SHORTCUTS, DEFAULT_SHORTCUTS)
@@ -559,27 +559,27 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     private fun launchQrScanner() {
         val qrIntents = mutableListOf<Intent>()
         
-        // 1. Google Lens Specific Intent
+        
         qrIntents.add(Intent("com.google.android.googlequicksearchbox.GOOGLE_LENS").apply {
             setPackage("com.google.android.googlequicksearchbox")
         })
         
-        // 2. Google Lens Standalone
+        
         val lensIntent = packageManager.getLaunchIntentForPackage("com.google.ar.lens")
         if (lensIntent != null) qrIntents.add(lensIntent)
         
-        // 3. Android 13+ System QR Scanner
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             qrIntents.add(Intent("android.settings.QR_CODE_SCANNER"))
         }
         
-        // 4. Google Lens via URI
+        
         qrIntents.add(Intent(Intent.ACTION_VIEW, Uri.parse("googlelens://v1/scan")))
         
-        // 5. ZXing
+        
         qrIntents.add(Intent("com.google.zxing.client.android.SCAN"))
         
-        // 6. Camera with QR mode
+        
         qrIntents.add(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
             putExtra("android.intent.extra.USE_QR_CODE", true)
         })
@@ -710,8 +710,8 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 
                 notificationManager.setInterruptionFilter(newFilter)
                 
-                // Immediately update UI to reflect intended state
-                val enabled = isOff // If it was off, we are turning it on
+                
+                val enabled = isOff 
                 icon?.alpha = if (enabled) 1.0f else 0.4f
                 label?.text = if (enabled) "DND On" else "DND Off"
             } else {
@@ -767,7 +767,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             hideMenu()
         } catch (e: Exception) {
             try {
-                // Fallback for some devices
+                
                 intent.action = "android.settings.WIFI_TETHER_SETTINGS"
                 startActivity(intent)
                 hideMenu()
@@ -784,7 +784,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     }
 
     private fun updateHotspotIcon(imageView: ImageView?) {
-        // For simplicity, just show as enabled for now
+        
         imageView?.alpha = 1.0f
     }
 
@@ -798,7 +798,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         
         try {
             val currentTimeout = Settings.System.getInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT)
-            val timeouts = arrayOf(15000, 30000, 60000, 120000, 300000, 600000, 2147483647) // 15s, 30s, 1min, 2min, 5min, 10min, Never
+            val timeouts = arrayOf(15000, 30000, 60000, 120000, 300000, 600000, 2147483647) 
             val timeoutLabels = arrayOf("15s", "30s", "1min", "2min", "5min", "10min", "Never")
             
             var nextIndex = 0
@@ -867,13 +867,13 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         
-        // Only block system settings when focus mode is active
+        
         if (!focusModeManager.isFocusModeEnabled()) return
         
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString()
             
-            // System settings package names to block (excluding notification panel)
+            
             val blockedSettingsPackages = setOf(
                 "com.android.settings",
                 "com.android.settings.panel",
@@ -886,19 +886,19 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             )
             
             if (packageName in blockedSettingsPackages) {
-                // Close the settings immediately
+                
                 performGlobalAction(GLOBAL_ACTION_BACK)
                 Toast.makeText(this, "Settings blocked - Focus mode is active", Toast.LENGTH_SHORT).show()
             }
             
-            // Also block specific settings activities in systemui (but not notification panel)
+            
             if (packageName == "com.android.systemui") {
                 val className = event.className?.toString()
                 if (className != null && 
                     (className.contains("Settings") || 
                      className.contains("settings") ||
                      className.contains("Preference"))) {
-                    // Close the settings immediately
+                    
                     performGlobalAction(GLOBAL_ACTION_BACK)
                     Toast.makeText(this, "Settings blocked - Focus mode is active", Toast.LENGTH_SHORT).show()
                 }

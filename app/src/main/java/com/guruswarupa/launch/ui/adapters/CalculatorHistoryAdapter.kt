@@ -37,9 +37,9 @@ class CalculatorHistoryAdapter(
     override fun getItemCount(): Int = historyItems.size
 
     fun addItem(item: CalculatorHistoryItem) {
-        historyItems.add(0, item) // Add to beginning
+        historyItems.add(0, item) 
         notifyItemInserted(0)
-        // Limit history to 50 items
+        
         if (historyItems.size > 50) {
             val lastIndex = historyItems.size - 1
             historyItems.removeAt(lastIndex)

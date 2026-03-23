@@ -6,7 +6,7 @@
     android:background="@color/widget_background"
     android:padding="16dp">
 
-    <!-- Display -->
+    
     <TextView
         android:layout_width="match_parent"
         android:layout_height="48dp"
@@ -19,7 +19,7 @@
         android:gravity="end|center_vertical"
         android:layout_marginBottom="12dp" />
 
-    <!-- Buttons Grid -->
+    
     <GridLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"

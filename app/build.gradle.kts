@@ -12,13 +12,13 @@ android {
         applicationId = "com.guruswarupa.launch"
         minSdk = 24
         targetSdk = 35
-        versionCode = 31
-        versionName = "7.0"
+        versionCode = 42
+        versionName = "7.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // Optimization: keep only English resources. 
-        // Density stripping is handled automatically when you build an App Bundle (.aab)
+        
+        
         resConfigs("en")
     }
 
@@ -97,4 +97,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.biometric)
+    implementation(libs.google.play.billing)
 }

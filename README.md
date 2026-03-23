@@ -186,7 +186,7 @@
 - **Import/Export Data**: Backup or restore your launcher settings and data
 - **Change Display Style**: Toggle between grid and list view easily
 - **Change Wallpaper**: Set custom wallpapers for your home screen
-- **Update Weather API Key**: Use your personal API key from openweathermap.org
+- **Set Weather Location**: Enter the city/country that the Open-Meteo widget should use for live forecasts
 - **Manage App Locks**: Configure PIN and fingerprint authentication
 - **App Timer Settings**: Configure default timer durations and daily limits
 - **Widget Management**: Add, remove, and configure widgets

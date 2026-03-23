@@ -88,8 +88,8 @@ class NightModeService : Service() {
         }
 
         overlayView = View(this)
-        // Use a solid color for the overlay view
-        // Orange color: #FFA500
+        
+        
         overlayView?.setBackgroundColor(Color.rgb(255, 165, 0))
         
         overlayView?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -116,7 +116,7 @@ class NightModeService : Service() {
             gravity = Gravity.TOP or Gravity.START
             x = 0
             y = 0
-            // Control transparency via window alpha for better system optimization
+            
             alpha = (intensity / 100f).coerceIn(0f, 0.8f)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

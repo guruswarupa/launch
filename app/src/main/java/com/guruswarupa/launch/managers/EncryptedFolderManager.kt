@@ -29,7 +29,7 @@ class EncryptedFolderManager(private val context: Context) {
         private const val THUMBS_DIR = "vault_thumbs"
         private const val CONFIG_FILE = ".vault_config"
         
-        // Memory-cached master key (cleared when app is closed or vault locked)
+        
         private var masterKey: SecretKey? = null
     }
 
@@ -52,7 +52,7 @@ class EncryptedFolderManager(private val context: Context) {
             val salt = ByteArray(SALT_SIZE).apply { SecureRandom().nextBytes(this) }
             val key = deriveKey(password, salt)
             
-            // Create a verification file to ensure password matches later
+            
             val verificationData = "VAULT_OPEN".toByteArray()
             val iv = ByteArray(IV_SIZE).apply { SecureRandom().nextBytes(this) }
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -117,7 +117,7 @@ class EncryptedFolderManager(private val context: Context) {
         val key = masterKey ?: throw IllegalStateException("Vault is locked")
         val destinationFile = File(encryptedFolder, fileName)
 
-        // Generate thumbnail BEFORE encryption if it's media
+        
         generateThumbnail(sourceUri, fileName)
 
         try {
@@ -127,7 +127,7 @@ class EncryptedFolderManager(private val context: Context) {
                 cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
 
                 FileOutputStream(destinationFile).use { fos ->
-                    fos.write(iv) // Store IV at the beginning
+                    fos.write(iv) 
                     val cipherOutputStream = javax.crypto.CipherOutputStream(fos, cipher)
                     inputStream.copyTo(cipherOutputStream)
                     cipherOutputStream.close()
@@ -208,7 +208,7 @@ class EncryptedFolderManager(private val context: Context) {
         }
     }
 
-    // Thumbnail Management
+    
     private fun generateThumbnail(uri: Uri, fileName: String) {
         val key = masterKey ?: return
         var mimeType = context.contentResolver.getType(uri)
@@ -338,12 +338,12 @@ class EncryptedFolderManager(private val context: Context) {
         return inSampleSize
     }
 
-    // Export/Import
+    
     fun exportVault(outputStream: OutputStream): Boolean {
         return try {
             val zipOut = java.util.zip.ZipOutputStream(outputStream)
             
-            // Add all files from encrypted vault
+            
             encryptedFolder.listFiles()?.forEach { file ->
                 val entry = java.util.zip.ZipEntry("data/${file.name}")
                 zipOut.putNextEntry(entry)
@@ -351,7 +351,7 @@ class EncryptedFolderManager(private val context: Context) {
                 zipOut.closeEntry()
             }
             
-            // Add all thumbnails
+            
             thumbnailFolder.listFiles()?.forEach { file ->
                 val entry = java.util.zip.ZipEntry("thumbs/${file.name}")
                 zipOut.putNextEntry(entry)

@@ -47,7 +47,7 @@ class WorkoutStopwatch(
                     if (isRunning) {
                         elapsedTime = System.currentTimeMillis() - startTime
                         updateDisplay()
-                        handler.postDelayed(this, 100) // Update every 100ms
+                        handler.postDelayed(this, 100) 
                     }
                 }
             }
@@ -62,7 +62,7 @@ class WorkoutStopwatch(
             resetButton.isEnabled = true
             updateRunnable?.let { handler.removeCallbacks(it) }
             
-            // Record the time
+            
             val seconds = (elapsedTime / 1000).toInt()
             if (seconds > 0) {
                 onTimeRecorded(seconds)

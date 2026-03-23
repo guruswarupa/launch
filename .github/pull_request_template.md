@@ -1,15 +1,15 @@
 ## 📝 Description
 
-<!-- Provide a clear description of what this PR does -->
+
 
 ## 🔗 Related Issue
 
-<!-- Link to the related issue -->
+
 Closes #(issue number)
 
 ## 🎯 Type of Change
 
-<!-- Mark the relevant option with an 'x' -->
+
 
 - [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
 - [ ] ✨ New feature (non-breaking change which adds functionality)
@@ -22,7 +22,7 @@ Closes #(issue number)
 
 ## 🧪 Testing
 
-<!-- Describe the tests you ran and how to verify your changes -->
+
 
 - [ ] Tested on Android [version]
 - [ ] Tested on device/emulator: [device name]
@@ -31,7 +31,7 @@ Closes #(issue number)
 
 ## 📸 Screenshots
 
-<!-- If applicable, add screenshots to demonstrate your changes -->
+
 
 | Before | After |
 |--------|-------|
@@ -39,7 +39,7 @@ Closes #(issue number)
 
 ## ✅ Checklist
 
-<!-- Mark completed items with an 'x' -->
+
 
 - [ ] My code follows the project's coding standards
 - [ ] I have performed a self-review of my code
@@ -52,11 +52,11 @@ Closes #(issue number)
 
 ## 📋 Additional Notes
 
-<!-- Add any additional information that reviewers should know -->
+
 
 ## 🔍 Review Focus Areas
 
-<!-- Let reviewers know what to pay special attention to -->
+
 
 - [ ] Code quality and style
 - [ ] Performance implications

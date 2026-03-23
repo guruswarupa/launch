@@ -6,7 +6,7 @@
     android:background="@color/widget_background"
     android:padding="12dp">
 
-    <!-- Header -->
+    
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -16,7 +16,7 @@
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
 
-    <!-- Connection Status -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -49,7 +49,7 @@
 
     </LinearLayout>
 
-    <!-- Data Usage -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"

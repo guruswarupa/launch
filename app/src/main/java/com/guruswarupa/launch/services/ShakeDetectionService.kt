@@ -18,10 +18,10 @@ import com.guruswarupa.launch.managers.ServiceNotificationManager
 import com.guruswarupa.launch.managers.TorchManager
 import com.guruswarupa.launch.models.Constants
 
-/**
- * Foreground service that detects shake gestures in the background
- * and toggles the torch when triple shake is detected.
- */
+
+
+
+
 class ShakeDetectionService : Service() {
     
     private var shakeDetector: ShakeDetector? = null
@@ -44,11 +44,11 @@ class ShakeDetectionService : Service() {
     override fun onCreate() {
         super.onCreate()
         
-        // CRITICAL: Call startForeground IMMEDIATELY in onCreate for background starts
-        // This is the safest place to ensure we meet the 5-second requirement
+        
+        
         startForegroundServiceStatus()
         
-        // Initialize components after foreground is established
+        
         torchManager = TorchManager(this)
         shakeDetector = ShakeDetector(this) {
             if (GestureCoordinator.requestTrigger()) {
@@ -63,14 +63,14 @@ class ShakeDetectionService : Service() {
 
     private fun startForegroundServiceStatus() {
         try {
-            // Get the notification without calling notify() immediately to avoid race conditions
+            
             val notification = ServiceNotificationManager.createNotification(this)
             
-            // Register this service in the active services list for future updates
+            
             ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                // Android 14+ requires specific foreground service types
+                
                 ServiceCompat.startForeground(
                     this,
                     ServiceNotificationManager.NOTIFICATION_ID,
@@ -78,8 +78,8 @@ class ShakeDetectionService : Service() {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
                 )
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ (but less than 14)
-                // Use 0 or appropriate type if needed, SPECIAL_USE is not available here
+                
+                
                 startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
             } else {
                 startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
@@ -87,7 +87,7 @@ class ShakeDetectionService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start foreground service", e)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // On newer Android versions, if we fail to start foreground, we must stop
+                
                 stopSelf()
             }
         }
@@ -100,7 +100,7 @@ class ShakeDetectionService : Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Always re-assert the foreground notification to satisfy the 5s requirement
+        
         startForegroundServiceStatus()
 
         try {

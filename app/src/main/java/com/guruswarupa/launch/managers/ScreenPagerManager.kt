@@ -18,10 +18,6 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 
-/**
- * Hosts the left widgets screen, the launcher home screen, and the right wallpaper screen
- * inside a horizontally swipeable container.
- */
 class ScreenPagerManager(
     private val activity: FragmentActivity,
     private val drawerLayout: DrawerLayout
@@ -48,7 +44,7 @@ class ScreenPagerManager(
     companion object {
         private const val PAGE_SWITCH_THRESHOLD = 0.12f
         private const val PAGE_SWITCH_SETTLE_THRESHOLD = 0.22f
-        private const val FLING_VELOCITY_MULTIPLIER = 6
+        private const val FLING_VELOCITY_MULTIPLIER = 4
     }
 
     fun setup() {
@@ -117,7 +113,6 @@ class ScreenPagerManager(
                         parent?.requestDisallowInterceptTouchEvent(true)
                         return true
                     }
-
                 }
                 return super.onInterceptTouchEvent(event)
             }
@@ -131,12 +126,14 @@ class ScreenPagerManager(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+            isSaveEnabled = false
             visibility = View.INVISIBLE
             isHorizontalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
             isFillViewport = true
             addView(pageStrip)
             setOnScrollChangeListener { _, scrollX, _, _, _ ->
+                applyPageTransitions(scrollX)
                 val page = nearestPageFor(scrollX)
                 if (page != currentPage) {
                     notifyPageChanged(page, force = false)
@@ -147,11 +144,69 @@ class ScreenPagerManager(
         drawerLayout.addView(pagerScrollView)
 
         pagerScrollView.post {
-            updatePageWidth()
-            val defaultPage = getDefaultPage()
-            scrollToPage(defaultPage, animated = false)
-            notifyPageChanged(defaultPage, force = true)
-            pagerScrollView.visibility = View.VISIBLE
+            if (pagerScrollView.width > 0) {
+                initializeAfterLayout()
+            } else {
+                pagerScrollView.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+                    override fun onLayoutChange(v: View?, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
+                        if (pagerScrollView.width > 0) {
+                            pagerScrollView.removeOnLayoutChangeListener(this)
+                            initializeAfterLayout()
+                        }
+                    }
+                })
+            }
+        }
+    }
+
+    private fun initializeAfterLayout() {
+        val width = pagerScrollView.width
+        if (width <= 0) return
+        
+        pageWidth = width
+        val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
+        for (i in 0 until pageStrip.childCount) {
+            val child = pageStrip.getChildAt(i)
+            val params = child.layoutParams
+            params.width = pageWidth
+            child.layoutParams = params
+        }
+        pageStrip.requestLayout()
+
+        val defaultPage = getDefaultPage()
+        
+        pagerScrollView.post {
+            val targetX = defaultPage.index * pageWidth
+            pagerScrollView.scrollTo(targetX, 0)
+            currentPage = defaultPage
+            
+            pagerScrollView.post {
+                if (pagerScrollView.scrollX != targetX) {
+                    pagerScrollView.scrollTo(targetX, 0)
+                }
+                pagerScrollView.visibility = View.VISIBLE
+                notifyPageChanged(defaultPage, force = true)
+                applyPageTransitions(pagerScrollView.scrollX)
+            }
+        }
+    }
+
+    private fun applyPageTransitions(scrollX: Int) {
+        if (pageWidth <= 0) return
+        val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
+        
+        for (i in 0 until pageStrip.childCount) {
+            val page = pageStrip.getChildAt(i)
+            val pageCenterX = i * pageWidth
+            val distanceFromCenter = kotlin.math.abs(scrollX - pageCenterX).toFloat()
+            val fraction = (distanceFromCenter / pageWidth).coerceIn(0f, 1f)
+            
+            page.alpha = 1f - (fraction * 0.5f)
+            val scale = 1f - (fraction * 0.08f)
+            page.scaleX = scale
+            page.scaleY = scale
+            
+            page.translationX = 0f
         }
     }
 
@@ -180,7 +235,7 @@ class ScreenPagerManager(
                 v.performClick()
             }
             gestureDetector.onTouchEvent(event)
-            true // Consume touches on wallpaper page to enable double tap detection
+            true 
         }
     }
 
@@ -244,6 +299,7 @@ class ScreenPagerManager(
         val threshold = pageWidth * PAGE_SWITCH_THRESHOLD
         val settleThreshold = pageWidth * PAGE_SWITCH_SETTLE_THRESHOLD
         val startPage = nearestPageFor(touchStartScrollX)
+        
         val target = when {
             flingVelocity < -(minimumFlingVelocity * FLING_VELOCITY_MULTIPLIER) -> nextPage(startPage)
             flingVelocity > (minimumFlingVelocity * FLING_VELOCITY_MULTIPLIER) -> previousPage(startPage)
@@ -252,6 +308,7 @@ class ScreenPagerManager(
             kotlin.math.abs(dragDistance) > settleThreshold -> nearestPageFor(pagerScrollView.scrollX)
             else -> startPage
         }
+        
         scrollToPage(target, animated = true)
     }
 
@@ -269,25 +326,25 @@ class ScreenPagerManager(
 
         pagerScrollView.postDelayed(
             { notifyPageChanged(page, force = false) },
-            if (animated) 220L else 0L
+            if (animated) 250L else 0L
         )
     }
 
     fun updatePageWidth() {
-        val width = drawerLayout.width.takeIf { it > 0 } ?: activity.resources.displayMetrics.widthPixels
-        if (width == pageWidth) return
+        val width = pagerScrollView.width
+        if (width <= 0) return
 
-        pageWidth = width
-        val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
-        for (index in 0 until pageStrip.childCount) {
-            val child = pageStrip.childCount.let { pageStrip.getChildAt(index) } ?: continue
-            val params = child.layoutParams as LinearLayout.LayoutParams
-            if (params.width != pageWidth) {
+        if (width != pageWidth) {
+            pageWidth = width
+            val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
+            for (i in 0 until pageStrip.childCount) {
+                val child = pageStrip.getChildAt(i)
+                val params = child.layoutParams
                 params.width = pageWidth
                 child.layoutParams = params
             }
+            pageStrip.requestLayout()
         }
-        pageStrip.requestLayout()
     }
 
     private fun nearestPageFor(scrollX: Int): Page {
@@ -322,9 +379,6 @@ class ScreenPagerManager(
         pageChangeListener?.invoke(page)
     }
 
-    /**
-     * Gets the user-defined default home page from preferences.
-     */
     fun getDefaultPage(): Page {
         val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
         val defaultPageIndex = prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)
@@ -335,14 +389,8 @@ class ScreenPagerManager(
         }
     }
 
-    /**
-     * Returns the currently active page.
-     */
     fun getCurrentPage(): Page = currentPage
 
-    /**
-     * Re-scrolls to the user-defined default home page.
-     */
     fun openDefaultHomePage(animated: Boolean = true) {
         scrollToPage(getDefaultPage(), animated)
     }

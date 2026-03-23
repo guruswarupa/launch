@@ -45,21 +45,21 @@ class WebAppSettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Enable edge-to-edge with translucent status bar
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
         setContentView(R.layout.activity_web_app_settings)
 
-        // Apply content insets like SettingsActivity does
+        
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             findViewById<View>(R.id.web_apps_scroll_view).setPadding(0, bars.top, 0, bars.bottom)
             insets
         }
 
-        // Apply wallpaper blur effect
+        
         WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.web_apps_wallpaper))
 
         listContainer = findViewById(R.id.web_apps_list)
@@ -67,15 +67,15 @@ class WebAppSettingsActivity : ComponentActivity() {
         scrollView = findViewById(R.id.web_apps_scroll_view)
         overlayView = findViewById(R.id.web_apps_overlay)
 
-        // Apply dynamic background translucency to match settings page
+        
         applyBackgroundTranslucency()
 
-        // Setup back button with ripple effect
+        
         findViewById<ImageButton>(R.id.web_apps_back_button).setOnClickListener { 
             animateFinish()
         }
         
-        // Setup add button with scale animation
+        
         findViewById<Button>(R.id.add_web_app_button).setOnClickListener { 
             animateButtonClick(it)
             showEditorDialog() 
@@ -88,7 +88,7 @@ class WebAppSettingsActivity : ComponentActivity() {
         val webApps = webAppManager.getWebApps()
         listContainer.removeAllViews()
         
-        // Animate empty state or list
+        
         if (webApps.isEmpty()) {
             emptyView.visibility = View.VISIBLE
             emptyView.alpha = 0f
@@ -107,14 +107,14 @@ class WebAppSettingsActivity : ComponentActivity() {
             itemView.findViewById<TextView>(R.id.web_app_item_name).text = entry.name
             itemView.findViewById<TextView>(R.id.web_app_item_url).text = entry.url
             
-            // Load icon with fade-in animation
+            
             WebAppIconFetcher.loadIcon(this, entry.url) { drawable ->
                 if (drawable != null) {
                     iconView.setImageDrawable(drawable)
                     iconView.alpha = 0f
                     ObjectAnimator.ofFloat(iconView, "alpha", 0f, 1f).apply {
                         duration = 300
-                        startDelay = index * 50L // Stagger animation
+                        startDelay = index * 50L 
                         start()
                     }
                 }
@@ -124,7 +124,7 @@ class WebAppSettingsActivity : ComponentActivity() {
                 val intent = Intent(this, WebAppActivity::class.java).apply {
                     putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, entry.name)
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, entry.url)
-                    // Always create new task for each web app
+                    
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
                                 Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
@@ -145,7 +145,7 @@ class WebAppSettingsActivity : ComponentActivity() {
             
             listContainer.addView(itemView)
             
-            // Animate item entrance
+            
             if (!isAnimating) {
                 itemView.alpha = 0f
                 itemView.translationY = 50f
@@ -223,7 +223,7 @@ class WebAppSettingsActivity : ComponentActivity() {
         urlInput.setText(existing?.url.orEmpty())
         urlInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
         
-        // Add focus listeners for validation feedback
+        
         nameInput.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
             if (!hasFocus && nameInput.text.toString().trim().isBlank()) {
                 nameInput.error = getString(R.string.web_app_name_required)
@@ -295,7 +295,7 @@ class WebAppSettingsActivity : ComponentActivity() {
                     renderWebApps()
                     dialog.dismiss()
                     
-                    // Show success feedback
+                    
                     Toast.makeText(
                         this,
                         if (existing == null) R.string.web_app_added else R.string.web_app_updated,
@@ -315,7 +315,7 @@ class WebAppSettingsActivity : ComponentActivity() {
                 notifySettingsChanged()
                 renderWebApps()
                 
-                // Show success feedback
+                
                 Toast.makeText(
                     this,
                     getString(R.string.web_app_removed, entry.name),
@@ -341,7 +341,7 @@ class WebAppSettingsActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clear icon cache to free memory
+        
         WebAppIconFetcher.clearCache()
     }
 }

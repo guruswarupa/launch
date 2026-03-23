@@ -20,6 +20,7 @@ import android.provider.Settings
 import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.util.TypedValue
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
@@ -37,6 +38,17 @@ import androidx.core.view.isVisible
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
+import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.guruswarupa.launch.MainActivity
@@ -54,11 +66,12 @@ import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.LinkedHashMap
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-class SettingsActivity : ComponentActivity() {
+class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
     companion object {
         const val EXTRA_START_SETTINGS_TUTORIAL = "start_settings_tutorial"
     }
@@ -71,6 +84,14 @@ class SettingsActivity : ComponentActivity() {
     private var selectedThemeId: String = "stardust"
     private var selectedThemeCategory: String? = null
     private var hasUnsavedThemeChanges = false
+    private var billingClient: BillingClient? = null
+    private val supportProducts = linkedMapOf(
+        "support_49" to R.id.support_49,
+        "support_99" to R.id.support_99,
+        "support_199" to R.id.support_199,
+        "support_299" to R.id.support_299
+    )
+    private val supportProductDetails = LinkedHashMap<String, ProductDetails>()
 
     private data class SettingsTutorialStep(
         val title: String,
@@ -102,7 +123,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -114,7 +135,7 @@ class SettingsActivity : ComponentActivity() {
 
         selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "stardust") ?: "stardust"
 
-        // Always show system wallpaper on startup as per user request
+        
         setupWallpaper(null)
 
         setupAppearanceSection()
@@ -129,6 +150,19 @@ class SettingsActivity : ComponentActivity() {
         if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
             window.decorView.post { startSettingsTutorial() }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (billingClient?.isReady == true) {
+            queryExistingSupportPurchases()
+        }
+    }
+
+    override fun onDestroy() {
+        billingClient?.endConnection()
+        billingClient = null
+        super.onDestroy()
     }
 
     private fun triggerWallpaperPicker(themeId: String) {
@@ -153,11 +187,11 @@ class SettingsActivity : ComponentActivity() {
 
                         val wm = WallpaperManager.getInstance(this@SettingsActivity)
                         try {
-                            // Try the direct crop-and-set intent
+                            
                             val intent = wm.getCropAndSetWallpaperIntent(uri)
                             startActivity(intent)
                         } catch (e: Exception) {
-                            // Fallback to ATTACH_DATA
+                            
                             val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
                                 addCategory(Intent.CATEGORY_DEFAULT)
                                 setDataAndType(uri, "image/*")
@@ -242,7 +276,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Show app names in grid toggle
+        
         val showAppNameInSection = findViewById<LinearLayout>(R.id.show_app_name_in_grid_section)
         val showAppNameSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.show_app_name_in_grid_switch)
         showAppNameInSection.isVisible = selectedStyle == "grid"
@@ -255,7 +289,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Update visibility of app name toggle when switching between grid and list
+        
         gridBtn.setOnClickListener {
             selectedStyle = "grid"
             updateDisplayStyleButtons(gridBtn, listBtn, "grid")
@@ -274,7 +308,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Icons
+        
         val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
         val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
         val iconVal = findViewById<TextView>(R.id.icon_size_value)
@@ -295,7 +329,7 @@ class SettingsActivity : ComponentActivity() {
         }
 
         val currentSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
-        iconSeek.max = 60 // 36 to 96
+        iconSeek.max = 60 
         iconSeek.progress = currentSize - 36
         iconVal.text = "${currentSize}dp"
         iconSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -316,7 +350,7 @@ class SettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
-        // Default Home Page
+        
         val homePageSpinner = findViewById<Spinner>(R.id.default_home_page_spinner)
         val pages = arrayOf("Widgets (Left)", "Home (Center)", "Wallpaper (Right)")
         homePageSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, pages).apply {
@@ -332,7 +366,7 @@ class SettingsActivity : ComponentActivity() {
             override fun onNothingSelected(p: AdapterView<*>) {}
         }
 
-        // Wallpaper Blur Section
+        
         val wallHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
         val wallContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallArrow = findViewById<TextView>(R.id.wallpaper_arrow)
@@ -341,7 +375,7 @@ class SettingsActivity : ComponentActivity() {
 
         setupThemeSelection()
 
-        // Typography
+        
         val typoHeader = findViewById<LinearLayout>(R.id.typography_header)
         val typoContent = findViewById<LinearLayout>(R.id.typography_content)
         val typoArrow = findViewById<TextView>(R.id.typography_arrow)
@@ -356,7 +390,7 @@ class SettingsActivity : ComponentActivity() {
             }
         }
 
-        // Background Translucency
+        
         val translucencySeek = findViewById<SeekBar>(R.id.background_translucency_seekbar)
         val translucencyValue = findViewById<TextView>(R.id.background_translucency_value)
         val currentTranslucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
@@ -368,7 +402,7 @@ class SettingsActivity : ComponentActivity() {
         translucencySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
                 translucencyValue.text = "$p%"
-                // Apply translucency immediately for live preview
+                
                 val alpha = (p * 255 / 100).coerceIn(0, 255)
                 val color = Color.argb(alpha, 0, 0, 0)
                 findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
@@ -389,7 +423,7 @@ class SettingsActivity : ComponentActivity() {
         container.removeAllViews()
 
         if (selectedThemeCategory == null) {
-            // Show Category Cards - Dynamically fetch categories from PREDEFINED_THEMES
+            
             val categories = ThemeOption.PREDEFINED_THEMES.map { it.category }.distinct()
 
             val scrollContainer = HorizontalScrollView(this).apply {
@@ -410,7 +444,7 @@ class SettingsActivity : ComponentActivity() {
 
                 name.text = category
 
-                // Highlight if selected
+                
                 val isSelected = ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
 
                 if (isSelected) {
@@ -421,7 +455,7 @@ class SettingsActivity : ComponentActivity() {
                     card.strokeWidth = 0
                 }
 
-                // Find a preview image for the category
+                
                 val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
                 if (firstThemeInCategory != null) {
                     WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
@@ -435,7 +469,7 @@ class SettingsActivity : ComponentActivity() {
             }
             applyBtn.isVisible = false
         } else {
-            // Show Themes in Selected Category
+            
             val category = selectedThemeCategory!!
 
             val contentRow = LinearLayout(this).apply {
@@ -491,18 +525,18 @@ class SettingsActivity : ComponentActivity() {
                     selectedThemeId = theme.id
                     prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
                     setupThemeSelection()
-                    setupWallpaper(theme.id) // Demo preview
+                    setupWallpaper(theme.id) 
                     hasUnsavedThemeChanges = true
                     notifySettingsChanged()
                 }
                 row.addView(themeView)
             }
 
-            // Ensure button visibility is correct based on currently selected theme in this category
+            
             applyBtn.isVisible = themes.any { it.id == selectedThemeId }
         }
 
-        // Re-set the listener since we re-calculate logic but keep the button reference
+        
         applyBtn.setOnClickListener {
             hasUnsavedThemeChanges = false
             triggerWallpaperPicker(selectedThemeId)
@@ -537,6 +571,7 @@ class SettingsActivity : ComponentActivity() {
         setupExtraDimmer()
         setupNightMode()
         setupFlipToDnd()
+        setupGrayscaleMode()
 
         findViewById<View>(R.id.config_control_center_button).setOnClickListener {
             startActivity(Intent(this, ControlCenterConfigActivity::class.java))
@@ -618,17 +653,231 @@ class SettingsActivity : ComponentActivity() {
         val a = findViewById<TextView>(R.id.support_arrow)
         setupSectionToggle(h, c, a)
         findViewById<View>(R.id.feedback_button).setOnClickListener { sendFeedback() }
+        supportProducts.forEach { (productId, buttonId) ->
+            findViewById<Button>(buttonId).apply {
+                text = getString(R.string.support_button_loading)
+                isEnabled = false
+                setOnClickListener { launchSupportPurchase(productId) }
+            }
+        }
         findViewById<TextView>(R.id.github_links_text).apply {
             movementMethod = LinkMovementMethod.getInstance()
             text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
         }
-        findViewById<TextView>(R.id.sponsor_github_link).apply {
-            movementMethod = LinkMovementMethod.getInstance()
-            text = Html.fromHtml(getString(R.string.sponsor_github_link), Html.FROM_HTML_MODE_COMPACT)
+        initializeBilling()
+    }
+
+    private fun initializeBilling() {
+        if (billingClient?.isReady == true) {
+            querySupportProductDetails()
+            queryExistingSupportPurchases()
+            return
         }
-        findViewById<TextView>(R.id.buy_me_a_coffee_link).apply {
-            movementMethod = LinkMovementMethod.getInstance()
-            text = Html.fromHtml(getString(R.string.buy_me_a_coffee_link), Html.FROM_HTML_MODE_COMPACT)
+        if (billingClient == null) {
+            billingClient = BillingClient.newBuilder(this)
+                .setListener(this)
+                .enablePendingPurchases(
+                    PendingPurchasesParams.newBuilder()
+                        .enableOneTimeProducts()
+                        .build()
+                )
+                .enableAutoServiceReconnection()
+                .build()
+        }
+        setSupportButtonsLoading()
+        billingClient?.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(billingResult: BillingResult) {
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    querySupportProductDetails()
+                    queryExistingSupportPurchases()
+                } else {
+                    handleBillingError(billingResult, showToast = false)
+                }
+            }
+
+            override fun onBillingServiceDisconnected() {
+                setSupportButtonsUnavailable(getString(R.string.support_billing_unavailable))
+            }
+        })
+    }
+
+    private fun querySupportProductDetails() {
+        val billing = billingClient ?: return
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(
+                supportProducts.keys.map { productId ->
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(productId)
+                        .setProductType(BillingClient.ProductType.INAPP)
+                        .build()
+                }
+            )
+            .build()
+        billing.queryProductDetailsAsync(params) { billingResult, queryResult ->
+            if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
+                handleBillingError(billingResult, showToast = false)
+                return@queryProductDetailsAsync
+            }
+            runOnUiThread {
+                supportProductDetails.clear()
+                queryResult.productDetailsList.forEach { details ->
+                    supportProductDetails[details.productId] = details
+                }
+                updateSupportButtons()
+            }
+        }
+    }
+
+    private fun updateSupportButtons() {
+        supportProducts.forEach { (productId, buttonId) ->
+            val button = findViewById<Button>(buttonId)
+            val offer = supportProductDetails[productId]?.oneTimePurchaseOfferDetailsList?.firstOrNull()
+            if (offer != null) {
+                button.text = getString(R.string.support_button_buy, offer.formattedPrice)
+                button.isEnabled = true
+                button.alpha = 1f
+            } else {
+                button.text = getString(R.string.support_button_unavailable)
+                button.isEnabled = false
+                button.alpha = 0.6f
+            }
+        }
+    }
+
+    private fun setSupportButtonsLoading() {
+        supportProducts.values.forEach { buttonId ->
+            findViewById<Button>(buttonId).apply {
+                text = getString(R.string.support_button_loading)
+                isEnabled = false
+                alpha = 0.7f
+            }
+        }
+    }
+
+    private fun setSupportButtonsUnavailable(label: String) {
+        supportProducts.values.forEach { buttonId ->
+            findViewById<Button>(buttonId).apply {
+                text = label
+                isEnabled = false
+                alpha = 0.6f
+            }
+        }
+    }
+
+    private fun launchSupportPurchase(productId: String) {
+        val billing = billingClient
+        if (billing == null || !billing.isReady) {
+            initializeBilling()
+            Toast.makeText(this, getString(R.string.support_billing_unavailable), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val details = supportProductDetails[productId]
+        val offer = details?.oneTimePurchaseOfferDetailsList?.firstOrNull()
+        val offerToken = offer?.offerToken
+        if (details == null || offer == null || offerToken.isNullOrBlank()) {
+            Toast.makeText(this, getString(R.string.support_option_not_ready), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(details)
+            .setOfferToken(offerToken)
+            .build()
+        val billingResult = billing.launchBillingFlow(
+            this,
+            BillingFlowParams.newBuilder()
+                .setProductDetailsParamsList(listOf(productDetailsParams))
+                .build()
+        )
+        if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
+            handleBillingError(billingResult)
+        }
+    }
+
+    override fun onPurchasesUpdated(billingResult: BillingResult, purchases: MutableList<Purchase>?) {
+        when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.OK -> purchases.orEmpty().forEach { handlePurchase(it, true) }
+            BillingClient.BillingResponseCode.USER_CANCELED -> {
+                Toast.makeText(this, getString(R.string.support_purchase_canceled), Toast.LENGTH_SHORT).show()
+            }
+            else -> handleBillingError(billingResult)
+        }
+    }
+
+    private fun queryExistingSupportPurchases() {
+        val billing = billingClient ?: return
+        billing.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        ) { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                purchases
+                    .filter { purchase -> purchase.products.any(supportProducts::containsKey) }
+                    .forEach { purchase -> handlePurchase(purchase, false) }
+            }
+        }
+    }
+
+    private fun handlePurchase(purchase: Purchase, notifyUser: Boolean) {
+        when (purchase.purchaseState) {
+            Purchase.PurchaseState.PURCHASED -> {
+                billingClient?.consumeAsync(
+                    ConsumeParams.newBuilder()
+                        .setPurchaseToken(purchase.purchaseToken)
+                        .build()
+                ) { result, _ ->
+                    if (result.responseCode == BillingClient.BillingResponseCode.OK && notifyUser) {
+                        runOnUiThread { showSupportThankYouDialog() }
+                    } else if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                        handleBillingError(result, showToast = notifyUser)
+                    }
+                }
+            }
+            Purchase.PurchaseState.PENDING -> {
+                if (notifyUser) {
+                    Toast.makeText(this, getString(R.string.support_purchase_pending), Toast.LENGTH_SHORT).show()
+                }
+                updatePendingSupportButtons(purchase)
+            }
+            else -> Unit
+        }
+    }
+
+    private fun showSupportThankYouDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_support_thank_you, null)
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setView(dialogView)
+            .setPositiveButton(getString(R.string.support_thank_you_close), null)
+            .show()
+    }
+
+    private fun updatePendingSupportButtons(purchase: Purchase) {
+        purchase.products.forEach { productId ->
+            val buttonId = supportProducts[productId] ?: return@forEach
+            findViewById<Button>(buttonId).apply {
+                text = getString(R.string.support_button_pending)
+                isEnabled = false
+                alpha = 0.7f
+            }
+        }
+    }
+
+    private fun handleBillingError(billingResult: BillingResult, showToast: Boolean = true) {
+        val messageRes = when (billingResult.responseCode) {
+            BillingClient.BillingResponseCode.BILLING_UNAVAILABLE -> R.string.support_billing_unavailable
+            BillingClient.BillingResponseCode.NETWORK_ERROR,
+            BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE,
+            BillingClient.BillingResponseCode.SERVICE_DISCONNECTED -> R.string.support_network_error
+            BillingClient.BillingResponseCode.USER_CANCELED -> R.string.support_purchase_canceled
+            else -> R.string.support_purchase_failed
+        }
+        runOnUiThread {
+            if (messageRes == R.string.support_billing_unavailable || messageRes == R.string.support_network_error) {
+                setSupportButtonsUnavailable(getString(R.string.support_button_unavailable))
+            }
+            if (showToast) {
+                Toast.makeText(this, getString(messageRes), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -832,6 +1081,38 @@ class SettingsActivity : ComponentActivity() {
         }
     }
 
+    private fun setupGrayscaleMode() {
+        val sw = findViewById<SwitchCompat>(R.id.grayscale_mode_switch)
+        sw.isChecked = prefs.getBoolean(Constants.Prefs.GRAYSCALE_MODE_ENABLED, false)
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            try {
+                Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer_enabled", if (isChecked) 1 else 0)
+                Settings.Secure.putInt(contentResolver, "accessibility_display_daltonizer", if (isChecked) 0 else -1)
+                prefs.edit { putBoolean(Constants.Prefs.GRAYSCALE_MODE_ENABLED, isChecked) }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                sw.isChecked = !isChecked
+                showProtectedPermissionDialog("WRITE_SECURE_SETTINGS")
+            }
+        }
+    }
+
+    private fun showProtectedPermissionDialog(permission: String) {
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Permission Required")
+            .setMessage("This feature requires the $permission permission.\n\n" +
+                    "Please run this command via ADB:\n\n" +
+                    "adb shell pm grant $packageName android.permission.$permission")
+            .setPositiveButton("Copy Command") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("ADB Command", "adb shell pm grant $packageName android.permission.$permission")
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "Command copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
     private fun setupSearchEngine() {
         val s = findViewById<Spinner>(R.id.search_engine_spinner)
         val engines = arrayOf("Google", "Bing", "DuckDuckGo", "Ecosia", "Brave", "Startpage", "Yahoo", "Qwant")
@@ -854,11 +1135,11 @@ class SettingsActivity : ComponentActivity() {
 
         val scale = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
 
-        // Prepare font style lists including downloaded fonts
+        
         val baseStyV = mutableListOf("default", "serif", "monospace", "condensed", "rounded", "casual", "cursive")
         val baseStyL = mutableListOf("Modern Sans", "Classic Serif", "Dev Mono", "Clean Condensed", "Soft Rounded", "Casual Hand", "Creative Script")
 
-        // Add downloaded fonts to the dropdown lists
+        
         DownloadableFontManager.getFontOptions().forEach { font ->
             if (DownloadableFontManager.isDownloaded(this, font.styleKey)) {
                 baseStyV.add(font.styleKey)
@@ -888,7 +1169,7 @@ class SettingsActivity : ComponentActivity() {
         if (selectedIndex >= 0) {
             styS.setSelection(selectedIndex)
         } else {
-            // Font was uninstalled, reset to default
+            
             prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
             styS.setSelection(0)
             TypographyManager.applyToActivity(this)
@@ -918,53 +1199,53 @@ class SettingsActivity : ComponentActivity() {
         }
 
         val colL = arrayOf(
-            "Pure White",      // Default white text
-            "Electric Purple", // Bright purple
-            "Neon Pink",       // Vibrant pink
-            "Solar Gold",      // Golden yellow
-            "Emerald Mist",    // Soft emerald green
-            "Arctic Frost",    // Light icy blue
-            "Midnight Teal",   // Deep teal tone
-            "Cyan Accent",     // Bright cyan
-            "Nord Mint",       // Nordic mint green
-            "Lavender",        // Soft lavender purple
-            "Orange Glow",     // Warm orange glow
+            "Pure White",      
+            "Electric Purple", 
+            "Neon Pink",       
+            "Solar Gold",      
+            "Emerald Mist",    
+            "Arctic Frost",    
+            "Midnight Teal",   
+            "Cyan Accent",     
+            "Nord Mint",       
+            "Lavender",        
+            "Orange Glow",     
 
-            "Sky Blue",        // Clear bright sky blue
-            "Soft Coral",      // Light coral red
-            "Lime Glow",       // Bright lime green
-            "Ice Blue",        // Pale icy blue
-            "Rose Pink",       // Soft rose pink
-            "Bright Amber",    // Strong amber yellow
-            "Mint Green",      // Fresh mint green
-            "Violet Glow",     // Bright glowing violet
-            "Aqua Light",      // Light aqua cyan
-            "Peach Light"      // Soft peach tone
+            "Sky Blue",        
+            "Soft Coral",      
+            "Lime Glow",       
+            "Ice Blue",        
+            "Rose Pink",       
+            "Bright Amber",    
+            "Mint Green",      
+            "Violet Glow",     
+            "Aqua Light",      
+            "Peach Light"      
         )
 
         val colV = arrayOf(
-            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, // Pure White
-            "#FF7C3AED", // Electric Purple
-            "#FFEC4899", // Neon Pink
-            "#FFF59E0B", // Solar Gold
-            "#FF10B981", // Emerald Mist
-            "#FF93C5FD", // Arctic Frost
-            "#FF0F766E", // Midnight Teal
-            "#FF03DAC5", // Cyan Accent
-            "#FF8FBCBB", // Nord Mint
-            "#FFB48EAD", // Lavender
-            "#FFD08770", // Orange Glow
+            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, 
+            "#FF7C3AED", 
+            "#FFEC4899", 
+            "#FFF59E0B", 
+            "#FF10B981", 
+            "#FF93C5FD", 
+            "#FF0F766E", 
+            "#FF03DAC5", 
+            "#FF8FBCBB", 
+            "#FFB48EAD", 
+            "#FFD08770", 
 
-            "#FF60A5FA", // Sky Blue
-            "#FFF87171", // Soft Coral
-            "#FFA3E635", // Lime Glow
-            "#FFBAE6FD", // Ice Blue
-            "#FFF472B6", // Rose Pink
-            "#FFFBBF24", // Bright Amber
-            "#FF6EE7B7", // Mint Green
-            "#FFA78BFA", // Violet Glow
-            "#FF67E8F9", // Aqua Light
-            "#FFFDA4AF"  // Peach Light
+            "#FF60A5FA", 
+            "#FFF87171", 
+            "#FFA3E635", 
+            "#FFBAE6FD", 
+            "#FFF472B6", 
+            "#FFFBBF24", 
+            "#FF6EE7B7", 
+            "#FFA78BFA", 
+            "#FF67E8F9", 
+            "#FFFDA4AF"  
         )
         colS.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, colL, colV).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         colS.setSelection(colV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)).coerceAtLeast(0))
@@ -1007,14 +1288,14 @@ class SettingsActivity : ComponentActivity() {
                     if (prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == opt.styleKey) {
                         prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
                     }
-                    // Refresh the typography settings UI to update the spinner
+                    
                     setupTypographySettings()
                     updateDownloadableFontsList(cont)
                 } else {
                     btn.text = "Fetching…"
                     DownloadableFontManager.requestFont(this, opt.styleKey) { success ->
                         handler.post {
-                            // Refresh the typography settings UI to update the spinner
+                            
                             setupTypographySettings()
                             updateDownloadableFontsList(cont)
                         }
@@ -1121,11 +1402,42 @@ class SettingsActivity : ComponentActivity() {
                     val j = JSONObject(); val p = JSONObject()
                     prefs.all.forEach { (k, v) -> p.put(k, v) }
                     j.put("main_preferences", p)
-                    zos.putNextEntry(ZipEntry("settings.json")); zos.write(j.toString(2).toByteArray()); zos.closeEntry()
+                    zos.putNextEntry(ZipEntry("settings.json"))
+                    zos.write(j.toString(2).toByteArray())
+                    zos.closeEntry()
+                    val webAppsJson = prefs.getString(Constants.Prefs.WEB_APPS, "[]") ?: "[]"
+                    zos.putNextEntry(ZipEntry("webapps.json"))
+                    zos.write(webAppsJson.toByteArray())
+                    zos.closeEntry()
+                    val weatherData = JSONObject().apply {
+                        put("location", prefs.getString("weather_stored_location", "") ?: "")
+                        put("city_name", prefs.getString("weather_stored_city_name", "") ?: "")
+                        put("temperature_unit", prefs.getString("weather_temperature_unit", "celsius") ?: "celsius")
+                    }
+                    zos.putNextEntry(ZipEntry("weather.json"))
+                    zos.write(weatherData.toString(2).toByteArray())
+                    zos.closeEntry()
+                    
+                    // Export notes data
+                    try {
+                        val mainActivity = com.guruswarupa.launch.MainActivity.instance
+                        if (mainActivity != null && mainActivity.isWidgetLifecycleCoordinatorInitialized() && 
+                            mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
+                            val notesJson = mainActivity.widgetLifecycleCoordinator.noteWidget.exportNotesToJson()
+                            zos.putNextEntry(ZipEntry("notes.json"))
+                            zos.write(notesJson.toByteArray())
+                            zos.closeEntry()
+                        }
+                    } catch (e: Exception) {
+                        // Notes export failed, but continue with other exports
+                        e.printStackTrace()
+                    }
                 }
             }
             Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) { Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show() }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun importSettingsFromFile(uri: Uri) {
@@ -1134,56 +1446,92 @@ class SettingsActivity : ComponentActivity() {
                 ZipInputStream(ins).use { zis ->
                     var entry = zis.nextEntry
                     while (entry != null) {
-                        if (entry.name == "settings.json") {
-                            val p = JSONObject(zis.bufferedReader().readText()).optJSONObject("main_preferences")
-                            if (p != null) {
-                                prefs.edit {
-                                    val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
-                                    p.keys().forEach { k ->
-                                        val v = p.get(k)
-
-                                        // Fix for corrupted data format: if it should be a set but is a string like "[a, b]"
-                                        if (k in stringSetKeys) {
-                                            val set = when (v) {
-                                                is JSONArray -> {
-                                                    val s = mutableSetOf<String>()
-                                                    for (i in 0 until v.length()) s.add(v.getString(i))
-                                                    s
-                                                }
-                                                is String -> {
-                                                    if (v.startsWith("[") && v.endsWith("]")) {
-                                                        v.substring(1, v.length - 1)
-                                                            .split(",")
-                                                            .map { it.trim() }
-                                                            .filter { it.isNotEmpty() }
-                                                            .toSet()
-                                                    } else {
-                                                        setOf(v)
+                        when (entry.name) {
+                            "settings.json" -> {
+                                val p = JSONObject(zis.bufferedReader().readText()).optJSONObject("main_preferences")
+                                if (p != null) {
+                                    prefs.edit {
+                                        val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
+                                        p.keys().forEach { k ->
+                                            val v = p.get(k)
+                                            if (k in stringSetKeys) {
+                                                val set = when (v) {
+                                                    is JSONArray -> {
+                                                        val s = mutableSetOf<String>()
+                                                        for (i in 0 until v.length()) s.add(v.getString(i))
+                                                        s
                                                     }
+                                                    is String -> {
+                                                        if (v.startsWith("[") && v.endsWith("]")) {
+                                                            v.substring(1, v.length - 1)
+                                                                .split(",")
+                                                                .map { it.trim() }
+                                                                .filter { it.isNotEmpty() }
+                                                                .toSet()
+                                                        } else {
+                                                            setOf(v)
+                                                        }
+                                                    }
+                                                    else -> emptySet<String>()
                                                 }
-                                                else -> emptySet<String>()
-                                            }
-                                            putStringSet(k, set)
-                                        } else {
-                                            when (v) {
-                                                is String -> putString(k, v)
-                                                is Boolean -> putBoolean(k, v)
-                                                is Int -> putInt(k, v)
-                                                is Long -> putLong(k, v)
-                                                is Double -> putFloat(k, v.toFloat())
-                                                is JSONArray -> {
-                                                    putString(k, v.toString())
+                                                putStringSet(k, set)
+                                            } else {
+                                                when (v) {
+                                                    is String -> putString(k, v)
+                                                    is Boolean -> putBoolean(k, v)
+                                                    is Int -> putInt(k, v)
+                                                    is Long -> putLong(k, v)
+                                                    is Double -> putFloat(k, v.toFloat())
+                                                    is JSONArray -> putString(k, v.toString())
                                                 }
                                             }
                                         }
+                                        putBoolean("contacts_permission_denied", false)
+                                        putBoolean("usage_stats_permission_denied", false)
                                     }
-                                    // Reset permission denial flags so permissions can be requested again
-                                    putBoolean("contacts_permission_denied", false)
-                                    putBoolean("usage_stats_permission_denied", false)
+                                }
+                            }
+                            "webapps.json" -> {
+                                val data = zis.bufferedReader().readText()
+                                prefs.edit { putString(Constants.Prefs.WEB_APPS, data) }
+                            }
+                            "weather.json" -> {
+                                val weatherJson = JSONObject(zis.bufferedReader().readText())
+                                prefs.edit {
+                                    val location = weatherJson.optString("location").ifBlank {
+                                        weatherJson.optString("city_name")
+                                    }
+                                    if (location.isNotBlank()) {
+                                        putString("weather_stored_location", location)
+                                        putString("weather_stored_city_name", location)
+                                    }
+                                    val unit = weatherJson.optString("temperature_unit")
+                                    if (unit.isNotBlank()) {
+                                        putString("weather_temperature_unit", unit)
+                                    }
+                                }
+                            }
+                            "notes.json" -> {
+                                try {
+                                    val notesJsonString = zis.bufferedReader().readText()
+                                    val mainActivity = com.guruswarupa.launch.MainActivity.instance
+                                    if (mainActivity != null && mainActivity.isWidgetLifecycleCoordinatorInitialized() && 
+                                        mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
+                                        val importedCount = mainActivity.widgetLifecycleCoordinator.noteWidget.importNotesFromJson(notesJsonString)
+                                        if (importedCount > 0) {
+                                            zis.closeEntry()
+                                            entry = zis.nextEntry
+                                            return@use // Exit early to avoid duplicate closeEntry
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    // Notes import failed, but continue with other imports
+                                    e.printStackTrace()
                                 }
                             }
                         }
-                        zis.closeEntry(); entry = zis.nextEntry
+                        zis.closeEntry()
+                        entry = zis.nextEntry
                     }
                 }
             }
@@ -1218,9 +1566,9 @@ class SettingsActivity : ComponentActivity() {
     }
 }
 
-/**
- * Custom ArrayAdapter that applies theme color or specific item colors to spinner items
- */
+
+
+
 class ThemedArrayAdapter(
     context: Context,
     private val resource: Int,
@@ -1245,7 +1593,7 @@ class ThemedArrayAdapter(
             val color = if (itemColors != null && position < itemColors.size) {
                 val colorStr = itemColors[position]
                 if (colorStr == Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT) {
-                    // For default adaptive, use white or some neutral color for the preview
+                    
                     Color.WHITE
                 } else {
                     try { Color.parseColor(colorStr) } catch (e: Exception) { Color.WHITE }

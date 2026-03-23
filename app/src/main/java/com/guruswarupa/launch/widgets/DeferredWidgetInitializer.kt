@@ -17,6 +17,7 @@ class DeferredWidgetInitializer(
         widgetSetupManager.setupBatteryAndUsage()
         
         with(widgetLifecycleCoordinator) {
+            mediaControllerWidget = widgetSetupManager.setupMediaControllerWidget()
             notificationsWidget = widgetSetupManager.setupNotificationsWidget()
             calculatorWidget = widgetSetupManager.setupCalculatorWidget()
             workoutWidget = widgetSetupManager.setupWorkoutWidget()
@@ -27,8 +28,10 @@ class DeferredWidgetInitializer(
             noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
             calendarEventsWidget = widgetSetupManager.setupCalendarEventsWidget(sharedPreferences)
             countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)
+            dnsWidget = widgetSetupManager.setupDnsWidget(sharedPreferences)
+            noteWidget = widgetSetupManager.setupNoteWidget(sharedPreferences)
+            batteryHealthWidget = widgetSetupManager.setupBatteryHealthWidget()
             
-            // Initialize new widgets
             networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget()
             deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget()
             yearProgressWidget = widgetSetupManager.setupYearProgressWidget(sharedPreferences)
@@ -37,13 +40,13 @@ class DeferredWidgetInitializer(
             lifecycleManager.setNetworkStatsWidget(networkStatsWidget)
             lifecycleManager.setDeviceInfoWidget(deviceInfoWidget)
             
-            // Setup lifecycle registrations
+            
             setupDefaultLifecycle()
         }
         
         widgetSetupManager.requestNotificationPermission()
 
-        // Update widget visibility based on configuration
+        
         val widgetVisibilityManager = com.guruswarupa.launch.widgets.WidgetVisibilityManager(
             widgetSetupManager.getActivity(),
             widgetConfigurationManager

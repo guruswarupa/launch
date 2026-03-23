@@ -24,8 +24,8 @@ class DeviceInfoManager(private val context: Context) {
                 line = reader.readLine()
             }
             reader.close()
-            // If we didn't find it in cpuinfo (common on some newer Android versions due to restrictions),
-            // return Build.BOARD or Build.HARDWARE as fallback
+            
+            
             if (model == "Unknown") {
                 return Build.BOARD
             }
@@ -53,7 +53,7 @@ class DeviceInfoManager(private val context: Context) {
                     reader.close()
                     if (line != null) {
                         var temp = line.toFloatOrNull() ?: continue
-                        // Often values are in millidegrees
+                        
                         if (temp > 1000) {
                             temp /= 1000f
                         }
@@ -64,7 +64,7 @@ class DeviceInfoManager(private val context: Context) {
                 continue
             }
         }
-        return -1f // Not valid
+        return -1f 
     }
 
     fun getRamUsage(): Pair<Long, Long> {

@@ -37,7 +37,7 @@ class AppLockSettingsActivity : ComponentActivity() {
     private var isPinVerifiedForThisSession = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)

@@ -32,24 +32,26 @@
     <string name="hide_app_plain">Hide App</string>
     <string name="grid_columns_title">Apps per row</string>
     <string name="apps_per_row_format">%1$d apps per row</string>
-    <string name="search_text"> Search...</string>
+    <string name="search_text"> Search…</string>
     
-    <!-- Accessibility Strings -->
+    
     <string name="accessibility_description">Used to lock the screen when you double tap, allowing you to use fingerprint to unlock. This service does not collect, store, or transmit any personal data. It only performs system-level actions like screen locking and taking screenshots when explicitly triggered by user gestures.</string>
     
-    <!-- App Data Disclosure Strings -->
+    
     <string name="app_data_disclosure_title">Privacy &amp; Data Disclosure</string>
     <string name="app_data_disclosure_message">To provide a functional launcher experience, Launch processes information about your installed applications. All data is stored &lt;b&gt;locally on your device&lt;/b&gt; and is never shared with third parties.&lt;br/&gt;&lt;br/&gt;&lt;b&gt;What we collect:&lt;/b&gt;&lt;br/&gt;• Package names, app names, and icons&lt;br/&gt;• Launch intent information&lt;br/&gt;&lt;br/&gt;&lt;b&gt;How we use it:&lt;/b&gt;&lt;br/&gt;• Displaying and searching your apps&lt;br/&gt;• Enabling app organization features&lt;br/&gt;By clicking \'Accept\', you agree to these data practices.</string>
     <string name="data_disclosure_links">&lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;  •  &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
-    <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch/blob/master/PRIVACY_POLICY.md"&gt;Privacy Policy&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
+    <string name="github_project_links">• &lt;a href="https://github.com/guruswarupa/launch"&gt;Star the repo on GitHub&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/README.md"&gt;README&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/CONTRIBUTING.md"&gt;Contributing&lt;/a&gt;\n• &lt;a href="https://github.com/guruswarupa/launch/blob/master/LICENSE"&gt;License&lt;/a&gt;</string>
     <string name="i_agree">Accept &amp; Continue</string>
     <string name="decline">Exit</string>
     <string name="accessibility_permission_title">Accessibility Permission</string>
     <string name="accessibility_permission_message">To lock the screen and keep fingerprint unlock working, please enable Launch in Accessibility settings.</string>
 
-    <!-- Device Admin Strings -->
+    
     <string name="device_admin_label">Launch Screen Off</string>
     <string name="device_admin_description">Allows the launcher to turn off the screen when double-tapped.</string>
+    <string name="work_profile_admin_label">Launch Work Profile</string>
+    <string name="work_profile_admin_description">Allows the launcher to create and manage work profiles for separating work and personal apps.</string>
     <string name="request_device_admin_title">Enable Screen Off</string>
     <string name="request_device_admin_message">To turn off the screen with a double-tap, Launch needs Device Administrator permission.</string>
     <string name="grant_permission">Grant</string>
@@ -58,7 +60,7 @@
     <string name="notification_listener_permission_title">Notification Access</string>
     <string name="notification_listener_permission_message">To read and manage notifications in the notification widget, please enable Launch in Notification Access settings.</string>
 
-    <!-- App Search Strings -->
+    
     <string name="search_on_play_store">Search %1$s on Play Store</string>
     <string name="search_in_google_maps">Search %1$s in Google Maps</string>
     <string name="search_on_youtube">Search %1$s on YouTube</string>
@@ -69,7 +71,7 @@
     <string name="cannot_open_vault">Cannot open vault: App not found</string>
     <string name="hidden_apps_feature_not_available">Hidden apps feature not available</string>
     
-    <!-- Search Mode Selector -->
+    
     <string name="search_mode_all">All</string>
     <string name="search_mode_apps">Apps</string>
     <string name="search_mode_contacts">Contacts</string>
@@ -90,13 +92,13 @@
     <string name="whatsapp">WhatsApp</string>
     <string name="sms">SMS</string>
 
-    <!-- App Lock Strings -->
+    
     <string name="set_pin">Set PIN</string>
     <string name="change_pin">Change PIN</string>
     <string name="set_access_pin">Set Access PIN</string>
     <string name="change_access_pin">Change Access PIN</string>
 
-    <!-- Share Manager strings -->
+    
     <string name="share_dialog_title">What would you like to share?</string>
     <string name="share_app_apk">Share an App (APK)</string>
     <string name="share_file">Share a File</string>
@@ -115,45 +117,45 @@
     <string name="sharing_apk">Sharing %1$s APK</string>
     <string name="share_apk_title">Share %1$s APK</string>
     
-    <!-- Calculator Strings -->
+    
     <string name="calculator_result_format">=\u0020%1$s</string>
     <string name="calculator_error">Error</string>
     <string name="calculator_zero">0</string>
     <string name="converter_result_format">%1$s %2$s</string>
 
-    <!-- Calendar Widget Strings -->
+    
     <string name="calendar_view_list">List</string>
     <string name="calendar_view_calendar">Calendar</string>
 
-    <!-- Compass Widget Strings -->
+    
     <string name="compass_disable">Disable</string>
     <string name="compass_enable">Enable</string>
     <string name="compass_no_sensors">Compass sensors not available on this device</string>
     <string name="compass_azimuth_format">%1$d°</string>
 
-    <!-- Device Info Widget Strings -->
+    
     <string name="ram_usage_format">%1$s / %2$s GB</string>
     <string name="storage_usage_format">%1$s / %2$s GB</string>
     <string name="cpu_temp_format">%1$.1f°C</string>
 
-    <!-- Widget Strings -->
+    
     <string name="screen_time_format">Screen Time: %1$s</string>
     <string name="widget_section_enabled">Enabled widgets</string>
     <string name="widget_section_custom_disabled">Custom widgets (disabled)</string>
     <string name="widget_section_system_disabled">System widgets (disabled)</string>
 
-    <!-- Hidden Apps Strings -->
+    
     <string name="no_hidden_apps">No hidden apps. Long press an app in the app list to hide it.</string>
 
-    <!-- Network Stats Widget Strings -->
+    
     <string name="mbps_format">%1$.1f Mbps</string>
     <string name="ms_format">%1$d ms</string>
-    <string name="status_running">Running...</string>
-    <string name="status_initializing">Initializing...</string>
+    <string name="status_running">Running…</string>
+    <string name="status_initializing">Initializing…</string>
     <string name="status_completed">Test Completed</string>
     <string name="button_run_speedtest">Run Speedtest</string>
 
-    <!-- Noise Decibel Widget Strings -->
+    
     <string name="decibel_format">%1$s dB</string>
     <string name="noise_level_quiet">Quiet</string>
     <string name="noise_level_moderate">Moderate</string>
@@ -177,7 +179,7 @@
     <string name="font_install">Install</string>
     <string name="font_uninstall">Uninstall</string>
 
-    <!-- Physical Activity Strings -->
+    
     <string name="distance_km_format">%1$s km</string>
     <string name="steps_distance_format">%1$d steps • %2$s km</string>
     <string name="stats">Stats</string>
@@ -187,7 +189,7 @@
     <string name="enable_in_settings">Enable in Settings</string>
     <string name="steps_format">%1$s steps</string>
 
-    <!-- Pressure Widget Strings -->
+    
     <string name="disable">Disable</string>
     <string name="enable">Enable</string>
     <string name="pressure_sensor_not_available">Pressure sensor not available on this device</string>
@@ -196,7 +198,7 @@
     <string name="trend_format">Trend: %1$s</string>
     <string name="trend_none">--</string>
 
-    <!-- Privacy Dashboard Strings -->
+    
     <string name="no_sensitive_permissions">No sensitive permissions accessed.</string>
     <string name="access_to_format">Access to: %1$s</string>
     <string name="no_sensitive_permissions_granted">This app does not seem to have any sensitive permissions granted.</string>
@@ -232,13 +234,13 @@
     <string name="desc_videos">Allows the app to specifically access your videos.</string>
     <string name="desc_audio">Allows the app to specifically access your audio files.</string>
 
-    <!-- Temperature Widget Strings -->
+    
     <string name="temperature_sensor_not_available">Temperature sensor not available on this device</string>
     <string name="temperature_c_format">%1$s°C</string>
     <string name="temperature_f_format">%1$s°F</string>
     <string name="status_format">Status: %1$s</string>
 
-    <!-- Todo Adapter Strings -->
+    
     <string name="todo_due_format">Due: %1$s</string>
     <string name="todo_every_30_min">Every 30 min</string>
     <string name="todo_every_1_hr">Every 1 hr</string>
@@ -251,18 +253,17 @@
     <string name="todo_every_min_format">Every %1$d min</string>
     <string name="todo_from_format"> from %1$s</string>
 
-    <!-- Finance Strings -->
+    
     <string name="income">Income</string>
     <string name="expense">Expense</string>
     <string name="date_time_divider_format">%1$s • %2$s</string>
     <string name="transaction_amount_income_format">+%1$s%2$.2f</string>
     <string name="transaction_amount_expense_format">-%1$s%2$.2f</string>
 
-    <!-- Usage Stats Strings -->
+    
     <string name="total_usage_format">Total: %1$s</string>
 
-    <!-- Weather Manager Strings -->
-    <string name="tap_to_set_api_key">Tap to set weather API key</string>
+    
     <string name="tap_to_enter_location">Tap to enter location</string>
     <string name="weather_unavailable">Weather unavailable</string>
     <string name="weather_temp_format_celsius">%1$d°C %2$s</string>
@@ -270,8 +271,10 @@
     <string name="temperature_unit">Temperature Unit</string>
     <string name="celsius">Celsius (°C)</string>
     <string name="fahrenheit">Fahrenheit (°F)</string>
+    <string name="weather_settings_title">Weather Settings</string>
+    <string name="settings_saved">Settings saved</string>
 
-    <!-- Workout Strings -->
+    
     <string name="workout_start">Start</string>
     <string name="workout_stop">Stop</string>
     <string name="workout_list">List</string>
@@ -284,35 +287,70 @@
     <string name="workout_type_reps">REPS</string>
     <string name="workout_type_time">TIME</string>
 
-    <!-- Workspace Strings -->
+    
     <string name="workspace_app_count_format">%1$d apps</string>
 
-    <!-- Accessibility Shortcut -->
+    
     <string name="accessibility_shortcut">Accessibility Shortcut</string>
     <string name="accessibility_shortcut_description">Show a floating button for quick access to system controls</string>
     
-    <!-- Year Progress Widget Strings -->
+    
     <string name="year_progress_enable">Enable</string>
     <string name="year_progress_disable">Disable</string>
     <string name="year_progress_stats_format">%1$d days of %2$d completed (%3$d%%)</string>
     <string name="year_progress_days_remaining_format">%1$d days remaining</string>
 
-    <!-- Developer Info Strings -->
+    
     <string name="support_project_title">Support the Project</string>
+    <string name="support_project_intro">Your support helps keep Launch ad-free, open source, and actively maintained for the long term.</string>
+    <string name="support_project_commitment">I am committed to keeping every feature free, avoiding subscriptions, and using support to improve stability, ship thoughtful updates, and maintain the app for years to come.</string>
+    <string name="support_project_prompt">Support the project</string>
     <string name="sponsor_github_link">&lt;a href="https://github.com/sponsors/guruswarupa"&gt;Sponsor on GitHub&lt;/a&gt;</string>
     <string name="buy_me_a_coffee_link">&lt;a href="https://buymeacoffee.com/guruswarupa"&gt;Buy Me a Coffee&lt;/a&gt;</string>
+    <string name="support_button_loading">Loading...</string>
+    <string name="support_button_buy">Support %1$s</string>
+    <string name="support_button_unavailable">Unavailable</string>
+    <string name="support_button_pending">Pending</string>
+    <string name="support_thank_you">Thank you for supporting ❤️</string>
+    <string name="support_thank_you_title">Thank You</string>
+    <string name="support_thank_you_message">Thank you for supporting Launch. Your contribution helps keep the app ad-free, open source, and free of subscriptions while I continue maintaining it long term.</string>
+    <string name="support_thank_you_chip_adfree">Ad-free forever</string>
+    <string name="support_thank_you_chip_open_source">Open source</string>
+    <string name="support_thank_you_chip_no_subscription">No subscription model</string>
+    <string name="support_thank_you_close">Close</string>
+    <string name="support_purchase_canceled">Support canceled</string>
+    <string name="support_purchase_pending">Your support purchase is pending approval.</string>
+    <string name="support_billing_unavailable">Google Play Billing is unavailable right now.</string>
+    <string name="support_network_error">Unable to load support options. Check your connection and try again.</string>
+    <string name="support_option_not_ready">This support option is not ready yet.</string>
+    <string name="support_purchase_failed">Unable to complete support purchase right now.</string>
     
-    <!-- Settings Category Headers -->
+    
     <string name="category_appearance">Appearance</string>
     <string name="category_features">Features</string>
     <string name="category_security_privacy">Security &amp; Privacy</string>
     <string name="category_system">System</string>
     <string name="category_about">About</string>
     
-    <!-- Pomodoro Mode Strings -->
+    
     <string name="pomodoro_work">Work</string>
     <string name="pomodoro_break">Break</string>
     <string name="pomodoro_mode">Pomodoro (25/5)</string>
     <string name="pomodoro_stop_title">Stop Pomodoro?</string>
     <string name="pomodoro_stop_message">A Pomodoro session is currently active. Do you want to stop it?</string>
+
+    
+    <string name="note_icon_description">Note Icon</string>
+    <string name="notes_title">Notes</string>
+    <string name="meeting_notes_title">Meeting Notes</string>
+    <string name="meeting_notes_desc">Discuss project roadmap and…</string>
+    <string name="meeting_notes_date">Mar 20, 2025 2:30 PM</string>
+    <string name="shopping_list_title">Shopping List</string>
+    <string name="shopping_list_desc">Milk, Eggs, Bread, Butter</string>
+    <string name="shopping_list_date">Mar 19, 2025 10:15 AM</string>
+    <string name="ideas_title">Ideas</string>
+    <string name="ideas_desc">New feature concepts for app</string>
+    <string name="ideas_date">Mar 18, 2025 4:45 PM</string>
+    <string name="add_note_button_text">+ Add Note</string>
+    <string name="status_not_charging">Not charging</string>
 </resources>

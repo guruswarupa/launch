@@ -281,8 +281,9 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     }
 
     private fun applyWallpaperBlur(imageView: ImageView) {
-        // Blur removed - no blur effect applied
-        imageView.setRenderEffect(null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            imageView.setRenderEffect(null)
+        }
     }
 
     private fun loadFiles() {
@@ -447,7 +448,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         val timeoutSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.timeout_switch)
         val recoveryBtn = dialogView.findViewById<Button>(R.id.view_recovery_phrase_button)
         
-        recoveryBtn.visibility = View.GONE // Removed recovery phrase
+        recoveryBtn.visibility = View.GONE 
         
         timeoutSwitch.isChecked = prefs.getBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, false)
         
@@ -496,7 +497,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             holder.name.text = file.name
             holder.info.text = formatFileSize(file.length())
             
-            // Clear previous drawable to prevent drawing recycled bitmap
+            
             holder.thumbnail.setImageDrawable(null)
             
             val bitmap = vaultManager.getThumbnail(file.name)

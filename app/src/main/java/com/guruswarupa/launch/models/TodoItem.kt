@@ -5,12 +5,12 @@ data class TodoItem(
     var isChecked: Boolean,
     val isRecurring: Boolean = false,
     var lastCompletedDate: String? = null,
-    val selectedDays: Set<Int> = emptySet(), // Days of week (1=Sunday, 2=Monday, etc.)
+    val selectedDays: Set<Int> = emptySet(), 
     val priority: Priority = Priority.MEDIUM,
     val category: String = "General",
-    val dueTime: String? = null, // Optional time in HH:mm format
-    val recurrenceInterval: Int? = null, // Interval in minutes (e.g., 30, 60, 120 for Pomodoro-style)
-    val intervalStartTime: String? = null // Start time for interval-based todos in HH:mm format
+    val dueTime: String? = null, 
+    val recurrenceInterval: Int? = null, 
+    val intervalStartTime: String? = null 
 ) {
     enum class Priority(val displayName: String, val color: String) {
         HIGH("High", "#FF5722"),

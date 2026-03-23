@@ -20,11 +20,11 @@
         <item name="android:textColorPrimary">@color/white</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="android:textColor">@color/white</item>
-        <!-- Force list items to be white -->
+        
         <item name="android:textColorAlertDialogListItem">@color/white</item>
         <item name="textColorAlertDialogListItem">@color/white</item>
         
-        <!-- Additional text color overrides for various dialog components -->
+        
         <item name="android:textColorPrimaryDisableOnly">@color/white</item>
         <item name="android:textColorHint">@color/text_secondary</item>
     </style>
@@ -206,7 +206,7 @@
         <item name="cornerSize">50%</item>
     </style>
 
-    <!-- Icon shape styles for different corner radii -->
+    
     <style name="IconShapeRound" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>

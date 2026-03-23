@@ -15,12 +15,12 @@ class PressureManager(context: Context) : SensorEventListener {
     private var pressureSensor: Sensor? = null
     private var isListening = false
     
-    private var currentPressure: Float = 0f // in hPa (hectopascals)
+    private var currentPressure: Float = 0f 
     private var onPressureChanged: ((Float) -> Unit)? = null
     
     companion object {
         private const val TAG = "PressureManager"
-        // For altitude calculation (sea level pressure is approximately 1013.25 hPa)
+        
         private const val SEA_LEVEL_PRESSURE = 1013.25f
     }
     
@@ -72,9 +72,9 @@ class PressureManager(context: Context) : SensorEventListener {
         }
     }
     
-    /**
-     * Cleanup method to unregister sensor listeners and prevent memory leaks
-     */
+    
+
+
     fun cleanup() {
         stopTracking()
         onPressureChanged = null
@@ -85,24 +85,24 @@ class PressureManager(context: Context) : SensorEventListener {
         
         val pressure = event.values[0]
         
-        if (abs(pressure - currentPressure) > 0.1f) { // Only update if change is significant
+        if (abs(pressure - currentPressure) > 0.1f) { 
             currentPressure = pressure
             onPressureChanged?.invoke(currentPressure)
         }
     }
     
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // Not critical for pressure readings
+        
     }
     
     fun getCurrentPressure(): Float {
         return currentPressure
     }
     
-    /**
-     * Calculate approximate altitude from pressure
-     * Using barometric formula: h = 44330 * (1 - (P/P0)^0.1903)
-     */
+    
+
+
+
     fun getAltitude(): Float {
         if (currentPressure <= 0) return 0f
         val ratio = currentPressure / SEA_LEVEL_PRESSURE
@@ -110,9 +110,9 @@ class PressureManager(context: Context) : SensorEventListener {
         return 44330f * (1f - power)
     }
     
-    /**
-     * Get pressure trend (rising, falling, stable)
-     */
+    
+
+
     fun getPressureTrend(previousPressure: Float): String {
         val diff = currentPressure - previousPressure
         return when {

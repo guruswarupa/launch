@@ -19,6 +19,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -42,7 +43,7 @@ data class NotificationAction(
     val actionIntent: PendingIntent?,
     val remoteInputs: Array<RemoteInput>?,
     val icon: Drawable?,
-    val androidRemoteInputs: Array<android.app.RemoteInput>? = null // Store original for conversion
+    val androidRemoteInputs: Array<android.app.RemoteInput>? = null 
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -80,15 +81,16 @@ data class NotificationItem(
     val bigPicture: Bitmap? = null,
     val actions: List<NotificationAction> = emptyList(),
     val isExpanded: Boolean = false,
-    val mergedKeys: List<String> = emptyList(), // Store keys of merged notifications for dismissal
-    val isMediaPlayer: Boolean = false // Indicates if this is a media player notification
+    val mergedKeys: List<String> = emptyList(), 
+    val isMediaPlayer: Boolean = false 
 )
 
 class NotificationsWidget(rootView: View) {
     private val context: Context = rootView.context
     private val notificationRecyclerView: RecyclerView = rootView.findViewById(R.id.notifications_recycler_view)
     private val emptyState: View = rootView.findViewById(R.id.notifications_empty_state)
-    private val permissionPrompt: TextView = rootView.findViewById(R.id.notification_permission_prompt)
+    private val emptyMessage: TextView = rootView.findViewById(R.id.notifications_empty_message)
+    private val permissionButton: Button = rootView.findViewById(R.id.request_notification_permission_button)
     private val countBadge: TextView = rootView.findViewById(R.id.notification_count_badge)
     
     private val notifications: MutableList<NotificationItem> = mutableListOf()
@@ -109,7 +111,7 @@ class NotificationsWidget(rootView: View) {
                     dismissNotification(item)
                 }
                 ActionType.REPLY -> {
-                    // Reply action is handled in adapter
+                    
                 }
             }
         }
@@ -120,40 +122,38 @@ class NotificationsWidget(rootView: View) {
         notificationRecyclerView.layoutManager = LinearLayoutManager(context)
         notificationRecyclerView.adapter = adapter
         
-        // Setup swipe to dismiss
         setupSwipeToDismiss()
         
-        permissionPrompt.setOnClickListener {
+        permissionButton.setOnClickListener {
             openNotificationSettings()
         }
         
-        // Initial update
         updateNotifications()
     }
     
     private fun setupSwipeToDismiss() {
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            0, // No drag and drop
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT // Allow swipe left and right
+            0, 
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT 
         ) {
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
-                return false // Not implemented
+                return false 
             }
             
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.bindingAdapterPosition
                 if (position != RecyclerView.NO_POSITION && position < notifications.size) {
                     val item = notifications[position]
-                    // Remove from list immediately for instant feedback
+                    
                     notifications.removeAt(position)
                     adapter.notifyItemRemoved(position)
-                    // Dismiss the actual notification
+                    
                     dismissNotificationImmediate(item)
-                    // Update badge count
+                    
                     updateBadgeCount()
                 }
             }
@@ -166,13 +166,11 @@ class NotificationsWidget(rootView: View) {
         try {
             val service = LaunchNotificationListenerService.instance
             if (service != null) {
-                // Dismiss all merged notifications if this is a merged notification
                 if (item.mergedKeys.isNotEmpty()) {
                     item.mergedKeys.forEach { key ->
                         service.dismissNotificationByKey(key)
                     }
                 } else {
-                    // Dismiss single notification
                     service.dismissNotificationByKey(item.key)
                 }
             }
@@ -189,7 +187,6 @@ class NotificationsWidget(rootView: View) {
             countBadge.visibility = View.GONE
         }
         
-        // Show/hide empty state
         if (notifications.isEmpty()) {
             showEmptyState("No notifications")
         }
@@ -198,7 +195,7 @@ class NotificationsWidget(rootView: View) {
     @SuppressLint("NotifyDataSetChanged")
     fun updateNotifications() {
         if (!isNotificationListenerEnabled()) {
-            showEmptyState("Enable notification access in settings")
+            showEmptyState("To see notifications here, please enable Notification Access for Launch in settings.", showPermissionButton = true)
             countBadge.visibility = View.GONE
             return
         }
@@ -209,10 +206,8 @@ class NotificationsWidget(rootView: View) {
             
             val tempNotifications = mutableListOf<NotificationItem>()
             val seenKeys = mutableSetOf<String>()
-            // Map to group notifications by package and title for merging
             val notificationGroups = mutableMapOf<String, MutableList<StatusBarNotification>>()
             
-            // First pass: group notifications by package and title
             activeNotifications.forEach { sbn ->
                 val notificationKey = sbn.key
                 if (seenKeys.contains(notificationKey)) {
@@ -225,7 +220,6 @@ class NotificationsWidget(rootView: View) {
                 val title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
                 
                 val groupKey = title.ifEmpty {
-                    // If title is empty, try to use notification group or tag
                     val group = notification.group
                     group ?: sbn.tag ?: "default"
                 }.let { "${sbn.packageName}|$it" }
@@ -233,9 +227,7 @@ class NotificationsWidget(rootView: View) {
                 notificationGroups.getOrPut(groupKey) { mutableListOf() }.add(sbn)
             }
             
-            // Second pass: process grouped notifications and merge them
             notificationGroups.forEach { (_, groupNotifications) ->
-                // For multiple notifications, prioritize the one with message content
                 val sbn = if (groupNotifications.size == 1) {
                     groupNotifications[0]
                 } else {
@@ -260,15 +252,12 @@ class NotificationsWidget(rootView: View) {
                 
                 val notification = sbn.notification
                 val extras = notification.extras
-                
                 val title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
                 val text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
                 
-                // Extract large icon
                 val largeIcon = try {
                     val largeIconObj = notification.getLargeIcon()
                     if (largeIconObj != null) {
-                        // Use remote context to load resources from the correct package
                         val remoteContext = try {
                             context.createPackageContext(sbn.packageName, 0)
                         } catch (_: Exception) {
@@ -281,7 +270,6 @@ class NotificationsWidget(rootView: View) {
                             null
                         }
                     } else {
-                        // Fallback to legacy large icon
                         @Suppress("DEPRECATION")
                         val bitmap = extras?.getParcelable(Notification.EXTRA_LARGE_ICON) as? Bitmap
                         bitmap
@@ -290,16 +278,13 @@ class NotificationsWidget(rootView: View) {
                     null
                 }
                 
-                // Extract big picture
                 @Suppress("DEPRECATION")
                 val bigPicture: Bitmap? = extras?.getParcelable(Notification.EXTRA_PICTURE)
                     ?: extras?.getParcelable(NotificationCompat.EXTRA_PICTURE)
                 
-                // Extract actions - merge from all notifications in group if multiple
                 val actions = mutableListOf<NotificationAction>()
-                val allActions = mutableSetOf<String>() // Track action titles to avoid duplicates
+                val allActions = mutableSetOf<String>() 
                 
-                // Collect actions from all notifications in the group
                 groupNotifications.forEach { groupSbn ->
                     val groupNotification = groupSbn.notification
                     if (groupNotification.actions != null) {
@@ -308,7 +293,6 @@ class NotificationsWidget(rootView: View) {
                         val actionIntent = action.actionIntent
                         val androidRemoteInputs = action.remoteInputs
                         
-                        // Convert android.app.RemoteInput to androidx.core.app.RemoteInput
                         val remoteInputs: Array<RemoteInput>? = if (androidRemoteInputs != null && androidRemoteInputs.isNotEmpty()) {
                             try {
                                 androidRemoteInputs.mapNotNull { androidRemoteInput: android.app.RemoteInput ->
@@ -330,7 +314,6 @@ class NotificationsWidget(rootView: View) {
                         }
                         
                         val icon: Drawable? = try {
-                            // On API 23+, getIcon() returns Icon?
                             val iconObj = action.getIcon()
                             if (iconObj != null) {
                                 val remoteContext = try {
@@ -340,7 +323,6 @@ class NotificationsWidget(rootView: View) {
                                 }
                                 iconObj.loadDrawable(remoteContext)
                             } else {
-                                // Fallback to icon resource ID if Icon object is null
                                 val iconResId = @Suppress("DEPRECATION") action.icon
                                 if (iconResId != 0) {
                                     val remoteContext = try {
@@ -352,21 +334,17 @@ class NotificationsWidget(rootView: View) {
                                 } else null
                             }
                         } catch (_: Throwable) {
-                            // If all else fails, return null
                             null
                         }
                         
-                            // Add action even if title is empty - we'll use icon or default icon
                             if (actionTitle.isNotEmpty() || icon != null || androidRemoteInputs != null) {
                                 val finalTitle = actionTitle.ifEmpty {
-                                    // Try to infer title from remote input or icon
                                     when {
                                         androidRemoteInputs != null && androidRemoteInputs.isNotEmpty() -> "Reply"
                                         else -> "Action"
                                     }
                                 }
                                 
-                                // Only add if we haven't seen this action title before (avoid duplicates)
                                 if (!allActions.contains(finalTitle.lowercase())) {
                                     allActions.add(finalTitle.lowercase())
                                     actions.add(NotificationAction(finalTitle, actionIntent, remoteInputs, icon, androidRemoteInputs))
@@ -376,14 +354,10 @@ class NotificationsWidget(rootView: View) {
                     }
                 }
                 
-                // Preserve expanded state if notification already exists
                 val existingItem = notifications.find { it.key == sbn.key }
                 val isExpanded = existingItem?.isExpanded ?: false
-                
-                // Collect all keys from merged notifications for dismissal
                 val mergedKeys = groupNotifications.map { it.key }
                 
-                // Detect if this is a media player notification
                 val isMediaPlayer = bigPicture != null || 
                     (actions.any { action ->
                         val actionTitle = action.title.lowercase()
@@ -414,7 +388,6 @@ class NotificationsWidget(rootView: View) {
                 }
             }
             
-            // Additional pass: merge notifications from messaging apps that have same package and title
             val finalNotifications = mutableListOf<NotificationItem>()
             val processedKeys = mutableSetOf<String>()
             
@@ -452,14 +425,13 @@ class NotificationsWidget(rootView: View) {
             
             notifications.clear()
             val uniqueNotifications = finalNotifications
-                .distinctBy { it.key } // Remove duplicates by key
+                .distinctBy { it.key } 
                 .sortedByDescending { it.time }
                 .take(10)
             notifications.addAll(uniqueNotifications)
             
             adapter.notifyDataSetChanged()
             
-            // Update badge
             val totalCount = activeNotifications.size
             if (totalCount > 0) {
                 countBadge.text = if (totalCount > 99) "99+" else totalCount.toString()
@@ -468,7 +440,6 @@ class NotificationsWidget(rootView: View) {
                 countBadge.visibility = View.GONE
             }
             
-            // Show/hide empty state
             if (notifications.isEmpty()) {
                 showEmptyState("No notifications")
             } else {
@@ -476,7 +447,7 @@ class NotificationsWidget(rootView: View) {
                 notificationRecyclerView.visibility = View.VISIBLE
             }
         } catch (_: SecurityException) {
-            showEmptyState("Notification access not granted")
+            showEmptyState("Notification access not granted", showPermissionButton = true)
             countBadge.visibility = View.GONE
         } catch (_: Exception) {
             showEmptyState("Error loading notifications")
@@ -496,31 +467,29 @@ class NotificationsWidget(rootView: View) {
             }
             bitmap
         } catch (_: Throwable) {
-            // Fallback for OOM or other issues
             createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
     }
     
-    private fun showEmptyState(message: String) {
+    private fun showEmptyState(message: String, showPermissionButton: Boolean = false) {
         emptyState.visibility = View.VISIBLE
         notificationRecyclerView.visibility = View.GONE
-        permissionPrompt.text = message
+        emptyMessage.text = message
+        permissionButton.visibility = if (showPermissionButton) View.VISIBLE else View.GONE
     }
     
     private fun dismissNotification(item: NotificationItem) {
         try {
             val service = LaunchNotificationListenerService.instance
             if (service != null) {
-                // Dismiss all merged notifications if this is a merged notification
                 if (item.mergedKeys.isNotEmpty()) {
                     item.mergedKeys.forEach { key ->
                         service.dismissNotificationByKey(key)
                     }
                 } else {
-                    // Dismiss single notification
                     service.dismissNotificationByKey(item.key)
                 }
-                // Small delay to let the system process the cancellation
+                
                 handler.postDelayed({
                     updateNotifications()
                 }, 200)
@@ -609,17 +578,14 @@ class NotificationAdapter(
         holder.textText.text = item.text
         holder.timeText.text = formatTime(item.time)
         
-        // Try to load app icon
         try {
             val pm = context.packageManager
             val appInfo = pm.getApplicationInfo(item.packageName, 0)
             holder.appIcon.setImageDrawable(pm.getApplicationIcon(appInfo))
         } catch (_: Exception) {
-            // Use default icon if app not found
             holder.appIcon.setImageDrawable(null)
         }
         
-        // Handle large icon (not used in media layout)
         holder.largeIconView?.let { view ->
             if (item.largeIcon != null && !item.largeIcon.isRecycled && !isMediaPlayer) {
                 view.setImageBitmap(item.largeIcon)
@@ -630,28 +596,24 @@ class NotificationAdapter(
             }
         }
         
-        // Handle big picture - always show for media players, conditional for others
         holder.bigPictureView?.let { view ->
             val bitmap = item.bigPicture ?: (if (isMediaPlayer) item.largeIcon else null)
             if (bitmap != null && !bitmap.isRecycled) {
-                // Use high-quality scaling to avoid pixelation
                 view.setImageBitmap(bitmap)
                 view.scaleType = ImageView.ScaleType.CENTER_CROP
                 view.visibility = View.VISIBLE
-                // Make it square for media players with proper scaling and padding
+                
                 if (isMediaPlayer) {
                     view.post {
                         val parent = view.parent as? View
                         val availableWidth = parent?.width ?: 0
                         if (availableWidth > 0) {
-                            // Account for margins (64dp on each side = 128dp total) and container padding (12dp on each side = 24dp total)
-                            val horizontalPadding = 128.dpToPx(context) + 24.dpToPx(context) // 64dp margin * 2 + 12dp padding * 2
+                            val horizontalPadding = 128.dpToPx(context) + 24.dpToPx(context) 
                             val squareSize = availableWidth - horizontalPadding
                             val layoutParams = view.layoutParams
                             layoutParams.width = squareSize
                             layoutParams.height = squareSize
                             view.layoutParams = layoutParams
-                            // Force high-quality rendering
                             view.setLayerType(View.LAYER_TYPE_HARDWARE, null)
                         }
                     }
@@ -662,35 +624,28 @@ class NotificationAdapter(
             }
         }
         
-        // Show text for media players (artist name)
         if (isMediaPlayer && item.text.isNotEmpty()) {
             holder.textText.visibility = View.VISIBLE
         } else if (!isMediaPlayer) {
             holder.textText.visibility = if (item.text.isNotEmpty()) View.VISIBLE else View.GONE
         }
         
-        // Handle actions - always show them, no expansion needed
         holder.actionsContainer?.let { container ->
             container.removeAllViews()
-            // Always show container if there are actions, even if we can't get icons
+            
             if (item.actions.isNotEmpty()) {
                 container.visibility = View.VISIBLE
-                // For media players, center the actions
+                
                 if (isMediaPlayer) {
                     container.gravity = android.view.Gravity.CENTER
                 }
                 
                 item.actions.forEachIndexed { index, action ->
-                    // Get icon - use action icon if available, otherwise map from title
                     val iconDrawable: Drawable? = action.icon ?: getIconForActionTitle(action.title, context)
-                    
-                    // Smaller buttons for media players
                     val buttonSize = if (isMediaPlayer) 40.dpToPx(context) else 48.dpToPx(context)
                     val paddingSize = if (isMediaPlayer) 10.dpToPx(context) else 12.dpToPx(context)
                     
-                    // Always create button, even if no icon - we'll show a default or text
                     val actionButton = if (iconDrawable != null) {
-                        // Icon-only button
                         ImageView(context).apply {
                             setImageDrawable(iconDrawable)
                             background = ContextCompat.getDrawable(context, R.drawable.notification_action_button)
@@ -704,13 +659,12 @@ class NotificationAdapter(
                             }
                             scaleType = ImageView.ScaleType.CENTER_INSIDE
                             setPadding(paddingSize, paddingSize, paddingSize, paddingSize)
-                            // Use white/translucent theme instead of nord7
+                            
                             if (action.icon != null) {
                                 colorFilter = PorterDuffColorFilter(ContextCompat.getColor(context, R.color.white), PorterDuff.Mode.SRC_IN)
                             }
                         }
                     } else {
-                        // Fallback: text button if no icon available
                         TextView(context).apply {
                             text = action.title.ifEmpty { "Action" }
                             setTextColor(ContextCompat.getColor(context, R.color.white))
@@ -732,16 +686,13 @@ class NotificationAdapter(
 
                     actionButton.setOnClickListener {
                         if (action.remoteInputs != null && action.remoteInputs.isNotEmpty()) {
-                            // Show reply input
                             holder.replyContainer?.visibility = View.VISIBLE
                             holder.replyEditText?.requestFocus()
 
-                            // Handle send button click
                             holder.replySendButton?.setOnClickListener {
                                 sendReply(action, holder.replyEditText?.text.toString(), holder)
                             }
 
-                            // Handle keyboard send action
                             holder.replyEditText?.setOnEditorActionListener { _, actionId, _ ->
                                 if (actionId == EditorInfo.IME_ACTION_SEND) {
                                     sendReply(action, holder.replyEditText.text.toString(), holder)
@@ -749,7 +700,6 @@ class NotificationAdapter(
                                 } else false
                             }
                         } else {
-                            // Execute action intent
                             try {
                                 action.actionIntent?.send()
                             } catch (_: Exception) {
@@ -766,7 +716,6 @@ class NotificationAdapter(
 
             holder.replyContainer?.visibility = View.GONE
 
-            // Click to open app (actions are always visible now)
             holder.itemView.setOnClickListener {
                 try {
                     val pm = context.packageManager
@@ -786,7 +735,6 @@ class NotificationAdapter(
         }
 
         try {
-            // Use androidx RemoteInputs if available, otherwise use android.app version
             val remoteInputs = action.remoteInputs
             if (remoteInputs != null && remoteInputs.isNotEmpty()) {
                 val results = Bundle()
@@ -800,7 +748,6 @@ class NotificationAdapter(
                 action.actionIntent?.send(context, 0, intent)
                 Toast.makeText(context, "Reply sent", Toast.LENGTH_SHORT).show()
             } else {
-                // Fallback to android.app.RemoteInput if androidx version not available
                 val androidRemoteInputs = action.androidRemoteInputs
                 if (androidRemoteInputs != null && androidRemoteInputs.isNotEmpty()) {
                     val results = Bundle()
@@ -840,27 +787,23 @@ class NotificationAdapter(
     }
 }
 
-// Extension function to convert dp to pixels
+
 private fun Int.dpToPx(context: Context): Int {
     return (this * context.resources.displayMetrics.density).toInt()
 }
 
-// Map action titles to icons for music players and common actions
+
 private fun getIconForActionTitle(title: String, context: Context): Drawable? {
     val lowerTitle = title.lowercase().trim()
     val iconResId = when {
-        // Music player controls - check pause first to avoid matching "play" in "pause"
         lowerTitle == "pause" || lowerTitle.contains("pause") -> R.drawable.ic_pause
         lowerTitle == "play" || (lowerTitle.contains("play") && !lowerTitle.contains("pause")) -> R.drawable.ic_play
         lowerTitle == "next" || lowerTitle.contains("next") || lowerTitle.contains("skip forward") || lowerTitle.contains("skip") -> R.drawable.ic_next
         lowerTitle == "previous" || lowerTitle.contains("prev") || lowerTitle.contains("previous") || lowerTitle.contains("prev") || lowerTitle.contains("skip back") || lowerTitle.contains("back") -> R.drawable.ic_previous
-        // Like/Dislike actions - check dislike first to avoid matching "like" in "dislike"
         lowerTitle == "dislike" || lowerTitle.contains("dislike") || lowerTitle.contains("thumbs down") -> R.drawable.ic_thumbs_down
         lowerTitle == "like" || lowerTitle.contains("like") || lowerTitle.contains("thumbs up") -> R.drawable.ic_thumbs_up
         lowerTitle.contains("favorite") || lowerTitle.contains("favourite") || lowerTitle.contains("love") -> R.drawable.ic_heart
-        // Messaging actions
         lowerTitle.contains("reply") || lowerTitle.contains("answer") -> R.drawable.ic_message
-        // Notification actions
         lowerTitle.contains("mark as read") || lowerTitle.contains("read") -> android.R.drawable.ic_menu_view
         lowerTitle.contains("mute") || lowerTitle.contains("silence") -> android.R.drawable.ic_lock_silent_mode
         lowerTitle.contains("archive") -> R.drawable.ic_archive
@@ -871,7 +814,6 @@ private fun getIconForActionTitle(title: String, context: Context): Drawable? {
     return iconResId?.let { 
         try {
             val drawable = ContextCompat.getDrawable(context, it)
-            // Apply color filter to match the theme
             drawable?.colorFilter = PorterDuffColorFilter(ContextCompat.getColor(context, R.color.white), PorterDuff.Mode.SRC_IN)
             drawable
         } catch (_: Exception) {

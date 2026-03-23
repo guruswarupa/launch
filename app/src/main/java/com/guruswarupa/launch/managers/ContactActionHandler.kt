@@ -7,10 +7,10 @@ import android.widget.AutoCompleteTextView
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.utils.VoiceCommandHandler
 
-/**
- * Handles contact-related actions such as opening WhatsApp or SMS chats.
- * Lazily initializes VoiceCommandHandler to perform these actions.
- */
+
+
+
+
 class ContactActionHandler(
     private val activity: FragmentActivity,
     private val packageManager: PackageManager,
@@ -21,9 +21,9 @@ class ContactActionHandler(
 ) {
     private var voiceCommandHandler: VoiceCommandHandler? = null
 
-    /**
-     * Returns the existing VoiceCommandHandler or creates a new one if it doesn't exist.
-     */
+    
+
+
     private fun getHandler(): VoiceCommandHandler {
         return voiceCommandHandler ?: VoiceCommandHandler(
             activity,
@@ -37,16 +37,16 @@ class ContactActionHandler(
         }
     }
 
-    /**
-     * Opens a WhatsApp chat for the specified contact.
-     */
+    
+
+
     fun openWhatsAppChat(contactName: String) {
         getHandler().openWhatsAppChat(contactName)
     }
 
-    /**
-     * Opens an SMS chat for the specified contact.
-     */
+    
+
+
     fun openSMSChat(contactName: String) {
         getHandler().openSMSChat(contactName)
     }

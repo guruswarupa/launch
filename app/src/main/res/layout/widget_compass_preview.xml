@@ -7,7 +7,7 @@
     android:padding="16dp"
     android:gravity="center">
 
-    <!-- Compass Circle -->
+    
     <FrameLayout
         android:layout_width="120dp"
         android:layout_height="120dp"
@@ -27,7 +27,7 @@
 
     </FrameLayout>
 
-    <!-- Direction Display -->
+    
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

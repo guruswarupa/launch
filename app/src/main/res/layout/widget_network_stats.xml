@@ -38,7 +38,7 @@
         android:orientation="horizontal"
         android:baselineAligned="false">
 
-        <!-- Speed Section -->
+        
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -80,7 +80,7 @@
                 android:textStyle="bold"/>
         </LinearLayout>
 
-        <!-- Latency Section -->
+        
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -128,7 +128,7 @@
         android:background="#33FFFFFF"
         android:layout_marginVertical="12dp"/>
 
-    <!-- Data Usage Section -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -182,7 +182,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- IP Address Section -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

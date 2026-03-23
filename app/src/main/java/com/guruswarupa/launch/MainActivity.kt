@@ -15,7 +15,7 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.core.content.edit
 
-// Import moved managers
+
 import com.guruswarupa.launch.core.CacheManager
 import com.guruswarupa.launch.core.PermissionManager
 import com.guruswarupa.launch.core.SystemBarManager
@@ -48,14 +48,18 @@ import java.util.concurrent.Executors
 
 
 class MainActivity : FragmentActivity() {
+    companion object {
+        var instance: MainActivity? = null
+            private set
+    }
 
-    // Core dependencies
+    
     internal lateinit var sharedPreferences: SharedPreferences
     internal val prefsName = "com.guruswarupa.launch.PREFS"
     internal val handler = Handler(Looper.getMainLooper())
     internal val backgroundExecutor = Executors.newFixedThreadPool(4)
 
-    // Modular managers
+    
     internal lateinit var activityInitializer: ActivityInitializer
     val views: MainActivityViews get() = activityInitializer.views
 
@@ -64,10 +68,10 @@ class MainActivity : FragmentActivity() {
     internal lateinit var searchTypeMenuManager: SearchTypeMenuManager
     internal var fullAppList: MutableList<ResolveInfo> = mutableListOf()
         
-    // Theme tracking
+    
     lateinit var widgetThemeManager: WidgetThemeManager
 
-    // Core managers
+    
     internal lateinit var cacheManager: CacheManager
     internal lateinit var permissionManager: PermissionManager
     internal lateinit var systemBarManager: SystemBarManager
@@ -101,7 +105,7 @@ class MainActivity : FragmentActivity() {
     internal lateinit var resultRegistry: MainActivityResultRegistry
     internal var voiceCommandHandler: VoiceCommandHandler? = null
 
-    // New modular managers
+    
     internal lateinit var appLauncher: AppLauncher
     internal lateinit var voiceSearchManager: VoiceSearchManager
     internal lateinit var usageStatsRefreshManager: UsageStatsRefreshManager
@@ -117,10 +121,10 @@ class MainActivity : FragmentActivity() {
     internal lateinit var contactActionHandler: ContactActionHandler
     internal lateinit var settingsChangeCoordinator: SettingsChangeCoordinator
 
-    // State trackers
+    
     private var hasAskedDefaultLauncherThisOpen = false
 
-    // Initialization check helpers for AppInitializer
+    
     fun isWidgetManagerInitialized() = ::widgetManager.isInitialized
     fun isAppSearchManagerInitialized() = ::appSearchManager.isInitialized
     fun isActivityResultHandlerInitialized() = ::activityResultHandler.isInitialized
@@ -142,9 +146,9 @@ class MainActivity : FragmentActivity() {
         return (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
     }
 
-    /**
-     * Initializes core managers that are needed early in the lifecycle.
-     */
+    
+
+
     internal fun initializeCoreManagers() {
         shareManager = ShareManager(this)
         appLockManager = AppLockManager(this)
@@ -153,28 +157,28 @@ class MainActivity : FragmentActivity() {
         hiddenAppManager = HiddenAppManager(sharedPreferences)
         webAppManager = WebAppManager(sharedPreferences)
         
-        // Initialize new modular managers
+        
         appLauncher = AppLauncher(this, packageManager, appLockManager)
         
-        // Initialize activity initializer
+        
         activityInitializer = ActivityInitializer(this, sharedPreferences, appLauncher)
         
-        // Initialize widget lifecycle coordinator early
+        
         widgetLifecycleCoordinator = WidgetLifecycleCoordinator()
     }
     
-    /**
-     * Applies theme-appropriate backgrounds to all widget containers based on current theme mode.
-     */
+    
+
+
     fun applyThemeBasedWidgetBackgrounds() {
         if (::settingsChangeCoordinator.isInitialized) {
             settingsChangeCoordinator.applyThemeBasedWidgetBackgrounds()
         }
     }
     
-    /**
-     * Checks if the UI mode has changed and updates widget backgrounds if needed.
-     */
+    
+
+
     internal fun checkAndUpdateThemeIfNeeded() {
         if (::widgetThemeManager.isInitialized) {
             widgetThemeManager.checkAndUpdateThemeIfNeeded(
@@ -188,9 +192,9 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    /**
-     * Initializes broadcast receivers.
-     */
+    
+
+
     internal fun initializeBroadcastReceivers() {
         broadcastReceiverManager = BroadcastReceiverManager(
             this,
@@ -221,11 +225,11 @@ class MainActivity : FragmentActivity() {
             },
             onDndStateChanged = {
                 if (::appDockManager.isInitialized && appDockManager.getCurrentMode()) {
-                    // Check if Dnd was disabled manually during focus mode
+                    
                     val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                     if (notificationManager.isNotificationPolicyAccessGranted && 
                         notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
-                        // Re-enable DND
+                        
                         notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
                         Toast.makeText(this, "DND re-enabled (Focus Mode active)", Toast.LENGTH_SHORT).show()
                     }
@@ -238,13 +242,13 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
-        // Always show the system wallpaper for the right drawer to ensure consistency
+        
         WallpaperDisplayHelper.applySystemWallpaper(views.rightDrawerWallpaper)
     }
 
-    /**
-     * Initializes all view components.
-     */
+    
+
+
     internal fun initializeViews() {
         activityInitializer.initializeViews()
         views.fastScroller.refreshTypography(sharedPreferences)
@@ -252,7 +256,7 @@ class MainActivity : FragmentActivity() {
         usageStatsManager = AppUsageStatsManager(this)
         weatherManager = WeatherManager(this)
         
-        // Initialize and setup search type menu manager
+        
         searchTypeMenuManager = SearchTypeMenuManager(
             context = this,
             searchTypeButton = views.searchTypeButton,
@@ -261,13 +265,13 @@ class MainActivity : FragmentActivity() {
         )
         searchTypeMenuManager.setup()
 
-        // Setup search box listener to show/hide top widget
+        
         setupSearchBoxListener()
     }
     
-    /**
-     * Sets up the search box listener to show/hide the top widget based on search text.
-     */
+    
+
+
     private fun setupSearchBoxListener() {
         views.searchBox.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -275,12 +279,12 @@ class MainActivity : FragmentActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val query = s?.toString()?.trim() ?: ""
                 if (query.isNotEmpty()) {
-                    // Hide header and dock when there's any character in search
+                    
                     activityInitializer.setHeaderVisibility(false)
                 } else {
-                    // Show header and dock when search is empty
+                    
                     activityInitializer.setHeaderVisibility(true)
-                    // Scroll to top when search is cleared with a slight delay to ensure layout is ready
+                    
                     handler.postDelayed({
                         views.recyclerView.scrollToPosition(0)
                     }, 100)
@@ -292,18 +296,18 @@ class MainActivity : FragmentActivity() {
         })
     }
 
-    /**
-     * Updates FastScroller visibility. Now always visible if apps are present.
-     */
+    
+
+
     internal fun updateFastScrollerVisibility() {
         if (!::sharedPreferences.isInitialized || !views.isSearchBoxInitialized() || !::appList.isInitialized) return
         
-        // Update favorites visibility on FastScroller based on current modes
+        
         val focusMode = if (::appDockManager.isInitialized) appDockManager.getCurrentMode() else false
         val workspaceMode = if (::appDockManager.isInitialized) appDockManager.isWorkspaceModeActive() else false
         views.fastScroller.setFavoritesVisible(!focusMode && !workspaceMode)
 
-        // Fast scroller is now requested to be always visible
+        
         if (appList.isNotEmpty()) {
             views.fastScroller.visibility = View.VISIBLE
         } else {
@@ -322,15 +326,15 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    /**
-     * Requests basic permissions needed by the app.
-     */
+    
+
+
     internal fun requestInitialPermissions(onComplete: () -> Unit = {}) {
-        // Step 1: Contacts Permission
+        
         permissionManager.requestContactsPermission { 
             contactManager.loadContacts { loadedContacts ->
                 if (::appSearchManager.isInitialized) {
-                    // Update the AppSearchManager with the newly loaded contacts
+                    
                     appSearchManager.updateData(
                         newFullAppList = appSearchManager.getFullAppList(),
                         newHomeAppList = appSearchManager.getHomeAppList(),
@@ -340,9 +344,9 @@ class MainActivity : FragmentActivity() {
                     updateAppSearchManager()
                 }
             }
-            // Chain to Usage Stats
+            
             permissionManager.requestUsageStatsPermission(usageStatsManager) {
-                // Step 3: Default Launcher
+                
                 permissionManager.requestDefaultLauncher {
                     hasAskedDefaultLauncherThisOpen = true
                     onComplete()
@@ -351,9 +355,9 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    /**
-     * Starts feature tutorial and requests initial permissions.
-     */
+    
+
+
     fun startFeatureTutorialAndRequestPermissions() {
         val tutorialManager = FeatureTutorialManager(this, sharedPreferences)
         if (tutorialManager.shouldShowTutorial()) {
@@ -365,9 +369,9 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    /**
-     * Initializes time/date and weather widgets.
-     */
+    
+
+
     internal fun initializeTimeDateAndWeather() {
         val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
         timeDateManager = TimeDateManager(
@@ -383,9 +387,9 @@ class MainActivity : FragmentActivity() {
         widgetSetupManager.setupWeather(views.weatherIcon, views.weatherText)
     }
     
-    /**
-     * Initializes widgets that can be deferred to avoid blocking UI.
-     */
+    
+
+
     internal fun initializeDeferredWidgets() {
         val initializer = DeferredWidgetInitializer(
             widgetSetupManager = widgetSetupManager,
@@ -394,30 +398,30 @@ class MainActivity : FragmentActivity() {
             widgetConfigurationManager = widgetConfigurationManager,
             widgetLifecycleCoordinator = widgetLifecycleCoordinator,
             onComplete = {
-                // Initialize Todo components after widgets are set up
+                
                 todoAlarmManager = TodoAlarmManager(this)
                 todoManager = TodoManager(this, sharedPreferences, views.todoRecyclerView, views.addTodoButton, todoAlarmManager)
                 todoManager.initialize()
                 
-                // Update lifecycle manager with deferred widgets
+                
                 updateLifecycleManagerWithDeferredWidgets()
             }
         )
         
         initializer.initialize()
         
-        // Update result registry with the initialized widgets via coordinator
+        
         updateRegistryDependencies()
         
-        // Update widget visibility based on configuration
+        
         widgetVisibilityManager.update(
             if (widgetLifecycleCoordinator.isYearProgressWidgetInitialized()) widgetLifecycleCoordinator.yearProgressWidget else null,
             if (widgetLifecycleCoordinator.isGithubContributionWidgetInitialized()) widgetLifecycleCoordinator.githubContributionWidget else null)
     }
     
-    /**
-     * Updates AppSearchManager with current app list state.
-     */
+    
+
+
     internal fun updateAppSearchManager(
         newFullList: List<ResolveInfo>? = null,
         newHomeList: List<ResolveInfo>? = null
@@ -430,7 +434,7 @@ class MainActivity : FragmentActivity() {
         if (::appSearchManager.isInitialized) {
             appSearchManager.updateData(targetFullList, targetHomeList, contactManager.getContactsList())
         } else {
-            // Initial initialization
+            
             appSearchManager = AppSearchManager(
                 packageManager = packageManager,
                 fullAppList = targetFullList.toMutableList(),
@@ -451,13 +455,13 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        instance = this
         AppInitializer(this).initialize()
         if (::systemBarManager.isInitialized) {
             systemBarManager.makeSystemBarsTransparent()
         }
-        hasAskedDefaultLauncherThisOpen = false
         
-        // Eagerly load contacts if permission is already granted
+        
         if (::contactManager.isInitialized) {
             contactManager.loadContactsEagerly()
         }
@@ -474,18 +478,13 @@ class MainActivity : FragmentActivity() {
             screenPagerManager.openDefaultHomePage(animated = true)
         }
 
-        // If we're coming from the disclosure activity (likely via a task flag), check permissions
+        
         if (intent.getBooleanExtra("request_permissions_after_disclosure", false)) {
             if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
                 requestInitialPermissions {
                     sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
                 }
             }
-        }
-        
-        // Reset the flag if explicitly opened again to allow re-prompting
-        if (isHomeOrLauncher) {
-            hasAskedDefaultLauncherThisOpen = false
         }
     }
 
@@ -496,10 +495,10 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    /**
-     * Initializes LifecycleManager with all dependencies.
-     * Only sets properties that are already initialized.
-     */
+    
+
+
+
     internal fun initializeLifecycleManager() {
         lifecycleManager = LifecycleManager(this, handler, sharedPreferences)
         lifecycleManager.setSystemBarManager(systemBarManager)
@@ -546,16 +545,16 @@ class MainActivity : FragmentActivity() {
             lifecycleManager.setHiddenAppManager(hiddenAppManager)
         }
         
-        // Setup callbacks
+        
         lifecycleManager.onBatteryUpdate = { updateBatteryInBackground() }
         lifecycleManager.onUsageUpdate = { updateUsageInBackground() }
         lifecycleManager.onFocusModeApply = { isFocusMode -> applyFocusMode(isFocusMode) }
         lifecycleManager.onLoadApps = { forceRefresh -> appListLoader.loadApps(forceRefresh) }
     }
     
-    /**
-     * Updates LifecycleManager with deferred widgets after they're initialized.
-     */
+    
+
+
     private fun updateLifecycleManagerWithDeferredWidgets() {
         if (::lifecycleManager.isInitialized) {
             if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isNotificationsWidgetInitialized()) {
@@ -609,6 +608,12 @@ class MainActivity : FragmentActivity() {
         }
     }
     
+    fun clearAppCacheAndReload() {
+        if (::appListLoader.isInitialized) {
+            appListLoader.loadApps(forceRefresh = true)
+        }
+    }
+    
     fun filterAppsWithoutReload() {
         if (::appListUIUpdater.isInitialized) {
             appListUIUpdater.filterAppsWithoutReload()
@@ -624,12 +629,12 @@ class MainActivity : FragmentActivity() {
     private fun handlePackageChange(packageName: String?, isRemoved: Boolean) {
         if (packageName == null) return
         
-        // Clear caches for removed package
+        
         if (::cacheManager.isInitialized) {
             cacheManager.removeMetadata(packageName)
         }
         
-        // Clear persistent cache files to force refresh
+        
         if (isRemoved) {
             cacheManager.clearCache()
         }
@@ -637,7 +642,7 @@ class MainActivity : FragmentActivity() {
         runOnUiThread {
             appList.removeAll { it.activityInfo.packageName == packageName }
             fullAppList.removeAll { it.activityInfo.packageName == packageName }
-            // Clear in-memory cache in AppListLoader
+            
             if (::appListLoader.isInitialized) {
                 appListLoader.clearCache()
             }
@@ -648,7 +653,7 @@ class MainActivity : FragmentActivity() {
         }
         
         if (!isRemoved) {
-            // Package added or updated - reload apps
+            
             if (::appListLoader.isInitialized) {
                 appListLoader.clearCache()
             }
@@ -658,15 +663,16 @@ class MainActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        instance = null
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onDestroy()
         }
-        // Note: WebAppIconFetcher.shutdown() is intentionally not called here
-        // as the adapter may still need to load icons during RecyclerView operations.
-        // Android will automatically clean up the process when the app terminates.
+        
+        
+        
     }
 
-    // Usage stats refresh methods - delegated to UsageStatsRefreshManager
+    
     private fun updateBatteryInBackground() {
         if (::usageStatsRefreshManager.isInitialized) {
             usageStatsRefreshManager.updateBatteryInBackground()
@@ -682,7 +688,7 @@ class MainActivity : FragmentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus && ::gestureHandler.isInitialized) {
-            // Update gesture exclusion rect when window gains focus (e.g., after rotation)
+            
             gestureHandler.updateGestureExclusion()
         }
     }
@@ -693,33 +699,20 @@ class MainActivity : FragmentActivity() {
             lifecycleManager.onResume()
         }
         
-        // Check if we're waiting for user to return from usage stats settings
+        
         if (sharedPreferences.getBoolean("waiting_for_usage_stats_return", false)) {
-            // User just returned from usage stats settings
+            
             sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", false) }
             
-            // Ask for default launcher before finishing initial setup
+            
             permissionManager.requestDefaultLauncher {
                 hasAskedDefaultLauncherThisOpen = true
-                // Mark as completed and proceed
+                
                 if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
                     sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
                 }
             }
-            return // Exit early to avoid triggering fallback
-        }
-
-        // Ask for default launcher if permissions are asked but app is not default
-        if (!hasAskedDefaultLauncherThisOpen && 
-            sharedPreferences.getBoolean("initial_permissions_asked", false) && 
-            ::permissionManager.isInitialized && 
-            !permissionManager.isDefaultLauncher()) {
-            
-            hasAskedDefaultLauncherThisOpen = true
-            // Use a slight delay to ensure the UI is fully settled before system popup appears
-            handler.postDelayed({
-                permissionManager.requestDefaultLauncher()
-            }, 1000)
+            return 
         }
     }
 
@@ -745,7 +738,7 @@ class MainActivity : FragmentActivity() {
                 onContactsGranted = { 
                     contactManager.loadContacts { loadedContacts ->
                         if (::appSearchManager.isInitialized) {
-                            // Update the AppSearchManager with the newly loaded contacts
+                            
                             appSearchManager.updateData(
                                 newFullAppList = appSearchManager.getFullAppList(),
                                 newHomeAppList = appSearchManager.getHomeAppList(),
@@ -756,14 +749,14 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                 },
-                onCallPhoneGranted = { /* Handle call phone granted */ },
+                onCallPhoneGranted = {  },
                 onNotificationGranted = {
                     if (::todoManager.isInitialized) {
                         todoManager.rescheduleTodoAlarms()
                     }
                 },
                 onStorageGranted = {
-                    // Storage permission granted, can be used for wallpaper or other features
+                    
                 },
                 onActivityRecognitionGranted = {
                     if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
@@ -772,9 +765,9 @@ class MainActivity : FragmentActivity() {
                 }
             )
 
-            // Sequential chaining for initial request flow
+            
             if (requestCode == PermissionManager.CONTACTS_PERMISSION_REQUEST) {
-                // Check if still pending (initial flow)
+                
                 if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
                     handler.postDelayed({
                         permissionManager.requestUsageStatsPermission(usageStatsManager) {
@@ -788,7 +781,7 @@ class MainActivity : FragmentActivity() {
             }
         }
         
-        // Handle voice search permission separately
+        
         if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && 
             grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             if (::voiceSearchManager.isInitialized) {
@@ -799,7 +792,7 @@ class MainActivity : FragmentActivity() {
             }
         }
         
-        // Handle other permissions (physical activity, calendar, etc.)
+        
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             when (requestCode) {
                 105 -> if (::widgetLifecycleCoordinator.isInitialized && widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
@@ -821,16 +814,16 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    /**
-     * Shows the widget configuration activity
-     */
+    
+
+
     internal fun showWidgetConfigurationDialog() {
         resultRegistry.showWidgetConfigurationDialog()
     }
 
-    /**
-     * Updates the MainActivityResultRegistry with all current dependencies
-     */
+    
+
+
     fun updateRegistryDependencies() {
         val deps = MainActivityResultRegistry.DependencyContainer(
             widgetManager = if (isWidgetManagerInitialized()) widgetManager else null,

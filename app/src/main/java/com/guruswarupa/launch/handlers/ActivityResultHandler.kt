@@ -4,17 +4,16 @@ import android.app.Activity
 import android.content.Intent
 import android.speech.RecognizerIntent
 import android.widget.AutoCompleteTextView
+import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
+import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.core.PermissionManager
 import com.guruswarupa.launch.core.ShareManager
 import com.guruswarupa.launch.managers.WallpaperManagerHelper
 import com.guruswarupa.launch.managers.WidgetManager
+import com.guruswarupa.launch.managers.WorkProfileManager
 import com.guruswarupa.launch.utils.VoiceCommandHandler
 
-/**
- * Handles all activity result callbacks.
- * Extracted from MainActivity to reduce complexity.
- */
 class ActivityResultHandler(
     private val activity: FragmentActivity,
     private val searchBox: AutoCompleteTextView,
@@ -52,6 +51,27 @@ class ActivityResultHandler(
                 it.clearCache()
                 it.setWallpaperBackground(forceReload = true)
             }
+        } else if (requestCode == WorkProfileManager.REQUEST_CODE_CREATE_WORK_PROFILE) {
+            handleWorkProfileResult(resultCode)
+        }
+    }
+
+    private fun handleWorkProfileResult(resultCode: Int) {
+        if (resultCode == Activity.RESULT_OK) {
+            Toast.makeText(activity, "Work profile setup complete!", Toast.LENGTH_LONG).show()
+            if (activity is MainActivity) {
+                // Refresh apps to show work profile apps
+                val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Activity.MODE_PRIVATE)
+                prefs.edit().putBoolean("work_profile_enabled", true).apply()
+                activity.refreshAppsForWorkspace()
+                
+                // Update dock icons
+                if (activity.isAppDockManagerInitialized()) {
+                    activity.appDockManager.updateDockIcons()
+                }
+            }
+        } else {
+            Toast.makeText(activity, "Work profile setup failed or cancelled", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -60,8 +80,6 @@ class ActivityResultHandler(
         results?.get(0)?.let { result ->
             searchBox.setText(result)
             searchBox.setSelection(result.length)
-            
-            // Pass the voice result to handleCommand if handler is available
             voiceCommandHandler?.handleCommand(result)
         }
     }

@@ -12,10 +12,6 @@ import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.MainActivity
 import java.util.concurrent.Executor
 
-/**
- * Handles updating the app list UI and filtering.
- * Extracted from MainActivity to reduce complexity.
- */
 class AppListUIUpdater(
     private val activity: MainActivity,
     private val recyclerView: RecyclerView,
@@ -33,12 +29,8 @@ class AppListUIUpdater(
         this.adapter = adapter
     }
 
-    /**
-     * Sets up callbacks for appListLoader.
-     */
     fun setupCallbacks() {
         appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
-            // Inject separators before updating UI.
             val listWithSeparators = appListManager.addSeparators(sortedList)
             updateAppListUI(listWithSeparators, filteredList, isFinal)
         }
@@ -76,9 +68,6 @@ class AppListUIUpdater(
         }
     }
 
-    /**
-     * Updates the app list UI and AppSearchManager with new data.
-     */
     fun updateAppListUI(
         newAppList: List<ResolveInfo>,
         newFullAppList: List<ResolveInfo>,
@@ -86,28 +75,20 @@ class AppListUIUpdater(
     ) {
         if (activity.isFinishing || activity.isDestroyed) return
         
-        // 1. Update full app list instance contents (needed for search)
-        if (newFullAppList !== fullAppList) {
+        val deduplicatedFullAppList = newFullAppList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
+        
+        if (deduplicatedFullAppList !== fullAppList) {
             fullAppList.clear()
-            fullAppList.addAll(newFullAppList)
+            fullAppList.addAll(deduplicatedFullAppList)
         }
         
-        // 2. Update the adapter with the new items.
         adapter?.updateAppList(newAppList)
-        
         recyclerView.visibility = View.VISIBLE
+        activity.updateFastScrollerVisibility()
         
-        if (isFinal) {
-            activity.updateFastScrollerVisibility()
-        }
-        
-        // 3. Update AppSearchManager with new app data.
         activity.updateAppSearchManager(newFullAppList, newAppList)
     }
 
-    /**
-     * Filters apps without reloading from package manager.
-     */
     fun filterAppsWithoutReload() {
         if (fullAppList.isEmpty()) {
             appListLoader.loadApps(forceRefresh = false, fullAppList, appList, adapter)
@@ -123,8 +104,6 @@ class AppListUIUpdater(
                     val currentFullList = ArrayList(fullAppList)
                     val filteredApps = appListManager.filterAndPrepareApps(currentFullList, focusMode, workspaceMode)
                     val sortedFinalList = appListManager.sortAppsAlphabetically(filteredApps)
-                    
-                    // Inject separators.
                     val listWithSeparators = appListManager.addSeparators(sortedFinalList)
                     
                     activity.runOnUiThread {
@@ -142,10 +121,10 @@ class AppListUIUpdater(
     }
 
     fun refreshAppsForFocusMode() {
-        appListLoader.loadApps(forceRefresh = false, fullAppList, appList, adapter)
+        appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
     }
     
     fun refreshAppsForWorkspace() {
-        appListLoader.loadApps(forceRefresh = false, fullAppList, appList, adapter)
+        appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
     }
 }

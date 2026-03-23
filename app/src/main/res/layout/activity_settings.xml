@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -13,14 +13,14 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay for better text visibility -->
+    
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66000000"/>
 
-    <!-- Content Container -->
+    
     <ScrollView
         android:id="@+id/settings_scroll_view"
         android:layout_width="match_parent"
@@ -37,7 +37,7 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="60dp">
 
-            <!-- Title & Header -->
+            
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -61,7 +61,7 @@
                     android:shadowRadius="6"/>
             </LinearLayout>
 
-            <!-- Appearance Category -->
+            
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -73,7 +73,7 @@
                 android:layout_marginBottom="12dp"
                 android:layout_marginStart="12dp"/>
 
-            <!-- Display Style Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -337,7 +337,7 @@
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
 
-                        <!-- Default Home Page Option -->
+                        
                         <LinearLayout
                             android:id="@+id/default_home_page_section"
                             android:layout_width="match_parent"
@@ -361,7 +361,7 @@
                                 android:layout_height="48dp"/>
                         </LinearLayout>
 
-                        <!-- App Highlighting / Scrim Option -->
+                        
                         <LinearLayout
                             android:id="@+id/background_translucency_section"
                             android:layout_width="match_parent"
@@ -408,7 +408,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Wallpaper Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -527,7 +527,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Typography Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -716,7 +716,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Widgets Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -792,7 +792,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Search Engine Section Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -865,7 +865,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Features Category -->
+            
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -877,7 +877,7 @@
                 android:layout_marginBottom="12dp"
                 android:layout_marginStart="12dp"/>
 
-            <!-- Quick Actions Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -941,7 +941,7 @@
                         android:paddingHorizontal="16dp"
                         android:paddingBottom="16dp">
 
-                        <!-- Accessibility Shortcut -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -985,7 +985,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Back Tap Gestures -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1066,7 +1066,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Shake for Torch -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1140,7 +1140,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Extra Dimmer -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1210,7 +1210,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Night Mode -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1266,7 +1266,7 @@
                             android:alpha="0.05"
                             android:background="@color/white" />
 
-                        <!-- Flip to DND -->
+                        
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1290,6 +1290,50 @@
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
 
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:alpha="0.05"
+                            android:background="@color/white" />
+
+                        
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Grayscale Mode"
+                                    android:textColor="@color/white"
+                                    android:textSize="15sp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Turn entire screen gray"
+                                    android:textColor="@color/white"
+                                    android:alpha="0.5"
+                                    android:textSize="11sp"/>
+                            </LinearLayout>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/grayscale_mode_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
                         <Button
                             android:id="@+id/config_control_center_button"
                             android:layout_width="match_parent"
@@ -1304,7 +1348,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
             
-            <!-- App Timer Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1380,7 +1424,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
             
-            <!-- Security Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1477,7 +1521,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Web Apps Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1553,7 +1597,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Maintenance Category -->
+            
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1565,7 +1609,7 @@
                 android:layout_marginBottom="12dp"
                 android:layout_marginStart="12dp"/>
 
-            <!-- System Maintenance Actions Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1640,7 +1684,7 @@
                                 android:layout_height="52dp"
                                 android:layout_weight="1"
                                 android:layout_marginEnd="6dp"
-                                android:text="Export Data"
+                                android:text="Export All Data"
                                 android:textAllCaps="false"
                                 android:background="@drawable/settings_card_background"
                                 android:textColor="@color/white"/>
@@ -1651,7 +1695,7 @@
                                 android:layout_height="52dp"
                                 android:layout_weight="1"
                                 android:layout_marginStart="6dp"
-                                android:text="Import Data"
+                                android:text="Import All Data"
                                 android:textAllCaps="false"
                                 android:background="@drawable/settings_card_background"
                                 android:textColor="@color/white"/>
@@ -1743,7 +1787,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Permissions & Support Card (Launcher Info) -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1840,7 +1884,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Support & Info Card -->
+            
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -1917,30 +1961,95 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Support the project:"
+                            android:text="@string/support_project_intro"
+                            android:textSize="14sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/white"
+                            android:alpha="0.8"
+                            android:lineSpacingExtra="2dp"
+                            android:layout_marginBottom="8dp"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/support_project_commitment"
+                            android:textSize="13sp"
+                            android:textColor="@color/white"
+                            android:alpha="0.65"
+                            android:lineSpacingExtra="2dp"
+                            android:layout_marginBottom="16dp"/>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/support_project_prompt"
                             android:textSize="14sp"
                             android:fontFamily="sans-serif-medium"
                             android:textColor="@color/white"
                             android:alpha="0.8"
                             android:layout_marginBottom="12dp"/>
 
-                        <TextView
-                            android:id="@+id/sponsor_github_link"
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Sponsor on GitHub"
-                            android:textSize="14sp"
-                            android:textColor="@color/nord8"
-                            android:paddingVertical="8dp"/>
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="8dp">
 
-                        <TextView
-                            android:id="@+id/buy_me_a_coffee_link"
+                            <Button
+                                android:id="@+id/support_49"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                android:background="@drawable/settings_card_background"
+                                android:enabled="false"
+                                android:text="Loading..."
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"/>
+
+                            <Button
+                                android:id="@+id/support_99"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/settings_card_background"
+                                android:enabled="false"
+                                android:text="Loading..."
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"/>
+                        </LinearLayout>
+
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Buy Me a Coffee"
-                            android:textSize="14sp"
-                            android:textColor="@color/nord8"
-                            android:paddingVertical="8dp"/>
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="16dp">
+
+                            <Button
+                                android:id="@+id/support_199"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                android:background="@drawable/settings_card_background"
+                                android:enabled="false"
+                                android:text="Loading..."
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"/>
+
+                            <Button
+                                android:id="@+id/support_299"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/settings_card_background"
+                                android:enabled="false"
+                                android:text="Loading..."
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"/>
+                        </LinearLayout>
 
                         <View
                             android:layout_width="match_parent"
@@ -1962,7 +2071,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Final Footer Info -->
+            
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

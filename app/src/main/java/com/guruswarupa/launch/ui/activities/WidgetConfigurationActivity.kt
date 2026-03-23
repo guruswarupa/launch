@@ -48,7 +48,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private lateinit var widgetsRecyclerView: RecyclerView
     private lateinit var widgetSectionDecoration: WidgetSectionDecoration
     
-    // Widget data
+    
     private var allWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
     private var filteredWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
     
@@ -60,7 +60,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val systemBarManager = SystemBarManager(this)
         window.decorView.post {
             systemBarManager.makeSystemBarsTransparent()
-            // Keep white status bar icons
+            
             WindowCompat.getInsetsController(window, window.decorView)?.let { controller ->
                 controller.isAppearanceLightStatusBars = false
                 controller.isAppearanceLightNavigationBars = false
@@ -91,7 +91,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         widgetConfigManager = WidgetConfigurationManager(this, sharedPreferences)
         previewManager = WidgetPreviewManager(this)
         
-        // Initialize WidgetManager
+        
         widgetManager = WidgetManager(this, android.widget.LinearLayout(this))
 
         val wallpaperBackground = findViewById<ImageView>(R.id.wallpaper_background)
@@ -112,12 +112,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
         TypographyManager.applyToView(searchInput)
 
-        // Load current widget configuration
+        
         loadWidgets()
 
         widgetsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
         
-        // Setup drag to reorder
+        
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             0
@@ -133,11 +133,11 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                     return false
                 }
                 
-                // Move item in filteredWidgets
+                
                 val movedItem = filteredWidgets.removeAt(fromPos)
                 filteredWidgets.add(toPos, movedItem)
                 
-                // Update the original list to maintain order
+                
                 updateOriginalListOrder()
                 
                 adapter?.notifyItemMoved(fromPos, toPos)
@@ -145,7 +145,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                // Not used
+                
             }
 
             override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
@@ -172,7 +172,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             finish()
         }
         
-        // Setup search functionality
+        
         searchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             
@@ -336,6 +336,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             "notifications_widget_container" -> "Quick access to recent notifications"
             "calendar_events_widget_container" -> "Upcoming calendar events and reminders"
             "countdown_widget_container" -> "Countdown timers for important events"
+            "dns_widget_container" -> "Switch between DNS providers for privacy and ad-blocking"
+            "note_widget_container" -> "Create and manage quick notes"
             "physical_activity_widget_container" -> "Track steps and physical activity"
             "pressure_widget_container" -> "Atmospheric pressure monitoring"
             "temperature_widget_container" -> "Temperature monitoring and alerts"

@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <!-- Header -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -41,14 +41,14 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- List View Container -->
+    
     <LinearLayout
         android:id="@+id/calendar_list_view_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Events List -->
+        
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/calendar_events_recycler_view"
             android:layout_width="match_parent"
@@ -59,14 +59,14 @@
             android:paddingBottom="4dp" />
     </LinearLayout>
 
-    <!-- Calendar View Container -->
+    
     <FrameLayout
         android:id="@+id/calendar_view_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone" />
 
-    <!-- Empty State / Permission Prompt -->
+    
     <LinearLayout
         android:id="@+id/calendar_empty_state"
         android:layout_width="match_parent"

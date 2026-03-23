@@ -20,7 +20,7 @@ class PhysicalActivityTrackingService : Service() {
     override fun onCreate() {
         super.onCreate()
         
-        // 1. CALL STARTFOREGROUND IMMEDIATELY - ABSOLUTE PRIORITY
+        
         try {
             val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -32,13 +32,13 @@ class PhysicalActivityTrackingService : Service() {
             Log.e(TAG, "Failed to call startForeground", e)
         }
         
-        // 2. Perform initialization asynchronously to avoid blocking the main thread
+        
         activityManager = PhysicalActivityManager(this)
         activityManager?.initializeAsync()
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Safe to call multiple times, ensures foreground state is maintained
+        
         try {
             val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -50,7 +50,7 @@ class PhysicalActivityTrackingService : Service() {
             Log.e(TAG, "Failed to re-assert startForeground", e)
         }
 
-        // Just ensure tracking is active
+        
         activityManager?.let { manager ->
             if (manager.hasActivityRecognitionPermission()) {
                 manager.startTracking()
@@ -60,7 +60,7 @@ class PhysicalActivityTrackingService : Service() {
             }
         }
         
-        return START_STICKY // Restart if killed by system
+        return START_STICKY 
     }
     
     override fun onDestroy() {

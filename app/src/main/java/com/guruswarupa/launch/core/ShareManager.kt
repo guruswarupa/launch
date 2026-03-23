@@ -22,18 +22,18 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.Executors
 
-/**
- * Data class representing an installed app that can be shared
- */
+
+
+
 data class ShareableApp(
     val name: String,
     val packageName: String
 )
 
-/**
- * Manages sharing of APK files and general files.
- * Handles file operations in background threads to avoid blocking UI.
- */
+
+
+
+
 class ShareManager(private val context: Context) {
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
@@ -46,9 +46,9 @@ class ShareManager(private val context: Context) {
         private const val DIALOG_OPTION_SHARE_FILE = 1
     }
 
-    /**
-     * Shows a dialog to choose between sharing an APK or a file
-     */
+    
+
+
     fun showApkSharingDialog() {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(context.getString(R.string.share_dialog_title))
@@ -59,16 +59,16 @@ class ShareManager(private val context: Context) {
                 when (which) {
                     DIALOG_OPTION_SHARE_APK -> showAppSharingDialog()
                     DIALOG_OPTION_SHARE_FILE -> showFileSharingDialog()
-                    else -> { /* Invalid option */ }
+                    else -> {  }
                 }
             }
             .setNegativeButton(context.getString(android.R.string.cancel), null)
             .show()
     }
 
-    /**
-     * Shows a dialog listing all shareable apps
-     */
+    
+
+
     private fun showAppSharingDialog() {
         val installedApps = getInstalledApps()
         if (installedApps.isEmpty()) {
@@ -90,9 +90,9 @@ class ShareManager(private val context: Context) {
             .show()
     }
 
-    /**
-     * Shows file picker dialog to select a file for sharing
-     */
+    
+
+
     @Suppress("DEPRECATION")
     private fun showFileSharingDialog() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
@@ -131,9 +131,9 @@ class ShareManager(private val context: Context) {
         }
     }
 
-    /**
-     * Handles the result from file picker
-     */
+    
+
+
     fun handleFilePickerResult(uri: Uri?) {
         if (uri != null) {
             shareFile(uri)
@@ -142,9 +142,9 @@ class ShareManager(private val context: Context) {
         }
     }
 
-    /**
-     * Shares a file using Android's share intent
-     */
+    
+
+
     private fun shareFile(uri: Uri) {
         try {
             val mimeType = context.contentResolver.getType(uri) ?: Constants.MIME_TYPE_ALL
@@ -162,19 +162,19 @@ class ShareManager(private val context: Context) {
         }
     }
     
-    /**
-     * Helper method to show toast messages on main thread
-     */
+    
+
+
     private fun showToast(message: String) {
         handler.post {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
-    /**
-     * Gets list of installed apps that can be shared (user-installed and updated system apps)
-     * @return List of ShareableApp objects sorted by name
-     */
+    
+
+
+
     private fun getInstalledApps(): List<ShareableApp> {
         val packageManager = context.packageManager
         return try {
@@ -182,7 +182,7 @@ class ShareManager(private val context: Context) {
             val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
             installedApps
                 .filter { app ->
-                    // Include user-installed apps and updated system apps
+                    
                     (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 ||
                             (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
                 }
@@ -204,11 +204,11 @@ class ShareManager(private val context: Context) {
         }
     }
 
-    /**
-     * Shares an APK file by copying it to cache and creating a share intent
-     * @param packageName The package name of the app to share
-     * @param appName The display name of the app
-     */
+    
+
+
+
+
     fun shareApk(packageName: String, appName: String) {
         showToast(context.getString(R.string.preparing_apk_for_sharing))
         
@@ -230,10 +230,10 @@ class ShareManager(private val context: Context) {
         }
     }
     
-    /**
-     * Prepares APK file for sharing by copying it to cache directory
-     * @return URI of the copied APK file, or null if preparation failed
-     */
+    
+
+
+
     private fun prepareApkForSharing(packageName: String, appName: String): Uri? {
         val packageManager = context.packageManager
         val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
@@ -244,28 +244,28 @@ class ShareManager(private val context: Context) {
             return null
         }
 
-        // Create cache directory if it doesn't exist
+        
         val cacheDir = File(context.cacheDir, Constants.SHARED_APKS_DIR)
         if (!cacheDir.exists() && !cacheDir.mkdirs()) {
             showToast(context.getString(R.string.error_creating_cache_directory))
             return null
         }
 
-        // Sanitize app name for filename
+        
         val sanitizedAppName = appName.replace(
             Constants.APP_NAME_SANITIZE_REGEX.toRegex(),
             Constants.APP_NAME_SANITIZE_REPLACEMENT
         )
         val copiedApk = File(cacheDir, "$sanitizedAppName${Constants.APK_EXTENSION}")
 
-        // Copy the APK file
+        
         FileInputStream(sourceApk).use { input ->
             FileOutputStream(copiedApk).use { output ->
                 input.copyTo(output)
             }
         }
 
-        // Create URI for sharing
+        
         return FileProvider.getUriForFile(
             context,
             "${context.packageName}${Constants.FILE_PROVIDER_AUTHORITY_SUFFIX}",
@@ -273,9 +273,9 @@ class ShareManager(private val context: Context) {
         )
     }
     
-    /**
-     * Launches the share intent chooser
-     */
+    
+
+
     private fun launchShareIntent(apkUri: Uri, appName: String) {
         try {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -293,9 +293,9 @@ class ShareManager(private val context: Context) {
         }
     }
     
-    /**
-     * Cleans up resources. Should be called when the manager is no longer needed.
-     */
+    
+
+
     fun cleanup() {
         executor.shutdown()
     }

@@ -7,7 +7,7 @@
     android:padding="12dp"
     android:gravity="center">
 
-    <!-- Temperature Value -->
+    
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -17,7 +17,7 @@
         android:textStyle="bold"
         android:layout_marginBottom="4dp" />
 
-    <!-- Status -->
+    
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

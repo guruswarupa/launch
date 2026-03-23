@@ -1,9 +1,10 @@
 <resources>
-    <!-- Single Theme Colors (Optimized for all wallpapers with white text/icons) -->
-    <color name="background">#121212</color> <!-- Matte black background -->
-    <color name="text">#FFFFFF</color> <!-- Pure white text -->
-    <color name="text_secondary">#B0B0B0</color> <!-- Lighter grey for secondary text -->
-    <color name="card_background">#80000000</color> <!-- Translucent black card background -->
+    
+    <color name="background">#121212</color> 
+    <color name="text">#FFFFFF</color> 
+    <color name="text_secondary">#B0B0B0</color> 
+    <color name="text_tertiary">#808080</color> 
+    <color name="card_background">#80000000</color> 
     <color name="card_elevation">#333333</color>
     <color name="colorPrimary">#6200EE</color>
     <color name="colorPrimaryDark">#3700B3</color>
@@ -40,14 +41,14 @@
     <color name="red">#FF5252</color>
     <color name="icon_color">#FFFFFF</color>
     
-    <!-- Translucent Surface Colors -->
+    
     <color name="settings_overlay_color">#66000000</color>
     <color name="button_glass_bg">#33FFFFFF</color>
     <color name="button_glass_stroke">#20FFFFFF</color>
     <color name="chip_glass_bg">#33000000</color>
     <color name="scrim_background">#66000000</color>
 
-    <!-- Dialog Colors -->
+    
     <color name="dialog_background">#80000000</color>
     <color name="dialog_button_background">#33000000</color>
     <color name="menu_background_color">#80000000</color>
@@ -70,10 +71,10 @@
     <color name="widget_config_chip_text">@color/widget_text</color>
     <color name="widget_config_secondary_button_text">@color/widget_text</color>
     
-    <!-- Widget configuration surfaces -->
+    
     <color name="widget_config_surface">#33000000</color>
 
-    <!-- Dynamic Text Colors -->
+    
     <color name="widget_text">@color/white</color>
     <color name="widget_text_secondary">@color/white</color>
     <color name="widget_divider">#33FFFFFF</color>
@@ -82,15 +83,15 @@
     <color name="widget_background">@color/card_background</color>
     <color name="widget_border">@color/outlineColor</color>
     
-    <!-- Settings Specific Colors -->
+    
     <color name="settings_overlay">@android:color/transparent</color>
     <color name="settings_header_text">@color/text</color>
 
-    <!-- Grid Item Background Colors -->
+    
     <color name="grid_item_background">#80000000</color>
     <color name="grid_item_background_dark">#80000000</color>
 
-    <!-- Tutorial Colors -->
+    
     <color name="tutorial_background">#E0000000</color>
     <color name="tutorial_title">@color/white</color>
     <color name="tutorial_description">@color/text_secondary</color>
@@ -99,7 +100,7 @@
     <color name="tutorial_button_stroke">#4DFFFFFF</color>
     <color name="tutorial_ripple">#40FFFFFF</color>
     
-    <!-- Colors for note editor and vault -->
+    
     <color name="note_editor_gradient_start">#0F1119</color>
     <color name="note_editor_gradient_end">#161A24</color>
     <color name="note_editor_title_text">#F5F6FF</color>

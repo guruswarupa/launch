@@ -2,11 +2,11 @@ package com.guruswarupa.launch.models
 
 import android.annotation.SuppressLint
 
-/**
- * Centralized constants for the application
- */
+
+
+
 object Constants {
-    // SharedPreferences keys
+    
     @SuppressLint("unused")
     object Prefs {
         const val PREFS_NAME = "com.guruswarupa.launch.PREFS"
@@ -41,29 +41,30 @@ object Constants {
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
         const val DEFAULT_HOME_PAGE_INDEX = "default_home_page_index"
         const val WEB_APPS = "web_apps"
+        const val GRAYSCALE_MODE_ENABLED = "grayscale_mode_enabled"
         
-        // Vault Prefs (Simplified)
+        
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"
-        const val VAULT_TIMEOUT_DURATION = "vault_timeout_duration"  // in minutes
+        const val VAULT_TIMEOUT_DURATION = "vault_timeout_duration"  
         const val VAULT_SETUP_COMPLETE = "vault_setup_complete"
 
     }
 
     const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "#FFFFFFF"
 
-    // FileProvider
+    
     const val FILE_PROVIDER_AUTHORITY_SUFFIX = ".fileprovider"
     
-    // Cache directories
+    
     const val SHARED_APKS_DIR = "shared_apks"
     
-    // File extensions
+    
     const val APK_EXTENSION = ".apk"
     
-    // MIME types
+    
     const val MIME_TYPE_APK = "application_vnd.android.package-archive"
     const val MIME_TYPE_ALL = "*/*"
-    // Regex patterns
+    
     const val APP_NAME_SANITIZE_REGEX = "[^a-zA-Z0-9.-]"
     const val APP_NAME_SANITIZE_REPLACEMENT = "_"
 }

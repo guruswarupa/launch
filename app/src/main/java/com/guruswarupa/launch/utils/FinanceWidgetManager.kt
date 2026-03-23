@@ -14,9 +14,9 @@ import com.guruswarupa.launch.ui.adapters.Transaction
 import com.guruswarupa.launch.ui.adapters.TransactionAdapter
 import java.util.Locale
 
-/**
- * Manages the finance widget: setup, transactions, and display updates
- */
+
+
+
 class FinanceWidgetManager(
     private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
@@ -36,12 +36,12 @@ class FinanceWidgetManager(
             addTransaction(false)
         }
 
-        // Click on balance text or card to show transaction history
+        
         balanceText.setOnClickListener {
             showTransactionHistory()
         }
         
-        // Also make the balance card clickable
+        
         activity.findViewById<LinearLayout>(R.id.balance_card)?.setOnClickListener {
             showTransactionHistory()
         }
@@ -57,11 +57,11 @@ class FinanceWidgetManager(
         }.toTypedArray()
         
         val adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_item, currencies)
-        // Use custom translucent dropdown item
+        
         adapter.setDropDownViewResource(R.layout.custom_spinner_dropdown_item)
         spinner.adapter = adapter
 
-        // Set current selection
+        
         val currentCurrency = financeManager.getCurrencyCode()
         val index = FinanceManager.SUPPORTED_CURRENCIES.keys.indexOf(currentCurrency)
         if (index >= 0) {
@@ -90,10 +90,10 @@ class FinanceWidgetManager(
         val monthlyIncome = financeManager.getMonthlyIncome()
         val netSavings = monthlyIncome - monthlyExpenses
         
-        // Format balance with 2 decimal places using specific locale
+        
         balanceText.text = String.format(Locale.getDefault(), "%s%.2f", currencySymbol, balance)
         
-        // Show net savings for the month (income - expenses) with neutral color
+        
         val netText = if (netSavings >= 0) {
             "This Month: +$currencySymbol${String.format(Locale.getDefault(), "%.2f", netSavings)}"
         } else {
@@ -110,14 +110,14 @@ class FinanceWidgetManager(
         if (amountText.isNotEmpty()) {
             val amount = amountText.toDoubleOrNull()
             if (amount != null && amount > 0) {
-                // Use addIncome or addExpense instead of addTransaction
+                
                 if (isIncome) {
                     financeManager.addIncome(amount, description)
                 } else {
                     financeManager.addExpense(amount, description)
                 }
 
-                // Clear inputs after adding transaction
+                
                 amountInput.text.clear()
                 descriptionInput.text.clear()
 
@@ -142,7 +142,7 @@ class FinanceWidgetManager(
     private fun showTransactionHistory() {
         val currencySymbol = financeManager.getCurrency()
         
-        // Create custom dialog
+        
         val dialogView = activity.layoutInflater.inflate(R.layout.dialog_transaction_history, null)
         val recyclerView = dialogView.findViewById<RecyclerView>(R.id.transaction_recycler_view)
         val closeButton = dialogView.findViewById<Button>(R.id.close_button)
@@ -177,7 +177,7 @@ class FinanceWidgetManager(
                     .setPositiveButton("Delete") { _, _ ->
                         financeManager.deleteTransaction(transactionToDelete.timestamp)
                         updateDisplay()
-                        // Refresh dialog list
+                        
                         val newList = getLatestTransactions()
                         (recyclerView.adapter as TransactionAdapter).updateData(newList)
                         if (newList.isEmpty()) {

@@ -21,21 +21,21 @@ class YearProgressWidget(
     fun initialize() {
         if (isInitialized) return
         
-        // Inflate the widget layout
+        
         val inflater = android.view.LayoutInflater.from(context)
         widgetView = inflater.inflate(R.layout.widget_year_progress, container, false)
         container.addView(widgetView)
         
-        // Initialize views
+        
         yearProgressView = widgetView.findViewById(R.id.year_progress_view)
         progressStatsText = widgetView.findViewById(R.id.progress_stats_text)
         daysRemainingText = widgetView.findViewById(R.id.days_remaining_text)
         yearProgressContainer = widgetView.findViewById(R.id.year_progress_container)
         
-        // Update progress info initially
+        
         updateProgressInfo()
         
-        // Start periodic updates
+        
         startPeriodicUpdates()
         
         isInitialized = true
@@ -62,7 +62,7 @@ class YearProgressWidget(
                     yearProgressView.refresh()
                     updateProgressInfo()
                 }
-                handler.postDelayed(this, 3600000) // Update every hour
+                handler.postDelayed(this, 3600000) 
             }
         }
         handler.post(updateRunnable)
@@ -76,17 +76,17 @@ class YearProgressWidget(
     }
     
     fun onPause() {
-        // No specific cleanup needed
+        
     }
     
     fun cleanup() {
-        // No specific cleanup needed
+        
     }
     
     fun setGlobalVisibility(visible: Boolean) {
         if (visible) {
             widgetView.visibility = android.view.View.VISIBLE
-            // Ensure the content container is visible
+            
             yearProgressContainer.visibility = android.view.View.VISIBLE
             yearProgressView.refresh()
             updateProgressInfo()

@@ -13,14 +13,17 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 data class AppPrivacyInfo(
     val packageName: String,
     val appName: String,
-    val icon: Drawable,
+    val icon: Drawable? = null,
     val grantedPermissions: List<String>,
-    val severity: Int, // 0: Trace/Low, 1: Medium, 2: High
+    val severity: Int, 
     val isSideloaded: Boolean = false,
     var isExpanded: Boolean = false
 )
@@ -28,6 +31,20 @@ data class AppPrivacyInfo(
 class PrivacyDashboardAdapter(
     private var apps: List<AppPrivacyInfo>
 ) : RecyclerView.Adapter<PrivacyDashboardAdapter.ViewHolder>() {
+    companion object {
+        private val iconCache = ConcurrentHashMap<String, Drawable>()
+    }
+
+    private val previousApps = mutableMapOf<String, AppPrivacyInfo>()
+    private val iconExecutor = Executors.newFixedThreadPool(2)
+    
+    init {
+        setHasStableIds(true)
+    }
+    
+    override fun getItemId(position: Int): Long {
+        return apps[position].packageName.hashCode().toLong()
+    }
 
     @SuppressLint("InlinedApi")
     private val permissionLabels = mapOf(
@@ -85,7 +102,8 @@ class PrivacyDashboardAdapter(
         val app = apps[position]
         val context = holder.itemView.context
         
-        holder.appIcon.setImageDrawable(app.icon)
+        holder.itemView.tag = app.packageName
+        bindIcon(holder, app)
         holder.appName.text = app.appName
         holder.packageName.text = app.packageName
         
@@ -107,9 +125,9 @@ class PrivacyDashboardAdapter(
             holder.permissionCount.text = app.grantedPermissions.size.toString()
             
             val color = when (app.severity) {
-                2 -> 0xFFFF4444.toInt() // High - Red
-                1 -> 0xFFFFBB33.toInt() // Medium - Orange/Yellow
-                else -> 0xFF99CC00.toInt() // Low - Green
+                2 -> 0xFFFF4444.toInt() 
+                1 -> 0xFFFFBB33.toInt() 
+                else -> 0xFF99CC00.toInt() 
             }
             holder.permissionCount.setTextColor(color)
         }
@@ -157,7 +175,72 @@ class PrivacyDashboardAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     fun updateData(newApps: List<AppPrivacyInfo>) {
-        apps = newApps
-        notifyDataSetChanged()
+        // Preserve expanded state from previous data
+        val newAppsWithState = newApps.map { newApp ->
+            previousApps[newApp.packageName]?.let { oldApp ->
+                newApp.copy(isExpanded = oldApp.isExpanded)
+            } ?: newApp
+        }
+        
+        val diffResult = DiffUtil.calculateDiff(AppPrivacyDiffCallback(apps, newAppsWithState))
+        
+        apps = newAppsWithState
+        
+        // Update cache
+        previousApps.clear()
+        newAppsWithState.forEach { previousApps[it.packageName] = it }
+        
+        // Dispatch diff results - this is safer for accessibility than notifyDataSetChanged
+        diffResult.dispatchUpdatesTo(this)
+    }
+
+    private fun bindIcon(holder: ViewHolder, app: AppPrivacyInfo) {
+        val cachedIcon = iconCache[app.packageName] ?: app.icon
+        if (cachedIcon != null) {
+            iconCache[app.packageName] = cachedIcon
+            holder.appIcon.setImageDrawable(cachedIcon)
+            return
+        }
+
+        holder.appIcon.setImageResource(android.R.drawable.sym_def_app_icon)
+
+        iconExecutor.execute {
+            val icon = try {
+                holder.itemView.context.packageManager.getApplicationIcon(app.packageName)
+            } catch (_: Exception) {
+                null
+            } ?: return@execute
+
+            iconCache[app.packageName] = icon
+            holder.itemView.post {
+                if (holder.bindingAdapterPosition != RecyclerView.NO_POSITION &&
+                    holder.itemView.tag == app.packageName) {
+                    holder.appIcon.setImageDrawable(icon)
+                }
+            }
+        }
+    }
+}
+
+private class AppPrivacyDiffCallback(
+    private val oldList: List<AppPrivacyInfo>,
+    private val newList: List<AppPrivacyInfo>
+) : DiffUtil.Callback() {
+    override fun getOldListSize(): Int = oldList.size
+    override fun getNewListSize(): Int = newList.size
+
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition].packageName == newList[newItemPosition].packageName
+    }
+
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        val oldApp = oldList[oldItemPosition]
+        val newApp = newList[newItemPosition]
+        return oldApp.packageName == newApp.packageName &&
+                oldApp.appName == newApp.appName &&
+                oldApp.grantedPermissions == newApp.grantedPermissions &&
+                oldApp.severity == newApp.severity &&
+                oldApp.isSideloaded == newApp.isSideloaded &&
+                oldApp.isExpanded == newApp.isExpanded
     }
 }

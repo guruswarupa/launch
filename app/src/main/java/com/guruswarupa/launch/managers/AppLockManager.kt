@@ -34,7 +34,7 @@ class AppLockManager(private val context: Context) {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (_: Exception) {
-            // Fallback to regular SharedPreferences if encryption fails
+            
             context.getSharedPreferences("app_lock_prefs", Context.MODE_PRIVATE)
         }
     }
@@ -46,7 +46,7 @@ class AppLockManager(private val context: Context) {
         private const val PREF_IS_APP_LOCK_ENABLED = "is_app_lock_enabled"
         private const val PREF_LAST_AUTH_TIME = "last_auth_time"
         private const val PREF_FINGERPRINT_ENABLED = "fingerprint_enabled"
-        private const val AUTH_TIMEOUT = 1 * 60 * 1000L // 1 min
+        private const val AUTH_TIMEOUT = 1 * 60 * 1000L 
         private const val SALT_LENGTH_BYTES = 16
     }
 
@@ -82,7 +82,7 @@ class AppLockManager(private val context: Context) {
         }
     }
 
-    // Set up PIN for the first time
+    
     fun setupPin(callback: (Boolean) -> Unit) {
         val pinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -131,21 +131,21 @@ class AppLockManager(private val context: Context) {
             .show()
     }
 
-    // Verify PIN
+    
     fun verifyPin(callback: (Boolean) -> Unit) {
         if (!isPinSet()) {
             callback(true)
             return
         }
 
-        // Check if recently authenticated (within timeout)
+        
         val lastAuthTime = sharedPreferences.getLong(PREF_LAST_AUTH_TIME, 0)
         if (System.currentTimeMillis() - lastAuthTime < AUTH_TIMEOUT) {
             callback(true)
             return
         }
 
-        // Check for biometric availability and user preference
+        
         if (isFingerprintEnabled()) {
             showBiometricPrompt(callback)
         } else {
@@ -154,7 +154,7 @@ class AppLockManager(private val context: Context) {
     }
 
     private fun showBiometricPrompt(callback: (Boolean) -> Unit) {
-        // Check if context is FragmentActivity, if not fall back to PIN
+        
         val activity = context as? FragmentActivity
         if (activity == null) {
             Toast.makeText(context, "Biometric authentication not available in this context. Using PIN.", Toast.LENGTH_SHORT).show()
@@ -183,14 +183,14 @@ class AppLockManager(private val context: Context) {
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
                     Toast.makeText(context, "Biometric authentication failed", Toast.LENGTH_SHORT).show()
-                    // Don't call callback(false) here - let user retry
+                    
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
                     if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
                         errorCode == BiometricPrompt.ERROR_USER_CANCELED) {
-                        // User chose to use PIN or canceled
+                        
                         showPinPrompt(callback)
                     } else {
                         Toast.makeText(context, "Biometric authentication error: $errString", Toast.LENGTH_SHORT).show()
@@ -219,7 +219,7 @@ class AppLockManager(private val context: Context) {
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
 
                 if (hashPin(enteredPin) == storedPinHash) {
-                    // Update last auth time
+                    
                     sharedPreferences.edit {
                         putLong(PREF_LAST_AUTH_TIME, System.currentTimeMillis())
                     }
@@ -234,12 +234,12 @@ class AppLockManager(private val context: Context) {
             .show()
     }
 
-    // Check if PIN is set
+    
     fun isPinSet(): Boolean {
         return sharedPreferences.getString(PREF_PIN_HASH, null)?.isNotEmpty() == true
     }
 
-    // Check if fingerprint authentication is available on the device
+    
     fun isFingerprintAvailable(): Boolean {
         val biometricManager = BiometricManager.from(context)
         return when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
@@ -248,51 +248,51 @@ class AppLockManager(private val context: Context) {
         }
     }
 
-    // Check if fingerprint authentication is enabled
+    
     fun isFingerprintEnabled(): Boolean {
         return sharedPreferences.getBoolean(PREF_FINGERPRINT_ENABLED, false) && isFingerprintAvailable()
     }
 
-    // Enable/disable fingerprint authentication
+    
     fun setFingerprintEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_FINGERPRINT_ENABLED, enabled) }
     }
 
-    // Check if app lock is enabled
+    
     fun isAppLockEnabled(): Boolean {
         return sharedPreferences.getBoolean(PREF_IS_APP_LOCK_ENABLED, false) && isPinSet()
     }
 
-    // Enable/disable app lock
+    
     fun setAppLockEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_IS_APP_LOCK_ENABLED, enabled) }
     }
 
-    // Add app to locked apps list
+    
     fun lockApp(packageName: String) {
         val lockedApps = getLockedApps().toMutableSet()
         lockedApps.add(packageName)
         sharedPreferences.edit { putStringSet(PREF_LOCKED_APPS, lockedApps) }
     }
 
-    // Remove app from locked apps list
+    
     fun unlockApp(packageName: String) {
         val lockedApps = getLockedApps().toMutableSet()
         lockedApps.remove(packageName)
         sharedPreferences.edit { putStringSet(PREF_LOCKED_APPS, lockedApps) }
     }
 
-    // Get list of locked apps
+    
     fun getLockedApps(): Set<String> {
         return sharedPreferences.getStringSet(PREF_LOCKED_APPS, emptySet()) ?: emptySet()
     }
 
-    // Check if app is locked
+    
     fun isAppLocked(packageName: String): Boolean {
         return isAppLockEnabled() && getLockedApps().contains(packageName)
     }
 
-    // Change PIN
+    
     fun changePin(callback: (Boolean) -> Unit) {
         if (!isPinSet()) {
             setupPin(callback)
@@ -324,12 +324,12 @@ class AppLockManager(private val context: Context) {
             .show()
     }
 
-    // Reset app lock (remove PIN and all locked apps)
+    
     fun resetAppLock(callback: (Boolean) -> Unit) {
         if (!isPinSet()) {
-            // If PIN is not set, directly reset
+            
             resetAppLockData()
-            callback(true) // Indicate success
+            callback(true) 
             return
         }
 
@@ -348,13 +348,13 @@ class AppLockManager(private val context: Context) {
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
 
                 if (hashPin(oldPin) == storedPinHash) {
-                    // Reset app lock data if PIN is correct
+                    
                     resetAppLockData()
                     Toast.makeText(context, "App Lock reset successfully!", Toast.LENGTH_SHORT).show()
-                    callback(true) // Indicate success
+                    callback(true) 
                 } else {
                     Toast.makeText(context, "Incorrect current PIN", Toast.LENGTH_SHORT).show()
-                    callback(false) // Indicate failure
+                    callback(false) 
                 }
             }
             .setNegativeButton("Cancel") { _, _ -> callback(false) }
@@ -372,7 +372,7 @@ class AppLockManager(private val context: Context) {
         }
     }
     
-    // Clear authentication timeout - forces re-authentication on next verifyPin call
+    
     fun clearAuthTimeout() {
         sharedPreferences.edit { remove(PREF_LAST_AUTH_TIME) }
     }

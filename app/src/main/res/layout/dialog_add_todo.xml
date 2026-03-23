@@ -9,7 +9,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Task Input -->
+        
         <EditText
             android:id="@+id/task_input"
             style="@style/DialogEditText"
@@ -18,7 +18,7 @@
             android:hint="Enter todo item"
             android:layout_marginBottom="16dp" />
 
-        <!-- Category Selection -->
+        
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp" />
 
-        <!-- Priority Selection -->
+        
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -46,7 +46,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp" />
 
-        <!-- Due Time (Optional) -->
+        
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -71,7 +71,7 @@
             android:visibility="gone"
             android:layout_marginBottom="16dp" />
 
-        <!-- Recurring Checkbox -->
+        
         <CheckBox
             android:id="@+id/recurring_checkbox"
             android:layout_width="wrap_content"
@@ -81,7 +81,7 @@
             android:buttonTint="@color/text"
             android:layout_marginBottom="8dp" />
 
-        <!-- Recurrence Type Selection -->
+        
         <RadioGroup
             android:id="@+id/recurrence_type_group"
             android:layout_width="match_parent"
@@ -111,7 +111,7 @@
 
         </RadioGroup>
 
-        <!-- Interval Selection Container -->
+        
         <LinearLayout
             android:id="@+id/interval_selection_container"
             android:layout_width="match_parent"
@@ -148,7 +148,7 @@
 
         </LinearLayout>
 
-        <!-- Days Selection Container -->
+        
         <LinearLayout
             android:id="@+id/days_selection_container"
             android:layout_width="match_parent"

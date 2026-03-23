@@ -10,12 +10,12 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.ChipGroup
@@ -32,7 +32,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
     private lateinit var adapter: PrivacyDashboardAdapter
     private lateinit var searchBox: EditText
     
-    // Summary views
+    
     private lateinit var statTotalValue: TextView
     private lateinit var statCriticalValue: TextView
     private lateinit var statSideloadedValue: TextView
@@ -61,7 +61,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -76,6 +76,13 @@ class PrivacyDashboardActivity : ComponentActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = PrivacyDashboardAdapter(emptyList())
         recyclerView.adapter = adapter
+        
+        // Improve accessibility and prevent crashes during view updates
+        recyclerView.setHasFixedSize(true)
+        recyclerView.itemAnimator?.apply {
+            addDuration = 0
+            moveDuration = 0
+        }
 
         searchBox = findViewById(R.id.search_box)
         searchBox.addTextChangedListener(object : TextWatcher {
@@ -95,11 +102,13 @@ class PrivacyDashboardActivity : ComponentActivity() {
             applyFilters()
         }
 
+        findViewById<ImageButton>(R.id.privacy_dashboard_back_button).setOnClickListener { finish() }
+
         loadApps()
     }
     
     private fun setupTheme() {
-        // Apply dynamic translucency instead of hardcoded overlay color
+        
         applyBackgroundTranslucency()
         setupWallpaper()
     }
@@ -140,11 +149,6 @@ class PrivacyDashboardActivity : ComponentActivity() {
                     } catch (_: Exception) {
                         packageInfo.packageName
                     }
-                    val icon = try {
-                        pm.getApplicationIcon(appInfo)
-                    } catch (_: Exception) {
-                        ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, theme)
-                    } ?: ResourcesCompat.getDrawable(resources, R.mipmap.ic_launcher, theme)!!
                     
                     val severity = when {
                         granted.any { it in listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_SMS, Manifest.permission.ACCESS_FINE_LOCATION) } -> 2
@@ -152,7 +156,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
                         else -> 0
                     }
 
-                    // Detect sideloaded apps
+                    
                     @Suppress("DEPRECATION")
                     val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         try {
@@ -169,7 +173,6 @@ class PrivacyDashboardActivity : ComponentActivity() {
                     AppPrivacyInfo(
                         packageName = packageInfo.packageName,
                         appName = appName,
-                        icon = icon,
                         grantedPermissions = granted,
                         severity = severity,
                         isSideloaded = isSideloaded
@@ -210,7 +213,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
                 R.id.chip_location -> app.grantedPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION) || 
                                      app.grantedPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
                 R.id.chip_sideloaded -> app.isSideloaded
-                else -> true // chip_all or no selection
+                else -> true 
             }
             
             matchesQuery && matchesChip

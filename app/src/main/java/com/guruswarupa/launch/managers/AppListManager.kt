@@ -1,181 +1,109 @@
 package com.guruswarupa.launch.managers
 
-import android.content.pm.ResolveInfo
+import android.content.Context
 import android.content.pm.ActivityInfo
+import android.content.pm.ResolveInfo
+import android.os.Process
+import android.os.UserManager
 import com.guruswarupa.launch.core.CacheManager
+import java.util.Locale
 
-/**
- * Manages app list filtering, sorting, and updates.
- * Centralizes all app list manipulation logic to reduce MainActivity complexity.
- */
 class AppListManager(
+    private val context: Context,
     private val appDockManager: AppDockManager,
     private val favoriteAppManager: FavoriteAppManager,
     private val hiddenAppManager: HiddenAppManager?,
-    private val cacheManager: CacheManager?
+    private val cacheManager: CacheManager?,
+    private val workspaceManager: WorkspaceManager,
+    private val workProfileManager: WorkProfileManager
 ) {
-    
-    /**
-     * Combined single-pass filter that applies all filtering (mode, hidden) in one iteration.
-     * Favorites are no longer filtered out; they are shown at the top.
-     */
+    private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+    private val mainUserSerial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
+
     fun filterAndPrepareApps(
         apps: List<ResolveInfo>,
         focusMode: Boolean,
         workspaceMode: Boolean
     ): List<ResolveInfo> {
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+        
         return apps.filter { app ->
             val packageName = app.activityInfo.packageName
             val activityName = app.activityInfo.name
             
-            // Allow internal activities (Settings, Vault), but exclude MainActivity
             val isLauncherApp = packageName == "com.guruswarupa.launch"
             val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") || 
                                               activityName.contains("EncryptedVaultActivity"))
             
             if (isLauncherApp && !isAllowedInternalActivity) return@filter false
             
-            // If it's a settings or vault activity, we ALWAYS show it (bypass focus/workspace/hidden filters)
-            // EXCEPT in focus mode, where we hide settings to minimize distractions
             if (isAllowedInternalActivity) {
                 return@filter !(focusMode && activityName.contains("SettingsActivity"))
             }
             
-            // Filter out hidden apps
             if (hiddenAppManager?.isAppHidden(packageName) == true) return@filter false
             
-            // Focus mode filter
-            if (focusMode && appDockManager.isAppHiddenInFocusMode(packageName)) return@filter false
+            val isWorkApp = app.preferredOrder != mainUserSerial
+
+            // Focus Mode takes absolute priority over Workspace and Work Profile toggle
+            if (focusMode) {
+                return@filter if (isWorkApp) true else !appDockManager.isAppHiddenInFocusMode(packageName)
+            }
             
-            // Workspace mode filter
-            if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) return@filter false
+            if (isWorkProfileEnabled) {
+                if (!isWorkApp) return@filter false
+            } else {
+                if (isWorkApp) return@filter false
+                
+                if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) {
+                    return@filter false
+                }
+            }
             
             true
         }
     }
     
-    /**
-     * Filters apps based on focus mode, workspace mode, hidden apps, and launcher exclusion.
-     */
-    fun filterAppsByMode(
-        apps: List<ResolveInfo>,
-        focusMode: Boolean,
-        workspaceMode: Boolean
-    ): List<ResolveInfo> {
-        return apps.filter { app ->
-            val packageName = app.activityInfo.packageName
-            val activityName = app.activityInfo.name
-            
-            // Allow internal activities (Settings, Vault), but exclude MainActivity
-            val isLauncherApp = packageName == "com.guruswarupa.launch"
-            val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") || 
-                                              activityName.contains("EncryptedVaultActivity"))
-            
-            if (isLauncherApp && !isAllowedInternalActivity) return@filter false
-            
-            // If it's a settings or vault activity, we ALWAYS show it
-            // EXCEPT in focus mode, where we hide settings
-            if (isAllowedInternalActivity) {
-                return@filter !(focusMode && activityName.contains("SettingsActivity"))
-            }
-            
-            // Filter out hidden apps (unless in workspace mode, where we might want to show them)
-            !(hiddenAppManager?.isAppHidden(packageName) ?: false) &&
-            (!focusMode || !appDockManager.isAppHiddenInFocusMode(packageName)) &&
-            (!workspaceMode || appDockManager.isAppInActiveWorkspace(packageName))
-        }
-    }
-    
-    /**
-     * Note: This is now a no-op as we show all apps.
-     */
-    fun applyFavoritesFilter(
-        apps: List<ResolveInfo>
-    ): List<ResolveInfo> {
-        return apps
-    }
-    
-    /**
-     * Sorts apps alphabetically by name using metadata cache when available.
-     * Favorites are shown BOTH at the top AND in their alphabetical positions.
-     * Internal Launcher apps (Settings, Vault) are placed at the absolute bottom.
-     * Apps starting with numbers or '#' are placed at the end of the alphabetical section.
-     * Favorites list at the top is only shown in normal mode (not focus or workspace mode).
-     */
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
-        val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         val favorites = favoriteAppManager.getFavoriteApps()
         val focusMode = appDockManager.getCurrentMode()
         val workspaceMode = appDockManager.isWorkspaceModeActive()
-        val showFavoritesAtTop = !focusMode && !workspaceMode
-        
-        // Get all favorites that exist in the current app list
-        val favoriteApps = if (showFavoritesAtTop) {
-            apps.filter { app ->
-                favorites.contains(app.activityInfo.packageName)
-            }
-        } else {
-            emptyList()
-        }
-        
-        // Sort favorites alphabetically among themselves
-        val sortedFavorites = favoriteApps.sortedWith(compareBy { app ->
-            val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
-                ?: app.activityInfo.packageName.lowercase()
-            getSortKey(label)
-        })
-        
-        // Sort ALL apps (including favorites) alphabetically, with internal apps at the end
-        val sortedAllApps = apps.sortedWith(compareBy<ResolveInfo> { app ->
-            val packageName = app.activityInfo.packageName
-            val activityName = app.activityInfo.name
-            val isInternal = packageName == "com.guruswarupa.launch" && 
-                           (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
-            
-            // Priority: 0 for normal apps, 1 for internal apps (at the end)
-            if (isInternal) 1 else 0
-        }.thenBy { app ->
-            // Second priority: Alphabetical/Numbers
-            val label = metadataCache[app.activityInfo.packageName]?.label?.lowercase() 
-                ?: app.activityInfo.packageName.lowercase()
-            getSortKey(label)
-        })
-        
-        // Combine: favorites first, then all apps (so favorites appear twice - at top and in alphabetical order)
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+        val showFavoritesAtTop = !focusMode && !workspaceMode && !isWorkProfileEnabled
+        val comparator = compareBy<ResolveInfo>(
+            { if (isInternalApp(it)) 1 else 0 },
+            { getSortKey(getDisplayLabel(it).lowercase(Locale.ROOT)) },
+            { it.activityInfo.packageName },
+            { it.activityInfo.name }
+        )
+
+        val favoriteApps = if (showFavoritesAtTop) apps.filter { favorites.contains(it.activityInfo.packageName) } else emptyList()
+        val sortedFavorites = favoriteApps.sortedWith(comparator)
+        val sortedAllApps = apps.sortedWith(comparator)
         return sortedFavorites + sortedAllApps
     }
 
-    /**
-     * Generates a sort key that puts numbers and '#' at the end.
-     */
     fun getSortKey(label: String): String {
         if (label.isEmpty()) return label
         val firstChar = label[0]
-        return if (firstChar.isDigit() || firstChar == '#') {
+        return if (!firstChar.isLetter()) {
             "\uFFFF$label"
         } else {
             label
         }
     }
 
-    /**
-     * Injects separator ResolveInfo objects into the list.
-     * Separates favorites from normal apps and normal apps by starting letter.
-     * Favorites are shown at the top and also in their alphabetical positions.
-     * Settings and Vault shortcuts are added at the very end.
-     * Favorites separators are only added in normal mode.
-     */
     fun addSeparators(apps: List<ResolveInfo>): List<ResolveInfo> {
         if (apps.isEmpty()) return apps
         
         val favorites = favoriteAppManager.getFavoriteApps()
-        val metadataCache = cacheManager?.getMetadataCache() ?: emptyMap()
         val result = mutableListOf<ResolveInfo>()
         val focusMode = appDockManager.getCurrentMode()
         val workspaceMode = appDockManager.isWorkspaceModeActive()
-        val showFavoritesSection = !focusMode && !workspaceMode
+        val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
         
-        // Check if we have favorites
+        val showFavoritesSection = !focusMode && !workspaceMode && !isWorkProfileEnabled
+        
         var hasFavorites = false
         if (showFavoritesSection) {
             for (app in apps) {
@@ -193,31 +121,23 @@ class AppListManager(
         
         for (app in apps) {
             val packageName = app.activityInfo.packageName
-            val activityName = app.activityInfo.name
             val isFavorite = favorites.contains(packageName)
-            val isInternal = packageName == "com.guruswarupa.launch" && 
-                           (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
+            val isInternal = isInternalApp(app)
             
-            // Add favorites separator before first favorite app
             if (hasFavorites && isFavorite && !processedFirstFavoriteSection) {
                 result.add(createSeparatorInfo("favorites_separator"))
                 processedFirstFavoriteSection = true
             }
             
-            // Transition from favorites to normal apps - add separator after favorites
             if (hasFavorites && !isFavorite && !isAfterFavorites && processedFirstFavoriteSection && !addedFavoritesEndSeparator) {
-                // Add a separator to mark the end of favorites section
                 result.add(createSeparatorInfo("favorites_end_separator"))
                 addedFavoritesEndSeparator = true
-                // Reset lastLetter so we add a separator for the first non-favorite app
                 lastLetter = null
                 isAfterFavorites = true
             }
             
-            // Between normal apps with different starting letters
-            // Skip separators for internal apps shown at the end
             if (!isFavorite && !isInternal) {
-                val label = metadataCache[packageName]?.label ?: packageName
+                val label = getDisplayLabel(app)
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
                 
@@ -226,9 +146,7 @@ class AppListManager(
                 }
                 lastLetter = effectiveLetter
             } else if (isFavorite && (isAfterFavorites || !showFavoritesSection)) {
-                // This is a favorite appearing in its alphabetical position
-                // Add a letter separator if needed
-                val label = metadataCache[packageName]?.label ?: packageName
+                val label = getDisplayLabel(app)
                 val currentLetter = if (label.isNotEmpty()) label[0].uppercaseChar() else '#'
                 val effectiveLetter = if (currentLetter.isLetter()) currentLetter else '#'
                 
@@ -237,8 +155,6 @@ class AppListManager(
                 }
                 lastLetter = effectiveLetter
             } else if (isInternal && lastLetter != null) {
-                // When we hit internal apps at the end, ensure we don't add more letter separators
-                // We might want one final separator for system apps
                 if (lastLetter != '⚙') {
                     result.add(createSeparatorInfo("letter_separator_SYSTEM"))
                     lastLetter = '⚙'
@@ -248,12 +164,10 @@ class AppListManager(
             result.add(app)
         }
         
-        // Add a horizontal separator before Settings and Vault shortcuts
         if (result.isNotEmpty()) {
             result.add(createSeparatorInfo("bottom_system_separator"))
         }
         
-        // Add Settings and Vault shortcuts at the very end
         result.add(createLauncherShortcut("launcher_settings_shortcut"))
         result.add(createLauncherShortcut("launcher_vault_shortcut"))
         
@@ -272,26 +186,49 @@ class AppListManager(
         val ri = ResolveInfo()
         ri.activityInfo = ActivityInfo()
         ri.activityInfo.packageName = shortcutType
-        // Use a descriptive name that will be shown as the label
+        
         ri.activityInfo.name = when (shortcutType) {
             "launcher_settings_shortcut" -> "Launch Settings"
             "launcher_vault_shortcut" -> "Launch Vault"
             else -> shortcutType
         }
-        // Mark it as a special shortcut type
+        
         ri.activityInfo.applicationInfo = android.content.pm.ApplicationInfo().apply {
             packageName = shortcutType
         }
         return ri
     }
     
-    /**
-     * Gets the current focus mode state.
-     */
     fun getFocusMode(): Boolean = appDockManager.getCurrentMode()
-    
-    /**
-     * Gets the current workspace mode state.
-     */
     fun getWorkspaceMode(): Boolean = appDockManager.isWorkspaceModeActive()
+
+    private fun isInternalApp(app: ResolveInfo): Boolean {
+        val packageName = app.activityInfo.packageName
+        val activityName = app.activityInfo.name
+        return packageName == "com.guruswarupa.launch" &&
+            (activityName.contains("SettingsActivity") || activityName.contains("EncryptedVaultActivity"))
+    }
+
+    private fun getDisplayLabel(app: ResolveInfo): String {
+        val packageName = app.activityInfo.packageName
+        if (WebAppManager.isWebAppPackage(packageName)) {
+            return app.activityInfo.name.ifBlank { packageName }
+        }
+
+        val cacheKey = "${packageName}|${app.preferredOrder}"
+        val cachedLabel = cacheManager?.getMetadataCache()?.get(cacheKey)?.label
+        if (!cachedLabel.isNullOrBlank()) {
+            return cachedLabel
+        }
+
+        val activityName = app.activityInfo.name
+        return when {
+            activityName.isNotBlank() && packageName.startsWith("launcher_") -> activityName
+            else -> try {
+                app.loadLabel(context.packageManager).toString().ifBlank { packageName }
+            } catch (_: Exception) {
+                packageName
+            }
+        }
+    }
 }

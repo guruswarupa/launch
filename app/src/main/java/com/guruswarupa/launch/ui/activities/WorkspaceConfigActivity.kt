@@ -38,7 +38,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Enable edge-to-edge for transparent system bars with white icons
+        
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -46,7 +46,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         
         setContentView(R.layout.activity_workspace_config)
         
-        workspaceManager = WorkspaceManager(getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
+        workspaceManager = WorkspaceManager(prefs)
         
         workspaceList = findViewById(R.id.workspace_list)
         createWorkspaceButton = findViewById(R.id.create_workspace_button)
@@ -57,7 +57,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         subtitleText = findViewById(R.id.subtitle_text)
         workspacesContainer = findViewById(R.id.workspaces_container)
         
-        // Apply theme and wallpaper
+        
         applyThemeAndWallpaper()
         
         createWorkspaceButton.setOnClickListener {
@@ -75,7 +75,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
     }
     
     private fun applyThemeAndWallpaper() {
-        // Set system wallpaper
+        
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
         
         applyBackgroundTranslucency()
@@ -100,12 +100,16 @@ class WorkspaceConfigActivity : ComponentActivity() {
     
     private fun loadWorkspaces() {
         val workspaces = workspaceManager.getAllWorkspaces()
-        val workspaceNames = workspaces.map { 
+        
+        // Only show user-created workspaces (work profile is now separate)
+        val allWorkspaces = workspaces
+        
+        val workspaceNames = allWorkspaces.map { 
             val appCount = it.appPackageNames.size
             "${it.name} ($appCount apps)"
         }.toTypedArray()
         
-        // Use a themed item layout for the list - always white text
+        
         val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, workspaceNames) {
             override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
                 val view = super.getView(position, convertView, parent)
@@ -153,14 +157,14 @@ class WorkspaceConfigActivity : ComponentActivity() {
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
         val pm = packageManager
         
-        // Get all apps
+        
         val allAppsRaw = pm.queryIntentActivities(mainIntent, 0)
             .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
         
-        // Get apps that are already in other workspaces (exclude current workspace if editing)
+        
         val appsInOtherWorkspaces = workspaceManager.getAppsInWorkspaces(existingWorkspaceId)
         
-        // Filter out apps that are already in other workspaces
+        
         val allApps = allAppsRaw.filter { app ->
             val packageName = app.activityInfo.packageName
             !appsInOtherWorkspaces.contains(packageName)

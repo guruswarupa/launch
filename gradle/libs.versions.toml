@@ -17,6 +17,7 @@ jsr305 = "3.0.2"
 google-http-client = "1.43.3"
 joda-time = "2.12.7"
 glide = "4.16.0"
+billing = "8.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -45,6 +46,7 @@ google-http-client = { module = "com.google.http-client:google-http-client", ver
 google-http-client-android = { module = "com.google.http-client:google-http-client-android", version.ref = "google-http-client" }
 joda-time = { module = "joda-time:joda-time", version.ref = "joda-time" }
 glide = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+google-play-billing = { group = "com.android.billingclient", name = "billing", version.ref = "billing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

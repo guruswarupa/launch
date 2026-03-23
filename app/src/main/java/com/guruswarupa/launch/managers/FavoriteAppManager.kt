@@ -11,7 +11,7 @@ class FavoriteAppManager(private val sharedPreferences: SharedPreferences) {
         private const val TAG = "FavoriteAppManager"
     }
     
-    // Cache favorites to avoid repeated SharedPreferences reads
+    
     private var favoritesCache: Set<String>? = null
     private var cacheValid = false
     
@@ -21,25 +21,25 @@ class FavoriteAppManager(private val sharedPreferences: SharedPreferences) {
                 favoritesCache = sharedPreferences.getStringSet(FAVORITE_APPS_KEY, emptySet()) ?: emptySet()
             } catch (e: ClassCastException) {
                 Log.e(TAG, "Data corruption: $FAVORITE_APPS_KEY is not a Set. Attempting recovery.", e)
-                // Handle recovery: read as string and convert to set if possible
+                
                 val stringValue = try { sharedPreferences.getString(FAVORITE_APPS_KEY, null) } catch (_: Exception) { null }
                 val recoveredSet = if (stringValue != null) {
                     if (stringValue.startsWith("[") && stringValue.endsWith("]")) {
-                        // Looks like a toString() of a list/set
+                        
                         stringValue.substring(1, stringValue.length - 1)
                             .split(",")
                             .map { it.trim() }
                             .filter { it.isNotEmpty() }
                             .toSet()
                     } else {
-                        // Single package name?
+                        
                         setOf(stringValue)
                     }
                 } else {
                     emptySet()
                 }
                 
-                // Save the recovered set back to fix the data type
+                
                 sharedPreferences.edit { 
                     remove(FAVORITE_APPS_KEY)
                     putStringSet(FAVORITE_APPS_KEY, recoveredSet)

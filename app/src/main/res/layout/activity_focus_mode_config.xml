@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -12,7 +12,7 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay -->
+    
     <View
         android:id="@+id/theme_overlay"
         android:layout_width="match_parent"
@@ -37,7 +37,7 @@
             android:layout_marginTop="32dp"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Apps Selection Container (Matches Workspace style) -->
+        
         <LinearLayout
             android:id="@+id/apps_container"
             android:layout_width="match_parent"
@@ -66,7 +66,7 @@
 
         </LinearLayout>
 
-        <!-- Action Buttons -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

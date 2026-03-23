@@ -116,7 +116,7 @@ class CountdownWidget(
         override fun run() {
             if (isInitialized) {
                 updateCountdowns()
-                // Update every second for active countdowns
+                
                 handler.postDelayed(this, 1000)
             }
         }
@@ -136,7 +136,7 @@ class CountdownWidget(
         
         adapter = CountdownAdapter(countdowns, 
             onCountdownClick = { countdown ->
-                // Only allow editing custom countdowns on click
+                
                 if (!countdown.isFromCalendar) {
                     showEditCountdownDialog(countdown)
                 }
@@ -148,7 +148,7 @@ class CountdownWidget(
         countdownsRecyclerView.layoutManager = LinearLayoutManager(context)
         countdownsRecyclerView.adapter = adapter
         
-        // Enable swipe to delete
+        
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean = false
             
@@ -227,7 +227,7 @@ class CountdownWidget(
     fun showCountdownOptionsDialog(countdown: CountdownItem) {
         val options = mutableListOf<String>()
         
-        // Only show edit option for custom countdowns
+        
         if (!countdown.isFromCalendar) {
             options.add("Edit")
         }
@@ -258,7 +258,7 @@ class CountdownWidget(
             .setNegativeButton("Cancel", null)
             .show()
         
-        // Fix dialog text colors for dark mode consistency
+        
         fixDialogTextColors(dialog)
     }
     
@@ -279,7 +279,7 @@ class CountdownWidget(
     
     @SuppressLint("NotifyDataSetChanged")
     private fun updateCountdowns() {
-        // Remove expired countdowns
+        
         val expiredCountdowns = countdowns.filter { it.isExpired() }
         countdowns.removeAll(expiredCountdowns)
         if (expiredCountdowns.isNotEmpty()) {
@@ -304,7 +304,7 @@ class CountdownWidget(
         val timeInput: EditText = dialogView.findViewById(R.id.countdown_time_input)
         val fromCalendarButton: Button = dialogView.findViewById(R.id.from_calendar_button)
         
-        // Fix input colors
+        
         val textColor = ContextCompat.getColor(context, R.color.text)
         val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
         titleInput.setTextColor(textColor)
@@ -314,7 +314,7 @@ class CountdownWidget(
         timeInput.setTextColor(textColor)
         timeInput.setHintTextColor(secondaryTextColor)
         
-        // Set up date picker
+        
         val calendar = Calendar.getInstance()
         dateInput.setOnClickListener {
             val year = calendar.get(Calendar.YEAR)
@@ -332,7 +332,7 @@ class CountdownWidget(
             ).show()
         }
         
-        // Set up time picker
+        
         timeInput.setOnClickListener {
             val hour = calendar.get(Calendar.HOUR_OF_DAY)
             val minute = calendar.get(Calendar.MINUTE)
@@ -351,7 +351,7 @@ class CountdownWidget(
             ).show()
         }
         
-        // Set default date/time to now
+        
         val dateFormat = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
         val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
         dateInput.setText(dateFormat.format(calendar.time))
@@ -399,7 +399,7 @@ class CountdownWidget(
         val timeInput: EditText = dialogView.findViewById(R.id.countdown_time_input)
         val fromCalendarButton: Button = dialogView.findViewById(R.id.from_calendar_button)
         
-        // Fix input colors
+        
         val textColor = ContextCompat.getColor(context, R.color.text)
         val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
         titleInput.setTextColor(textColor)
@@ -420,7 +420,7 @@ class CountdownWidget(
         dateInput.setText(dateFormat.format(calendar.time))
         timeInput.setText(timeFormat.format(calendar.time))
         
-        // Set up date picker
+        
         dateInput.setOnClickListener {
             val year = calendar.get(Calendar.YEAR)
             val month = calendar.get(Calendar.MONTH)
@@ -436,7 +436,7 @@ class CountdownWidget(
             ).show()
         }
         
-        // Set up time picker
+        
         timeInput.setOnClickListener {
             val hour = calendar.get(Calendar.HOUR_OF_DAY)
             val minute = calendar.get(Calendar.MINUTE)
@@ -520,7 +520,7 @@ class CountdownWidget(
             .setNegativeButton("Cancel", null)
             .show()
         
-        // Fix dialog text colors
+        
         fixDialogTextColors(dialog)
     }
     
@@ -530,7 +530,7 @@ class CountdownWidget(
         }
         
         val eventsList = mutableListOf<CalendarEvent>()
-        val seenEvents = mutableSetOf<String>() // For deduplication
+        val seenEvents = mutableSetOf<String>() 
         
         val now = System.currentTimeMillis()
         val oneYearFromNow = now + (365 * 24 * 60 * 60 * 1000L)
@@ -579,10 +579,10 @@ class CountdownWidget(
                     val allDay = it.getInt(allDayIndex) == 1
                     val calendarId = it.getLong(calendarIdIndex)
 
-                    // Only include future events
+                    
                     if (startTime < now) continue
                     
-                    // Handle all-day events
+                    
                     if (allDay) {
                         val calendar = Calendar.getInstance()
                         calendar.timeInMillis = startTime
@@ -592,18 +592,18 @@ class CountdownWidget(
                         calendar.set(Calendar.MILLISECOND, 0)
                         startTime = calendar.timeInMillis
                         
-                        // End time is start of next day
+                        
                         calendar.add(Calendar.DAY_OF_MONTH, 1)
                         endTime = calendar.timeInMillis
                     }
                     
-                    // Create unique key for deduplication (title + date)
-                    // Festivals often appear in multiple calendars with different event IDs
-                    // So we deduplicate by title + date instead of event ID
+                    
+                    
+                    
                     val cal = Calendar.getInstance().apply { timeInMillis = startTime }
                     val dateKey = "${title.lowercase().trim()}_${cal.get(Calendar.YEAR)}_${cal.get(Calendar.MONTH)}_${cal.get(Calendar.DAY_OF_MONTH)}"
                     
-                    // Skip if we've already seen this exact event (same title on same date)
+                    
                     if (!seenEvents.contains(dateKey)) {
                         seenEvents.add(dateKey)
                         eventsList.add(
@@ -621,14 +621,14 @@ class CountdownWidget(
                 }
             }
         } catch (_: SecurityException) {
-            // Permission denied
+            
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
             cursor?.close()
         }
         
-        // Return all events (no limit) - showing all events in a year
+        
         return eventsList
     }
     
@@ -679,7 +679,7 @@ class CountdownWidget(
     }
     
     fun onPermissionGranted() {
-        // Refresh if needed
+        
     }
     
     fun refresh() {
@@ -721,11 +721,11 @@ class CountdownAdapter(
         
         holder.remainingText.text = countdown.formatRemainingTime()
         
-        // Change color if expired
+        
         val color = if (countdown.isExpired()) {
-            ContextCompat.getColor(holder.itemView.context, R.color.nord11) // Red
+            ContextCompat.getColor(holder.itemView.context, R.color.nord11) 
         } else {
-            ContextCompat.getColor(holder.itemView.context, R.color.nord9) // Blue
+            ContextCompat.getColor(holder.itemView.context, R.color.nord9) 
         }
         holder.remainingText.setTextColor(color)
         

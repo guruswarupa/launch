@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <!-- Header -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -46,14 +46,14 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- Stats View Container -->
+    
     <LinearLayout
         android:id="@+id/stats_view_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Steps Display -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -79,14 +79,14 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Divider -->
+        
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="@color/nord3"
             android:layout_marginBottom="20dp" />
 
-        <!-- Distance Display -->
+        
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -111,7 +111,7 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Permission Request Button -->
+        
         <Button
             android:id="@+id/request_permission_button"
             android:layout_width="match_parent"
@@ -125,7 +125,7 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <!-- Calendar View Container -->
+    
     <FrameLayout
         android:id="@+id/calendar_view_container"
         android:layout_width="match_parent"

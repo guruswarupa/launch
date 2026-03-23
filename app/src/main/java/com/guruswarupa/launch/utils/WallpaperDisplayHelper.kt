@@ -15,10 +15,10 @@ import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.ThemeOption
 
 object WallpaperDisplayHelper {
-    /**
-     * Applies the actual system wallpaper to the target ImageView.
-     * This always fetches what is currently set as the device wallpaper.
-     */
+    
+
+
+
     fun applySystemWallpaper(target: ImageView, fallbackRes: Int = R.drawable.wallpaper_background) {
         val context = target.context
         
@@ -35,10 +35,10 @@ object WallpaperDisplayHelper {
         }
     }
     
-    /**
-     * Applies a theme's wallpaper URL to the target ImageView.
-     * Used for previews or when a specific theme wallpaper is requested.
-     */
+    
+
+
+
     fun applyThemeWallpaper(target: ImageView, themeId: String, fallbackRes: Int = R.drawable.wallpaper_background) {
         val context = target.context
         val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId }

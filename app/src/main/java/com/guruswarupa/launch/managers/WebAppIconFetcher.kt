@@ -21,19 +21,19 @@ object WebAppIconFetcher {
     private val executor = Executors.newFixedThreadPool(2)
     private val mainHandler = Handler(Looper.getMainLooper())
     
-    /**
-     * Clear the memory cache to free up resources.
-     * Call this when the web app feature is no longer needed.
-     */
+    
+
+
+
     fun clearCache() {
         memoryCache.clear()
     }
     
-    /**
-     * Shutdown the background thread pool and clear caches.
-     * This should only be called when the application process is terminating.
-     * Note: In most cases, you don't need to call this as Android will clean up automatically.
-     */
+    
+
+
+
+
     fun shutdown() {
         if (!executor.isShutdown) {
             executor.shutdown()
@@ -53,13 +53,13 @@ object WebAppIconFetcher {
         siteUrl: String,
         onResult: (Drawable?) -> Unit
     ) {
-        // Check memory cache first
+        
         memoryCache[siteUrl]?.let {
             onResult(it)
             return
         }
 
-        // Don't execute if executor is shutdown
+        
         if (executor.isShutdown || executor.isTerminated) {
             onResult(null)
             return
@@ -72,12 +72,12 @@ object WebAppIconFetcher {
                     drawable?.let { memoryCache[siteUrl] = it }
                     mainHandler.post { onResult(drawable) }
                 } catch (_: Exception) {
-                    // Silently handle exceptions to prevent crashes
+                    
                     mainHandler.post { onResult(null) }
                 }
             }
         } catch (_: RejectedExecutionException) {
-            // Executor was shutdown between the check and execute
+            
             onResult(null)
         }
     }

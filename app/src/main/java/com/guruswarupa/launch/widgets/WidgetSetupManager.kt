@@ -10,9 +10,9 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.managers.BatteryManager
 
-/**
- * Manages initialization and setup of all widgets
- */
+
+
+
 class WidgetSetupManager(
     private val activity: MainActivity,
     private val usageStatsManager: AppUsageStatsManager,
@@ -21,26 +21,26 @@ class WidgetSetupManager(
 ) {
     
     fun setupBatteryAndUsage() {
-        // Updated: Screen time display removed from main layout to improve privacy and battery
+        
         val batteryPercentageTextView = activity.findViewById<TextView>(R.id.battery_percentage)
 
-        // Get battery percentage using BatteryManager
+        
         val batteryManager = BatteryManager(activity)
         batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
     }
     
     fun setupWeather(weatherIcon: ImageView, weatherText: TextView) {
-        // Try to load cached weather first, otherwise show placeholder
+        
         weatherManager.updateWeather(weatherIcon, weatherText)
         
-        // Add click listeners to refresh weather when tapped
+        
         val weatherClickListener = View.OnClickListener {
             weatherManager.updateWeather(weatherIcon, weatherText)
         }
         weatherIcon.setOnClickListener(weatherClickListener)
         weatherText.setOnClickListener(weatherClickListener)
 
-        // Add long click listener to show API settings
+        
         val weatherLongClickListener = View.OnLongClickListener {
             weatherManager.showWeatherSettings(weatherIcon, weatherText)
             true
@@ -61,6 +61,13 @@ class WidgetSetupManager(
         val calculatorView = LayoutInflater.from(activity).inflate(R.layout.calculator_widget, calculatorContainer, false)
         calculatorContainer.addView(calculatorView)
         return CalculatorWidget(calculatorView)
+    }
+    
+    fun setupMediaControllerWidget(): MediaControllerWidget {
+        val mediaContainer = activity.findViewById<ViewGroup>(R.id.media_controller_widget_container)
+        val mediaView = LayoutInflater.from(activity).inflate(R.layout.media_controller_widget, mediaContainer, false)
+        mediaContainer.addView(mediaView)
+        return MediaControllerWidget(activity, mediaView)
     }
     
     fun setupWorkoutWidget(): WorkoutWidget {
@@ -118,6 +125,20 @@ class WidgetSetupManager(
         countdownWidget.initialize()
         return countdownWidget
     }
+    
+    fun setupDnsWidget(sharedPreferences: android.content.SharedPreferences): DnsWidget {
+        val dnsContainer = activity.findViewById<android.widget.LinearLayout>(R.id.dns_widget_container)
+        val dnsWidget = DnsWidget(activity, dnsContainer, sharedPreferences)
+        dnsWidget.initialize()
+        return dnsWidget
+    }
+    
+    fun setupNoteWidget(sharedPreferences: android.content.SharedPreferences): NoteWidget {
+        val noteContainer = activity.findViewById<android.widget.LinearLayout>(R.id.note_widget_container)
+        val noteWidget = NoteWidget(activity, noteContainer, sharedPreferences)
+        noteWidget.initialize()
+        return noteWidget
+    }
 
     fun setupNetworkStatsWidget(): NetworkStatsWidget {
         val container = activity.findViewById<android.widget.LinearLayout>(R.id.network_stats_widget_container)
@@ -141,8 +162,8 @@ class WidgetSetupManager(
     }
     
     fun setupWeeklyUsageWidget() {
-        // The weekly usage graph is managed by UsageStatsDisplayManager
-        // This method exists for consistency with other widget setup methods
+        
+        
     }
     
     fun setupGithubContributionWidget(sharedPreferences: android.content.SharedPreferences): GithubContributionWidget {
@@ -150,6 +171,13 @@ class WidgetSetupManager(
         val githubWidget = GithubContributionWidget(activity, githubContainer, sharedPreferences)
         githubWidget.initialize()
         return githubWidget
+    }
+    
+    fun setupBatteryHealthWidget(): BatteryHealthWidget {
+        val batteryContainer = activity.findViewById<android.widget.LinearLayout>(R.id.battery_health_widget_container)
+        val widget = BatteryHealthWidget(activity, batteryContainer)
+        widget.initialize()
+        return widget
     }
     
     fun requestNotificationPermission() {

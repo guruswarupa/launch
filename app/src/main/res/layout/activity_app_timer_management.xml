@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Wallpaper Background -->
+    
     <ImageView
         android:id="@+id/wallpaper_background"
         android:layout_width="match_parent"
@@ -12,63 +12,160 @@
         android:scaleType="centerCrop"
         android:contentDescription="Background"/>
 
-    <!-- Semi-transparent overlay -->
+    
     <View
         android:id="@+id/settings_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#66000000"/>
 
-    <!-- Content Container -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:fitsSystemWindows="true">
+        android:padding="16dp">
 
-        <!-- Toolbar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="16dp">
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp"
+            android:paddingBottom="16dp">
 
-            <ImageView
-                android:id="@+id/back_button"
+            <ImageButton
+                android:id="@+id/app_timers_back_button"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:src="@drawable/ic_back"
-                app:tint="@color/white"
-                android:padding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Back"/>
+                android:contentDescription="@string/back_button"
+                android:paddingTop="32dp"
+                android:paddingHorizontal="8dp"
+                android:paddingBottom="8dp"
+                android:src="@drawable/ic_back"
+                android:tint="@color/white" />
 
             <TextView
-                android:id="@+id/toolbar_title"
+                android:id="@+id/title_text"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="16dp"
-                android:text="Manage App Timers"
-                android:textSize="20sp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/white"/>
+                android:paddingStart="8dp"
+                android:paddingTop="32dp"
+                android:text="App Timers"
+                android:textColor="@color/white"
+                android:textSize="28sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Apps RecyclerView -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/apps_recycler_view"
+        <LinearLayout
+            android:id="@+id/apps_container"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:paddingHorizontal="16dp"
-            android:paddingBottom="16dp"/>
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginBottom="24dp"
+            android:orientation="vertical"
+            android:background="@drawable/widget_background"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/subtitle_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="Choose an app, set a daily limit, and use the switch to pause or resume the timer."
+                android:textSize="14sp"
+                android:textColor="#B0B0B0"
+                android:alpha="0.7" />
+
+            <TextView
+                android:id="@+id/summary_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:text="0 apps"
+                android:textColor="@color/white"
+                android:textSize="13sp"
+                android:alpha="0.82" />
+
+            <EditText
+                android:id="@+id/app_search_box"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/edit_text_background"
+                android:drawableStart="@android:drawable/ic_menu_search"
+                android:drawablePadding="10dp"
+                android:hint="Search apps"
+                android:imeOptions="actionDone"
+                android:inputType="text"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="10dp"
+                android:minHeight="0dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/text_secondary" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/apps_recycler_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false" />
+
+                <TextView
+                    android:id="@+id/empty_state"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginHorizontal="32dp"
+                    android:gravity="center"
+                    android:text="No apps match your search."
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/clear_search_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/settings_card_background"
+                android:padding="16dp"
+                android:text="Clear Search"
+                android:textAllCaps="false"
+                android:textColor="@color/white" />
+
+            <Button
+                android:id="@+id/done_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/settings_card_background"
+                android:padding="16dp"
+                android:text="Done"
+                android:textAllCaps="false"
+                android:textColor="@color/white" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Loading Progress -->
+    
     <ProgressBar
         android:id="@+id/loading_progress"
         android:layout_width="wrap_content"

@@ -48,7 +48,7 @@ Example voice commands:
 
 * Time widget → Opens Clock
 * Date widget → Opens Calendar
-* Weather widget with live data (OpenWeatherMap API supported)
+* Weather widget with live data (powered by Open-Meteo)
 * Battery widget with charging status
 * Notifications widget (view & dismiss notifications)
 * Todo list widget (full task management)
@@ -183,7 +183,7 @@ Example voice commands:
 * Change wallpaper
 * Manage app locks
 * Configure app timers
-* Update weather API key
+* Set weather location (used by the Open-Meteo widget)
 * Manage widgets
 * Customize workspace layout
 * Enable shake-to-toggle torch

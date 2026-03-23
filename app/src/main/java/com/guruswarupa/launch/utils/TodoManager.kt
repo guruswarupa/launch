@@ -22,9 +22,9 @@ import com.guruswarupa.launch.ui.adapters.TodoAdapter
 import java.util.Calendar
 import java.util.Locale
 
-/**
- * Manages todo items: loading, saving, adding, removing, and recurring task logic
- */
+
+
+
 class TodoManager(
     private val activity: MainActivity,
     private val sharedPreferences: SharedPreferences,
@@ -37,13 +37,13 @@ class TodoManager(
 
     fun initialize() {
         todoRecyclerView.layoutManager = LinearLayoutManager(activity)
-        // Disable animations to prevent "Tmp detached view" crash during rapid updates
+        
         todoRecyclerView.itemAnimator = null
 
         todoAdapter = TodoAdapter(todoItems, { todoItem ->
             removeTodoItem(todoItem)
         }, {
-            // onTaskStateChanged callback - save and reschedule alarms when task state changes
+            
             saveTodoItems()
             rescheduleTodoAlarms()
         })
@@ -57,9 +57,9 @@ class TodoManager(
         rescheduleTodoAlarms()
     }
 
-    /**
-     * Notify the adapter that theme has changed and views need to be refreshed
-     */
+    
+
+
     fun onThemeChanged() {
         if (::todoAdapter.isInitialized) {
             todoAdapter.notifyItemRangeChanged(0, todoItems.size)
@@ -70,7 +70,7 @@ class TodoManager(
         val dialogBuilder = android.app.AlertDialog.Builder(activity, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Add Todo Item")
 
-        // Create custom layout
+        
         val dialogView = activity.layoutInflater.inflate(R.layout.dialog_add_todo, null)
         val taskInput = dialogView.findViewById<EditText>(R.id.task_input)
         val categorySpinner = dialogView.findViewById<Spinner>(R.id.category_spinner)
@@ -86,7 +86,7 @@ class TodoManager(
         val intervalSpinner = dialogView.findViewById<Spinner>(R.id.interval_spinner)
         val intervalStartTimePicker = dialogView.findViewById<android.widget.TimePicker>(R.id.interval_start_time_picker)
 
-        // Day checkboxes
+        
         val dayCheckboxes = listOf<CheckBox>(
             dialogView.findViewById(R.id.checkbox_sunday),
             dialogView.findViewById(R.id.checkbox_monday),
@@ -97,16 +97,16 @@ class TodoManager(
             dialogView.findViewById(R.id.checkbox_saturday)
         )
 
-        // Setup category spinner
+        
         val categories = arrayOf("General", "Work", "Personal", "Health", "Shopping", "Study")
         categorySpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, categories)
 
-        // Setup priority spinner
+        
         val priorities = TodoItem.Priority.entries.map { it.displayName }.toTypedArray()
         prioritySpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, priorities)
-        prioritySpinner.setSelection(1) // Default to Medium
+        prioritySpinner.setSelection(1) 
 
-        // Setup interval spinner
+        
         val intervals = arrayOf(
             "30 minutes",
             "1 hour",
@@ -120,12 +120,12 @@ class TodoManager(
         val intervalValues = arrayOf(30, 60, 120, 180, 240, 360, 480, 720)
         intervalSpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, intervals)
 
-        // Handle time picker checkbox
+        
         enableTimeCheckbox.setOnCheckedChangeListener { _, isChecked ->
             timePicker.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
-        // Handle recurring checkbox
+        
         recurringCheckbox.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 recurrenceTypeGroup.visibility = View.VISIBLE
@@ -143,7 +143,7 @@ class TodoManager(
             }
         }
 
-        // Handle recurrence type change
+        
         recurrenceTypeGroup.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.recurrence_days) {
                 daysContainer.visibility = View.VISIBLE
@@ -162,7 +162,7 @@ class TodoManager(
                 val isRecurring = recurringCheckbox.isChecked
                 val selectedDays = if (isRecurring && recurrenceDays.isChecked) {
                     dayCheckboxes.mapIndexedNotNull { index, checkbox ->
-                        if (checkbox.isChecked) index + 1 else null // 1=Sunday, 2=Monday, etc.
+                        if (checkbox.isChecked) index + 1 else null 
                     }.toSet()
                 } else {
                     emptySet()
@@ -203,7 +203,7 @@ class TodoManager(
         val dialog = dialogBuilder.create()
         dialog.show()
 
-        // Fix dialog text colors
+        
         fixDialogTextColors(dialog)
     }
 
@@ -230,7 +230,7 @@ class TodoManager(
         todoAdapter.notifyItemInserted(index)
         saveTodoItems()
 
-        // Schedule alarm if due time is set or if it's interval-based
+        
         if (dueTime != null || (newTodo.isIntervalBased() && newTodo.intervalStartTime != null)) {
             val requestCode = todoAlarmManager.getRequestCode(newTodo, index)
             todoAlarmManager.scheduleAlarm(newTodo, requestCode)
@@ -240,7 +240,7 @@ class TodoManager(
     private fun removeTodoItem(todoItem: TodoItem) {
         val index = todoItems.indexOf(todoItem)
         if (index != -1) {
-            // Cancel alarm before removing
+            
             if (todoItem.dueTime != null) {
                 val requestCode = todoAlarmManager.getRequestCode(todoItem, index)
                 todoAlarmManager.cancelAlarm(todoItem, requestCode)
@@ -260,7 +260,7 @@ class TodoManager(
                 if (itemString.isNotEmpty()) {
                     val parts = itemString.split(":")
                     if (parts.size >= 7) {
-                        // New format with all fields
+                        
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         val isRecurring = parts[2].toBoolean()
@@ -290,14 +290,14 @@ class TodoManager(
 
                         todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate, selectedDays, priority, category, dueTime, recurrenceInterval, intervalStartTime))
                     } else if (parts.size >= 3) {
-                        // Legacy format support
+                        
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         val isRecurring = parts[2].toBoolean()
                         val lastCompletedDate = if (parts.size > 3) parts[3] else null
                         todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate))
                     } else if (parts.size == 2) {
-                        // Very old legacy format support
+                        
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         todoItems.add(TodoItem(text, isChecked, false))
@@ -307,7 +307,7 @@ class TodoManager(
             checkRecurringTasks()
             todoAdapter.notifyItemRangeChanged(0, todoItems.size)
             
-            // Reschedule alarms after loading
+            
             rescheduleTodoAlarms()
         }
     }
@@ -323,7 +323,7 @@ class TodoManager(
     private fun checkRecurringTasks() {
         val currentDate = getCurrentDateString()
         val calendar = Calendar.getInstance()
-        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // 1=Sunday, 2=Monday, etc.
+        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) 
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
         val currentMinute = calendar.get(Calendar.MINUTE)
         val currentTimeInMinutes = currentHour * 60 + currentMinute
@@ -334,42 +334,42 @@ class TodoManager(
         for (todoItem in todoItems) {
             if (todoItem.isRecurring) {
                 if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
-                    // Interval-based recurrence (Pomodoro-style)
+                    
                     val lastCompletedDate = todoItem.lastCompletedDate
                     if (lastCompletedDate != null) {
                         try {
-                            // Parse last completed timestamp
+                            
                             val lastCompletedMillis = lastCompletedDate.toLongOrNull()
                             if (lastCompletedMillis != null) {
                                 val elapsedMinutes = (currentTimeMillis - lastCompletedMillis) / (1000 * 60)
                                 if (elapsedMinutes >= todoItem.recurrenceInterval) {
-                                    // Interval has passed, reset task
+                                    
                                     todoItem.isChecked = false
                                     todoItem.lastCompletedDate = null
                                 }
                             }
                         } catch (_: Exception) {
-                            // If parsing fails, treat as date string (legacy format)
+                            
                             if (todoItem.lastCompletedDate != currentDate) {
                                 todoItem.isChecked = false
                                 todoItem.lastCompletedDate = null
                             }
                         }
                     } else if (todoItem.isChecked) {
-                        // Task was just completed, set timestamp
+                        
                         todoItem.lastCompletedDate = currentTimeMillis.toString()
                     }
                 } else if (todoItem.isDayBased() && todoItem.lastCompletedDate != currentDate) {
-                    // Day-based recurrence - only reset if today is one of the selected days
+                    
                     if (todoItem.selectedDays.contains(currentDayOfWeek)) {
                         todoItem.isChecked = false
                     }
                 } else if (todoItem.lastCompletedDate != currentDate) {
-                    // Daily recurring (legacy behavior)
+                    
                     todoItem.isChecked = false
                 }
             } else if (todoItem.dueTime != null) {
-                // Check if non-recurring task with due time is overdue
+                
                 val dueTimeParts = todoItem.dueTime.split(":")
                 if (dueTimeParts.size == 2) {
                     try {
@@ -377,18 +377,18 @@ class TodoManager(
                         val dueMinute = dueTimeParts[1].toInt()
                         val dueTimeInMinutes = dueHour * 60 + dueMinute
 
-                        // If current time has passed the due time, mark for removal
+                        
                         if (currentTimeInMinutes > dueTimeInMinutes) {
                             itemsToRemove.add(todoItem)
                         }
                     } catch (_: NumberFormatException) {
-                        // Invalid time format, ignore
+                        
                     }
                 }
             }
         }
 
-        // Remove overdue non-recurring items
+        
         for (item in itemsToRemove) {
             val index = todoItems.indexOf(item)
             if (index != -1) {

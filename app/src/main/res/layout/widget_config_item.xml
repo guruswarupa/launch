@@ -10,7 +10,7 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Drag handle icon -->
+    
     <ImageView
         android:id="@+id/drag_handle"
         android:layout_width="24dp"
@@ -20,7 +20,7 @@
         android:contentDescription="Drag to reorder"
         android:layout_marginEnd="16dp"/>
 
-    <!-- Widget name -->
+    
     <TextView
         android:id="@+id/widget_name"
         android:layout_width="0dp"
@@ -31,7 +31,7 @@
         android:textColor="@color/white"
         android:textStyle="bold"/>
 
-    <!-- Toggle switch -->
+    
     <androidx.appcompat.widget.SwitchCompat
         android:id="@+id/widget_toggle"
         android:layout_width="wrap_content"

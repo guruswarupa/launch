@@ -17,9 +17,6 @@ import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.ui.activities.AppDataDisclosureActivity
 import com.guruswarupa.launch.widgets.*
 
-/**
- * Handles the initialization of MainActivity and its components.
- */
 class AppInitializer(private val activity: MainActivity) {
 
     private fun isTablet(): Boolean {
@@ -31,88 +28,66 @@ class AppInitializer(private val activity: MainActivity) {
         with(activity) {
             sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
-            // Lock orientation to portrait for phones only
             if (!this@AppInitializer.isTablet()) {
                 requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             }
 
             setContentView(R.layout.activity_main)
 
-            // Initialize core managers
             initializeCoreManagers()
 
-            // Make status bar and navigation bar transparent (after setContentView, post to ensure window is ready)
             window.decorView.post {
                 systemBarManager.makeSystemBarsTransparent()
             }
 
-            // Initialize widget configuration manager
             widgetConfigurationManager = WidgetConfigurationManager(activity, sharedPreferences)
 
-            // Initialize widget visibility manager
             widgetVisibilityManager = WidgetVisibilityManager(activity, widgetConfigurationManager)
 
-            // Initialize result registry
             resultRegistry = MainActivityResultRegistry(activity)
 
-            // Initialize managers
             cacheManager = CacheManager(activity, packageManager, backgroundExecutor)
             permissionManager = PermissionManager(activity, sharedPreferences)
             systemBarManager = SystemBarManager(activity)
 
-            // Initialize new managers
             usageStatsCacheManager = UsageStatsCacheManager(sharedPreferences, backgroundExecutor)
             contactManager = ContactManager(activity, contentResolver, backgroundExecutor)
 
-            // Load usage stats cache immediately
             usageStatsCacheManager.loadCache()
 
-            // Load metadata cache from CacheManager asynchronously
             cacheManager.loadAppMetadataFromCacheAsync {
-                // Once metadata is loaded, refresh search manager if it's already initialized
                 if (activity.isAppSearchManagerInitialized()) {
                     updateAppSearchManager()
                 }
             }
 
-            // Check if user has given consent for app data collection
             if (!sharedPreferences.getBoolean("app_data_consent_given", false)) {
-                // Show disclosure activity
                 startActivity(Intent(activity, AppDataDisclosureActivity::class.java))
                 finish()
                 return@with
             }
 
-            // Initialize broadcast receiver manager
             initializeBroadcastReceivers()
 
-            // Initialize views and UI components
             initializeViews()
 
-            // Request necessary permissions only if coming from disclosure completion
             val requestPermissionsAfterDisclosure = activity.intent.getBooleanExtra("request_permissions_after_disclosure", false)
             if (requestPermissionsAfterDisclosure) {
-                // Post to handler to ensure views are fully initialized first
                 activity.handler.post {
-                    // Start feature tutorial first, then request permissions after tutorial completes
                     activity.startFeatureTutorialAndRequestPermissions()
                 }
             }
 
-            // Initialize time/date and weather widgets
             initializeTimeDateAndWeather()
 
-            // Optimization #7: Reduced delay to make launcher feel more responsive
             handler.postDelayed({
                 initializeDeferredWidgets()
-            }, 30) // Reduced from 100ms
+            }, 30) 
 
             appDockManager = AppDockManager(activity, sharedPreferences, views.appDock)
             
-            // Initialize widget theme manager
             widgetThemeManager = WidgetThemeManager(activity) { resources.configuration.uiMode }
             
-            // Initialize settings change coordinator
             settingsChangeCoordinator = SettingsChangeCoordinator(
                 activity = activity,
                 adapterProvider = { if (activity.isAdapterInitialized()) activity.adapter else null },
@@ -121,17 +96,13 @@ class AppInitializer(private val activity: MainActivity) {
                 widgetThemeManagerProvider = { activity.widgetThemeManager }
             )
             
-            // Apply theme-appropriate widget backgrounds
             applyThemeBasedWidgetBackgrounds()
             
-            // Apply background translucency
             settingsChangeCoordinator.applyBackgroundTranslucency()
             
-            // Initialize appList before using it (must be initialized before appListLoader)
             appList = mutableListOf()
             fullAppList = mutableListOf()
             
-            // Initialize ContactActionHandler (depends on searchBox and appList)
             contactActionHandler = ContactActionHandler(
                 activity, packageManager, contentResolver, views.searchBox, appList
             ) { handler ->
@@ -139,20 +110,19 @@ class AppInitializer(private val activity: MainActivity) {
                 if (activity.isActivityResultHandlerInitialized()) {
                     activity.activityResultHandler.setVoiceCommandHandler(handler)
                 }
-                // Update registry if it's already been fully initialized
+                
                 this@AppInitializer.updateRegistryDependencies()
             }
             
-            // Initialize app list manager
-            appListManager = AppListManager(appDockManager, favoriteAppManager, hiddenAppManager, cacheManager)
+            val workspaceManager = WorkspaceManager(sharedPreferences)
+            val workProfileManager = WorkProfileManager(activity, sharedPreferences)
+            appListManager = AppListManager(activity, appDockManager, favoriteAppManager, hiddenAppManager, cacheManager, workspaceManager, workProfileManager)
             
-            // Initialize app list loader
             appListLoader = AppListLoader(
                 activity, packageManager, appListManager, appDockManager,
                 cacheManager, webAppManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
             )
             
-            // Initialize AppListUIUpdater
             appListUIUpdater = AppListUIUpdater(
                 activity, views.recyclerView, if (activity.isAdapterInitialized()) activity.adapter else null,
                 appList, fullAppList, appListLoader, appListManager,
@@ -160,13 +130,10 @@ class AppInitializer(private val activity: MainActivity) {
             )
             appListUIUpdater.setupCallbacks()
 
-            // Refresh apps after appDockManager is fully initialized
             if (!appDockManager.getCurrentMode()) {
-                // If focus mode was disabled during init, refresh the apps
                 refreshAppsForFocusMode()
             }
 
-            // Initialize adapter immediately with empty/cached list for instant UI
             val viewPreference = sharedPreferences.getString("view_preference", "list")
             val isGridMode = viewPreference == "grid"
             adapter = AppAdapter(activity, appList, views.searchBox, isGridMode, activity)
@@ -174,23 +141,18 @@ class AppInitializer(private val activity: MainActivity) {
             views.recyclerView.visibility = View.VISIBLE
             updateFastScrollerVisibility()
             
-            // Update AppListUIUpdater with the initialized adapter
             appListUIUpdater.setAdapter(adapter)
 
-            // Initialize usage stats display manager (after adapter is created)
             usageStatsDisplayManager = UsageStatsDisplayManager(activity, usageStatsManager, views.weeklyUsageGraph, adapter, views.recyclerView, handler)
             
-            // Load apps in background - will update adapter when ready
             appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (activity.isAdapterInitialized()) activity.adapter else null)
             
-            // Optimization #7: Reduced delay for initialization
             handler.postDelayed({
                 if (!isFinishing && !isDestroyed && activity.isAppDockManagerInitialized()) {
                     updateAppSearchManager()
                 }
-            }, 50) // Reduced from 150ms
+            }, 50) 
 
-            // Initialize DrawerLayout and navigation
             val mainContent = findViewById<FrameLayout>(R.id.main_content)
             gestureHandler = GestureHandler(activity, views.drawerLayout, mainContent)
             screenPagerManager = ScreenPagerManager(activity, views.drawerLayout)
@@ -202,11 +164,9 @@ class AppInitializer(private val activity: MainActivity) {
             drawerManager.setup()
             navigationManager = drawerManager.navigationManager
             
-            // Initialize WidgetManager
             val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
             widgetManager = WidgetManager(activity, drawerContentLayout)
             
-            // Setup widget configuration button
             val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
             val widgetSettingsHeader = findViewById<LinearLayout>(R.id.widget_settings_header)
             val widgetSettingsText = findViewById<TextView>(R.id.widget_settings_text)
@@ -223,19 +183,16 @@ class AppInitializer(private val activity: MainActivity) {
                 showWidgetConfigurationDialog()
             }
 
-            // Initialize wallpaper manager helper
             val drawerWallpaper = findViewById<ImageView>(R.id.drawer_wallpaper_background)
             wallpaperManagerHelper = WallpaperManagerHelper(activity, views.wallpaperBackground, drawerWallpaper, backgroundExecutor)
             wallpaperManagerHelper.setWallpaperBackground()
             
-            // Set wallpaper for the new right drawer immediately
             if (activity.isWallpaperManagerHelperInitialized()) {
                 activity.refreshRightDrawerWallpaper()
             }
 
-            // Initialize voice search manager
             voiceSearchManager = VoiceSearchManager(activity, packageManager)
-            // Set up voice search button with new launcher API
+            
             views.voiceSearchButton.setOnClickListener {
                 voiceSearchManager.startVoiceSearchWithLauncher(resultRegistry.voiceSearchLauncher)
             }
@@ -245,56 +202,44 @@ class AppInitializer(private val activity: MainActivity) {
                 true
             }
             
-            // Initialize usage stats refresh manager
             usageStatsRefreshManager = UsageStatsRefreshManager(
                 activity, backgroundExecutor, usageStatsManager
             )
             
-            // Initialize activity result handler (voiceCommandHandler will be set later)
             activityResultHandler = ActivityResultHandler(
                 activity, views.searchBox, voiceCommandHandler, shareManager,
                 widgetManager, wallpaperManagerHelper,
                 onBlockBackGestures = { navigationManager.blockBackGesturesTemporarily() }
             )
             
-            // Initialize focus mode applier
             focusModeApplier = FocusModeApplier(
                 activity, backgroundExecutor, appListManager, appDockManager,
-                views.searchBox, views.voiceSearchButton, views.searchContainer, if (activity.isAdapterInitialized()) activity.adapter else null, fullAppList, appList,
+                views.searchContainer, if (activity.isAdapterInitialized()) activity.adapter else null, fullAppList, appList,
                 onUpdateAppSearchManager = { updateAppSearchManager() },
                 onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() }
             )
             
-            // Initialize service manager
             serviceManager = ServiceManager(activity, sharedPreferences)
 
-            // Initialize FinanceWidget using the new initializer
             FinanceWidgetInitializer(activity, sharedPreferences, 100)
                 .onInitialized { manager -> 
                     financeWidgetManager = manager
                 }
                 .initialize(handler)
             
-            // Start app usage monitor for daily limits
             ContextCompat.startForegroundService(activity, Intent(activity, AppUsageMonitor::class.java))
             
-            // Initialize background services through ServiceManager
             serviceManager.updateShakeDetectionService()
             serviceManager.updateScreenDimmerService()
             serviceManager.updateFlipToDndService()
             serviceManager.updateBackTapService()
             
-            // Initialize lifecycle manager
             initializeLifecycleManager()
 
-            // Finally, set all dependencies for result registry in one go
             this@AppInitializer.updateRegistryDependencies()
         }
     }
 
-    /**
-     * Updates the MainActivityResultRegistry with all current dependencies from MainActivity
-     */
     fun updateRegistryDependencies() {
         with(activity) {
             val deps = MainActivityResultRegistry.DependencyContainer(

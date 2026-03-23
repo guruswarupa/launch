@@ -5,18 +5,18 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.managers.AppLockManager
 
-/**
- * Handles app launching logic with lock and timer checks.
- * Extracted from MainActivity to reduce complexity.
- */
+
+
+
+
 class AppLauncher(
     private val activity: FragmentActivity,
     private val packageManager: PackageManager,
     private val appLockManager: AppLockManager,
 ) {
-    /**
-     * Launches an app directly without any checks.
-     */
+    
+
+
     fun launchApp(packageName: String, appName: String) {
         try {
             val intent = packageManager.getLaunchIntentForPackage(packageName)
@@ -30,9 +30,9 @@ class AppLauncher(
         }
     }
 
-    /**
-     * Launches an app with lock check.
-     */
+    
+
+
     fun launchAppWithLockCheck(packageName: String, appName: String) {
         if (appLockManager.isAppLocked(packageName)) {
             appLockManager.verifyPin { isAuthenticated ->

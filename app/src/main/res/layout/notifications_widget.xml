@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- Header -->
+    
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -45,7 +45,7 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <!-- Notification List -->
+    
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/notifications_recycler_view"
         android:layout_width="match_parent"
@@ -55,7 +55,7 @@
         android:paddingTop="4dp"
         android:paddingBottom="4dp" />
 
-    <!-- Empty State / Permission Prompt -->
+    
     <LinearLayout
         android:id="@+id/notifications_empty_state"
         android:layout_width="match_parent"
@@ -66,23 +66,23 @@
         android:visibility="gone">
 
         <TextView
+            android:id="@+id/notifications_empty_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/widget_text_secondary"
             android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="16dp" />
 
-        <TextView
-            android:id="@+id/notification_permission_prompt"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/request_notification_permission_button"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Enable notification access in settings"
-            android:textColor="@color/widget_text_secondary"
-            android:textSize="12sp"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="8dp"
-            android:background="?attr/selectableItemBackground" />
+            android:text="Grant Notification Access"
+            android:textColor="@color/widget_text"
+            android:textSize="14sp"
+            android:background="@drawable/button_neutral_ripple"
+            android:paddingVertical="12dp"
+            android:visibility="gone" />
     </LinearLayout>
 
 </LinearLayout>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        
+        <EditText
+            android:id="@+id/custom_dns_name"
+            style="@style/DialogEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="DNS Name (e.g., My Custom DNS)"
+            android:inputType="textCapSentences"
+            android:layout_marginBottom="16dp" />
+
+        
+        <EditText
+            android:id="@+id/custom_dns_hostname"
+            style="@style/DialogEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="DNS Hostname (e.g., dns.example.com)"
+            android:inputType="textNoSuggestions"
+            android:layout_marginBottom="16dp" />
+
+        
+        <EditText
+            android:id="@+id/custom_dns_description"
+            style="@style/DialogEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Description (optional)"
+            android:inputType="textCapSentences"
+            android:layout_marginBottom="16dp" />
+
+        
+        <CheckBox
+            android:id="@+id/ad_blocking_checkbox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="This DNS blocks ads and trackers"
+            android:textColor="@color/text"
+            android:buttonTint="@color/text" />
+
+    </LinearLayout>
+
+</ScrollView>
