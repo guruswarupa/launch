@@ -104,6 +104,13 @@ class WidgetSetupManager(
         temperatureWidget.initialize()
         return temperatureWidget
     }
+
+    fun setupWeatherForecastWidget(): WeatherForecastWidget {
+        val forecastContainer = activity.findViewById<android.widget.LinearLayout>(R.id.weather_forecast_widget_container)
+        val forecastWidget = WeatherForecastWidget(activity, forecastContainer)
+        forecastWidget.initialize()
+        return forecastWidget
+    }
     
     fun setupNoiseDecibelWidget(sharedPreferences: android.content.SharedPreferences): NoiseDecibelWidget {
         val noiseContainer = activity.findViewById<android.widget.LinearLayout>(R.id.noise_decibel_widget_container)

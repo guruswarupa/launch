@@ -365,7 +365,12 @@ class NotificationsWidget(rootView: View) {
                         actionTitle.contains("next") || actionTitle.contains("previous") ||
                         actionTitle.contains("prev")
                     }) ||
-                    (notification.category == Notification.CATEGORY_TRANSPORT)
+                    (notification.category == Notification.CATEGORY_TRANSPORT) ||
+                    extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true
+
+                if (isMediaPlayer) {
+                    return@forEach
+                }
                 
                 if (title.isNotEmpty() || text.isNotEmpty()) {
                     tempNotifications.add(
@@ -432,7 +437,7 @@ class NotificationsWidget(rootView: View) {
             
             adapter.notifyDataSetChanged()
             
-            val totalCount = activeNotifications.size
+            val totalCount = uniqueNotifications.size
             if (totalCount > 0) {
                 countBadge.text = if (totalCount > 99) "99+" else totalCount.toString()
                 countBadge.visibility = View.VISIBLE

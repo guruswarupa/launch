@@ -86,48 +86,48 @@ class AppLockManager(private val context: Context) {
     fun setupPin(callback: (Boolean) -> Unit) {
         val pinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "Enter 4-6 digit PIN"
+            hint = context.getString(R.string.app_lock_hint_enter_pin_range)
             DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Set App Lock PIN")
-            .setMessage("Choose a PIN to protect your apps")
+            .setTitle(R.string.app_lock_title_set_pin)
+            .setMessage(R.string.app_lock_message_choose_pin)
             .setDialogInputView(context, pinInput)
-            .setPositiveButton("Set PIN") { _, _ ->
+            .setPositiveButton(R.string.app_lock_action_set_pin) { _, _ ->
                 val pin = pinInput.text.toString()
                 if (pin.length in 4..6 && pin.all { it.isDigit() }) {
                     val confirmInput = EditText(context).apply {
                         inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-                        hint = "Confirm PIN"
+                        hint = context.getString(R.string.app_lock_hint_confirm_pin)
                         DialogStyler.styleInput(context, this)
                     }
 
                     AlertDialog.Builder(context, R.style.CustomDialogTheme)
-                        .setTitle("Confirm PIN")
+                        .setTitle(R.string.app_lock_title_confirm_pin)
                         .setDialogInputView(context, confirmInput)
-                        .setPositiveButton("Confirm") { _, _ ->
+                        .setPositiveButton(R.string.app_lock_action_confirm) { _, _ ->
                             val confirmPin = confirmInput.text.toString()
                             if (pin == confirmPin) {
                                 saveNewPin(pin)
                                 sharedPreferences.edit {
                                     putBoolean(PREF_IS_APP_LOCK_ENABLED, true)
                                 }
-                                Toast.makeText(context, "App Lock PIN set successfully!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, R.string.app_lock_pin_set_success, Toast.LENGTH_SHORT).show()
                                 callback(true)
                             } else {
-                                Toast.makeText(context, "PINs don't match. Try again.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, R.string.app_lock_pins_do_not_match, Toast.LENGTH_SHORT).show()
                                 callback(false)
                             }
                         }
-                        .setNegativeButton("Cancel") { _, _ -> callback(false) }
+                        .setNegativeButton(R.string.cancel_button) { _, _ -> callback(false) }
                         .show()
                 } else {
-                    Toast.makeText(context, "PIN must be 4-6 digits", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.app_lock_pin_length_error, Toast.LENGTH_SHORT).show()
                     callback(false)
                 }
             }
-            .setNegativeButton("Cancel") { _, _ -> callback(false) }
+            .setNegativeButton(R.string.cancel_button) { _, _ -> callback(false) }
             .show()
     }
 
@@ -157,15 +157,15 @@ class AppLockManager(private val context: Context) {
         
         val activity = context as? FragmentActivity
         if (activity == null) {
-            Toast.makeText(context, "Biometric authentication not available in this context. Using PIN.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.app_lock_biometric_unavailable_context, Toast.LENGTH_SHORT).show()
             showPinPrompt(callback)
             return
         }
 
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Biometric Authentication")
-            .setDescription("Authenticate with your fingerprint to unlock")
-            .setNegativeButtonText("Use PIN")
+            .setTitle(context.getString(R.string.app_lock_biometric_title))
+            .setDescription(context.getString(R.string.app_lock_biometric_description))
+            .setNegativeButtonText(context.getString(R.string.app_lock_action_use_pin))
             .build()
 
         val biometricPrompt = BiometricPrompt(
@@ -182,7 +182,7 @@ class AppLockManager(private val context: Context) {
 
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
-                    Toast.makeText(context, "Biometric authentication failed", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.app_lock_biometric_failed, Toast.LENGTH_SHORT).show()
                     
                 }
 
@@ -193,7 +193,11 @@ class AppLockManager(private val context: Context) {
                         
                         showPinPrompt(callback)
                     } else {
-                        Toast.makeText(context, "Biometric authentication error: $errString", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.app_lock_biometric_error, errString),
+                            Toast.LENGTH_SHORT
+                        ).show()
                         callback(false)
                     }
                 }
@@ -206,15 +210,15 @@ class AppLockManager(private val context: Context) {
     private fun showPinPrompt(callback: (Boolean) -> Unit) {
         val pinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "Enter PIN"
+            hint = context.getString(R.string.app_lock_hint_enter_pin)
             DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Enter PIN")
-            .setMessage("Enter your PIN to unlock this app")
+            .setTitle(R.string.app_lock_title_enter_pin)
+            .setMessage(R.string.app_lock_message_unlock)
             .setDialogInputView(context, pinInput)
-            .setPositiveButton("Unlock") { _, _ ->
+            .setPositiveButton(R.string.app_lock_action_unlock) { _, _ ->
                 val enteredPin = pinInput.text.toString()
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
 
@@ -225,11 +229,11 @@ class AppLockManager(private val context: Context) {
                     }
                     callback(true)
                 } else {
-                    Toast.makeText(context, "Incorrect PIN", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.app_lock_incorrect_pin, Toast.LENGTH_SHORT).show()
                     callback(false)
                 }
             }
-            .setNegativeButton("Cancel") { _, _ -> callback(false) }
+            .setNegativeButton(R.string.cancel_button) { _, _ -> callback(false) }
             .setCancelable(false)
             .show()
     }
@@ -301,26 +305,26 @@ class AppLockManager(private val context: Context) {
 
         val oldPinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "Enter current PIN"
+            hint = context.getString(R.string.app_lock_hint_enter_current_pin)
             DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Change PIN")
-            .setMessage("Enter your current PIN")
+            .setTitle(R.string.app_lock_title_change_pin)
+            .setMessage(R.string.app_lock_message_enter_current_pin)
             .setDialogInputView(context, oldPinInput)
-            .setPositiveButton("Continue") { _, _ ->
+            .setPositiveButton(R.string.app_lock_action_continue) { _, _ ->
                 val oldPin = oldPinInput.text.toString()
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
 
                 if (hashPin(oldPin) == storedPinHash) {
                     setupPin(callback)
                 } else {
-                    Toast.makeText(context, "Incorrect current PIN", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.app_lock_incorrect_current_pin, Toast.LENGTH_SHORT).show()
                     callback(false)
                 }
             }
-            .setNegativeButton("Cancel") { _, _ -> callback(false) }
+            .setNegativeButton(R.string.cancel_button) { _, _ -> callback(false) }
             .show()
     }
 
@@ -335,29 +339,29 @@ class AppLockManager(private val context: Context) {
 
         val oldPinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "Enter current PIN"
+            hint = context.getString(R.string.app_lock_hint_enter_current_pin)
             DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Reset App Lock")
-            .setMessage("Enter your current PIN to reset App Lock")
+            .setTitle(R.string.app_lock_title_reset)
+            .setMessage(R.string.app_lock_message_reset)
             .setDialogInputView(context, oldPinInput)
-            .setPositiveButton("Continue") { _, _ ->
+            .setPositiveButton(R.string.app_lock_action_continue) { _, _ ->
                 val oldPin = oldPinInput.text.toString()
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
 
                 if (hashPin(oldPin) == storedPinHash) {
                     
                     resetAppLockData()
-                    Toast.makeText(context, "App Lock reset successfully!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.app_lock_reset_success, Toast.LENGTH_SHORT).show()
                     callback(true) 
                 } else {
-                    Toast.makeText(context, "Incorrect current PIN", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.app_lock_incorrect_current_pin, Toast.LENGTH_SHORT).show()
                     callback(false) 
                 }
             }
-            .setNegativeButton("Cancel") { _, _ -> callback(false) }
+            .setNegativeButton(R.string.cancel_button) { _, _ -> callback(false) }
             .show()
     }
 

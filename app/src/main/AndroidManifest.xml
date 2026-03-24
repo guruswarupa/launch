@@ -146,6 +146,12 @@
             android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
 
+        <activity
+            android:name=".ui.activities.RssFeedSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:excludeFromRecents="true" />
+
         <service
             android:name=".managers.AppUsageMonitor"
             android:enabled="true"

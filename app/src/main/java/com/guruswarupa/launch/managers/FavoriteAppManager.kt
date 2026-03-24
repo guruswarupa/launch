@@ -3,8 +3,9 @@ package com.guruswarupa.launch.managers
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import android.util.Log
+import javax.inject.Inject
 
-class FavoriteAppManager(private val sharedPreferences: SharedPreferences) {
+class FavoriteAppManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
     
     companion object {
         private const val FAVORITE_APPS_KEY = "favorite_apps"

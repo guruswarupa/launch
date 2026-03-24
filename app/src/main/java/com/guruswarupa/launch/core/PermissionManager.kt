@@ -116,16 +116,16 @@ class PermissionManager(
             if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
                 isRequestingPermissions = true
                 val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
-                    .setTitle("App Usage Statistics")
-                    .setMessage("To display your most used apps and track your digital wellbeing, Launch needs permission to access usage stats. This data is processed locally and never leaves your device.")
-                    .setPositiveButton("Grant Access") { _, _ ->
+                    .setTitle(R.string.usage_stats_permission_title)
+                    .setMessage(R.string.usage_stats_permission_message)
+                    .setPositiveButton(R.string.usage_stats_permission_grant) { _, _ ->
                         
                         sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", true) }
                         isRequestingPermissions = false
                         val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
                         activity.startActivity(intent)
                     }
-                    .setNegativeButton("Skip") { _, _ ->
+                    .setNegativeButton(R.string.usage_stats_permission_skip) { _, _ ->
                         sharedPreferences.edit { putBoolean("usage_stats_permission_denied", true) }
                         isRequestingPermissions = false
                         onComplete()

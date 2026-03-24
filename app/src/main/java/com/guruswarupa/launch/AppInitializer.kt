@@ -14,6 +14,8 @@ import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.core.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.managers.*
+import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.ui.RssFeedPage
 import com.guruswarupa.launch.ui.activities.AppDataDisclosureActivity
 import com.guruswarupa.launch.widgets.*
 
@@ -26,7 +28,8 @@ class AppInitializer(private val activity: MainActivity) {
     @SuppressLint("UnspecifiedRegisterReceiverFlag", "SourceLockedOrientationActivity")
     fun initialize() {
         with(activity) {
-            sharedPreferences = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+            sharedPreferences = injectedSharedPreferences
+            backgroundExecutor = injectedBackgroundExecutor
 
             if (!this@AppInitializer.isTablet()) {
                 requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -36,27 +39,24 @@ class AppInitializer(private val activity: MainActivity) {
 
             initializeCoreManagers()
 
-            window.decorView.post {
-                systemBarManager.makeSystemBarsTransparent()
-            }
-
             widgetConfigurationManager = WidgetConfigurationManager(activity, sharedPreferences)
 
             widgetVisibilityManager = WidgetVisibilityManager(activity, widgetConfigurationManager)
 
             resultRegistry = MainActivityResultRegistry(activity)
 
-            cacheManager = CacheManager(activity, packageManager, backgroundExecutor)
+            cacheManager = injectedCacheManager
             permissionManager = PermissionManager(activity, sharedPreferences)
             systemBarManager = SystemBarManager(activity)
 
             usageStatsCacheManager = UsageStatsCacheManager(sharedPreferences, backgroundExecutor)
             contactManager = ContactManager(activity, contentResolver, backgroundExecutor)
+            rssFeedManager = RssFeedManager(activity, sharedPreferences, backgroundExecutor)
 
             usageStatsCacheManager.loadCache()
 
             cacheManager.loadAppMetadataFromCacheAsync {
-                if (activity.isAppSearchManagerInitialized()) {
+                if (activity.appSearchManagerOrNull != null) {
                     updateAppSearchManager()
                 }
             }
@@ -66,9 +66,6 @@ class AppInitializer(private val activity: MainActivity) {
                 finish()
                 return@with
             }
-
-            initializeBroadcastReceivers()
-
             initializeViews()
 
             val requestPermissionsAfterDisclosure = activity.intent.getBooleanExtra("request_permissions_after_disclosure", false)
@@ -80,9 +77,11 @@ class AppInitializer(private val activity: MainActivity) {
 
             initializeTimeDateAndWeather()
 
-            handler.postDelayed({
-                initializeDeferredWidgets()
-            }, 30) 
+            if (sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)) {
+                handler.postDelayed({
+                    initializeDeferredWidgets()
+                }, 30)
+            }
 
             appDockManager = AppDockManager(activity, sharedPreferences, views.appDock)
             
@@ -90,10 +89,10 @@ class AppInitializer(private val activity: MainActivity) {
             
             settingsChangeCoordinator = SettingsChangeCoordinator(
                 activity = activity,
-                adapterProvider = { if (activity.isAdapterInitialized()) activity.adapter else null },
-                appDockManagerProvider = { if (activity.isAppDockManagerInitialized()) activity.appDockManager else null },
-                widgetSetupManagerProvider = { activity.widgetSetupManager },
-                widgetThemeManagerProvider = { activity.widgetThemeManager }
+                adapterProvider = { activity.adapterOrNull },
+                appDockManagerProvider = { activity.appDockManagerOrNull },
+                widgetSetupManagerProvider = { activity.widgetSetupManagerOrNull },
+                widgetThemeManagerProvider = { activity.widgetThemeManagerOrNull }
             )
             
             applyThemeBasedWidgetBackgrounds()
@@ -107,16 +106,13 @@ class AppInitializer(private val activity: MainActivity) {
                 activity, packageManager, contentResolver, views.searchBox, appList
             ) { handler ->
                 voiceCommandHandler = handler
-                if (activity.isActivityResultHandlerInitialized()) {
-                    activity.activityResultHandler.setVoiceCommandHandler(handler)
-                }
+                activity.activityResultHandlerOrNull?.setVoiceCommandHandler(handler)
                 
                 this@AppInitializer.updateRegistryDependencies()
             }
             
-            val workspaceManager = WorkspaceManager(sharedPreferences)
-            val workProfileManager = WorkProfileManager(activity, sharedPreferences)
-            appListManager = AppListManager(activity, appDockManager, favoriteAppManager, hiddenAppManager, cacheManager, workspaceManager, workProfileManager)
+            appListManager = injectedAppListManager
+            appListManager.attach(appDockManager)
             
             appListLoader = AppListLoader(
                 activity, packageManager, appListManager, appDockManager,
@@ -124,7 +120,7 @@ class AppInitializer(private val activity: MainActivity) {
             )
             
             appListUIUpdater = AppListUIUpdater(
-                activity, views.recyclerView, if (activity.isAdapterInitialized()) activity.adapter else null,
+                activity, views.recyclerView, activity.adapterOrNull,
                 appList, fullAppList, appListLoader, appListManager,
                 backgroundExecutor, views.searchBox
             )
@@ -145,18 +141,25 @@ class AppInitializer(private val activity: MainActivity) {
 
             usageStatsDisplayManager = UsageStatsDisplayManager(activity, usageStatsManager, views.weeklyUsageGraph, adapter, views.recyclerView, handler)
             
-            appListLoader.loadApps(forceRefresh = false, fullAppList, appList, if (activity.isAdapterInitialized()) activity.adapter else null)
+            appListLoader.loadApps(forceRefresh = false, fullAppList, appList, activity.adapterOrNull)
             
             handler.postDelayed({
-                if (!isFinishing && !isDestroyed && activity.isAppDockManagerInitialized()) {
+                if (!isFinishing && !isDestroyed && activity.appDockManagerOrNull != null) {
                     updateAppSearchManager()
                 }
             }, 50) 
 
+            val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
+            widgetManager = WidgetManager(activity, drawerContentLayout)
+
             val mainContent = findViewById<FrameLayout>(R.id.main_content)
             gestureHandler = GestureHandler(activity, views.drawerLayout, mainContent)
             screenPagerManager = ScreenPagerManager(activity, views.drawerLayout)
-            
+
+            findViewById<View?>(R.id.rss_feed_page)?.let { rssPageView ->
+                RssFeedPage(activity, rssPageView).setup()
+            }
+
             drawerManager = DrawerManager(
                 activity, screenPagerManager, gestureHandler, usageStatsDisplayManager, activityInitializer,
                 themeCheckCallback = { checkAndUpdateThemeIfNeeded() }
@@ -164,32 +167,24 @@ class AppInitializer(private val activity: MainActivity) {
             drawerManager.setup()
             navigationManager = drawerManager.navigationManager
             
-            val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
-            widgetManager = WidgetManager(activity, drawerContentLayout)
-            
-            val widgetConfigButton = findViewById<ImageButton>(R.id.widget_config_button)
-            val widgetSettingsHeader = findViewById<LinearLayout>(R.id.widget_settings_header)
-            val widgetSettingsText = findViewById<TextView>(R.id.widget_settings_text)
-            
-            widgetConfigButton.setOnClickListener {
+            findViewById<ImageButton?>(R.id.widget_config_button)?.setOnClickListener {
                 showWidgetConfigurationDialog()
             }
-            
-            widgetSettingsHeader.setOnClickListener {
+
+            findViewById<LinearLayout?>(R.id.widget_settings_header)?.setOnClickListener {
                 showWidgetConfigurationDialog()
             }
-            
-            widgetSettingsText.setOnClickListener {
+
+            findViewById<TextView?>(R.id.widget_settings_text)?.setOnClickListener {
                 showWidgetConfigurationDialog()
             }
 
             val drawerWallpaper = findViewById<ImageView>(R.id.drawer_wallpaper_background)
-            wallpaperManagerHelper = WallpaperManagerHelper(activity, views.wallpaperBackground, drawerWallpaper, backgroundExecutor)
+            val rssWallpaper = findViewById<ImageView>(R.id.rss_wallpaper_background)
+            wallpaperManagerHelper = WallpaperManagerHelper(activity, views.wallpaperBackground, drawerWallpaper, backgroundExecutor, rssWallpaper)
             wallpaperManagerHelper.setWallpaperBackground()
             
-            if (activity.isWallpaperManagerHelperInitialized()) {
-                activity.refreshRightDrawerWallpaper()
-            }
+            activity.refreshRightDrawerWallpaper()
 
             voiceSearchManager = VoiceSearchManager(activity, packageManager)
             
@@ -214,7 +209,7 @@ class AppInitializer(private val activity: MainActivity) {
             
             focusModeApplier = FocusModeApplier(
                 activity, backgroundExecutor, appListManager, appDockManager,
-                views.searchContainer, if (activity.isAdapterInitialized()) activity.adapter else null, fullAppList, appList,
+                views.searchContainer, activity.adapterOrNull, fullAppList, appList,
                 onUpdateAppSearchManager = { updateAppSearchManager() },
                 onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() }
             )
@@ -235,24 +230,30 @@ class AppInitializer(private val activity: MainActivity) {
             serviceManager.updateBackTapService()
             
             initializeLifecycleManager()
+            initializeBroadcastReceivers()
+            lifecycleManager.setBroadcastReceiverManager(broadcastReceiverManager)
 
             this@AppInitializer.updateRegistryDependencies()
+
+            window.decorView.post {
+                systemBarManager.makeSystemBarsTransparent()
+            }
         }
     }
 
     fun updateRegistryDependencies() {
         with(activity) {
             val deps = MainActivityResultRegistry.DependencyContainer(
-                widgetManager = if (isWidgetManagerInitialized()) widgetManager else null,
-                widgetVisibilityManager = if (isWidgetVisibilityManagerInitialized()) widgetVisibilityManager else null,
-                widgetConfigurationManager = if (isWidgetConfigurationManagerInitialized()) widgetConfigurationManager else null,
+                widgetManager = widgetManager,
+                widgetVisibilityManager = widgetVisibilityManager,
+                widgetConfigurationManager = widgetConfigurationManager,
                 voiceCommandHandler = voiceCommandHandler,
-                activityResultHandler = if (isActivityResultHandlerInitialized()) activityResultHandler else null,
+                activityResultHandler = activityResultHandlerOrNull,
                 packageManager = packageManager,
                 contentResolver = contentResolver,
                 searchBox = if (views.isSearchBoxInitialized()) views.searchBox else null,
-                appList = if (isAppListInitialized()) appList else null,
-                widgetLifecycleCoordinator = if (isWidgetLifecycleCoordinatorInitialized()) widgetLifecycleCoordinator else null
+                appList = appListOrNull,
+                widgetLifecycleCoordinator = widgetLifecycleCoordinator
             )
             resultRegistry.setDependencies(deps)
         }

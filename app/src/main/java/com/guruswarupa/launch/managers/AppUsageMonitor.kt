@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.widget.Toast
 import com.guruswarupa.launch.managers.AppTimerManager
+import com.guruswarupa.launch.R
 
 class AppUsageMonitor : Service() {
     private val handler = Handler(Looper.getMainLooper())
@@ -68,7 +69,7 @@ class AppUsageMonitor : Service() {
             
             if (appTimerManager.isAppOverDailyLimit(currentApp)) {
                 handler.post {
-                    Toast.makeText(this, "Daily limit reached for this app.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@AppUsageMonitor, R.string.daily_usage_limit_reached, Toast.LENGTH_LONG).show()
                     appTimerManager.returnToLauncher(currentApp)
                 }
             }

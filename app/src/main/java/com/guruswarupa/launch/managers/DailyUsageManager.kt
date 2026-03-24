@@ -139,16 +139,16 @@ class DailyUsageManager(private val context: Context) {
         val currentLimit = getDailyLimit(packageName)
         val input = EditText(context).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            hint = "Enter minutes (0 to disable)"
+            hint = context.getString(R.string.daily_usage_hint_minutes_disable)
             setText(if (currentLimit > 0) (currentLimit / 60000).toString() else "")
             DialogStyler.styleInput(context, this)
         }
 
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Set Daily Limit for $appName")
-            .setMessage("Enter daily usage limit in minutes:")
+            .setTitle(context.getString(R.string.daily_usage_set_limit_title, appName))
+            .setMessage(R.string.daily_usage_set_limit_message)
             .setDialogInputView(context, input)
-            .setPositiveButton("Set") { _, _ ->
+            .setPositiveButton(R.string.daily_usage_action_set) { _, _ ->
                 try {
                     val minutes = input.text.toString().toLongOrNull() ?: 0L
                     val limitMs = minutes * 60000L
@@ -157,14 +157,18 @@ class DailyUsageManager(private val context: Context) {
                     onLimitSet(limitMs)
                     Toast.makeText(
                         context,
-                        if (limitMs > 0) "Daily limit set to ${formatTime(limitMs)}" else "Daily limit disabled",
+                        if (limitMs > 0) {
+                            context.getString(R.string.daily_usage_limit_set, formatTime(limitMs))
+                        } else {
+                            context.getString(R.string.daily_usage_limit_disabled)
+                        },
                         Toast.LENGTH_SHORT
                     ).show()
                 } catch (_: NumberFormatException) {
-                    Toast.makeText(context, "Please enter a valid number", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.daily_usage_invalid_number, Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Cancel") { dialog, _ ->
+            .setNegativeButton(R.string.cancel_button) { dialog, _ ->
                 dialog.dismiss()
             }
             .show()

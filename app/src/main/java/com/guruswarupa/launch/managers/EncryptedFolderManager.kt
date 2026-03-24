@@ -27,6 +27,7 @@ class EncryptedFolderManager(private val context: Context) {
         private const val KEY_LENGTH = 256
         private const val VAULT_DIR = "encrypted_vault"
         private const val THUMBS_DIR = "vault_thumbs"
+        private const val TEMP_DIR = "vault_temp"
         private const val CONFIG_FILE = ".vault_config"
         
         
@@ -156,6 +157,54 @@ class EncryptedFolderManager(private val context: Context) {
         return javax.crypto.CipherInputStream(fis, cipher)
     }
 
+    fun decryptToOutputStream(fileName: String, outputStream: OutputStream) {
+        val key = masterKey ?: throw IllegalStateException("Vault is locked")
+        val sourceFile = File(encryptedFolder, fileName)
+
+        FileInputStream(sourceFile).use { inputStream ->
+            val iv = ByteArray(IV_SIZE)
+            if (inputStream.read(iv) != IV_SIZE) {
+                throw IOException("Invalid file format")
+            }
+
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+
+            val bufferSize = DEFAULT_BUFFER_SIZE * 8
+            var previousBuffer = ByteArray(bufferSize)
+            var previousCount = inputStream.read(previousBuffer)
+
+            if (previousCount == -1) {
+                val finalBytes = cipher.doFinal()
+                if (finalBytes.isNotEmpty()) {
+                    outputStream.write(finalBytes)
+                }
+                outputStream.flush()
+                return
+            }
+
+            while (true) {
+                val currentBuffer = ByteArray(bufferSize)
+                val currentCount = inputStream.read(currentBuffer)
+                if (currentCount == -1) {
+                    val finalBytes = cipher.doFinal(previousBuffer, 0, previousCount)
+                    if (finalBytes.isNotEmpty()) {
+                        outputStream.write(finalBytes)
+                    }
+                    break
+                }
+
+                val updatedBytes = cipher.update(previousBuffer, 0, previousCount)
+                if (updatedBytes != null && updatedBytes.isNotEmpty()) {
+                    outputStream.write(updatedBytes)
+                }
+                previousBuffer = currentBuffer
+                previousCount = currentCount
+            }
+            outputStream.flush()
+        }
+    }
+
     fun deleteFile(fileName: String): Boolean {
         File(thumbnailFolder, "$fileName.thumb").delete()
         return File(encryptedFolder, fileName).delete()
@@ -187,22 +236,34 @@ class EncryptedFolderManager(private val context: Context) {
     }
 
     fun decryptToCache(fileName: String): File {
-        val cacheDir = File(context.cacheDir, "vault_temp")
+        val sourceFile = File(encryptedFolder, fileName)
+        val cacheDir = File(context.cacheDir, TEMP_DIR)
         if (!cacheDir.exists()) cacheDir.mkdirs()
         
         val tempFile = File(cacheDir, fileName)
+        if (tempFile.exists() && tempFile.length() > 0L && tempFile.lastModified() >= sourceFile.lastModified()) {
+            return tempFile
+        }
         if (tempFile.exists()) tempFile.delete()
 
-        getDecryptedInputStream(fileName).use { inputStream ->
+        try {
             tempFile.outputStream().use { outputStream ->
-                inputStream.copyTo(outputStream)
+                decryptToOutputStream(fileName, outputStream)
             }
+            if (tempFile.length() <= 0L) {
+                tempFile.delete()
+                throw IOException("Decrypted file is empty")
+            }
+            tempFile.setLastModified(sourceFile.lastModified())
+            return tempFile
+        } catch (e: Exception) {
+            tempFile.delete()
+            throw e
         }
-        return tempFile
     }
 
     fun clearCache() {
-        val cacheDir = File(context.cacheDir, "vault_temp")
+        val cacheDir = File(context.cacheDir, TEMP_DIR)
         if (cacheDir.exists()) {
             cacheDir.deleteRecursively()
         }

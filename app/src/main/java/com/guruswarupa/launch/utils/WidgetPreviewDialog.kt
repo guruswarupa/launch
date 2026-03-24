@@ -97,6 +97,7 @@ class WidgetPreviewDialog(
             "physical_activity_widget_container" -> "Track steps and physical activity"
             "pressure_widget_container" -> "Atmospheric pressure monitoring"
             "temperature_widget_container" -> "Temperature monitoring and alerts"
+            "weather_forecast_widget_container" -> "Multi-day forecasts, hourly breakdowns, and weather alerts"
             "noise_decibel_widget_container" -> "Sound level measurement in decibels"
             "workout_widget_container" -> "Workout tracking and fitness metrics"
             "todo_recycler_view" -> "Task management and to-do lists"

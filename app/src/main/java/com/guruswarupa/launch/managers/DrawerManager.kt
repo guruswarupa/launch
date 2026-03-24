@@ -32,7 +32,7 @@ class DrawerManager(
         navigationManager = NavigationManager(screenPagerManager, gestureHandler, handler)
         screenPagerManager.setOnPageChanged { page ->
             themeCheckCallback()
-            if (page == ScreenPagerManager.Page.LEFT) {
+            if (page == ScreenPagerManager.Page.WIDGETS) {
                 handler.post { usageStatsDisplayManager.loadWeeklyUsageData() }
             }
         }

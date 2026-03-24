@@ -33,6 +33,7 @@ object Constants {
         const val TYPOGRAPHY_FONT_INTENSITY = "typography_font_intensity"
         const val TYPOGRAPHY_FONT_COLOR = "typography_font_color"
         const val CLOCK_24_HOUR_FORMAT = "clock_24_hour_format"
+        const val SHOW_FAST_SCROLLER = "show_fast_scroller"
         const val GRID_COLUMNS = "grid_columns"
         const val SHOW_APP_NAME_IN_GRID = "show_app_name_in_grid"
         const val ICON_STYLE = "icon_style"
@@ -40,8 +41,22 @@ object Constants {
         const val GRAYSCALE_ICONS_ENABLED = "grayscale_icons_enabled"
         const val BACKGROUND_TRANSLUCENCY = "background_translucency"
         const val DEFAULT_HOME_PAGE_INDEX = "default_home_page_index"
+        const val DEFAULT_HOME_PAGE_TARGET = "default_home_page_target"
         const val WEB_APPS = "web_apps"
         const val GRAYSCALE_MODE_ENABLED = "grayscale_mode_enabled"
+        const val RSS_PAGE_ENABLED = "rss_page_enabled"
+        const val WIDGETS_PAGE_ENABLED = "widgets_page_enabled"
+        const val RSS_FEED_URLS = "rss_feed_urls"
+        const val RSS_CUSTOM_FEED_URLS = "rss_custom_feed_urls"
+        const val RSS_FEED_CACHE = "rss_feed_cache"
+        const val RSS_FEED_CACHE_TIME = "rss_feed_cache_time"
+        const val RSS_REFRESH_INTERVAL_MINUTES = "rss_refresh_interval_minutes"
+        const val REVIEW_FIRST_USE_AT = "review_first_use_at"
+        const val REVIEW_NEXT_PROMPT_AT = "review_next_prompt_at"
+        const val REVIEW_PROMPT_COUNT = "review_prompt_count"
+        const val REVIEW_CTA_USED = "review_cta_used"
+        const val DONATION_PROMPT_SHOWN = "donation_prompt_shown"
+        const val SUPPORTER_BADGE_EARNED = "supporter_badge_earned"
         
         
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"
@@ -50,7 +65,7 @@ object Constants {
 
     }
 
-    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "#FFFFFFF"
+    const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "#FFFFFF"
 
     
     const val FILE_PROVIDER_AUTHORITY_SUFFIX = ".fileprovider"
@@ -62,7 +77,7 @@ object Constants {
     const val APK_EXTENSION = ".apk"
     
     
-    const val MIME_TYPE_APK = "application_vnd.android.package-archive"
+    const val MIME_TYPE_APK = "application/vnd.android.package-archive"
     const val MIME_TYPE_ALL = "*/*"
     
     const val APP_NAME_SANITIZE_REGEX = "[^a-zA-Z0-9.-]"

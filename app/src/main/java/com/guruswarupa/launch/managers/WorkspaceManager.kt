@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
+import javax.inject.Inject
 
 data class Workspace(
     val id: String,
@@ -11,7 +12,7 @@ data class Workspace(
     val appPackageNames: Set<String>
 )
 
-class WorkspaceManager(private val sharedPreferences: SharedPreferences) {
+class WorkspaceManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
     
     companion object {
         private const val WORKSPACES_KEY = "workspaces"

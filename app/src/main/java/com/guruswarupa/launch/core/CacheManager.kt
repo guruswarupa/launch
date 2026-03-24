@@ -8,17 +8,22 @@ import android.content.pm.ResolveInfo
 import android.os.Handler
 import android.os.Looper
 import android.os.UserManager
+import com.guruswarupa.launch.di.BackgroundExecutor
 import com.guruswarupa.launch.models.AppMetadata
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.ExecutorService
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CacheManager(
-    private val context: Context,
-    private val packageManager: PackageManager,
-    private val backgroundExecutor: java.util.concurrent.ExecutorService
+@Singleton
+class CacheManager @Inject constructor(
+    @ApplicationContext private val context: Context,
+    @BackgroundExecutor private val backgroundExecutor: ExecutorService
 ) {
     companion object {
         private const val CACHE_DURATION = 300000L 
@@ -28,6 +33,7 @@ class CacheManager(
     private val appListCacheTimeFile: File = File(context.cacheDir, "app_list_cache_time.txt")
     private val appMetadataCacheFile: File = File(context.cacheDir, "app_metadata_cache.dat")
     private val appListVersionFile: File = File(context.cacheDir, "app_list_version.txt")
+    private val packageManager: PackageManager = context.packageManager
 
     private val appMetadataCache = mutableMapOf<String, AppMetadata>()
     private var cachedAppListVersion: String? = null

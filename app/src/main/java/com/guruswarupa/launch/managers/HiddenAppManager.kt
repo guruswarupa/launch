@@ -3,12 +3,13 @@ package com.guruswarupa.launch.managers
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import android.util.Log
+import javax.inject.Inject
 
 
 
 
 
-class HiddenAppManager(private val sharedPreferences: SharedPreferences) {
+class HiddenAppManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
     
     companion object {
         private const val HIDDEN_APPS_KEY = "hidden_apps"

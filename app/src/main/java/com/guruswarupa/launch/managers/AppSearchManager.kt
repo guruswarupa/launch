@@ -1,51 +1,77 @@
 package com.guruswarupa.launch.managers
 
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
-import android.os.Handler
-import android.os.Looper
 import android.os.Environment
 import android.widget.AutoCompleteTextView
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.models.AppMetadata
 import com.guruswarupa.launch.utils.AndroidSettingsHelper
+import dagger.hilt.android.qualifiers.ActivityContext
+import dagger.hilt.android.scopes.ActivityScoped
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.objecthunter.exp4j.ExpressionBuilder
 import java.io.File
-import java.util.concurrent.Executors
+import javax.inject.Inject
 
-class AppSearchManager(
-    private val packageManager: PackageManager,
-    private val fullAppList: MutableList<ResolveInfo>,
-    private var homeAppList: List<ResolveInfo>,
-    private var adapter: AppAdapter?,
-    private val searchBox: AutoCompleteTextView,
-    private var contactsList: List<String>,
-    private val context: android.content.Context,
-    private val appMetadataCache: Map<String, AppMetadata>? = null,
-    private val isAppFiltered: ((String) -> Boolean)? = null,
-    private val isFocusModeActive: (() -> Boolean)? = null
+@ActivityScoped
+class AppSearchManager @Inject constructor(
+    @ActivityContext private val context: Context
 ) {
-    private val handler = Handler(Looper.getMainLooper())
-    private val searchExecutor = Executors.newSingleThreadExecutor()
-    private val debounceRunnable = Runnable {
-        val query = searchBox.text.toString()
-        searchExecutor.execute {
-            filterAppsAndContacts(query)
-        }
-    }
+    private val packageManager: PackageManager = context.packageManager
+    private val fullAppList = mutableListOf<ResolveInfo>()
+    private var homeAppList: List<ResolveInfo> = emptyList()
+    private var adapter: AppAdapter? = null
+    private var searchBox: AutoCompleteTextView? = null
+    private var contactsList: List<String> = emptyList()
+    private var appMetadataCache: Map<String, AppMetadata>? = null
+    private var isAppFiltered: ((String) -> Boolean)? = null
+    private var isFocusModeActive: (() -> Boolean)? = null
+    private val lifecycleScope = (context as LifecycleOwner).lifecycleScope
+    private var searchJob: Job? = null
+    private var searchListenerAttached = false
 
     private val appLabelCache = mutableMapOf<String, String>()
     private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
     private val dataLock = Any()
 
-    init {
+    fun configure(
+        fullAppList: MutableList<ResolveInfo>,
+        homeAppList: List<ResolveInfo>,
+        adapter: AppAdapter?,
+        searchBox: AutoCompleteTextView,
+        contactsList: List<String>,
+        appMetadataCache: Map<String, AppMetadata>?,
+        isAppFiltered: ((String) -> Boolean)?,
+        isFocusModeActive: (() -> Boolean)?
+    ) {
+        this.appMetadataCache = appMetadataCache
+        this.isAppFiltered = isAppFiltered
+        this.isFocusModeActive = isFocusModeActive
+        this.searchBox = searchBox
+        this.adapter = adapter
+        updateData(fullAppList, homeAppList, contactsList)
+        attachSearchListener(searchBox)
+    }
+
+    private fun attachSearchListener(searchBox: AutoCompleteTextView) {
+        if (searchListenerAttached) {
+            return
+        }
+        searchListenerAttached = true
         searchBox.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                handler.removeCallbacks(debounceRunnable)
-                handler.postDelayed(debounceRunnable, 10)
+                scheduleSearch(debounceMs = 10)
             }
 
             override fun afterTextChanged(s: android.text.Editable?) {}
@@ -128,11 +154,34 @@ class AppSearchManager(
     }
 
     private fun refreshSearch() {
-        handler.removeCallbacks(debounceRunnable)
-        handler.post(debounceRunnable)
+        if (searchBox == null) {
+            return
+        }
+        scheduleSearch()
     }
 
     fun filterAppsAndContacts(query: String) {
+        scheduleSearch(query = query)
+    }
+
+    private fun scheduleSearch(query: String? = null, debounceMs: Long = 0L) {
+        val configuredSearchBox = searchBox ?: return
+        searchJob?.cancel()
+        searchJob = lifecycleScope.launch {
+            if (debounceMs > 0) {
+                delay(debounceMs)
+            }
+            val currentQuery = query ?: configuredSearchBox.text?.toString().orEmpty()
+            val newFilteredList = withContext(Dispatchers.IO) {
+                buildFilteredList(currentQuery)
+            }
+            if (configuredSearchBox.text.toString() == currentQuery) {
+                adapter?.updateAppList(newFilteredList)
+            }
+        }
+    }
+
+    private fun buildFilteredList(query: String): ArrayList<ResolveInfo> {
         val queryLower = query.lowercase().trim()
         val newFilteredList = ArrayList<ResolveInfo>()
         
@@ -259,10 +308,7 @@ class AppSearchManager(
                 SearchMode.YOUTUBE -> newFilteredList.add(createYoutubeSearchOption(""))
             }
         }
-
-        handler.post {
-            adapter?.updateAppList(newFilteredList)
-        }
+        return newFilteredList
     }
 
     private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()
@@ -438,6 +484,6 @@ class AppSearchManager(
     }
     
     fun cleanup() {
-        searchExecutor.shutdown()
+        searchJob?.cancel()
     }
 }

@@ -1,5 +1,6 @@
 package com.guruswarupa.launch.ui.activities
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,10 +11,10 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextPaint
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.View
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
@@ -60,8 +61,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val systemBarManager = SystemBarManager(this)
         window.decorView.post {
             systemBarManager.makeSystemBarsTransparent()
-            
-            WindowCompat.getInsetsController(window, window.decorView)?.let { controller ->
+
+            WindowCompat.getInsetsController(window, window.decorView).let { controller ->
                 controller.isAppearanceLightStatusBars = false
                 controller.isAppearanceLightNavigationBars = false
                 controller.systemBarsBehavior =
@@ -127,8 +128,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
-                val fromPos = viewHolder.adapterPosition
-                val toPos = target.adapterPosition
+                val fromPos = viewHolder.bindingAdapterPosition
+                val toPos = target.bindingAdapterPosition
                 if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION) {
                     return false
                 }
@@ -184,6 +185,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         })
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     fun loadWidgets() {
         allWidgets = widgetConfigManager.getWidgetConfiguration().toMutableList()
         filteredWidgets = allWidgets.toMutableList()
@@ -283,6 +285,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         widgetManager.bindProvider(this, pkg, cls, ActivityResultHandler.REQUEST_BIND_WIDGET)
     }
     
+    @SuppressLint("NotifyDataSetChanged")
     private fun filterWidgets(query: String) {
         filteredWidgets = if (query.isEmpty()) {
             allWidgets.toMutableList()
@@ -341,6 +344,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             "physical_activity_widget_container" -> "Track steps and physical activity"
             "pressure_widget_container" -> "Atmospheric pressure monitoring"
             "temperature_widget_container" -> "Temperature monitoring and alerts"
+            "weather_forecast_widget_container" -> "Multi-day outlook, hourly forecast, and alert summary"
             "noise_decibel_widget_container" -> "Sound level measurement in decibels"
             "workout_widget_container" -> "Workout tracking and fitness metrics"
             "todo_recycler_view" -> "Task manager"
@@ -368,7 +372,11 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
         private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = ContextCompat.getColor(context, R.color.widget_config_text_secondary)
-            textSize = 14f * context.resources.displayMetrics.scaledDensity
+            textSize = TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_SP,
+                14f,
+                context.resources.displayMetrics
+            )
             typeface = Typeface.DEFAULT_BOLD
         }
 

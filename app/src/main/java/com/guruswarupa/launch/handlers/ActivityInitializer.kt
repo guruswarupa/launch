@@ -154,8 +154,29 @@ class ActivityInitializer(
     private fun setupHeaderVisibilityOnScroll(recyclerView: RecyclerView) {
         val hideThreshold = (activity.resources.displayMetrics.density * 40).toInt() 
         val showThreshold = (activity.resources.displayMetrics.density * 10).toInt()
+        var currentScrollState = RecyclerView.SCROLL_STATE_IDLE
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(rv: RecyclerView, newState: Int) {
+                currentScrollState = newState
+                if (newState != RecyclerView.SCROLL_STATE_IDLE) {
+                    return
+                }
+
+                val searchBox = activity.findViewById<android.widget.AutoCompleteTextView>(R.id.search_box)
+                val isSearching = !searchBox?.text.toString().trim().isNullOrEmpty()
+                if (isSearching) {
+                    return
+                }
+
+                val offset = rv.computeVerticalScrollOffset()
+                val scrollRange = rv.computeVerticalScrollRange()
+                val viewportHeight = rv.height
+                if (headerHidden && (offset <= showThreshold || scrollRange <= viewportHeight)) {
+                    setHeaderVisibility(true)
+                }
+            }
+
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val searchBox = activity.findViewById<android.widget.AutoCompleteTextView>(R.id.search_box)
                 val isSearching = !searchBox?.text.toString().trim().isNullOrEmpty()
@@ -165,26 +186,17 @@ class ActivityInitializer(
                     val scrollRange = rv.computeVerticalScrollRange()
                     val viewportHeight = rv.height
                     
-                    
-                    if (offset <= showThreshold && headerHidden) {
-                        setHeaderVisibility(true)
-                        return
-                    }
-
-                    
-                    
-                    if (headerHidden && scrollRange <= viewportHeight) {
-                        setHeaderVisibility(true)
-                        return
-                    }
-
-                    
                     if (dy > 0 && !headerHidden && offset > hideThreshold) {
                         
                         if (scrollRange > viewportHeight * 1.5) {
                             setHeaderVisibility(false)
                         }
-                    } else if (dy < 0 && headerHidden && offset <= showThreshold) {
+                    } else if (
+                        currentScrollState == RecyclerView.SCROLL_STATE_IDLE &&
+                        dy < 0 &&
+                        headerHidden &&
+                        offset <= showThreshold
+                    ) {
                         setHeaderVisibility(true)
                     }
                 }
@@ -197,13 +209,11 @@ class ActivityInitializer(
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> startY = event.y
-                    MotionEvent.ACTION_MOVE -> {
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         val deltaY = event.y - startY
                         
                         if (deltaY > 50 && headerHidden) {
-                            val offset = recyclerView.computeVerticalScrollOffset()
-                            
-                            if (offset <= showThreshold) {
+                            if (!recyclerView.canScrollVertically(-1)) {
                                 setHeaderVisibility(true)
                             }
                         }
@@ -350,6 +360,42 @@ class ActivityInitializer(
             val drawerWidth = displayMetrics.widthPixels
             val targetWidth = drawerWidth
 
+            val rssView = activity.findViewById<FrameLayout>(R.id.rss_feed_page)
+            rssView?.let {
+                val params = it.layoutParams as ViewGroup.LayoutParams
+                params.width = targetWidth
+                it.layoutParams = params
+
+                val header = activity.findViewById<LinearLayout>(R.id.rss_header)
+                val swipeRefresh = activity.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.rss_swipe_refresh)
+                if (header != null && swipeRefresh != null) {
+                    val headerParams = header.layoutParams as FrameLayout.LayoutParams
+                    val initialHeaderTopMargin = (header.getTag(R.id.rss_header) as? Int) ?: headerParams.topMargin.also {
+                        header.setTag(R.id.rss_header, it)
+                    }
+                    val initialSwipeTopPadding = (swipeRefresh.getTag(R.id.rss_swipe_refresh) as? Int) ?: swipeRefresh.paddingTop.also {
+                        swipeRefresh.setTag(R.id.rss_swipe_refresh, it)
+                    }
+
+                    ViewCompat.setOnApplyWindowInsetsListener(it) { _, insets ->
+                        val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+
+                        val updatedHeaderParams = header.layoutParams as FrameLayout.LayoutParams
+                        updatedHeaderParams.topMargin = initialHeaderTopMargin + topInset
+                        header.layoutParams = updatedHeaderParams
+
+                        swipeRefresh.setPadding(
+                            swipeRefresh.paddingLeft,
+                            initialSwipeTopPadding + topInset,
+                            swipeRefresh.paddingRight,
+                            swipeRefresh.paddingBottom
+                        )
+                        insets
+                    }
+                    ViewCompat.requestApplyInsets(it)
+                }
+            }
+
             
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
@@ -361,8 +407,12 @@ class ActivityInitializer(
                 val drawerScroll = activity.findViewById<androidx.core.widget.NestedScrollView>(R.id.widgets_drawer_scroll)
                 if (header != null && drawerScroll != null) {
                     val headerParams = header.layoutParams as FrameLayout.LayoutParams
-                    val initialHeaderTopMargin = headerParams.topMargin
-                    val initialScrollTopPadding = drawerScroll.paddingTop
+                    val initialHeaderTopMargin = (header.getTag(R.id.widget_settings_header) as? Int) ?: headerParams.topMargin.also {
+                        header.setTag(R.id.widget_settings_header, it)
+                    }
+                    val initialScrollTopPadding = (drawerScroll.getTag(R.id.widgets_drawer_scroll) as? Int) ?: drawerScroll.paddingTop.also {
+                        drawerScroll.setTag(R.id.widgets_drawer_scroll, it)
+                    }
 
                     ViewCompat.setOnApplyWindowInsetsListener(it) { _, insets ->
                         val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top

@@ -25,6 +25,7 @@ class DeferredWidgetInitializer(
             compassWidget = widgetSetupManager.setupCompassWidget(sharedPreferences)
             pressureWidget = widgetSetupManager.setupPressureWidget(sharedPreferences)
             temperatureWidget = widgetSetupManager.setupTemperatureWidget(sharedPreferences)
+            weatherForecastWidget = widgetSetupManager.setupWeatherForecastWidget()
             noiseDecibelWidget = widgetSetupManager.setupNoiseDecibelWidget(sharedPreferences)
             calendarEventsWidget = widgetSetupManager.setupCalendarEventsWidget(sharedPreferences)
             countdownWidget = widgetSetupManager.setupCountdownWidget(sharedPreferences)

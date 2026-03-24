@@ -10,8 +10,9 @@ import com.guruswarupa.launch.models.WebAppEntry
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import javax.inject.Inject
 
-class WebAppManager(private val sharedPreferences: SharedPreferences) {
+class WebAppManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
     companion object {
         const val WEB_APP_PACKAGE_PREFIX = "com.guruswarupa.launch.webapp."
 

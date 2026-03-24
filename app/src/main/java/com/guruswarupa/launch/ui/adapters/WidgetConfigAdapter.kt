@@ -108,6 +108,7 @@ class WidgetConfigAdapter(
             "physical_activity_widget_container" -> "Step counter"
             "pressure_widget_container" -> "Pressure monitor"
             "temperature_widget_container" -> "Temperature sensor"
+            "weather_forecast_widget_container" -> "Forecast, hourly, alerts"
             "noise_decibel_widget_container" -> "Sound level meter"
             "workout_widget_container" -> "Workout tracker"
             "todo_recycler_view" -> "Task manager"

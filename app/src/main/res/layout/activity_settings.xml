@@ -337,6 +337,29 @@
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
 
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Disable Fast Scroller"
+                                android:textColor="@color/white"
+                                android:textSize="15sp"/>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/show_fast_scroller_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
                         
                         <LinearLayout
                             android:id="@+id/default_home_page_section"
@@ -407,7 +430,6 @@
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -481,7 +503,7 @@
                             android:alpha="0.6"
                             android:layout_marginBottom="12dp"/>
 
-                        <HorizontalScrollView
+                        <com.guruswarupa.launch.ui.views.SafeHorizontalScrollView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:scrollbars="none">
@@ -491,7 +513,7 @@
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
                                 android:paddingVertical="4dp"/>
-                        </HorizontalScrollView>
+                        </com.guruswarupa.launch.ui.views.SafeHorizontalScrollView>
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/apply_theme_button"
@@ -712,82 +734,6 @@
                             android:visibility="gone"
                             android:layout_marginTop="8dp"/>
 
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="@color/card_background"
-                app:cardCornerRadius="24dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/outlineColor">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="6dp">
-
-                    <LinearLayout
-                        android:id="@+id/widgets_settings_header"
-                        android:layout_width="match_parent"
-                        android:layout_height="64dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:paddingHorizontal="16dp"
-                        android:background="?attr/selectableItemBackgroundBorderless">
-
-                        <ImageView
-                            android:layout_width="22dp"
-                            android:layout_height="22dp"
-                            android:src="@drawable/ic_calendar"
-                            app:tint="@color/white"
-                            android:alpha="1.0"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="16dp"
-                            android:text="Widgets"
-                            android:textSize="16sp"
-                            android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/white"/>
-
-                        <TextView
-                            android:id="@+id/widgets_settings_arrow"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="▼"
-                            android:textSize="10sp"
-                            android:textColor="@color/white"
-                            android:alpha="0.4"/>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/widgets_settings_content"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="gone"
-                        android:paddingHorizontal="16dp"
-                        android:paddingBottom="16dp">
-
-                        <Button
-                            android:id="@+id/configure_widgets_button"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:text="Configure Home Widgets"
-                            android:textAllCaps="false"
-                            android:background="@drawable/settings_card_background"
-                            android:textColor="@color/white"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -1521,6 +1467,204 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="6dp">
+
+                    <LinearLayout
+                        android:id="@+id/widgets_settings_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:paddingHorizontal="16dp"
+                        android:background="?attr/selectableItemBackgroundBorderless">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_calendar"
+                            app:tint="@color/white"
+                            android:alpha="1.0"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:text="Widgets"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/white"/>
+
+                        <TextView
+                            android:id="@+id/widgets_settings_arrow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▼"
+                            android:textSize="10sp"
+                            android:textColor="@color/white"
+                            android:alpha="0.4"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/widgets_settings_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone"
+                        android:paddingHorizontal="16dp"
+                        android:paddingBottom="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Enable widgets page"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                android:fontFamily="sans-serif-medium" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/widgets_page_enabled_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="@color/nord8" />
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/configure_widgets_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:text="Configure Home Widgets"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/outlineColor">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="6dp">
+
+                    <LinearLayout
+                        android:id="@+id/news_feed_header"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:alpha="1.0"
+                            android:src="@drawable/ic_notifications"
+                            app:tint="@color/white" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:text="News Feed"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium" />
+
+                        <TextView
+                            android:id="@+id/news_feed_arrow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:alpha="0.4"
+                            android:text="▼"
+                            android:textColor="@color/white"
+                            android:textSize="10sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/news_feed_content"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="16dp"
+                        android:paddingBottom="16dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Enable news page"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                android:fontFamily="sans-serif-medium" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/news_feed_enabled_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="@color/nord8" />
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/manage_news_feeds_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="16dp"
+                            android:background="@drawable/settings_card_background"
+                            android:text="Manage News Feed Sources"
+                            android:textAllCaps="false"
+                            android:textColor="@color/white" />
+
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
             
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -1596,7 +1740,6 @@
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             
             <TextView
                 android:layout_width="match_parent"
@@ -1928,6 +2071,20 @@
                             android:textSize="16sp"
                             android:fontFamily="sans-serif-medium"
                             android:textColor="@color/white"/>
+
+                        <TextView
+                            android:id="@+id/support_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="12dp"
+                            android:background="@drawable/supporter_badge_background"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:text="@string/supporter_badge"
+                            android:textColor="@color/white"
+                            android:textSize="11sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:visibility="gone"/>
 
                         <TextView
                             android:id="@+id/support_arrow"

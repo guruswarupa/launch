@@ -20,9 +20,11 @@ import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
 import com.guruswarupa.launch.services.ScreenDimmerService
 import com.guruswarupa.launch.services.ShakeDetectionService
+import dagger.hilt.android.HiltAndroidApp
 import java.io.PrintWriter
 import java.io.StringWriter
 
+@HiltAndroidApp
 class LaunchApplication : Application() {
     override fun onCreate() {
         super.onCreate()

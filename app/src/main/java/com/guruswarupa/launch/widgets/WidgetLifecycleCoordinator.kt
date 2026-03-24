@@ -9,6 +9,7 @@ class WidgetLifecycleCoordinator {
     lateinit var compassWidget: CompassWidget
     lateinit var pressureWidget: PressureWidget
     lateinit var temperatureWidget: TemperatureWidget
+    lateinit var weatherForecastWidget: WeatherForecastWidget
     lateinit var noiseDecibelWidget: NoiseDecibelWidget
     lateinit var calendarEventsWidget: CalendarEventsWidget
     lateinit var countdownWidget: CountdownWidget
@@ -26,6 +27,7 @@ class WidgetLifecycleCoordinator {
     fun isCompassWidgetInitialized() = ::compassWidget.isInitialized
     fun isPressureWidgetInitialized() = ::pressureWidget.isInitialized
     fun isTemperatureWidgetInitialized() = ::temperatureWidget.isInitialized
+    fun isWeatherForecastWidgetInitialized() = ::weatherForecastWidget.isInitialized
     fun isNoiseDecibelWidgetInitialized() = ::noiseDecibelWidget.isInitialized
     fun isCalendarEventsWidgetInitialized() = ::calendarEventsWidget.isInitialized
     fun isCountdownWidgetInitialized() = ::countdownWidget.isInitialized
@@ -80,6 +82,7 @@ class WidgetLifecycleCoordinator {
         register({ ::compassWidget.isInitialized }, { compassWidget.onResume() }, { compassWidget.onPause() }, { compassWidget.onPause() })
         register({ ::pressureWidget.isInitialized }, { pressureWidget.onResume() }, { pressureWidget.onPause() }, { pressureWidget.cleanup() })
         register({ ::temperatureWidget.isInitialized }, { temperatureWidget.onResume() }, { temperatureWidget.onPause() }, { temperatureWidget.cleanup() })
+        register({ ::weatherForecastWidget.isInitialized }, { weatherForecastWidget.onResume() }, { weatherForecastWidget.onPause() }, { weatherForecastWidget.cleanup() })
         register({ ::noiseDecibelWidget.isInitialized }, { noiseDecibelWidget.onResume() }, { noiseDecibelWidget.onPause() }, { noiseDecibelWidget.cleanup() })
         register({ ::calendarEventsWidget.isInitialized }, { calendarEventsWidget.onResume() }, { calendarEventsWidget.onPause() }, { calendarEventsWidget.cleanup() })
         register({ ::countdownWidget.isInitialized }, { countdownWidget.onResume() }, { countdownWidget.onPause() }, { countdownWidget.cleanup() })

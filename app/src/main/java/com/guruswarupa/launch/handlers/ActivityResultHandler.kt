@@ -60,15 +60,11 @@ class ActivityResultHandler(
         if (resultCode == Activity.RESULT_OK) {
             Toast.makeText(activity, "Work profile setup complete!", Toast.LENGTH_LONG).show()
             if (activity is MainActivity) {
-                // Refresh apps to show work profile apps
                 val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Activity.MODE_PRIVATE)
                 prefs.edit().putBoolean("work_profile_enabled", true).apply()
                 activity.refreshAppsForWorkspace()
                 
-                // Update dock icons
-                if (activity.isAppDockManagerInitialized()) {
-                    activity.appDockManager.updateDockIcons()
-                }
+                activity.appDockManagerOrNull?.updateDockIcons()
             }
         } else {
             Toast.makeText(activity, "Work profile setup failed or cancelled", Toast.LENGTH_SHORT).show()

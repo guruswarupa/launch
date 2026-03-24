@@ -97,6 +97,35 @@
     <string name="change_pin">Change PIN</string>
     <string name="set_access_pin">Set Access PIN</string>
     <string name="change_access_pin">Change Access PIN</string>
+    <string name="app_lock_hint_enter_pin_range">Enter 4-6 digit PIN</string>
+    <string name="app_lock_hint_confirm_pin">Confirm PIN</string>
+    <string name="app_lock_hint_enter_pin">Enter PIN</string>
+    <string name="app_lock_hint_enter_current_pin">Enter current PIN</string>
+    <string name="app_lock_title_set_pin">Set App Lock PIN</string>
+    <string name="app_lock_title_confirm_pin">Confirm PIN</string>
+    <string name="app_lock_title_enter_pin">Enter PIN</string>
+    <string name="app_lock_title_change_pin">Change PIN</string>
+    <string name="app_lock_title_reset">Reset App Lock</string>
+    <string name="app_lock_message_choose_pin">Choose a PIN to protect your apps</string>
+    <string name="app_lock_message_unlock">Enter your PIN to unlock this app</string>
+    <string name="app_lock_message_enter_current_pin">Enter your current PIN</string>
+    <string name="app_lock_message_reset">Enter your current PIN to reset App Lock</string>
+    <string name="app_lock_action_set_pin">Set PIN</string>
+    <string name="app_lock_action_confirm">Confirm</string>
+    <string name="app_lock_action_unlock">Unlock</string>
+    <string name="app_lock_action_continue">Continue</string>
+    <string name="app_lock_action_use_pin">Use PIN</string>
+    <string name="app_lock_pin_set_success">App Lock PIN set successfully!</string>
+    <string name="app_lock_pins_do_not_match">PINs don\'t match. Try again.</string>
+    <string name="app_lock_pin_length_error">PIN must be 4-6 digits</string>
+    <string name="app_lock_incorrect_pin">Incorrect PIN</string>
+    <string name="app_lock_incorrect_current_pin">Incorrect current PIN</string>
+    <string name="app_lock_reset_success">App Lock reset successfully!</string>
+    <string name="app_lock_biometric_unavailable_context">Biometric authentication not available in this context. Using PIN.</string>
+    <string name="app_lock_biometric_title">Biometric Authentication</string>
+    <string name="app_lock_biometric_description">Authenticate with your fingerprint to unlock</string>
+    <string name="app_lock_biometric_failed">Biometric authentication failed</string>
+    <string name="app_lock_biometric_error">Biometric authentication error: %1$s</string>
 
     
     <string name="share_dialog_title">What would you like to share?</string>
@@ -122,6 +151,9 @@
     <string name="calculator_error">Error</string>
     <string name="calculator_zero">0</string>
     <string name="converter_result_format">%1$s %2$s</string>
+    <string name="converter_loading_rates">Loading live rates...</string>
+    <string name="converter_rate_unavailable">Live rates unavailable</string>
+    <string name="converter_result_cached_format">%1$s (cached)</string>
 
     
     <string name="calendar_view_list">List</string>
@@ -176,6 +208,7 @@
     <string name="font_removed_message">%1$s removed</string>
     <string name="font_removing">Removing…</string>
     <string name="font_download_failed">Failed to download %1$s</string>
+    <string name="font_download_failed_with_name">Failed to download font: %1$s</string>
     <string name="font_install">Install</string>
     <string name="font_uninstall">Uninstall</string>
 
@@ -239,6 +272,9 @@
     <string name="temperature_c_format">%1$s°C</string>
     <string name="temperature_f_format">%1$s°F</string>
     <string name="status_format">Status: %1$s</string>
+    <string name="torch_not_available">Flashlight not available on this device</string>
+    <string name="torch_camera_unavailable">Unable to access camera</string>
+    <string name="torch_toggle_error">Error toggling torch: %1$s</string>
 
     
     <string name="todo_due_format">Due: %1$s</string>
@@ -255,6 +291,41 @@
 
     
     <string name="income">Income</string>
+    <string name="review_prompt_title">Enjoying Launch?</string>
+    <string name="review_prompt_message">You have been using the app for a week. Would you like to leave a review?</string>
+    <string name="review_prompt_positive">Review now</string>
+    <string name="review_prompt_negative">Maybe later</string>
+    <string name="usage_stats_permission_title">App Usage Statistics</string>
+    <string name="usage_stats_permission_message">To display your most used apps and track your digital wellbeing, Launch needs permission to access usage stats. This data is processed locally and never leaves your device.</string>
+    <string name="usage_stats_permission_grant">Grant Access</string>
+    <string name="usage_stats_permission_skip">Skip</string>
+    <string name="app_list_no_apps_found">No apps found!</string>
+    <string name="app_list_error_loading_apps">Error loading apps: %1$s</string>
+    <string name="daily_usage_hint_minutes_disable">Enter minutes (0 to disable)</string>
+    <string name="daily_usage_set_limit_title">Set Daily Limit for %1$s</string>
+    <string name="daily_usage_set_limit_message">Enter daily usage limit in minutes:</string>
+    <string name="daily_usage_action_set">Set</string>
+    <string name="daily_usage_limit_set">Daily limit set to %1$s</string>
+    <string name="daily_usage_limit_disabled">Daily limit disabled</string>
+    <string name="daily_usage_invalid_number">Please enter a valid number</string>
+    <string name="daily_usage_limit_reached">Daily limit reached for this app.</string>
+    <string name="weather_today">Today</string>
+    <string name="weather_condition_clear">Clear</string>
+    <string name="weather_condition_cloudy">Cloudy</string>
+    <string name="weather_condition_fog">Fog</string>
+    <string name="weather_condition_rain">Rain</string>
+    <string name="weather_condition_snow">Snow</string>
+    <string name="weather_condition_thunderstorm">Thunderstorm</string>
+    <string name="weather_alert_storm_risk_title">Storm risk</string>
+    <string name="weather_alert_storm_risk_detail">Thunderstorms are possible in the next few hours.</string>
+    <string name="weather_alert_snow_expected_title">Snow expected</string>
+    <string name="weather_alert_snow_expected_detail">Snow is showing up in the short-range forecast.</string>
+    <string name="weather_alert_rain_ahead_title">Rain ahead</string>
+    <string name="weather_alert_rain_ahead_detail">Rain is likely within the upcoming forecast window.</string>
+    <string name="weather_alert_heat_watch_title">Heat watch</string>
+    <string name="weather_alert_heat_watch_detail">High temperatures may feel intense over the next few days.</string>
+    <string name="weather_alert_freeze_risk_title">Freeze risk</string>
+    <string name="weather_alert_freeze_risk_detail">Overnight temperatures may dip near freezing.</string>
     <string name="expense">Expense</string>
     <string name="date_time_divider_format">%1$s • %2$s</string>
     <string name="transaction_amount_income_format">+%1$s%2$.2f</string>
@@ -268,11 +339,22 @@
     <string name="weather_unavailable">Weather unavailable</string>
     <string name="weather_temp_format_celsius">%1$d°C %2$s</string>
     <string name="weather_temp_format_fahrenheit">%1$d°F %2$s</string>
+    <string name="weather_temp_value_celsius">%1$d°C</string>
+    <string name="weather_temp_value_fahrenheit">%1$d°F</string>
     <string name="temperature_unit">Temperature Unit</string>
     <string name="celsius">Celsius (°C)</string>
     <string name="fahrenheit">Fahrenheit (°F)</string>
     <string name="weather_settings_title">Weather Settings</string>
     <string name="settings_saved">Settings saved</string>
+    <string name="weather_forecast_widget_title">Weather Forecast</string>
+    <string name="weather_forecast_hourly_title">Next Hours</string>
+    <string name="weather_forecast_daily_title">Next Days</string>
+    <string name="weather_forecast_alerts_clear">No major weather alerts in the current forecast.</string>
+    <string name="weather_forecast_location_missing">Location needed</string>
+    <string name="weather_forecast_hold_to_set_location">Long press to set a location, tap to refresh.</string>
+    <string name="weather_forecast_refresh_hint">Tap to retry or long press to update location.</string>
+    <string name="weather_forecast_day_range">%1$s / %2$s</string>
+    <string name="weather_forecast_chart_empty">Hourly forecast unavailable</string>
 
     
     <string name="workout_start">Start</string>
@@ -324,6 +406,11 @@
     <string name="support_network_error">Unable to load support options. Check your connection and try again.</string>
     <string name="support_option_not_ready">This support option is not ready yet.</string>
     <string name="support_purchase_failed">Unable to complete support purchase right now.</string>
+    <string name="supporter_badge">Supporter</string>
+    <string name="donation_prompt_title">Support Launch?</string>
+    <string name="donation_prompt_message">You have been using Launch for a month. If the app has been useful, please consider supporting it. Your donation helps maintain the app, keep it ad-free, avoid subscriptions, and fund thoughtful updates over time.</string>
+    <string name="donation_prompt_support">Support Launch</string>
+    <string name="donation_prompt_not_now">Not now</string>
     
     
     <string name="category_appearance">Appearance</string>
@@ -335,7 +422,8 @@
     
     <string name="pomodoro_work">Work</string>
     <string name="pomodoro_break">Break</string>
-    <string name="pomodoro_mode">Pomodoro (25/5)</string>
+    <string name="pomodoro_long_break">Long Break</string>
+    <string name="pomodoro_mode">Pomodoro</string>
     <string name="pomodoro_stop_title">Stop Pomodoro?</string>
     <string name="pomodoro_stop_message">A Pomodoro session is currently active. Do you want to stop it?</string>
 

@@ -41,6 +41,7 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.compass_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.pressure_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.temperature_widget_container)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.weather_forecast_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.network_stats_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.device_info_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.noise_decibel_widget_container)?.setBackgroundResource(widgetBackground)
@@ -57,6 +58,10 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.widget_settings_header)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.widget_config_button)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.widgets_empty_state)?.setBackgroundResource(emptyStateBackground)
+        activity.findViewById<View>(R.id.rss_header)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.rss_refresh_button)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.rss_manage_button)?.setBackgroundResource(widgetBackground)
+        activity.findViewById<View>(R.id.rss_empty_state)?.setBackgroundResource(emptyStateBackground)
         
         
         searchBox?.let { sb ->

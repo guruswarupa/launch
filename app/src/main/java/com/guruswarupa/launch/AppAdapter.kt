@@ -19,7 +19,13 @@ import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.ImageView
 import android.widget.PopupMenu
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Path
+import android.graphics.RectF
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.AdaptiveIconDrawable
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.widget.TextView
@@ -52,6 +58,7 @@ import com.google.android.material.shape.ShapeAppearanceModel
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.RelativeCornerSize
 import com.google.android.material.shape.CornerSize
+import kotlin.math.roundToInt
 
 class AppAdapter(
     private val activity: MainActivity,
@@ -189,6 +196,8 @@ class AppAdapter(
     @SuppressLint("NotifyDataSetChanged")
     fun updateIconStyle(style: String) {
         currentIconStyle = style
+        iconCache.clear()
+        specialAppIconCache.clear()
         (context as? Activity)?.runOnUiThread {
             notifyDataSetChanged()
         }
@@ -197,6 +206,8 @@ class AppAdapter(
     @SuppressLint("NotifyDataSetChanged")
     fun updateIconSize(size: Int) {
         currentIconSize = size
+        iconCache.clear()
+        specialAppIconCache.clear()
         (context as? Activity)?.runOnUiThread {
             notifyDataSetChanged()
         }
@@ -269,6 +280,84 @@ class AppAdapter(
             }
         }
         return builder.build()
+    }
+
+    private fun setIconDrawable(imageView: ImageView?, drawable: Drawable?) {
+        imageView?.setImageDrawable(drawable?.let { shapeIconDrawable(it) })
+    }
+
+    private fun setIconResource(imageView: ImageView?, resId: Int) {
+        val drawable = ContextCompat.getDrawable(context, resId)
+        setIconDrawable(imageView, drawable)
+    }
+
+    private fun shapeIconDrawable(drawable: Drawable): Drawable {
+        val density = context.resources.displayMetrics.density
+        val size = (currentIconSize * density).roundToInt().coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val bounds = RectF(0f, 0f, size.toFloat(), size.toFloat())
+        val path = createIconMaskPath(bounds)
+
+        canvas.save()
+        canvas.clipPath(path)
+        if (drawable is AdaptiveIconDrawable) {
+            val background = drawable.background?.constantState?.newDrawable(context.resources)?.mutate()
+                ?: drawable.background?.mutate()
+            val foreground = drawable.foreground?.constantState?.newDrawable(context.resources)?.mutate()
+                ?: drawable.foreground?.mutate()
+            background?.setBounds(0, 0, size, size)
+            foreground?.setBounds(0, 0, size, size)
+            background?.draw(canvas)
+            foreground?.draw(canvas)
+        } else {
+            val copy = drawable.constantState?.newDrawable(context.resources)?.mutate() ?: drawable.mutate()
+            copy.setBounds(0, 0, size, size)
+            copy.draw(canvas)
+        }
+        canvas.restore()
+
+        return BitmapDrawable(context.resources, bitmap)
+    }
+
+    private fun createIconMaskPath(bounds: RectF): Path {
+        val width = bounds.width()
+        val height = bounds.height()
+        val minSize = minOf(width, height)
+        val path = Path()
+
+        when (currentIconStyle) {
+            "round" -> path.addOval(bounds, Path.Direction.CW)
+            "squircle" -> path.addRoundRect(bounds, minSize * 0.28f, minSize * 0.28f, Path.Direction.CW)
+            "squared" -> path.addRoundRect(bounds, minSize * 0.08f, minSize * 0.08f, Path.Direction.CW)
+            "teardrop" -> {
+                path.addRoundRect(
+                    bounds,
+                    floatArrayOf(
+                        minSize * 0.5f, minSize * 0.5f,
+                        minSize * 0.5f, minSize * 0.5f,
+                        minSize * 0.18f, minSize * 0.18f,
+                        minSize * 0.5f, minSize * 0.5f
+                    ),
+                    Path.Direction.CW
+                )
+            }
+            "vortex" -> {
+                path.moveTo(bounds.left + minSize * 0.2f, bounds.top)
+                path.lineTo(bounds.right - minSize * 0.2f, bounds.top)
+                path.lineTo(bounds.right, bounds.top + minSize * 0.2f)
+                path.lineTo(bounds.right, bounds.bottom - minSize * 0.2f)
+                path.lineTo(bounds.right - minSize * 0.2f, bounds.bottom)
+                path.lineTo(bounds.left + minSize * 0.2f, bounds.bottom)
+                path.lineTo(bounds.left, bounds.bottom - minSize * 0.2f)
+                path.lineTo(bounds.left, bounds.top + minSize * 0.2f)
+                path.close()
+            }
+            "overlay" -> path.addRoundRect(bounds, minSize * 0.18f, minSize * 0.18f, Path.Direction.CW)
+            else -> path.addOval(bounds, Path.Direction.CW)
+        }
+
+        return path
     }
 
     fun getAppLabel(position: Int): String {
@@ -390,7 +479,7 @@ class AppAdapter(
                         currentPosition == position && 
                         currentTag != null && 
                         currentTag.toString() == cacheKey) {
-                        holder.appIcon.setImageDrawable(icon)
+                        setIconDrawable(holder.appIcon, icon)
                         applyIconVisualState(packageName, holder.appIcon)
                     }
                 }
@@ -412,8 +501,9 @@ class AppAdapter(
                             icon = activity.packageManager.getUserBadgedIcon(icon, userHandle)
                         }
                     }
-                    
-                    iconCache[cacheKey] = icon
+
+                    val shapedIcon = shapeIconDrawable(icon)
+                    iconCache[cacheKey] = shapedIcon
                     
                     if (holder != null && holder.appIcon != null) {
                         (context as? Activity)?.runOnUiThread {
@@ -423,7 +513,7 @@ class AppAdapter(
                                 currentPosition == position && 
                                 currentTag != null && 
                                 currentTag.toString() == cacheKey) {
-                                holder.appIcon.setImageDrawable(icon)
+                                holder.appIcon.setImageDrawable(shapedIcon)
                                 applyIconVisualState(packageName, holder.appIcon)
                             }
                         }
@@ -529,9 +619,9 @@ class AppAdapter(
                 val contactName = appInfo.activityInfo.name
                 val cachedPhoto = contactPhotoCache[contactName]
                 if (cachedPhoto != null) {
-                    holder.appIcon?.setImageDrawable(cachedPhoto)
+                    setIconDrawable(holder.appIcon, cachedPhoto)
                 } else if (holder.itemView.tag.toString() != contactName) {
-                    holder.appIcon?.setImageResource(R.drawable.ic_person)
+                    setIconResource(holder.appIcon, R.drawable.ic_person)
                     executor.execute {
                         try {
                             val photoUri = getPhotoUriForContact(contactName)
@@ -543,7 +633,7 @@ class AppAdapter(
                                     contactPhotoCache[contactName] = drawable
                                     (context as? Activity)?.runOnUiThread {
                                         if (holder.itemView.tag.toString() == contactName) { 
-                                            holder.appIcon?.setImageDrawable(drawable)
+                                            setIconDrawable(holder.appIcon, drawable)
                                             applyIconVisualState(packageName, holder.appIcon)
                                         }
                                     }
@@ -564,10 +654,10 @@ class AppAdapter(
                 if (cachedIcon != null) {
                     holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                    setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
                     executor.execute {
                         try {
-                            val icon = activity.packageManager.getApplicationIcon("com.android.vending")
+                            val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
                             specialAppIconCache["com.android.vending"] = icon
                             (context as? Activity)?.runOnUiThread {
                                 if (holder.bindingAdapterPosition == position) {
@@ -591,10 +681,10 @@ class AppAdapter(
                 if (cachedIcon != null) {
                     holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                    setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
                     executor.execute {
                         try {
-                            val icon = activity.packageManager.getApplicationIcon("com.google.android.apps.maps")
+                            val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
                             specialAppIconCache["com.google.android.apps.maps"] = icon
                             (context as? Activity)?.runOnUiThread {
                                 if (holder.bindingAdapterPosition == position) {
@@ -627,11 +717,11 @@ class AppAdapter(
                 if (cachedIcon != null) {
                     holder.appIcon?.setImageDrawable(cachedIcon)
                 } else {
-                    holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                    setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
                     executor.execute {
                         try {
                             try {
-                                val icon = activity.packageManager.getApplicationIcon("app.revanced.android.youtube")
+                                val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("app.revanced.android.youtube"))
                                 specialAppIconCache["app.revanced.android.youtube"] = icon
                                 (context as? Activity)?.runOnUiThread {
                                     if (holder.bindingAdapterPosition == position) {
@@ -641,7 +731,7 @@ class AppAdapter(
                                 }
                             } catch (_: Exception) {
                                 try {
-                                    val icon = activity.packageManager.getApplicationIcon("com.google.android.youtube")
+                                    val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
                                     specialAppIconCache["com.google.android.youtube"] = icon
                                     (context as? Activity)?.runOnUiThread {
                                         if (holder.bindingAdapterPosition == position) {
@@ -679,7 +769,7 @@ class AppAdapter(
             }
 
             "browser_search" -> {
-                holder.appIcon?.setImageResource(R.drawable.ic_browser)
+                setIconResource(holder.appIcon, R.drawable.ic_browser)
                 holder.appName?.text = activity.getString(R.string.search_in_browser, appInfo.activityInfo.name)
                 holder.itemView.setOnClickListener {
                     val engine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
@@ -699,7 +789,7 @@ class AppAdapter(
             }
 
             "settings_result" -> {
-                holder.appIcon?.setImageResource(R.drawable.ic_settings)
+                setIconResource(holder.appIcon, R.drawable.ic_settings)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
@@ -710,7 +800,7 @@ class AppAdapter(
             }
             
             "system_settings_result" -> {
-                holder.appIcon?.setImageResource(R.drawable.ic_settings)
+                setIconResource(holder.appIcon, R.drawable.ic_settings)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
@@ -721,7 +811,7 @@ class AppAdapter(
             }
 
             "file_result" -> {
-                holder.appIcon?.setImageResource(R.drawable.ic_file)
+                setIconResource(holder.appIcon, R.drawable.ic_file)
                 holder.appName?.text = appInfo.activityInfo.name
                 holder.itemView.setOnClickListener {
                     val filePath = appInfo.activityInfo.nonLocalizedLabel.toString()
@@ -741,12 +831,13 @@ class AppAdapter(
             }
 
             "math_result" -> {
-                holder.appIcon?.setImageResource(R.drawable.ic_calculator)
+                setIconResource(holder.appIcon, R.drawable.ic_calculator)
                 holder.appName?.text = appInfo.activityInfo.name
             }
 
             "launcher_settings_shortcut" -> {
-                holder.appIcon?.setImageResource(R.drawable.ic_settings)
+                holder.itemView.tag = packageName
+                setIconResource(holder.appIcon, R.drawable.ic_settings)
                 holder.appName?.text = activity.getString(R.string.settings_app_name)
                 holder.itemView.setOnClickListener {
                     val settingsIntent = Intent(activity, com.guruswarupa.launch.ui.activities.SettingsActivity::class.java).apply {
@@ -758,7 +849,8 @@ class AppAdapter(
             }
 
             "launcher_vault_shortcut" -> {
-                holder.appIcon?.setImageResource(R.drawable.ic_vault_icon)
+                holder.itemView.tag = packageName
+                setIconResource(holder.appIcon, R.drawable.ic_vault_icon)
                 holder.appName?.text = activity.getString(R.string.vault_app_name)
                 holder.itemView.setOnClickListener {
                     val vaultIntent = Intent(activity, com.guruswarupa.launch.ui.activities.EncryptedVaultActivity::class.java).apply {
@@ -775,11 +867,11 @@ class AppAdapter(
                     when {
                         activityName.contains("SettingsActivity") -> {
                             holder.appName?.text = activity.getString(R.string.settings_app_name)
-                            holder.appIcon?.setImageResource(R.mipmap.ic_launcher)
+                            setIconResource(holder.appIcon, R.mipmap.ic_launcher)
                         }
                         activityName.contains("EncryptedVaultActivity") -> {
                             holder.appName?.text = activity.getString(R.string.vault_app_name)
-                            holder.appIcon?.setImageResource(R.drawable.ic_vault_icon)
+                            setIconResource(holder.appIcon, R.drawable.ic_vault_icon)
                         }
                         else -> {
                             holder.appName?.text = labelCache[cacheKey] ?: appInfo.loadLabel(activity.packageManager).toString()
@@ -788,7 +880,7 @@ class AppAdapter(
                                 holder.appIcon?.setImageDrawable(cachedIcon)
                                 applyIconVisualState(packageName, holder.appIcon)
                             } else {
-                                holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                                setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
                                 val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
                                 submitIconLoadTask(appInfo, priority, holder, position)
                             }
@@ -819,7 +911,7 @@ class AppAdapter(
                         holder.appIcon?.setImageDrawable(cachedIcon)
                         applyIconVisualState(packageName, holder.appIcon)
                     } else {
-                        holder.appIcon?.setImageResource(R.drawable.ic_default_app_icon)
+                        setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
                         val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
                         submitIconLoadTask(appInfo, priority, holder, position)
                     }
@@ -1209,7 +1301,7 @@ class AppAdapter(
 
         holder.itemView.tag = packageName
         holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
-        holder.appIcon?.setImageResource(R.drawable.ic_browser)
+        setIconResource(holder.appIcon, R.drawable.ic_browser)
         holder.appIcon?.background = null
         holder.appName?.text = appInfo.activityInfo.name
         holder.appUsageTime?.visibility = View.GONE
@@ -1225,7 +1317,7 @@ class AppAdapter(
         if (siteUrl.isNotBlank()) {
             WebAppIconFetcher.loadIcon(activity, siteUrl) { drawable ->
                 if (holder.itemView.tag == packageName && drawable != null) {
-                    holder.appIcon?.setImageDrawable(drawable)
+                    setIconDrawable(holder.appIcon, drawable)
                     applyIconVisualState(packageName, holder.appIcon)
                 }
             }

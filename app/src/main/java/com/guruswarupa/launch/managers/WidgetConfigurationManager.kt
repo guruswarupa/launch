@@ -26,6 +26,7 @@ class WidgetConfigurationManager(
             WidgetInfo("compass_widget_container", "Compass", false),
             WidgetInfo("pressure_widget_container", "Pressure", false),
             WidgetInfo("temperature_widget_container", "Temperature", false),
+            WidgetInfo("weather_forecast_widget_container", "Weather Forecast", false),
             WidgetInfo("noise_decibel_widget_container", "Noise Decibel Analyzer", false),
             WidgetInfo("workout_widget_container", "Workout Tracker", false),
             WidgetInfo("calculator_widget_container", "Calculator", false),

@@ -49,10 +49,11 @@ class SettingsChangeCoordinator(
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)
         val color = Color.argb(alpha, 0, 0, 0)
         
-        if (activity.isViewsInitialized() && views.areTranslucencyOverlaysInitialized()) {
+        if (views.areTranslucencyOverlaysInitialized()) {
             views.backgroundTranslucencyOverlay.setBackgroundColor(color)
             views.widgetsDrawerTranslucencyOverlay.setBackgroundColor(color)
         }
+        activity.findViewById<android.view.View>(com.guruswarupa.launch.R.id.rss_drawer_translucency_overlay)?.setBackgroundColor(color)
     }
 
     
@@ -69,9 +70,7 @@ class SettingsChangeCoordinator(
         TypographyManager.applyToActivity(activity)
         views.fastScroller.refreshTypography(sharedPreferences)
 
-        if (activity.isTimeDateManagerInitialized()) {
-            activity.timeDateManager.setUse24HourFormat(use24HourClock)
-        }
+        activity.timeDateManagerOrNull?.setUse24HourFormat(use24HourClock)
         
         
         val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"
@@ -121,9 +120,7 @@ class SettingsChangeCoordinator(
                 }
                 layoutManager.requestLayout()
                 
-                if (activity.isAppListLoaderInitialized()) {
-                    activity.appListLoader.loadApps(forceRefresh = false)
-                }
+                activity.appListLoader.loadApps(forceRefresh = false)
             }
         }
         
@@ -142,39 +139,33 @@ class SettingsChangeCoordinator(
         activity.updateFastScrollerVisibility()
 
         
-        if (activity.isServiceManagerInitialized()) {
-            activity.serviceManager.updateShakeDetectionService()
-            activity.serviceManager.updateScreenDimmerService()
-            activity.serviceManager.updateNightModeService()
-            activity.serviceManager.updateFlipToDndService()
-            activity.serviceManager.updateBackTapService()
+        activity.serviceManager.updateShakeDetectionService()
+        activity.serviceManager.updateScreenDimmerService()
+        activity.serviceManager.updateNightModeService()
+        activity.serviceManager.updateFlipToDndService()
+        activity.serviceManager.updateBackTapService()
+        
+        
+        activity.hiddenAppManager.forceRefresh()
+        
+        
+        activity.appListLoader.loadApps(forceRefresh = false)
+        
+        try {
+            activity.financeWidgetManagerOrNull?.updateDisplay()
+        } catch (_: Exception) {
         }
         
         
-        if (activity.isHiddenAppManagerInitialized()) {
-            activity.hiddenAppManager.forceRefresh()
-        }
+        activity.wallpaperManagerHelper.applyBlurToViews()
+        activity.wallpaperManagerHelper.clearCache()
+        activity.wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
         
-        
-        if (activity.isAppListLoaderInitialized()) {
-            activity.appListLoader.loadApps(forceRefresh = false)
-        }
-        
-        if (activity.isFinanceWidgetManagerInitialized()) {
-            try {
-                activity.financeWidgetManager.updateDisplay() 
-            } catch (_: Exception) {
-                
-            }
-        }
-        
-        
-        if (activity.isWallpaperManagerHelperInitialized()) {
-            activity.wallpaperManagerHelper.applyBlurToViews()
-            activity.wallpaperManagerHelper.clearCache()
-            activity.wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
-            
-            activity.refreshRightDrawerWallpaper()
-        }
+        activity.refreshRightDrawerWallpaper()
+
+        activity.screenPagerManager.reloadPages()
+
+        activity.activityInitializer.setupDrawerLayout()
+
     }
 }

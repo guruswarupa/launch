@@ -29,6 +29,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.graphics.toColorInt
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -39,6 +40,9 @@ import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import java.io.File
 import java.text.DecimalFormat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class EncryptedVaultActivity : VaultBaseActivity() {
     private lateinit var vaultManager: EncryptedFolderManager
@@ -63,15 +67,21 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 fileToDecrypt?.let { file ->
-                    try {
-                        contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            vaultManager.getDecryptedInputStream(file.name).use { inputStream ->
-                                inputStream.copyTo(outputStream)
+                    lifecycleScope.launch {
+                        try {
+                            withContext(Dispatchers.IO) {
+                                contentResolver.openOutputStream(uri)?.use { outputStream ->
+                                    vaultManager.decryptToOutputStream(file.name, outputStream)
+                                } ?: throw IllegalStateException("Unable to open destination")
                             }
+                            Toast.makeText(this@EncryptedVaultActivity, "File decrypted and saved", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                this@EncryptedVaultActivity,
+                                "Decryption failed: ${e.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
-                        Toast.makeText(this, "File decrypted and saved", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        Toast.makeText(this, "Decryption failed: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -350,14 +360,31 @@ class EncryptedVaultActivity : VaultBaseActivity() {
                 }
                 createNoteLauncher.launch(intent)
             } else {
-                val tempFile = vaultManager.decryptToCache(file.name)
-                val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", tempFile)
-                val actualMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension) ?: "*/*"
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(uri, actualMimeType)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                lifecycleScope.launch {
+                    try {
+                        val tempFile = withContext(Dispatchers.IO) {
+                            vaultManager.decryptToCache(file.name)
+                        }
+                        val uri = FileProvider.getUriForFile(
+                            this@EncryptedVaultActivity,
+                            "${packageName}.fileprovider",
+                            tempFile
+                        )
+                        val actualMimeType =
+                            MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension) ?: "*/*"
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, actualMimeType)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(Intent.createChooser(intent, "Open with..."))
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@EncryptedVaultActivity,
+                            "Failed to open file: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
-                startActivity(Intent.createChooser(intent, "Open with..."))
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to open file: ${e.message}", Toast.LENGTH_SHORT).show()

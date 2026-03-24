@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.ui.activities.SettingsActivity
@@ -41,6 +42,7 @@ class FeatureTutorialManager(
     }
 
     private enum class TutorialPage(val rootViewId: Int) {
+        RSS(R.id.rss_feed_page),
         HOME(R.id.main_content),
         WIDGETS(R.id.widgets_drawer),
         WALLPAPER(R.id.wallpaper_drawer)
@@ -75,24 +77,11 @@ class FeatureTutorialManager(
             description = "Search apps, contacts, and quick actions from here. Keep it empty to browse normally, or type to filter instantly.",
             targetViewId = R.id.search_box
         ),
-        VOICE_SEARCH(
-            page = TutorialPage.HOME,
-            title = "Voice Search",
-            description = "Tap the mic to run voice commands or search hands-free.",
-            targetViewId = R.id.voice_search_button
-        ),
         TIME_AND_WEATHER(
             page = TutorialPage.HOME,
             title = "Top Widgets",
             description = "The top card keeps time, date, weather, and status info visible without leaving the home page.",
             targetViewId = R.id.top_widget_container
-        ),
-        APP_LIST(
-            page = TutorialPage.HOME,
-            title = "App List Actions",
-            description = "Your installed apps live here. Long press any app to open actions like Add to Favorites, share, app info, and limits.",
-            targetViewId = R.id.app_list,
-            highlightPosition = HighlightPosition.TOP
         ),
         APP_DOCK(
             page = TutorialPage.HOME,
@@ -114,20 +103,49 @@ class FeatureTutorialManager(
             targetViewId = R.id.app_dock,
             targetViewTag = "focus_mode_container"
         ),
+        WORK_PROFILE(
+            page = TutorialPage.HOME,
+            title = "Work Profile",
+            description = "This dock control handles your work profile. Tap it to turn work apps on or off, and long press it to open work profile setup or settings.",
+            targetViewId = R.id.app_dock,
+            targetViewTag = "work_profile_container"
+        ),
+        APP_LIST(
+            page = TutorialPage.HOME,
+            title = "App List Actions",
+            description = "Your installed apps live here. Long press any app to open actions like Add to Favorites, share, app info, and limits.",
+            targetViewId = R.id.app_list,
+            highlightPosition = HighlightPosition.TOP
+        ),
+        LAUNCH_SETTINGS_SHORTCUT(
+            page = TutorialPage.HOME,
+            title = "Launch Settings",
+            description = "At the bottom of the app list you can quickly open Launch Settings without searching for it.",
+            targetViewId = R.id.app_list,
+            targetViewTag = "launcher_settings_shortcut",
+            highlightPosition = HighlightPosition.TOP
+        ),
+        LAUNCH_VAULT_SHORTCUT(
+            page = TutorialPage.HOME,
+            title = "Launch Vault",
+            description = "Right below that, Launch Vault opens your encrypted vault directly from the bottom of the app list.",
+            targetViewId = R.id.app_list,
+            targetViewTag = "launcher_vault_shortcut",
+            highlightPosition = HighlightPosition.TOP
+        ),
+        NEWS_FEED_PAGE(
+            page = TutorialPage.RSS,
+            title = "News Feed",
+            description = "The far-left page is your news feed. Use the topic chips to focus on enabled categories and tap any article to open it full screen.",
+            targetViewId = R.id.rss_header,
+            highlightPosition = HighlightPosition.BOTTOM,
+            scrollToTarget = false
+        ),
         WIDGETS_PAGE(
             page = TutorialPage.WIDGETS,
             title = "Widgets Page",
-            description = "The left page is widgets page. Swipe over to see larger widgets and utility panels.",
-            targetViewId = R.id.widgets_drawer,
-            highlightPosition = HighlightPosition.CENTER,
-            highlightVisible = false,
-            scrollToTarget = false
-        ),
-        WIDGETS_SETTINGS(
-            page = TutorialPage.WIDGETS,
-            title = "Configure Widgets",
-            description = "Use this action to choose which widgets appear in the drawer and adjust the widgets page to fit your setup.",
-            targetViewId = R.id.widget_config_button,
+            description = "The left page is your widgets page. Swipe here for larger widgets and utility panels, and use the settings action to choose what appears.",
+            targetViewId = R.id.widget_settings_header,
             scrollToTarget = false
         ),
         WALLPAPER_PAGE(
@@ -175,6 +193,7 @@ class FeatureTutorialManager(
             return
         }
 
+        removeTutorialOverlay()
         val step = TutorialStep.entries[currentStep]
         val token = ++renderToken
         openPage(step.page, animated = false) {
@@ -186,6 +205,12 @@ class FeatureTutorialManager(
         if (!isTutorialActive || token != renderToken) return
 
         val pageRoot = activity.findViewById<ViewGroup>(step.page.rootViewId)
+        if (pageRoot != null && scrollRecyclerToTutorialTarget(step, pageRoot)) {
+            pageRoot.postDelayed({
+                renderStep(step, token, attempt + 1)
+            }, RETRY_DELAY_MS)
+            return
+        }
         val targetView = resolveTargetView(step, pageRoot)
         if (pageRoot == null || targetView == null || !targetView.isAttachedToWindow) {
             if (attempt >= MAX_RENDER_ATTEMPTS) {
@@ -210,7 +235,12 @@ class FeatureTutorialManager(
 
     private fun resolveTargetView(step: TutorialStep, pageRoot: ViewGroup?): View? {
         if (pageRoot == null) return null
-        
+
+        if (step.targetViewTag != null && step.targetViewId == R.id.app_list) {
+            val recyclerView = pageRoot.findViewById<RecyclerView>(R.id.app_list) ?: return null
+            return recyclerView.findViewWithTag(step.targetViewTag)
+        }
+
         return if (step.targetViewTag != null) {
             pageRoot.findViewWithTag(step.targetViewTag)
         } else {
@@ -220,6 +250,7 @@ class FeatureTutorialManager(
 
     private fun openPage(page: TutorialPage, animated: Boolean, onReady: () -> Unit) {
         when (page) {
+            TutorialPage.RSS -> activity.openRssPage(animated)
             TutorialPage.HOME -> activity.openHomePage(animated)
             TutorialPage.WIDGETS -> activity.openWidgetsPage(animated)
             TutorialPage.WALLPAPER -> activity.openWallpaperPage(animated)
@@ -236,11 +267,7 @@ class FeatureTutorialManager(
         tutorialOverlay = LayoutInflater.from(activity).inflate(R.layout.tutorial_overlay, null)
         parentView.addView(tutorialOverlay)
 
-        @SuppressLint("ClickableViewAccessibility")
-        tutorialOverlay?.setOnTouchListener { view, _ ->
-            view.performClick()
-            false
-        }
+        tutorialOverlay?.setOnClickListener { }
         tutorialOverlay?.bringToFront()
 
         val titleText = tutorialOverlay?.findViewById<TextView>(R.id.tutorial_title)
@@ -389,6 +416,27 @@ class FeatureTutorialManager(
                 }
             }
         }
+    }
+
+    private fun scrollRecyclerToTutorialTarget(step: TutorialStep, pageRoot: ViewGroup): Boolean {
+        if (step.targetViewId != R.id.app_list || step.targetViewTag == null) {
+            return false
+        }
+        val recyclerView = pageRoot.findViewById<RecyclerView>(R.id.app_list) ?: return false
+        if (recyclerView.findViewWithTag<View>(step.targetViewTag) != null) {
+            return false
+        }
+        val itemCount = recyclerView.adapter?.itemCount ?: return false
+        if (itemCount <= 0) {
+            return false
+        }
+        val targetPosition = when (step.targetViewTag) {
+            "launcher_settings_shortcut" -> (itemCount - 2).coerceAtLeast(0)
+            "launcher_vault_shortcut" -> (itemCount - 1).coerceAtLeast(0)
+            else -> return false
+        }
+        recyclerView.scrollToPosition(targetPosition)
+        return true
     }
 
     private fun findVerticalScrollParent(view: View): NestedScrollView? {

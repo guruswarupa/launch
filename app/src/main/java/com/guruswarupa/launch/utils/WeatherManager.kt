@@ -1,7 +1,5 @@
 package com.guruswarupa.launch.utils
 
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
@@ -10,17 +8,23 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.guruswarupa.launch.R
+import dagger.hilt.android.qualifiers.ActivityContext
+import dagger.hilt.android.scopes.ActivityScoped
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
 import java.util.Locale
-import java.util.concurrent.Executors
+import javax.inject.Inject
 import kotlin.math.roundToInt
 
-class WeatherManager(private val context: android.content.Context) {
-
-    private val executor = Executors.newSingleThreadExecutor()
-    private val handler = Handler(Looper.getMainLooper())
+@ActivityScoped
+class WeatherManager @Inject constructor(@ActivityContext private val context: android.content.Context) {
+    private val lifecycleScope = (context as LifecycleOwner).lifecycleScope
 
     private data class GeocodingResult(
         val latitude: Double,
@@ -36,10 +40,40 @@ class WeatherManager(private val context: android.content.Context) {
         val location: String
     )
 
+    data class ForecastDay(
+        val dayLabel: String,
+        val weatherCode: Int,
+        val highTemperature: Int,
+        val lowTemperature: Int
+    )
+
+    data class HourlyForecast(
+        val timeLabel: String,
+        val weatherCode: Int,
+        val temperature: Int
+    )
+
+    data class ForecastAlert(
+        val title: String,
+        val detail: String
+    )
+
+    data class WeatherForecast(
+        val location: String,
+        val currentTemperature: Int,
+        val currentDescription: String,
+        val currentWeatherCode: Int,
+        val dailyForecasts: List<ForecastDay>,
+        val hourlyForecasts: List<HourlyForecast>,
+        val alerts: List<ForecastAlert>
+    )
+
     fun getTemperatureUnit(): String {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", android.content.Context.MODE_PRIVATE)
         return prefs.getString("weather_temperature_unit", "celsius") ?: "celsius"
     }
+
+    fun getConfiguredLocation(): String? = getStoredLocation()
 
     private fun saveTemperatureUnit(unit: String) {
         val prefs = context.getSharedPreferences("com.guruswarupa.launch.PREFS", android.content.Context.MODE_PRIVATE)
@@ -107,7 +141,7 @@ class WeatherManager(private val context: android.content.Context) {
         val storedLocation = getStoredLocation()
         val cachedWeather = getCachedWeather(storedLocation)
         if (cachedWeather != null && isCacheValid(cachedWeather)) {
-            handler.post {
+            lifecycleScope.launch {
                 val convertedTemp = convertTemperatureToSelectedUnit(cachedWeather.temperature)
                 val formatString = getTemperatureFormatString()
                 weatherText.text = String.format(formatString, convertedTemp, cachedWeather.description)
@@ -118,7 +152,7 @@ class WeatherManager(private val context: android.content.Context) {
         }
 
         if (storedLocation.isNullOrBlank()) {
-            handler.post {
+            lifecycleScope.launch {
                 weatherText.text = context.getString(R.string.tap_to_enter_location)
                 weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
                 setupRefreshListeners(weatherIcon, weatherText)
@@ -131,39 +165,86 @@ class WeatherManager(private val context: android.content.Context) {
         fetchWeatherFromOpenMeteo(weatherIcon, weatherText, storedLocation)
     }
 
-    private fun fetchWeatherFromOpenMeteo(weatherIcon: ImageView, weatherText: TextView, location: String) {
-        executor.execute {
+    fun fetchWeatherForecast(
+        onSuccess: (WeatherForecast) -> Unit,
+        onError: () -> Unit
+    ) {
+        val storedLocation = getStoredLocation()
+        if (storedLocation.isNullOrBlank()) {
+            lifecycleScope.launch { onError() }
+            return
+        }
+        fetchWeatherForecast(storedLocation, onSuccess, onError)
+    }
+
+    fun fetchWeatherForecast(
+        location: String,
+        onSuccess: (WeatherForecast) -> Unit,
+        onError: () -> Unit
+    ) {
+        lifecycleScope.launch {
             try {
-                val geocodingResult = geocodeLocation(location) ?: throw Exception("Location not found")
-                val unitParam = if (getTemperatureUnit() == "fahrenheit") "fahrenheit" else "celsius"
-                val lat = String.format(Locale.US, "%.5f", geocodingResult.latitude)
-                val lon = String.format(Locale.US, "%.5f", geocodingResult.longitude)
-                val url =
-                    "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current_weather=true&temperature_unit=$unitParam&timezone=auto"
-                val response = URL(url).readText()
-                val jsonObject = JSONObject(response)
-                val currentWeather = jsonObject.getJSONObject("current_weather")
-                val temperature = currentWeather.getDouble("temperature").roundToInt()
-                val weatherCode = currentWeather.getInt("weathercode")
-                val description = describeOpenMeteoWeatherCode(weatherCode)
-                val displayName = if (geocodingResult.displayName.isNotBlank()) geocodingResult.displayName else location
-
-                saveLocation(displayName)
-                saveCachedWeather(temperature, description, weatherCode, displayName)
-
-                handler.post {
-                    val convertedTemp = convertTemperatureToSelectedUnit(temperature)
-                    val formatString = getTemperatureFormatString()
-                    weatherText.text = String.format(formatString, convertedTemp, description)
-                    setWeatherIcon(weatherIcon, weatherCode)
-                    setupRefreshListeners(weatherIcon, weatherText)
+                val forecast = withContext(Dispatchers.IO) {
+                    val geocodingResult = geocodeLocation(location) ?: throw Exception("Location not found")
+                    val unitParam = if (getTemperatureUnit() == "fahrenheit") "fahrenheit" else "celsius"
+                    val lat = String.format(Locale.US, "%.5f", geocodingResult.latitude)
+                    val lon = String.format(Locale.US, "%.5f", geocodingResult.longitude)
+                    val url =
+                        "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=5&temperature_unit=$unitParam&timezone=auto"
+                    val response = URL(url).readText()
+                    parseForecastResponse(JSONObject(response), geocodingResult.displayName.ifBlank { location })
                 }
+                saveLocation(forecast.location)
+                saveCachedWeather(
+                    forecast.currentTemperature,
+                    forecast.currentDescription,
+                    forecast.currentWeatherCode,
+                    forecast.location
+                )
+                onSuccess(forecast)
             } catch (_: Exception) {
-                handler.post {
-                    weatherText.text = context.getString(R.string.weather_unavailable)
-                    weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
-                    setupRefreshListeners(weatherIcon, weatherText)
+                onError()
+            }
+        }
+    }
+
+    private fun fetchWeatherFromOpenMeteo(weatherIcon: ImageView, weatherText: TextView, location: String) {
+        lifecycleScope.launch {
+            try {
+                val currentWeather = withContext(Dispatchers.IO) {
+                    val geocodingResult = geocodeLocation(location) ?: throw Exception("Location not found")
+                    val unitParam = if (getTemperatureUnit() == "fahrenheit") "fahrenheit" else "celsius"
+                    val lat = String.format(Locale.US, "%.5f", geocodingResult.latitude)
+                    val lon = String.format(Locale.US, "%.5f", geocodingResult.longitude)
+                    val url =
+                        "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current_weather=true&temperature_unit=$unitParam&timezone=auto"
+                    val response = URL(url).readText()
+                    val jsonObject = JSONObject(response)
+                    val currentWeather = jsonObject.getJSONObject("current_weather")
+                    val temperature = currentWeather.getDouble("temperature").roundToInt()
+                    val weatherCode = currentWeather.getInt("weathercode")
+                    val description = describeOpenMeteoWeatherCode(weatherCode)
+                    val displayName = if (geocodingResult.displayName.isNotBlank()) geocodingResult.displayName else location
+                    CurrentWeatherPayload(temperature, weatherCode, description, displayName)
                 }
+
+                saveLocation(currentWeather.displayName)
+                saveCachedWeather(
+                    currentWeather.temperature,
+                    currentWeather.description,
+                    currentWeather.weatherCode,
+                    currentWeather.displayName
+                )
+
+                val convertedTemp = convertTemperatureToSelectedUnit(currentWeather.temperature)
+                val formatString = getTemperatureFormatString()
+                weatherText.text = String.format(formatString, convertedTemp, currentWeather.description)
+                setWeatherIcon(weatherIcon, currentWeather.weatherCode)
+                setupRefreshListeners(weatherIcon, weatherText)
+            } catch (_: Exception) {
+                weatherText.text = context.getString(R.string.weather_unavailable)
+                weatherIcon.setImageResource(R.drawable.ic_weather_cloudy)
+                setupRefreshListeners(weatherIcon, weatherText)
             }
         }
     }
@@ -191,29 +272,139 @@ class WeatherManager(private val context: android.content.Context) {
         return GeocodingResult(latitude, longitude, displayName)
     }
 
-    private fun describeOpenMeteoWeatherCode(code: Int): String {
+    private fun parseForecastResponse(jsonObject: JSONObject, displayName: String): WeatherForecast {
+        val current = jsonObject.getJSONObject("current")
+        val currentTemperature = current.getDouble("temperature_2m").roundToInt()
+        val currentWeatherCode = current.getInt("weather_code")
+        val currentDescription = describeOpenMeteoWeatherCode(currentWeatherCode)
+        val daily = jsonObject.getJSONObject("daily")
+        val dailyTimes = daily.getJSONArray("time")
+        val dailyCodes = daily.getJSONArray("weather_code")
+        val dailyHighs = daily.getJSONArray("temperature_2m_max")
+        val dailyLows = daily.getJSONArray("temperature_2m_min")
+        val dayFormatter = java.time.format.DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+        val dailyForecasts = buildList {
+            for (index in 0 until minOf(dailyTimes.length(), 5)) {
+                val date = java.time.LocalDate.parse(dailyTimes.getString(index))
+                add(
+                    ForecastDay(
+                        dayLabel = if (index == 0) context.getString(R.string.weather_today) else date.format(dayFormatter),
+                        weatherCode = dailyCodes.getInt(index),
+                        highTemperature = dailyHighs.getDouble(index).roundToInt(),
+                        lowTemperature = dailyLows.getDouble(index).roundToInt()
+                    )
+                )
+            }
+        }
+        val hourly = jsonObject.getJSONObject("hourly")
+        val hourlyTimes = hourly.getJSONArray("time")
+        val hourlyCodes = hourly.getJSONArray("weather_code")
+        val hourlyTemps = hourly.getJSONArray("temperature_2m")
+        val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("ha", Locale.getDefault())
+        val now = java.time.LocalDateTime.now()
+        val hourlyForecasts = buildList {
+            for (index in 0 until hourlyTimes.length()) {
+                val dateTime = java.time.LocalDateTime.parse(hourlyTimes.getString(index))
+                if (dateTime.isBefore(now)) {
+                    continue
+                }
+                add(
+                    HourlyForecast(
+                        timeLabel = dateTime.format(timeFormatter).replace("AM", "a").replace("PM", "p"),
+                        weatherCode = hourlyCodes.getInt(index),
+                        temperature = hourlyTemps.getDouble(index).roundToInt()
+                    )
+                )
+                if (size == 6) {
+                    break
+                }
+            }
+        }
+        return WeatherForecast(
+            location = displayName,
+            currentTemperature = currentTemperature,
+            currentDescription = currentDescription,
+            currentWeatherCode = currentWeatherCode,
+            dailyForecasts = dailyForecasts,
+            hourlyForecasts = hourlyForecasts,
+            alerts = buildForecastAlerts(dailyForecasts, hourlyForecasts)
+        )
+    }
+
+    private fun buildForecastAlerts(
+        dailyForecasts: List<ForecastDay>,
+        hourlyForecasts: List<HourlyForecast>
+    ): List<ForecastAlert> {
+        val alerts = mutableListOf<ForecastAlert>()
+        if (hourlyForecasts.any { it.weatherCode in 95..99 }) {
+            alerts.add(
+                ForecastAlert(
+                    context.getString(R.string.weather_alert_storm_risk_title),
+                    context.getString(R.string.weather_alert_storm_risk_detail)
+                )
+            )
+        }
+        if (hourlyForecasts.any { it.weatherCode in 71..77 || it.weatherCode in 85..86 }) {
+            alerts.add(
+                ForecastAlert(
+                    context.getString(R.string.weather_alert_snow_expected_title),
+                    context.getString(R.string.weather_alert_snow_expected_detail)
+                )
+            )
+        }
+        if (hourlyForecasts.any { it.weatherCode in 51..67 || it.weatherCode in 80..82 }) {
+            alerts.add(
+                ForecastAlert(
+                    context.getString(R.string.weather_alert_rain_ahead_title),
+                    context.getString(R.string.weather_alert_rain_ahead_detail)
+                )
+            )
+        }
+        val warmThreshold = if (getTemperatureUnit() == "fahrenheit") 90 else 32
+        val coldThreshold = if (getTemperatureUnit() == "fahrenheit") 32 else 0
+        if (dailyForecasts.any { it.highTemperature >= warmThreshold }) {
+            alerts.add(
+                ForecastAlert(
+                    context.getString(R.string.weather_alert_heat_watch_title),
+                    context.getString(R.string.weather_alert_heat_watch_detail)
+                )
+            )
+        }
+        if (dailyForecasts.any { it.lowTemperature <= coldThreshold }) {
+            alerts.add(
+                ForecastAlert(
+                    context.getString(R.string.weather_alert_freeze_risk_title),
+                    context.getString(R.string.weather_alert_freeze_risk_detail)
+                )
+            )
+        }
+        return alerts.take(3)
+    }
+
+    fun describeOpenMeteoWeatherCode(code: Int): String {
         return when (code) {
-            0 -> "Clear"
-            in 1..3 -> "Cloudy"
-            45, 48 -> "Fog"
-            in 51..67, in 80..82 -> "Rain"
-            in 71..77, in 85..86 -> "Snow"
-            in 95..99 -> "Thunderstorm"
-            else -> "Cloudy"
+            0 -> context.getString(R.string.weather_condition_clear)
+            in 1..3 -> context.getString(R.string.weather_condition_cloudy)
+            45, 48 -> context.getString(R.string.weather_condition_fog)
+            in 51..67, in 80..82 -> context.getString(R.string.weather_condition_rain)
+            in 71..77, in 85..86 -> context.getString(R.string.weather_condition_snow)
+            in 95..99 -> context.getString(R.string.weather_condition_thunderstorm)
+            else -> context.getString(R.string.weather_condition_cloudy)
+        }
+    }
+
+    fun getWeatherIconResource(weatherCode: Int): Int {
+        return when (weatherCode) {
+            0 -> R.drawable.ic_weather_sunny
+            in 1..3, 45, 48 -> R.drawable.ic_weather_cloudy
+            in 51..67, in 80..82, in 95..99 -> R.drawable.ic_weather_rainy
+            in 71..77, in 85..86 -> R.drawable.ic_weather_snowy
+            else -> R.drawable.ic_weather_cloudy
         }
     }
 
     private fun setWeatherIcon(weatherIcon: ImageView, weatherCode: Int) {
-        val iconResource = when (weatherCode) {
-            in 200..232 -> R.drawable.ic_weather_rainy
-            in 300..321 -> R.drawable.ic_weather_rainy
-            in 500..531 -> R.drawable.ic_weather_rainy
-            in 600..622 -> R.drawable.ic_weather_snowy
-            in 701..781 -> R.drawable.ic_weather_cloudy
-            800 -> R.drawable.ic_weather_sunny
-            in 801..804 -> R.drawable.ic_weather_cloudy
-            else -> R.drawable.ic_weather_cloudy
-        }
+        val iconResource = getWeatherIconResource(weatherCode)
         weatherIcon.setImageResource(iconResource)
     }
 
@@ -233,8 +424,8 @@ class WeatherManager(private val context: android.content.Context) {
     private var isSettingDialogVisible = false
 
     fun showWeatherSettings(weatherIcon: ImageView? = null, weatherText: TextView? = null) {
-        handler.post {
-            if (isSettingDialogVisible) return@post
+        lifecycleScope.launch {
+            if (isSettingDialogVisible) return@launch
             isSettingDialogVisible = true
             val inflater = LayoutInflater.from(context)
             val dialogView = inflater.inflate(R.layout.dialog_weather_settings, null)
@@ -278,4 +469,11 @@ class WeatherManager(private val context: android.content.Context) {
                 .show()
         }
     }
+
+    private data class CurrentWeatherPayload(
+        val temperature: Int,
+        val weatherCode: Int,
+        val description: String,
+        val displayName: String
+    )
 }

@@ -6,19 +6,29 @@ import android.content.pm.ResolveInfo
 import android.os.Process
 import android.os.UserManager
 import com.guruswarupa.launch.core.CacheManager
+import dagger.hilt.android.qualifiers.ActivityContext
+import dagger.hilt.android.scopes.ActivityScoped
 import java.util.Locale
+import javax.inject.Inject
 
-class AppListManager(
-    private val context: Context,
-    private val appDockManager: AppDockManager,
+@ActivityScoped
+class AppListManager @Inject constructor(
+    @ActivityContext private val context: Context,
     private val favoriteAppManager: FavoriteAppManager,
-    private val hiddenAppManager: HiddenAppManager?,
-    private val cacheManager: CacheManager?,
+    private val hiddenAppManager: HiddenAppManager,
+    private val cacheManager: CacheManager,
     private val workspaceManager: WorkspaceManager,
     private val workProfileManager: WorkProfileManager
 ) {
     private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
     private val mainUserSerial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
+    private var appDockManager: AppDockManager? = null
+
+    fun attach(appDockManager: AppDockManager) {
+        this.appDockManager = appDockManager
+    }
+
+    private fun requireAppDockManager(): AppDockManager = requireNotNull(appDockManager) { "AppDockManager not attached" }
 
     fun filterAndPrepareApps(
         apps: List<ResolveInfo>,
@@ -26,6 +36,7 @@ class AppListManager(
         workspaceMode: Boolean
     ): List<ResolveInfo> {
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
+        val dockManager = requireAppDockManager()
         
         return apps.filter { app ->
             val packageName = app.activityInfo.packageName
@@ -47,7 +58,7 @@ class AppListManager(
 
             // Focus Mode takes absolute priority over Workspace and Work Profile toggle
             if (focusMode) {
-                return@filter if (isWorkApp) true else !appDockManager.isAppHiddenInFocusMode(packageName)
+                return@filter if (isWorkApp) true else !dockManager.isAppHiddenInFocusMode(packageName)
             }
             
             if (isWorkProfileEnabled) {
@@ -55,7 +66,7 @@ class AppListManager(
             } else {
                 if (isWorkApp) return@filter false
                 
-                if (workspaceMode && !appDockManager.isAppInActiveWorkspace(packageName)) {
+                if (workspaceMode && !dockManager.isAppInActiveWorkspace(packageName)) {
                     return@filter false
                 }
             }
@@ -66,8 +77,9 @@ class AppListManager(
     
     fun sortAppsAlphabetically(apps: List<ResolveInfo>): List<ResolveInfo> {
         val favorites = favoriteAppManager.getFavoriteApps()
-        val focusMode = appDockManager.getCurrentMode()
-        val workspaceMode = appDockManager.isWorkspaceModeActive()
+        val dockManager = requireAppDockManager()
+        val focusMode = dockManager.getCurrentMode()
+        val workspaceMode = dockManager.isWorkspaceModeActive()
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
         val showFavoritesAtTop = !focusMode && !workspaceMode && !isWorkProfileEnabled
         val comparator = compareBy<ResolveInfo>(
@@ -98,8 +110,9 @@ class AppListManager(
         
         val favorites = favoriteAppManager.getFavoriteApps()
         val result = mutableListOf<ResolveInfo>()
-        val focusMode = appDockManager.getCurrentMode()
-        val workspaceMode = appDockManager.isWorkspaceModeActive()
+        val dockManager = requireAppDockManager()
+        val focusMode = dockManager.getCurrentMode()
+        val workspaceMode = dockManager.isWorkspaceModeActive()
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
         
         val showFavoritesSection = !focusMode && !workspaceMode && !isWorkProfileEnabled
@@ -199,8 +212,8 @@ class AppListManager(
         return ri
     }
     
-    fun getFocusMode(): Boolean = appDockManager.getCurrentMode()
-    fun getWorkspaceMode(): Boolean = appDockManager.isWorkspaceModeActive()
+    fun getFocusMode(): Boolean = requireAppDockManager().getCurrentMode()
+    fun getWorkspaceMode(): Boolean = requireAppDockManager().isWorkspaceModeActive()
 
     private fun isInternalApp(app: ResolveInfo): Boolean {
         val packageName = app.activityInfo.packageName

@@ -110,7 +110,11 @@ object DownloadableFontManager {
 
             override fun onTypefaceRequestFailed(reason: Int) {
                 
-                Toast.makeText(context, "Failed to download font: ${option.displayName}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.font_download_failed_with_name, option.displayName),
+                    Toast.LENGTH_SHORT
+                ).show()
                 dispatch(styleKey, false)
             }
         }

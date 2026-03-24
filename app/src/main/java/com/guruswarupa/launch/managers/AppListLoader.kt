@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.MainActivity
+import com.guruswarupa.launch.R
 import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import com.guruswarupa.launch.core.CacheManager
@@ -69,7 +70,7 @@ class AppListLoader(
     fun loadApps(forceRefresh: Boolean = false) {
         if (activity.isFinishing || activity.isDestroyed) return
         
-        val adapter = if (activity.isAdapterInitialized()) activity.adapter else null
+        val adapter = activity.adapterOrNull
         loadApps(forceRefresh, activity.fullAppList, activity.appList, adapter)
     }
     
@@ -205,7 +206,7 @@ class AppListLoader(
                 if (fullList.isEmpty()) {
                     handler.post {
                         if (appList.isEmpty()) {
-                            Toast.makeText(activity, "No apps found!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(activity, R.string.app_list_no_apps_found, Toast.LENGTH_SHORT).show()
                         }
                         recyclerView.visibility = View.VISIBLE
                     }
@@ -266,7 +267,11 @@ class AppListLoader(
                         handler.postDelayed({ loadApps(forceRefresh = true, fullAppList, appList, adapter) }, 500)
                     }
                     if (appList.isEmpty()) {
-                        Toast.makeText(activity, "Error loading apps: ${e.message}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            activity,
+                            activity.getString(R.string.app_list_error_loading_apps, e.message),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                     recyclerView.visibility = View.VISIBLE
                 }

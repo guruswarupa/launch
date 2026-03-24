@@ -11,6 +11,7 @@ import android.util.Log
 import android.widget.ImageView
 import androidx.core.graphics.createBitmap
 import com.guruswarupa.launch.R
+import java.util.concurrent.RejectedExecutionException
 
 
 
@@ -19,7 +20,8 @@ class WallpaperManagerHelper(
     private val activity: androidx.fragment.app.FragmentActivity,
     private val wallpaperBackground: ImageView,
     private val drawerWallpaperBackground: ImageView?,
-    private val backgroundExecutor: java.util.concurrent.ExecutorService
+    private val backgroundExecutor: java.util.concurrent.ExecutorService,
+    private val rssWallpaperBackground: ImageView? = null
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private var currentWallpaperBitmap: Bitmap? = null
@@ -52,7 +54,14 @@ class WallpaperManagerHelper(
         lastWallpaperId = wallpaperId
         
         
-        backgroundExecutor.execute {
+        if ((backgroundExecutor as? java.util.concurrent.ExecutorService)?.isShutdown == true) {
+            Log.w("WallpaperManagerHelper", "Background executor is shut down, skipping wallpaper load")
+            setDefaultWallpaper()
+            return
+        }
+
+        try {
+            backgroundExecutor.execute {
             try {
                 val drawable = wallpaperManager.drawable
                 
@@ -98,6 +107,10 @@ class WallpaperManagerHelper(
                 handler.post { setDefaultWallpaper() }
             }
         }
+        } catch (e: RejectedExecutionException) {
+            Log.w("WallpaperManagerHelper", "Wallpaper load task rejected", e)
+            setDefaultWallpaper()
+        }
     }
 
     private fun updateWallpaperViews(newBitmap: Bitmap) {
@@ -109,6 +122,7 @@ class WallpaperManagerHelper(
         if (!newBitmap.isRecycled) {
             wallpaperBackground.setImageBitmap(newBitmap)
             drawerWallpaperBackground?.setImageBitmap(newBitmap)
+            rssWallpaperBackground?.setImageBitmap(newBitmap)
         }
         
         
@@ -127,6 +141,7 @@ class WallpaperManagerHelper(
         
         wallpaperBackground.setImageResource(R.drawable.wallpaper_background)
         drawerWallpaperBackground?.setImageResource(R.drawable.wallpaper_background)
+        rssWallpaperBackground?.setImageResource(R.drawable.wallpaper_background)
         
         
         
@@ -139,6 +154,7 @@ class WallpaperManagerHelper(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             wallpaperBackground.setRenderEffect(null)
             drawerWallpaperBackground?.setRenderEffect(null)
+            rssWallpaperBackground?.setRenderEffect(null)
             activity.findViewById<ImageView>(R.id.right_drawer_wallpaper)?.setRenderEffect(null)
         }
     }
@@ -162,6 +178,7 @@ class WallpaperManagerHelper(
     fun cleanup() {
         wallpaperBackground.setImageDrawable(null)
         drawerWallpaperBackground?.setImageDrawable(null)
+        rssWallpaperBackground?.setImageDrawable(null)
         
         
         

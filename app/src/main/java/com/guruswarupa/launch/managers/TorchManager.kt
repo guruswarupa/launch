@@ -5,6 +5,7 @@ import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.widget.Toast
+import com.guruswarupa.launch.R
 
 
 
@@ -42,7 +43,7 @@ class TorchManager(private val context: Context) {
 
     fun toggleTorch(): Boolean {
         if (cameraManager == null || cameraId == null) {
-            Toast.makeText(context, "Flashlight not available on this device", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.torch_not_available, Toast.LENGTH_SHORT).show()
             return false
         }
         
@@ -51,11 +52,11 @@ class TorchManager(private val context: Context) {
             cameraManager.setTorchMode(cameraId!!, isTorchOn)
             true
         } catch (_: CameraAccessException) {
-            Toast.makeText(context, "Unable to access camera", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.torch_camera_unavailable, Toast.LENGTH_SHORT).show()
             isTorchOn = !isTorchOn 
             false
         } catch (e: Exception) {
-            Toast.makeText(context, "Error toggling torch: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.torch_toggle_error, e.message), Toast.LENGTH_SHORT).show()
             isTorchOn = !isTorchOn 
             false
         }

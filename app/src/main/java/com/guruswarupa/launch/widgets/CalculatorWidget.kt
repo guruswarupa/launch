@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.CalculatorHistoryItem
 import com.guruswarupa.launch.ui.adapters.CalculatorHistoryAdapter
+import com.guruswarupa.launch.utils.CurrencyConverter
 import com.guruswarupa.launch.utils.NumberBaseConverter
 import com.guruswarupa.launch.utils.UnitConverter
 import java.math.BigDecimal
@@ -53,9 +54,10 @@ class CalculatorWidget(private val rootView: View) {
     private var currentMode = CalculatorMode.BASIC
     private var isInRadians = true 
     private var selectedInputBase = 10 
+    private var currencyRequestId = 0
     
     
-    private val unitCategories = listOf("Length", "Area", "Temperature", "Volume", "Mass", "Data", "Speed", "Time")
+    private val unitCategories = listOf("Length", "Area", "Temperature", "Volume", "Mass", "Data", "Speed", "Time", "Currency")
     private val unitMap = mapOf(
         "Length" to listOf("mm", "cm", "m", "km", "in", "ft", "yd", "mi"),
         "Area" to listOf("mm²", "cm²", "m²", "km²", "in²", "ft²", "yd²", "ac", "ha"),
@@ -64,7 +66,8 @@ class CalculatorWidget(private val rootView: View) {
         "Mass" to listOf("mg", "g", "kg", "oz", "lb", "t"),
         "Data" to listOf("B", "KB", "MB", "GB", "TB"),
         "Speed" to listOf("m/s", "km/h", "mph", "ft/s", "knot"),
-        "Time" to listOf("ms", "s", "min", "h", "d", "wk")
+        "Time" to listOf("ms", "s", "min", "h", "d", "wk"),
+        "Currency" to listOf("USD", "EUR", "GBP", "JPY", "INR", "AUD", "CAD", "CHF", "CNY", "SGD", "AED", "NZD")
     )
 
     init {
@@ -231,7 +234,12 @@ class CalculatorWidget(private val rootView: View) {
             val category = unitCategories[converterCategory.selectedItemPosition]
             val fromUnit = unitMap[category]!![converterFromUnit.selectedItemPosition]
             val toUnit = unitMap[category]!![converterToUnit.selectedItemPosition]
-            
+
+            if (category == "Currency") {
+                performCurrencyConversion(value, fromUnit, toUnit)
+                return
+            }
+
             val result = when (category) {
                 "Length" -> UnitConverter.convertLength(value, fromUnit, toUnit)
                 "Area" -> UnitConverter.convertArea(value, fromUnit, toUnit)
@@ -243,10 +251,32 @@ class CalculatorWidget(private val rootView: View) {
                 "Time" -> UnitConverter.convertTime(value, fromUnit, toUnit)
                 else -> value
             }
-            
+
             converterResult.text = rootView.context.getString(R.string.converter_result_format, result.stripTrailingZeros().toPlainString(), toUnit)
         } catch (_: Exception) {
             converterResult.text = rootView.context.getString(R.string.calculator_error)
+        }
+    }
+
+    private fun performCurrencyConversion(value: BigDecimal, fromCurrency: String, toCurrency: String) {
+        val requestId = ++currencyRequestId
+        converterResult.text = rootView.context.getString(R.string.converter_loading_rates)
+        CurrencyConverter.convert(rootView.context, value, fromCurrency, toCurrency) { result, isCachedFallback ->
+            if (requestId != currencyRequestId) return@convert
+            if (result == null) {
+                converterResult.text = rootView.context.getString(R.string.converter_rate_unavailable)
+                return@convert
+            }
+            val resultText = rootView.context.getString(
+                R.string.converter_result_format,
+                result.stripTrailingZeros().toPlainString(),
+                toCurrency
+            )
+            converterResult.text = if (isCachedFallback) {
+                rootView.context.getString(R.string.converter_result_cached_format, resultText)
+            } else {
+                resultText
+            }
         }
     }
 

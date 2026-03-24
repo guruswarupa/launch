@@ -5,27 +5,31 @@ import android.content.Intent
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.MotionEvent
-import android.view.View
 import android.view.VelocityTracker
-import android.view.ViewGroup
+import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
+import com.guruswarupa.launch.ui.views.SafeHorizontalScrollView
 
 class ScreenPagerManager(
     private val activity: FragmentActivity,
     private val drawerLayout: DrawerLayout
 ) {
-    enum class Page(val index: Int) {
-        LEFT(0),
-        CENTER(1),
-        RIGHT(2)
+    enum class Page {
+        RSS,
+        WIDGETS,
+        CENTER,
+        RIGHT
     }
 
     private lateinit var pagerScrollView: HorizontalScrollView
@@ -36,10 +40,13 @@ class ScreenPagerManager(
     private var touchStartX = 0f
     private var touchStartY = 0f
     private var touchStartScrollX = 0
+    private var touchStartPage = Page.CENTER
     private var velocityTracker: VelocityTracker? = null
     private val viewConfiguration = ViewConfiguration.get(activity)
     private val minimumFlingVelocity = viewConfiguration.scaledMinimumFlingVelocity
     private val touchSlop = viewConfiguration.scaledTouchSlop
+    private val pageViews = linkedMapOf<Page, View>()
+    private var activePages = listOf(Page.WIDGETS, Page.CENTER, Page.RIGHT)
 
     companion object {
         private const val PAGE_SWITCH_THRESHOLD = 0.12f
@@ -48,11 +55,17 @@ class ScreenPagerManager(
     }
 
     fun setup() {
-        val leftView = activity.findViewById<View>(R.id.widgets_drawer) ?: return
+        val rssView = activity.findViewById<View>(R.id.rss_feed_page) ?: return
+        val widgetsView = activity.findViewById<View>(R.id.widgets_drawer) ?: return
         val centerView = activity.findViewById<View>(R.id.main_content) ?: return
         val rightView = activity.findViewById<View>(R.id.wallpaper_drawer) ?: return
 
-        val pages = listOf(leftView, centerView, rightView)
+        pageViews.clear()
+        pageViews[Page.RSS] = rssView
+        pageViews[Page.WIDGETS] = widgetsView
+        pageViews[Page.CENTER] = centerView
+        pageViews[Page.RIGHT] = rightView
+
         val pageStrip = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = ViewGroup.LayoutParams(
@@ -62,28 +75,22 @@ class ScreenPagerManager(
         }
 
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+        ViewCompat.setAccessibilityDelegate(drawerLayout, AccessibilityDelegateCompat())
         drawerLayout.removeAllViews()
 
-        pages.forEach { page ->
+        pageViews.values.forEach { page ->
             (page.parent as? ViewGroup)?.removeView(page)
             setupDoubleTapToLock(page)
-            
-            pageStrip.addView(
-                page,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            )
         }
 
-        pagerScrollView = object : HorizontalScrollView(activity) {
+        pagerScrollView = object : SafeHorizontalScrollView(activity) {
             override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         touchStartX = event.x
                         touchStartY = event.y
                         touchStartScrollX = scrollX
+                        touchStartPage = nearestPageFor(scrollX)
                         updatePageWidth()
                         velocityTracker?.recycle()
                         velocityTracker = VelocityTracker.obtain().apply {
@@ -142,6 +149,7 @@ class ScreenPagerManager(
         }
 
         drawerLayout.addView(pagerScrollView)
+        rebuildPageStrip()
 
         pagerScrollView.post {
             if (pagerScrollView.width > 0) {
@@ -159,14 +167,67 @@ class ScreenPagerManager(
         }
     }
 
+    fun reloadPages() {
+        if (!::pagerScrollView.isInitialized) {
+            return
+        }
+        val previousPage = currentPage
+        rebuildPageStrip()
+        updatePageWidth(force = true)
+        val restoredPage = if (activePages.contains(previousPage)) previousPage else getDefaultPage()
+        scrollToPage(restoredPage, animated = false)
+        pagerScrollView.post {
+            pagerScrollView.visibility = View.VISIBLE
+            notifyPageChanged(restoredPage, force = true)
+            applyPageTransitions(pagerScrollView.scrollX)
+        }
+    }
+
+    private fun rebuildPageStrip() {
+        activePages = buildActivePages()
+        val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
+        pageStrip.removeAllViews()
+
+        activePages.forEach { page ->
+            pageViews[page]?.let { view ->
+                (view.parent as? ViewGroup)?.removeView(view)
+                pageStrip.addView(
+                    view,
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                )
+            }
+        }
+    }
+
+    private fun buildActivePages(): List<Page> {
+        val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
+        val rssEnabled = prefs.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true)
+        val widgetsEnabled = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
+        val pages = mutableListOf<Page>()
+        if (rssEnabled) {
+            pages.add(Page.RSS)
+        }
+        if (widgetsEnabled) {
+            pages.add(Page.WIDGETS)
+        }
+        pages.add(Page.CENTER)
+        pages.add(Page.RIGHT)
+        return pages
+    }
+
     private fun initializeAfterLayout() {
         val width = pagerScrollView.width
-        if (width <= 0) return
-        
+        if (width <= 0) {
+            return
+        }
+
         pageWidth = width
         val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
-        for (i in 0 until pageStrip.childCount) {
-            val child = pageStrip.getChildAt(i)
+        for (index in 0 until pageStrip.childCount) {
+            val child = pageStrip.getChildAt(index)
             val params = child.layoutParams
             params.width = pageWidth
             child.layoutParams = params
@@ -174,12 +235,11 @@ class ScreenPagerManager(
         pageStrip.requestLayout()
 
         val defaultPage = getDefaultPage()
-        
+
         pagerScrollView.post {
-            val targetX = defaultPage.index * pageWidth
+            val targetX = pageIndex(defaultPage) * pageWidth
             pagerScrollView.scrollTo(targetX, 0)
             currentPage = defaultPage
-            
             pagerScrollView.post {
                 if (pagerScrollView.scrollX != targetX) {
                     pagerScrollView.scrollTo(targetX, 0)
@@ -192,20 +252,20 @@ class ScreenPagerManager(
     }
 
     private fun applyPageTransitions(scrollX: Int) {
-        if (pageWidth <= 0) return
+        if (pageWidth <= 0) {
+            return
+        }
         val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
-        
-        for (i in 0 until pageStrip.childCount) {
-            val page = pageStrip.getChildAt(i)
-            val pageCenterX = i * pageWidth
+
+        for (index in 0 until pageStrip.childCount) {
+            val page = pageStrip.getChildAt(index)
+            val pageCenterX = index * pageWidth
             val distanceFromCenter = kotlin.math.abs(scrollX - pageCenterX).toFloat()
             val fraction = (distanceFromCenter / pageWidth).coerceIn(0f, 1f)
-            
-            page.alpha = 1f - (fraction * 0.5f)
-            val scale = 1f - (fraction * 0.08f)
-            page.scaleX = scale
-            page.scaleY = scale
-            
+
+            page.alpha = 1f - (fraction * 0.08f)
+            page.scaleX = 1f
+            page.scaleY = 1f
             page.translationX = 0f
         }
     }
@@ -216,15 +276,15 @@ class ScreenPagerManager(
                 val service = ScreenLockAccessibilityService.instance
                 if (service != null) {
                     return service.lockScreen()
-                } else {
-                    Toast.makeText(
-                        activity,
-                        "Enable Accessibility Service to lock screen",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    try {
-                        activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    } catch (_: Exception) {}
+                }
+                Toast.makeText(
+                    activity,
+                    "Enable Accessibility Service to lock screen",
+                    Toast.LENGTH_SHORT
+                ).show()
+                try {
+                    activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } catch (_: Exception) {
                 }
                 return true
             }
@@ -235,7 +295,7 @@ class ScreenPagerManager(
                 v.performClick()
             }
             gestureDetector.onTouchEvent(event)
-            true 
+            true
         }
     }
 
@@ -245,10 +305,11 @@ class ScreenPagerManager(
 
     fun isPageOpen(page: Page): Boolean = currentPage == page
 
-    fun openLeftPage(animated: Boolean = true) {
-        if (leftPageLocked) return
-        scrollToPage(Page.LEFT, animated)
-    }
+    fun openLeftPage(animated: Boolean = true) = openWidgetsPage(animated)
+
+    fun openRssPage(animated: Boolean = true) = scrollToPage(Page.RSS, animated)
+
+    fun openWidgetsPage(animated: Boolean = true) = scrollToPage(Page.WIDGETS, animated)
 
     fun openCenterPage(animated: Boolean = true) = scrollToPage(Page.CENTER, animated)
 
@@ -256,7 +317,7 @@ class ScreenPagerManager(
 
     fun setLeftPageLocked(locked: Boolean) {
         leftPageLocked = locked
-        if (locked && currentPage == Page.LEFT) {
+        if (locked && (currentPage == Page.RSS || currentPage == Page.WIDGETS)) {
             openCenterPage(animated = true)
         }
     }
@@ -267,6 +328,7 @@ class ScreenPagerManager(
                 touchStartX = event.x
                 touchStartY = event.y
                 touchStartScrollX = pagerScrollView.scrollX
+                touchStartPage = nearestPageFor(pagerScrollView.scrollX)
                 updatePageWidth()
                 velocityTracker?.recycle()
                 velocityTracker = VelocityTracker.obtain().apply {
@@ -295,11 +357,13 @@ class ScreenPagerManager(
     }
 
     private fun snapToNearestPage(dragDistance: Float, flingVelocity: Float) {
-        if (pageWidth <= 0) return
+        if (pageWidth <= 0) {
+            return
+        }
         val threshold = pageWidth * PAGE_SWITCH_THRESHOLD
         val settleThreshold = pageWidth * PAGE_SWITCH_SETTLE_THRESHOLD
-        val startPage = nearestPageFor(touchStartScrollX)
-        
+        val startPage = touchStartPage
+
         val target = when {
             flingVelocity < -(minimumFlingVelocity * FLING_VELOCITY_MULTIPLIER) -> nextPage(startPage)
             flingVelocity > (minimumFlingVelocity * FLING_VELOCITY_MULTIPLIER) -> previousPage(startPage)
@@ -308,16 +372,20 @@ class ScreenPagerManager(
             kotlin.math.abs(dragDistance) > settleThreshold -> nearestPageFor(pagerScrollView.scrollX)
             else -> startPage
         }
-        
+
         scrollToPage(target, animated = true)
     }
 
     private fun scrollToPage(page: Page, animated: Boolean) {
-        if (!::pagerScrollView.isInitialized) return
+        if (!::pagerScrollView.isInitialized || !activePages.contains(page)) {
+            return
+        }
         updatePageWidth()
-        if (pageWidth <= 0) return
+        if (pageWidth <= 0) {
+            return
+        }
 
-        val targetX = page.index * pageWidth
+        val targetX = pageIndex(page) * pageWidth
         if (animated) {
             pagerScrollView.smoothScrollTo(targetX, 0)
         } else {
@@ -330,15 +398,17 @@ class ScreenPagerManager(
         )
     }
 
-    fun updatePageWidth() {
+    fun updatePageWidth(force: Boolean = false) {
         val width = pagerScrollView.width
-        if (width <= 0) return
+        if (width <= 0) {
+            return
+        }
 
-        if (width != pageWidth) {
+        if (force || width != pageWidth) {
             pageWidth = width
             val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
-            for (i in 0 until pageStrip.childCount) {
-                val child = pageStrip.getChildAt(i)
+            for (index in 0 until pageStrip.childCount) {
+                val child = pageStrip.getChildAt(index)
                 val params = child.layoutParams
                 params.width = pageWidth
                 child.layoutParams = params
@@ -348,46 +418,78 @@ class ScreenPagerManager(
     }
 
     private fun nearestPageFor(scrollX: Int): Page {
-        if (pageWidth <= 0) return Page.CENTER
-        val index = ((scrollX + (pageWidth / 2)) / pageWidth).coerceIn(0, 2)
-        return when (index) {
-            0 -> if (leftPageLocked) Page.CENTER else Page.LEFT
-            1 -> Page.CENTER
-            else -> Page.RIGHT
+        if (pageWidth <= 0 || activePages.isEmpty()) {
+            return Page.CENTER
+        }
+        val index = ((scrollX + (pageWidth / 2)) / pageWidth).coerceIn(0, activePages.lastIndex)
+        val candidate = activePages[index]
+        return if (leftPageLocked && (candidate == Page.RSS || candidate == Page.WIDGETS)) {
+            Page.CENTER
+        } else {
+            candidate
         }
     }
 
     private fun nextPage(page: Page): Page {
-        return when (page) {
-            Page.LEFT -> Page.CENTER
-            Page.CENTER -> Page.RIGHT
-            Page.RIGHT -> if (leftPageLocked) Page.CENTER else Page.LEFT
-        }
+        val pages = navigablePages()
+        val index = pages.indexOf(page).takeIf { it >= 0 } ?: return Page.CENTER
+        return pages[(index + 1) % pages.size]
     }
 
     private fun previousPage(page: Page): Page {
-        return when (page) {
-            Page.LEFT -> Page.RIGHT
-            Page.CENTER -> if (leftPageLocked) Page.CENTER else Page.LEFT
-            Page.RIGHT -> Page.CENTER
+        val pages = navigablePages()
+        val index = pages.indexOf(page).takeIf { it >= 0 } ?: return Page.CENTER
+        return pages[(index - 1 + pages.size) % pages.size]
+    }
+
+    private fun navigablePages(): List<Page> {
+        return if (leftPageLocked) {
+            activePages.filterNot { it == Page.RSS || it == Page.WIDGETS }
+        } else {
+            activePages
         }
     }
 
     private fun notifyPageChanged(page: Page, force: Boolean) {
-        if (!force && page == currentPage) return
+        if (!force && page == currentPage) {
+            return
+        }
         currentPage = page
         pageChangeListener?.invoke(page)
     }
 
     fun getDefaultPage(): Page {
         val prefs = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-        val defaultPageIndex = prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)
-        return when (defaultPageIndex) {
-            0 -> if (leftPageLocked) Page.CENTER else Page.LEFT
+        val target = prefs.getString(Constants.Prefs.DEFAULT_HOME_PAGE_TARGET, null)
+        val defaultPage = when (target) {
+            "rss" -> Page.RSS
+            "widgets" -> Page.WIDGETS
+            "right" -> Page.RIGHT
+            "center" -> Page.CENTER
+            else -> legacyDefaultPage(prefs)
+        }
+        return sanitizePage(defaultPage)
+    }
+
+    private fun legacyDefaultPage(prefs: android.content.SharedPreferences): Page {
+        return when (prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)) {
+            0 -> Page.WIDGETS
             2 -> Page.RIGHT
             else -> Page.CENTER
         }
     }
+
+    private fun sanitizePage(page: Page): Page {
+        if (!activePages.contains(page)) {
+            return Page.CENTER
+        }
+        if (leftPageLocked && (page == Page.RSS || page == Page.WIDGETS)) {
+            return Page.CENTER
+        }
+        return page
+    }
+
+    private fun pageIndex(page: Page): Int = activePages.indexOf(page).coerceAtLeast(0)
 
     fun getCurrentPage(): Page = currentPage
 

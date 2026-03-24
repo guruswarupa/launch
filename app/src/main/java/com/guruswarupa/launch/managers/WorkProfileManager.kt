@@ -15,9 +15,13 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.edit
 import com.guruswarupa.launch.receivers.WorkProfileProvisioningReceiver
+import dagger.hilt.android.qualifiers.ActivityContext
+import dagger.hilt.android.scopes.ActivityScoped
+import javax.inject.Inject
 
-class WorkProfileManager(
-    private val context: Context,
+@ActivityScoped
+class WorkProfileManager @Inject constructor(
+    @ActivityContext private val context: Context,
     private val sharedPreferences: SharedPreferences
 ) {
     companion object {

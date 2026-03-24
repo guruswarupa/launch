@@ -189,7 +189,7 @@
                 android:drawablePadding="12dp"
                 app:drawableTint="#66FFFFFF"/>
 
-            <HorizontalScrollView
+            <com.guruswarupa.launch.ui.views.SafeHorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:scrollbars="none"
@@ -257,7 +257,7 @@
                         app:chipStrokeWidth="1dp"
                         app:chipStrokeColor="@color/outlineColor"/>
                 </com.google.android.material.chip.ChipGroup>
-            </HorizontalScrollView>
+            </com.guruswarupa.launch.ui.views.SafeHorizontalScrollView>
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView

@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -271,12 +272,14 @@ class WebAppActivity : AppCompatActivity() {
         super.onPause()
         if (::webView.isInitialized) {
             webView.onPause()
+            webView.pauseTimers()
         }
     }
 
     override fun onResume() {
         super.onResume()
         if (::webView.isInitialized) {
+            webView.resumeTimers()
             webView.onResume()
         }
     }
@@ -286,16 +289,14 @@ class WebAppActivity : AppCompatActivity() {
         if (::webView.isInitialized) {
             webView.stopLoading()
         }
+        if (isFinishing) {
+            releaseWebView()
+        }
     }
 
     override fun onDestroy() {
         exitFullscreen()
-        if (::webView.isInitialized) {
-            webView.stopLoading()
-            webView.clearHistory()
-            webView.removeAllViews()
-            webView.destroy()
-        }
+        releaseWebView()
         fileUploadCallback = null
         super.onDestroy()
     }
@@ -309,5 +310,26 @@ class WebAppActivity : AppCompatActivity() {
         customViewCallback = null
         fullscreenContainer.visibility = View.GONE
         webView.visibility = View.VISIBLE
+    }
+
+    private fun releaseWebView() {
+        if (!::webView.isInitialized) {
+            return
+        }
+        fileUploadCallback?.onReceiveValue(null)
+        fileUploadCallback = null
+        webView.apply {
+            stopLoading()
+            onPause()
+            pauseTimers()
+            loadUrl("about:blank")
+            clearHistory()
+            clearCache(false)
+            webChromeClient = WebChromeClient()
+            webViewClient = WebViewClient()
+            removeAllViews()
+            (parent as? ViewGroup)?.removeView(this )
+            destroy()
+        }
     }
 }

@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
@@ -56,13 +57,14 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.managers.DownloadableFontManager
 import com.guruswarupa.launch.managers.TypographyManager
-import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.ThemeOption
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
 import com.guruswarupa.launch.services.ScreenDimmerService
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
+import com.guruswarupa.launch.ui.views.SafeHorizontalScrollView
+import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -74,6 +76,9 @@ import java.util.zip.ZipOutputStream
 class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
     companion object {
         const val EXTRA_START_SETTINGS_TUTORIAL = "start_settings_tutorial"
+        const val EXTRA_OPEN_SUPPORT_SECTION = "open_support_section"
+        private const val STATE_WIDGETS_SECTION_EXPANDED = "state_widgets_section_expanded"
+        private const val STATE_NEWS_SECTION_EXPANDED = "state_news_section_expanded"
     }
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
@@ -84,6 +89,8 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
     private var selectedThemeId: String = "stardust"
     private var selectedThemeCategory: String? = null
     private var hasUnsavedThemeChanges = false
+    private var widgetsSectionExpanded = false
+    private var newsSectionExpanded = false
     private var billingClient: BillingClient? = null
     private val supportProducts = linkedMapOf(
         "support_49" to R.id.support_49,
@@ -132,6 +139,8 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         setContentView(R.layout.activity_settings)
         applyContentInsets()
         applyBackgroundTranslucency()
+        widgetsSectionExpanded = savedInstanceState?.getBoolean(STATE_WIDGETS_SECTION_EXPANDED, false) ?: false
+        newsSectionExpanded = savedInstanceState?.getBoolean(STATE_NEWS_SECTION_EXPANDED, false) ?: false
 
         selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "stardust") ?: "stardust"
 
@@ -140,12 +149,14 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         setupAppearanceSection()
         setupActionsSection()
+        setupNewsFeedSection()
         setupAppTimerSection()
         setupSecuritySection()
         setupWebAppsSection()
         setupMaintenanceSection()
         setupSupportSection()
         setupVersionInfo()
+        openSupportSectionIfRequested()
 
         if (intent.getBooleanExtra(EXTRA_START_SETTINGS_TUTORIAL, false)) {
             window.decorView.post { startSettingsTutorial() }
@@ -163,6 +174,12 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         billingClient?.endConnection()
         billingClient = null
         super.onDestroy()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(STATE_WIDGETS_SECTION_EXPANDED, widgetsSectionExpanded)
+        outState.putBoolean(STATE_NEWS_SECTION_EXPANDED, newsSectionExpanded)
     }
 
     private fun triggerWallpaperPicker(themeId: String) {
@@ -352,15 +369,29 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         
         val homePageSpinner = findViewById<Spinner>(R.id.default_home_page_spinner)
-        val pages = arrayOf("Widgets (Left)", "Home (Center)", "Wallpaper (Right)")
+        val rssEnabled = prefs.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true)
+        val widgetsEnabled = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
+        val pageEntries = buildList {
+            if (rssEnabled) add("News Feed (Far Left)" to "rss")
+            if (widgetsEnabled) add("Widgets (Left)" to "widgets")
+            add("Home (Center)" to "center")
+            add("Wallpaper (Right)" to "right")
+        }
+        val pages = pageEntries.map { it.first }.toTypedArray()
         homePageSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, pages).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-        val defaultPageIndex = prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)
-        homePageSpinner.setSelection(defaultPageIndex)
+        val defaultPageTarget = prefs.getString(Constants.Prefs.DEFAULT_HOME_PAGE_TARGET, null)
+        val selectedIndex = pageEntries.indexOfFirst { it.second == defaultPageTarget }.takeIf { it >= 0 }
+            ?: pageEntries.indexOfFirst { it.second == "center" }.takeIf { it >= 0 }
+            ?: 0
+        homePageSpinner.setSelection(selectedIndex)
         homePageSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>, v: View?, pos: Int, id: Long) {
-                prefs.edit { putInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, pos) }
+                prefs.edit {
+                    putString(Constants.Prefs.DEFAULT_HOME_PAGE_TARGET, pageEntries[pos].second)
+                    putInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, pos)
+                }
                 notifySettingsChanged()
             }
             override fun onNothingSelected(p: AdapterView<*>) {}
@@ -383,9 +414,33 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         setupTypographySettings()
 
         findViewById<SwitchCompat>(R.id.clock_24_hour_switch).apply {
+            fun applyClockSwitchColors(isEnabled: Boolean) {
+                val color = if (isEnabled) ContextCompat.getColor(this@SettingsActivity, R.color.nord8) else Color.WHITE
+                thumbTintList = ColorStateList.valueOf(color)
+                trackTintList = ColorStateList.valueOf(color)
+            }
+
             isChecked = prefs.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
+            applyClockSwitchColors(isChecked)
             setOnCheckedChangeListener { _, isChecked ->
+                applyClockSwitchColors(isChecked)
                 prefs.edit { putBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, isChecked) }
+                notifySettingsChanged()
+            }
+        }
+
+        findViewById<SwitchCompat>(R.id.show_fast_scroller_switch).apply {
+            fun applyFastScrollerSwitchColors(isEnabled: Boolean) {
+                val color = if (isEnabled) ContextCompat.getColor(this@SettingsActivity, R.color.nord8) else Color.WHITE
+                thumbTintList = ColorStateList.valueOf(color)
+                trackTintList = ColorStateList.valueOf(color)
+            }
+
+            isChecked = !prefs.getBoolean(Constants.Prefs.SHOW_FAST_SCROLLER, true)
+            applyFastScrollerSwitchColors(isChecked)
+            setOnCheckedChangeListener { _, isChecked ->
+                applyFastScrollerSwitchColors(isChecked)
+                prefs.edit { putBoolean(Constants.Prefs.SHOW_FAST_SCROLLER, !isChecked) }
                 notifySettingsChanged()
             }
         }
@@ -426,7 +481,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             
             val categories = ThemeOption.PREDEFINED_THEMES.map { it.category }.distinct()
 
-            val scrollContainer = HorizontalScrollView(this).apply {
+            val scrollContainer = SafeHorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             }
@@ -491,7 +546,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             }
             contentRow.addView(backBtn)
 
-            val scrollContainer = HorizontalScrollView(this).apply {
+            val scrollContainer = SafeHorizontalScrollView(this).apply {
                 isHorizontalScrollBarEnabled = false
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
@@ -549,8 +604,30 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         val wHeader = findViewById<LinearLayout>(R.id.widgets_settings_header)
         val wContent = findViewById<LinearLayout>(R.id.widgets_settings_content)
         val wArrow = findViewById<TextView>(R.id.widgets_settings_arrow)
-        setupSectionToggle(wHeader, wContent, wArrow)
-        findViewById<View>(R.id.configure_widgets_button).setOnClickListener {
+        setupSectionToggle(wHeader, wContent, wArrow) { isExpanded ->
+            widgetsSectionExpanded = isExpanded
+        }
+        applySectionExpandedState(wContent, wArrow, widgetsSectionExpanded)
+        val widgetsEnabledSwitch = findViewById<SwitchCompat>(R.id.widgets_page_enabled_switch)
+        val configureWidgetsButton = findViewById<View>(R.id.configure_widgets_button)
+        fun applyWidgetsSwitchColors(isEnabled: Boolean) {
+            val color = if (isEnabled) ContextCompat.getColor(this, R.color.nord8) else Color.WHITE
+            widgetsEnabledSwitch.thumbTintList = ColorStateList.valueOf(color)
+            widgetsEnabledSwitch.trackTintList = ColorStateList.valueOf(color)
+            configureWidgetsButton.alpha = if (isEnabled) 1f else 0.6f
+            configureWidgetsButton.isEnabled = isEnabled
+        }
+
+        widgetsEnabledSwitch.isChecked = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
+        applyWidgetsSwitchColors(widgetsEnabledSwitch.isChecked)
+        widgetsEnabledSwitch.setOnCheckedChangeListener { _, isChecked ->
+            applyWidgetsSwitchColors(isChecked)
+            prefs.edit { putBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, isChecked) }
+            notifySettingsChanged()
+            recreate()
+        }
+
+        configureWidgetsButton.setOnClickListener {
             startActivity(Intent(this, WidgetConfigurationActivity::class.java))
         }
 
@@ -575,6 +652,42 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         findViewById<View>(R.id.config_control_center_button).setOnClickListener {
             startActivity(Intent(this, ControlCenterConfigActivity::class.java))
+        }
+    }
+
+    private fun setupNewsFeedSection() {
+        val header = findViewById<LinearLayout>(R.id.news_feed_header)
+        val content = findViewById<LinearLayout>(R.id.news_feed_content)
+        val arrow = findViewById<TextView>(R.id.news_feed_arrow)
+        setupSectionToggle(header, content, arrow) { isExpanded ->
+            newsSectionExpanded = isExpanded
+        }
+        applySectionExpandedState(content, arrow, newsSectionExpanded)
+
+        val enabledSwitch = findViewById<SwitchCompat>(R.id.news_feed_enabled_switch)
+        val manageButton = findViewById<View>(R.id.manage_news_feeds_button)
+
+        val disabledColor = Color.WHITE
+        val enabledColor = ContextCompat.getColor(this, R.color.nord8)
+        fun applyNewsFeedSwitchColors(isEnabled: Boolean) {
+            val color = if (isEnabled) enabledColor else disabledColor
+            enabledSwitch.thumbTintList = ColorStateList.valueOf(color)
+            enabledSwitch.trackTintList = ColorStateList.valueOf(color)
+            manageButton.alpha = if (isEnabled) 1f else 0.6f
+            manageButton.isEnabled = isEnabled
+        }
+
+        enabledSwitch.isChecked = prefs.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true)
+        applyNewsFeedSwitchColors(enabledSwitch.isChecked)
+        enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
+            applyNewsFeedSwitchColors(isChecked)
+            prefs.edit { putBoolean(Constants.Prefs.RSS_PAGE_ENABLED, isChecked) }
+            notifySettingsChanged()
+            recreate()
+        }
+
+        manageButton.setOnClickListener {
+            startActivity(Intent(this, RssFeedSettingsActivity::class.java))
         }
     }
 
@@ -653,6 +766,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         val a = findViewById<TextView>(R.id.support_arrow)
         setupSectionToggle(h, c, a)
         findViewById<View>(R.id.feedback_button).setOnClickListener { sendFeedback() }
+        updateSupporterBadge()
         supportProducts.forEach { (productId, buttonId) ->
             findViewById<Button>(buttonId).apply {
                 text = getString(R.string.support_button_loading)
@@ -665,6 +779,26 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             text = Html.fromHtml(getString(R.string.github_project_links), Html.FROM_HTML_MODE_COMPACT)
         }
         initializeBilling()
+    }
+
+    private fun openSupportSectionIfRequested() {
+        if (!intent.getBooleanExtra(EXTRA_OPEN_SUPPORT_SECTION, false)) {
+            return
+        }
+        val supportHeader = findViewById<LinearLayout>(R.id.support_header)
+        val supportContent = findViewById<LinearLayout>(R.id.support_content)
+        val scrollView = findViewById<ScrollView>(R.id.settings_scroll_view)
+        val supportCard = supportHeader.parent?.parent as? View ?: supportHeader
+        intent.removeExtra(EXTRA_OPEN_SUPPORT_SECTION)
+        supportHeader.post {
+            if (supportContent.visibility != View.VISIBLE) {
+                supportHeader.performClick()
+            }
+            scrollView.postDelayed({
+                supportCard.requestFocus()
+                scrollView.smoothScrollTo(0, supportCard.top)
+            }, 180)
+        }
     }
 
     private fun initializeBilling() {
@@ -826,8 +960,17 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                         .setPurchaseToken(purchase.purchaseToken)
                         .build()
                 ) { result, _ ->
-                    if (result.responseCode == BillingClient.BillingResponseCode.OK && notifyUser) {
-                        runOnUiThread { showSupportThankYouDialog() }
+                    if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                        prefs.edit {
+                            putBoolean(Constants.Prefs.SUPPORTER_BADGE_EARNED, true)
+                            putBoolean(Constants.Prefs.DONATION_PROMPT_SHOWN, true)
+                        }
+                        runOnUiThread {
+                            updateSupporterBadge()
+                            if (notifyUser) {
+                                showSupportThankYouDialog()
+                            }
+                        }
                     } else if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                         handleBillingError(result, showToast = notifyUser)
                     }
@@ -849,6 +992,11 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             .setView(dialogView)
             .setPositiveButton(getString(R.string.support_thank_you_close), null)
             .show()
+    }
+
+    private fun updateSupporterBadge() {
+        findViewById<TextView>(R.id.support_badge)?.visibility =
+            if (prefs.getBoolean(Constants.Prefs.SUPPORTER_BADGE_EARNED, false)) View.VISIBLE else View.GONE
     }
 
     private fun updatePendingSupportButtons(purchase: Purchase) {
@@ -881,12 +1029,19 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         }
     }
 
-    private fun setupSectionToggle(header: View, content: View, arrow: TextView) {
+    private fun setupSectionToggle(header: View, content: View, arrow: TextView, onToggle: ((Boolean) -> Unit)? = null) {
         header.setOnClickListener {
             val visible = content.visibility == View.VISIBLE
-            content.visibility = if (visible) View.GONE else View.VISIBLE
-            arrow.animate().rotation(if (visible) 0f else 180f).setDuration(250).start()
+            val expanded = !visible
+            content.visibility = if (expanded) View.VISIBLE else View.GONE
+            arrow.animate().rotation(if (expanded) 180f else 0f).setDuration(250).start()
+            onToggle?.invoke(expanded)
         }
+    }
+
+    private fun applySectionExpandedState(content: View, arrow: TextView, isExpanded: Boolean) {
+        content.visibility = if (isExpanded) View.VISIBLE else View.GONE
+        arrow.rotation = if (isExpanded) 180f else 0f
     }
 
     private fun updateDisplayStyleButtons(grid: Button, list: Button, style: String) {
@@ -1421,7 +1576,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     // Export notes data
                     try {
                         val mainActivity = com.guruswarupa.launch.MainActivity.instance
-                        if (mainActivity != null && mainActivity.isWidgetLifecycleCoordinatorInitialized() && 
+                        if (mainActivity != null &&
                             mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
                             val notesJson = mainActivity.widgetLifecycleCoordinator.noteWidget.exportNotesToJson()
                             zos.putNextEntry(ZipEntry("notes.json"))
@@ -1515,7 +1670,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                                 try {
                                     val notesJsonString = zis.bufferedReader().readText()
                                     val mainActivity = com.guruswarupa.launch.MainActivity.instance
-                                    if (mainActivity != null && mainActivity.isWidgetLifecycleCoordinatorInitialized() && 
+                                    if (mainActivity != null &&
                                         mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
                                         val importedCount = mainActivity.widgetLifecycleCoordinator.noteWidget.importNotesFromJson(notesJsonString)
                                         if (importedCount > 0) {
