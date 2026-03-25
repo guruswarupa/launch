@@ -22,6 +22,7 @@ import android.transition.TransitionManager
 import android.transition.TransitionSet
 import android.transition.ChangeBounds
 import android.transition.Fade
+import android.util.TypedValue
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
@@ -68,18 +69,13 @@ class ActivityInitializer(
             defaultSearchTopMargin = searchMarginParams.topMargin
             pinnedSearchTopMargin = activity.resources.getDimensionPixelSize(R.dimen.search_bar_top_margin_pinned)
             recyclerView = activity.findViewById(R.id.app_list)
+            appListEmptyState = activity.findViewById(R.id.app_list_empty_state)
             fastScroller = activity.findViewById(R.id.fast_scroller)
             fastScroller.setRecyclerView(recyclerView)
             
             // Improve accessibility and prevent crashes during view updates
             recyclerView.setHasFixedSize(true)
-            
-            val displayMetrics = activity.resources.displayMetrics
-            val screenHeight = displayMetrics.heightPixels
-            val scrollerParams = fastScroller.layoutParams as FrameLayout.LayoutParams
-            scrollerParams.height = (screenHeight * 0.65).toInt()
-            scrollerParams.gravity = Gravity.BOTTOM or Gravity.END
-            fastScroller.layoutParams = scrollerParams
+            applyFastScrollerLayout()
 
             
             recyclerView.itemAnimator = null
@@ -110,7 +106,88 @@ class ActivityInitializer(
             setupLayoutManager(recyclerView)
             setupHeaderVisibilityOnScroll(recyclerView)
             setupTimeDateListeners(timeTextView, dateTextView)
+            applyPhoneLandscapeOptimizations()
         }
+    }
+
+    fun handleConfigurationChange() {
+        if (!views.isRecyclerViewInitialized()) return
+        pinnedSearchTopMargin = activity.resources.getDimensionPixelSize(R.dimen.search_bar_top_margin_pinned)
+        applyFastScrollerLayout()
+        applyPhoneLandscapeOptimizations()
+    }
+
+    private fun applyFastScrollerLayout() {
+        val displayMetrics = activity.resources.displayMetrics
+        val isLandscape =
+            activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val heightRatio = if (isLandscape) 0.5f else 0.65f
+        val scrollerParams = views.fastScroller.layoutParams as FrameLayout.LayoutParams
+        scrollerParams.height = (displayMetrics.heightPixels * heightRatio).toInt()
+        scrollerParams.gravity = Gravity.BOTTOM or Gravity.END
+        views.fastScroller.layoutParams = scrollerParams
+        views.fastScroller.requestLayout()
+    }
+
+    private fun applyPhoneLandscapeOptimizations() {
+        val mainActivity = activity as? MainActivity ?: return
+        val configuration = activity.resources.configuration
+        val isPhoneLandscape =
+            configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE &&
+                !mainActivity.isTablet()
+        if (!isPhoneLandscape) {
+            restoreDefaultPhoneLayout()
+            return
+        }
+
+        val compactPadding = (12 * activity.resources.displayMetrics.density).toInt()
+        val compactMargin = (8 * activity.resources.displayMetrics.density).toInt()
+
+        views.topWidgetContainer.setPadding(compactPadding, compactPadding, compactPadding, compactPadding)
+        (views.topWidgetContainer.layoutParams as? MarginLayoutParams)?.let { params ->
+            params.topMargin = compactMargin
+            params.bottomMargin = compactMargin
+            views.topWidgetContainer.layoutParams = params
+        }
+
+        views.timeTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+        views.dateTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        views.weatherText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        activity.findViewById<TextView>(R.id.battery_percentage)?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+
+        (views.appDock.parent as? View)?.let { dockContainer ->
+            dockContainer.setPadding(compactMargin, compactMargin, compactMargin, compactMargin)
+        }
+    }
+
+    private fun restoreDefaultPhoneLayout() {
+        val density = activity.resources.displayMetrics.density
+        val defaultContainerPadding = (16 * density).toInt()
+        val defaultDockPadding = (8 * density).toInt()
+
+        views.topWidgetContainer.setPadding(
+            defaultContainerPadding,
+            defaultContainerPadding,
+            defaultContainerPadding,
+            defaultContainerPadding
+        )
+        (views.topWidgetContainer.layoutParams as? MarginLayoutParams)?.let { params ->
+            params.topMargin = activity.resources.getDimensionPixelSize(R.dimen.widget_status_bar_clearance)
+            params.bottomMargin = defaultContainerPadding
+            views.topWidgetContainer.layoutParams = params
+        }
+
+        views.timeTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 32f)
+        views.dateTextView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+        views.weatherText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+        activity.findViewById<TextView>(R.id.battery_percentage)?.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+
+        (views.appDock.parent as? View)?.setPadding(
+            defaultDockPadding,
+            defaultDockPadding,
+            defaultDockPadding,
+            defaultDockPadding
+        )
     }
 
     private fun setupSearchBox(searchBox: AutoCompleteTextView) {
@@ -139,8 +216,11 @@ class ActivityInitializer(
     }
 
     private fun setupLayoutManager(recyclerView: RecyclerView) {
-        val viewPreference = sharedPreferences.getString("view_preference", "list")
-        val isGridMode = viewPreference == "grid"
+        val viewPreference = sharedPreferences.getString(
+            Constants.Prefs.VIEW_PREFERENCE,
+            Constants.Prefs.VIEW_PREFERENCE_LIST
+        )
+        val isGridMode = viewPreference == Constants.Prefs.VIEW_PREFERENCE_GRID
 
         if (isGridMode) {
             val columns = (activity as? MainActivity)?.getPreferredGridColumns()

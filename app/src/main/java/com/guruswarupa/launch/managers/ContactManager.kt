@@ -18,6 +18,10 @@ class ContactManager(
     private val backgroundExecutor: Executor
 ) {
     private val contactsList: MutableList<String> = mutableListOf()
+    @Volatile
+    private var contactsLoaded = false
+    @Volatile
+    private var contactsLoading = false
     
     
 
@@ -29,6 +33,18 @@ class ContactManager(
             onComplete?.invoke(emptyList())
             return
         }
+
+        if (contactsLoaded && contactsList.isNotEmpty()) {
+            onComplete?.invoke(ArrayList(contactsList))
+            return
+        }
+
+        if (contactsLoading) {
+            onComplete?.invoke(ArrayList(contactsList))
+            return
+        }
+
+        contactsLoading = true
         
         backgroundExecutor.execute {
             try {
@@ -55,11 +71,13 @@ class ContactManager(
                 
                 contactsList.clear()
                 contactsList.addAll(tempContactsList)
+                contactsLoaded = true
+                contactsLoading = false
                 
                 onComplete?.invoke(ArrayList(contactsList))
             } catch (e: Exception) {
-                
                 e.printStackTrace()
+                contactsLoading = false
                 onComplete?.invoke(emptyList())
             }
         }
@@ -77,4 +95,6 @@ class ContactManager(
     }
     
     fun getContactsList(): List<String> = contactsList.toList()
+
+    fun hasLoadedContacts(): Boolean = contactsLoaded
 }

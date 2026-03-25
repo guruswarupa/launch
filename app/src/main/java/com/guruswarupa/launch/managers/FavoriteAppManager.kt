@@ -4,7 +4,9 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import android.util.Log
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class FavoriteAppManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
     
     companion object {
@@ -19,7 +21,7 @@ class FavoriteAppManager @Inject constructor(private val sharedPreferences: Shar
     private fun getFavoriteAppsInternal(): Set<String> {
         if (!cacheValid || favoritesCache == null) {
             try {
-                favoritesCache = sharedPreferences.getStringSet(FAVORITE_APPS_KEY, emptySet()) ?: emptySet()
+                favoritesCache = (sharedPreferences.getStringSet(FAVORITE_APPS_KEY, emptySet()) ?: emptySet()).toSet()
             } catch (e: ClassCastException) {
                 Log.e(TAG, "Data corruption: $FAVORITE_APPS_KEY is not a Set. Attempting recovery.", e)
                 
@@ -45,7 +47,7 @@ class FavoriteAppManager @Inject constructor(private val sharedPreferences: Shar
                     remove(FAVORITE_APPS_KEY)
                     putStringSet(FAVORITE_APPS_KEY, recoveredSet)
                 }
-                favoritesCache = recoveredSet
+                favoritesCache = recoveredSet.toSet()
             }
             cacheValid = true
         }
@@ -61,14 +63,16 @@ class FavoriteAppManager @Inject constructor(private val sharedPreferences: Shar
         val favorites = getFavoriteAppsInternal().toMutableSet()
         favorites.add(packageName)
         sharedPreferences.edit { putStringSet(FAVORITE_APPS_KEY, favorites) }
-        invalidateCache()
+        favoritesCache = favorites.toSet()
+        cacheValid = true
     }
     
     fun removeFavoriteApp(packageName: String) {
         val favorites = getFavoriteAppsInternal().toMutableSet()
         favorites.remove(packageName)
         sharedPreferences.edit { putStringSet(FAVORITE_APPS_KEY, favorites) }
-        invalidateCache()
+        favoritesCache = favorites.toSet()
+        cacheValid = true
     }
     
     fun isFavoriteApp(packageName: String): Boolean {

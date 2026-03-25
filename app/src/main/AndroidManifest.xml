@@ -175,6 +175,14 @@
         </service>
 
         <service
+            android:name=".services.WalkDetectionService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_CATEGORY" android:value="Walk detection auto-launch" />
+        </service>
+
+        <service
             android:name=".services.ScreenDimmerService"
             android:enabled="true"
             android:exported="false"
@@ -224,7 +232,14 @@
             android:name=".ui.activities.ControlCenterConfigActivity"
             android:exported="false"
             android:theme="@style/Theme.Launch.Settings"
-            android:label="Control Center Shortcuts"
+            android:label="@string/control_center_config_title"
+            android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".ui.activities.EdgePanelConfigActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Launch.Settings"
+            android:label="@string/edge_panel_config_title"
             android:excludeFromRecents="true" />
 
         <receiver
@@ -355,6 +370,66 @@
             android:exported="false"
             android:theme="@style/Theme.Launch.Settings"
             android:excludeFromRecents="true" />
+
+        <activity
+            android:name=".ui.activities.DocumentViewerActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Launch.Settings"
+            android:label="Document Viewer"
+            android:excludeFromRecents="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density">
+            <!-- PDF -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+            <!-- Word Documents -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/msword" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            </intent-filter>
+            <!-- PowerPoint -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.ms-powerpoint" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+            </intent-filter>
+            <!-- Excel -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.ms-excel" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+            </intent-filter>
+            <!-- RTF -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/rtf" />
+            </intent-filter>
+            <!-- Plain text / code -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+        </activity>
 
     </application>
 

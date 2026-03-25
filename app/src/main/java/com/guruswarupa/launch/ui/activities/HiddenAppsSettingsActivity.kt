@@ -64,13 +64,30 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
         } else {
             appsRecyclerView.visibility = View.VISIBLE
             emptyStateLayout.visibility = View.GONE
-            appsRecyclerView.adapter = HiddenAppsAdapter(hiddenAppsList) { pkg ->
-                hiddenAppManager.unhideApp(pkg)
-                Toast.makeText(this, "Application restored", Toast.LENGTH_SHORT).show()
-                recreateAppsList()
-                setResult(RESULT_OK)
-            }
+            appsRecyclerView.adapter = HiddenAppsAdapter(
+                apps = hiddenAppsList,
+                onOpen = { app -> openHiddenApp(app) },
+                onUnhide = { pkg ->
+                    hiddenAppManager.unhideApp(pkg)
+                    Toast.makeText(this, getString(R.string.application_restored), Toast.LENGTH_SHORT).show()
+                    recreateAppsList()
+                    setResult(RESULT_OK)
+                }
+            )
         }
+    }
+
+    private fun openHiddenApp(app: ResolveInfo) {
+        val launchIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            setClassName(app.activityInfo.packageName, app.activityInfo.name)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        }
+
+        runCatching { startActivity(launchIntent) }
+            .onFailure {
+                Toast.makeText(this, getString(R.string.unable_to_open_app), Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun applyBackgroundTranslucency() {
@@ -96,7 +113,11 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
         }
     }
 
-    private class HiddenAppsAdapter(private val apps: List<ResolveInfo>, private val onUnhide: (String) -> Unit) : RecyclerView.Adapter<HiddenAppsAdapter.ViewHolder>() {
+    private class HiddenAppsAdapter(
+        private val apps: List<ResolveInfo>,
+        private val onOpen: (ResolveInfo) -> Unit,
+        private val onUnhide: (String) -> Unit
+    ) : RecyclerView.Adapter<HiddenAppsAdapter.ViewHolder>() {
         class ViewHolder(v: View) : RecyclerView.ViewHolder(v) {
             val icon: ImageView = v.findViewById(R.id.app_icon)
             val name: TextView = v.findViewById(R.id.app_name)
@@ -109,6 +130,7 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
             val pm = h.itemView.context.packageManager
             h.icon.setImageDrawable(app.loadIcon(pm))
             h.name.text = app.loadLabel(pm)
+            h.itemView.setOnClickListener { onOpen(app) }
             h.btn.setOnClickListener { onUnhide(app.activityInfo.packageName) }
         }
     }

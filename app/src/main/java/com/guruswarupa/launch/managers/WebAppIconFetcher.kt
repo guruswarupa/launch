@@ -55,7 +55,14 @@ object WebAppIconFetcher {
     ) {
         
         memoryCache[siteUrl]?.let {
-            onResult(it)
+            // Safety check: ensure bitmap is not recycled
+            if (!(it is android.graphics.drawable.BitmapDrawable && it.bitmap.isRecycled)) {
+                onResult(it)
+            } else {
+                // Cached icon was recycled, remove from cache and reload
+                memoryCache.remove(siteUrl)
+                loadIcon(context, siteUrl, onResult)
+            }
             return
         }
 

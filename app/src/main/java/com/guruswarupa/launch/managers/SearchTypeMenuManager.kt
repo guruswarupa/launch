@@ -38,14 +38,6 @@ class SearchTypeMenuManager(
         popup.menu.add(0, 1, 1, context.getString(R.string.search_mode_apps))
         popup.menu.add(0, 2, 2, context.getString(R.string.search_mode_contacts))
         popup.menu.add(0, 3, 3, context.getString(R.string.search_mode_files))
-        popup.menu.add(0, 4, 4, context.getString(R.string.search_mode_maps))
-        
-        
-        if (!isFocusModeActive()) {
-            popup.menu.add(0, 5, 5, context.getString(R.string.search_mode_web))
-            popup.menu.add(0, 6, 6, context.getString(R.string.search_mode_playstore))
-            popup.menu.add(0, 7, 7, context.getString(R.string.search_mode_youtube))
-        }
         
         popup.setOnMenuItemClickListener { item ->
             val mode = when (item.itemId) {
@@ -53,31 +45,6 @@ class SearchTypeMenuManager(
                 1 -> AppSearchManager.SearchMode.APPS
                 2 -> AppSearchManager.SearchMode.CONTACTS
                 3 -> AppSearchManager.SearchMode.FILES
-                4 -> AppSearchManager.SearchMode.MAPS
-                5 -> {
-                    
-                    if (isFocusModeActive()) {
-                        AppSearchManager.SearchMode.ALL  
-                    } else {
-                        AppSearchManager.SearchMode.WEB
-                    }
-                }
-                6 -> {
-                    
-                    if (isFocusModeActive()) {
-                        AppSearchManager.SearchMode.ALL  
-                    } else {
-                        AppSearchManager.SearchMode.PLAYSTORE
-                    }
-                }
-                7 -> {
-                    
-                    if (isFocusModeActive()) {
-                        AppSearchManager.SearchMode.ALL  
-                    } else {
-                        AppSearchManager.SearchMode.YOUTUBE
-                    }
-                }
                 else -> AppSearchManager.SearchMode.ALL
             }
             

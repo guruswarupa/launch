@@ -17,6 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.view.doOnLayout
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
@@ -25,6 +26,11 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 import com.guruswarupa.launch.managers.AppUsageStatsManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class AppTimerManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("app_timer_prefs", Context.MODE_PRIVATE)
@@ -59,7 +65,9 @@ class AppTimerManager(private val context: Context) {
 
     fun setDailyLimit(packageName: String, limit: Long) {
         prefs.edit { putLong(PREF_DAILY_LIMIT_PREFIX + packageName, limit) }
-        usageStatsManager.invalidateCache() 
+        DailyUsageManager(context).setTimerEnabled(packageName, limit > NO_TIMER)
+        AppUsageMonitor.syncMonitoring(context)
+        usageStatsManager.invalidateCache()
     }
 
     fun isSessionTimerEnabled(packageName: String): Boolean {
@@ -211,21 +219,22 @@ class AppTimerManager(private val context: Context) {
                     }
                 }
                 
-                
-                mainHandler.postDelayed({
+                // Use doOnLayout instead of postDelayed for view updates
+                listView.doOnLayout {
                     try {
                         for (i in 0 until listView.childCount) {
                             val itemView = listView.getChildAt(i)
                             if (itemView is TextView) {
                                 itemView.setTextColor(textColor)
                             } else if (itemView is ViewGroup) {
+                                
                                 findTextViewsAndSetColor(itemView, textColor)
                             }
                         }
                     } catch (_: Exception) {
                         
                     }
-                }, 100)
+                }
             }
         } catch (_: Exception) {
             
@@ -339,10 +348,11 @@ class AppTimerManager(private val context: Context) {
                                           Intent.FLAG_ACTIVITY_SINGLE_TOP
                     context.startActivity(launcherIntent)
                     
-                    
-                    mainHandler.postDelayed({
+                    // Use lifecycleScope with NonCancellable for critical cleanup
+                    CoroutineScope(Dispatchers.Main + NonCancellable).launch {
+                        delay(500)
                         forceCloseApp(packageName)
-                    }, 500)
+                    }
                     return
                 }
             } catch (_: Exception) {
@@ -358,10 +368,11 @@ class AppTimerManager(private val context: Context) {
                           Intent.FLAG_ACTIVITY_CLEAR_TOP
             context.startActivity(intent)
             
-            
-            mainHandler.postDelayed({
+            // Use lifecycleScope with NonCancellable for critical cleanup
+            CoroutineScope(Dispatchers.Main + NonCancellable).launch {
+                delay(500)
                 forceCloseApp(packageName)
-            }, 500)
+            }
         } catch (_: Exception) {
             
             try {
@@ -370,9 +381,11 @@ class AppTimerManager(private val context: Context) {
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 context.startActivity(intent)
                 
-                mainHandler.postDelayed({
+                // Use lifecycleScope with NonCancellable for critical cleanup
+                CoroutineScope(Dispatchers.Main + NonCancellable).launch {
+                    delay(500)
                     forceCloseApp(packageName)
-                }, 500)
+                }
             } catch (_: Exception) {
                 
             }
@@ -390,14 +403,15 @@ class AppTimerManager(private val context: Context) {
                 
                 activityManager.killBackgroundProcesses(packageName)
                 
-                
-                mainHandler.postDelayed({
+                // Use NonCancellable scope for follow-up cleanup
+                CoroutineScope(Dispatchers.Main + NonCancellable).launch {
+                    delay(300)
                     try {
                         activityManager.killBackgroundProcesses(packageName)
                     } catch (_: Exception) {
                         
                     }
-                }, 300)
+                }
                 
                 
                 try {

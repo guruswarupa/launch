@@ -1,16 +1,14 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
+import androidx.core.view.doOnLayout
 import com.guruswarupa.launch.core.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.managers.*
@@ -21,47 +19,23 @@ import com.guruswarupa.launch.widgets.*
 
 class AppInitializer(private val activity: MainActivity) {
 
-    private fun isTablet(): Boolean {
-        return (activity.resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
-    }
-
     @SuppressLint("UnspecifiedRegisterReceiverFlag", "SourceLockedOrientationActivity")
     fun initialize() {
         with(activity) {
-            sharedPreferences = injectedSharedPreferences
-            backgroundExecutor = injectedBackgroundExecutor
-
-            if (!this@AppInitializer.isTablet()) {
-                requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            }
-
             setContentView(R.layout.activity_main)
 
-            initializeCoreManagers()
-
             widgetConfigurationManager = WidgetConfigurationManager(activity, sharedPreferences)
-
             widgetVisibilityManager = WidgetVisibilityManager(activity, widgetConfigurationManager)
-
-            resultRegistry = MainActivityResultRegistry(activity)
-
-            cacheManager = injectedCacheManager
-            permissionManager = PermissionManager(activity, sharedPreferences)
-            systemBarManager = SystemBarManager(activity)
 
             usageStatsCacheManager = UsageStatsCacheManager(sharedPreferences, backgroundExecutor)
             contactManager = ContactManager(activity, contentResolver, backgroundExecutor)
             rssFeedManager = RssFeedManager(activity, sharedPreferences, backgroundExecutor)
 
-            usageStatsCacheManager.loadCache()
-
             cacheManager.loadAppMetadataFromCacheAsync {
-                if (activity.appSearchManagerOrNull != null) {
-                    updateAppSearchManager()
-                }
+                updateAppSearchManager()
             }
 
-            if (!sharedPreferences.getBoolean("app_data_consent_given", false)) {
+            if (!sharedPreferences.getBoolean(Constants.Prefs.APP_DATA_CONSENT_GIVEN, false)) {
                 startActivity(Intent(activity, AppDataDisclosureActivity::class.java))
                 finish()
                 return@with
@@ -77,22 +51,16 @@ class AppInitializer(private val activity: MainActivity) {
 
             initializeTimeDateAndWeather()
 
-            if (sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)) {
-                handler.postDelayed({
-                    initializeDeferredWidgets()
-                }, 30)
-            }
-
             appDockManager = AppDockManager(activity, sharedPreferences, views.appDock)
             
             widgetThemeManager = WidgetThemeManager(activity) { resources.configuration.uiMode }
             
             settingsChangeCoordinator = SettingsChangeCoordinator(
                 activity = activity,
-                adapterProvider = { activity.adapterOrNull },
-                appDockManagerProvider = { activity.appDockManagerOrNull },
-                widgetSetupManagerProvider = { activity.widgetSetupManagerOrNull },
-                widgetThemeManagerProvider = { activity.widgetThemeManagerOrNull }
+                adapterProvider = { activity.adapter },
+                appDockManagerProvider = { activity.appDockManager },
+                widgetSetupManagerProvider = { activity.widgetSetupManager },
+                widgetThemeManagerProvider = { activity.widgetThemeManager }
             )
             
             applyThemeBasedWidgetBackgrounds()
@@ -106,12 +74,11 @@ class AppInitializer(private val activity: MainActivity) {
                 activity, packageManager, contentResolver, views.searchBox, appList
             ) { handler ->
                 voiceCommandHandler = handler
-                activity.activityResultHandlerOrNull?.setVoiceCommandHandler(handler)
+                activity.activityResultHandler.setVoiceCommandHandler(handler)
                 
                 this@AppInitializer.updateRegistryDependencies()
             }
             
-            appListManager = injectedAppListManager
             appListManager.attach(appDockManager)
             
             appListLoader = AppListLoader(
@@ -119,35 +86,39 @@ class AppInitializer(private val activity: MainActivity) {
                 cacheManager, webAppManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
             )
             
-            appListUIUpdater = AppListUIUpdater(
-                activity, views.recyclerView, activity.adapterOrNull,
-                appList, fullAppList, appListLoader, appListManager,
-                backgroundExecutor, views.searchBox
+            // Initialize adapter first before using it
+            val viewPreference = sharedPreferences.getString(
+                Constants.Prefs.VIEW_PREFERENCE,
+                Constants.Prefs.VIEW_PREFERENCE_LIST
             )
-            appListUIUpdater.setupCallbacks()
-
-            if (!appDockManager.getCurrentMode()) {
-                refreshAppsForFocusMode()
-            }
-
-            val viewPreference = sharedPreferences.getString("view_preference", "list")
-            val isGridMode = viewPreference == "grid"
+            val isGridMode = viewPreference == Constants.Prefs.VIEW_PREFERENCE_GRID
             adapter = AppAdapter(activity, appList, views.searchBox, isGridMode, activity)
             views.recyclerView.adapter = adapter
             views.recyclerView.visibility = View.VISIBLE
             updateFastScrollerVisibility()
             
+            appListUIUpdater = AppListUIUpdater(
+                activity, views.recyclerView, activity.adapter,
+                appList, fullAppList, appListLoader, appListManager,
+                backgroundExecutor, views.searchBox
+            )
+            appListUIUpdater.setupCallbacks()
             appListUIUpdater.setAdapter(adapter)
 
             usageStatsDisplayManager = UsageStatsDisplayManager(activity, usageStatsManager, views.weeklyUsageGraph, adapter, views.recyclerView, handler)
             
-            appListLoader.loadApps(forceRefresh = false, fullAppList, appList, activity.adapterOrNull)
+            if (!appDockManager.getCurrentMode()) {
+                refreshAppsForFocusMode()
+            }
+
+            appListLoader.loadApps(forceRefresh = false, fullAppList, appList, activity.adapter)
             
-            handler.postDelayed({
-                if (!isFinishing && !isDestroyed && activity.appDockManagerOrNull != null) {
+            // Use doOnLayout for layout-dependent initialization instead of postDelayed
+            views.recyclerView.doOnLayout {
+                if (!activity.isFinishing && !activity.isDestroyed) {
                     updateAppSearchManager()
                 }
-            }, 50) 
+            } 
 
             val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
             widgetManager = WidgetManager(activity, drawerContentLayout)
@@ -209,29 +180,26 @@ class AppInitializer(private val activity: MainActivity) {
             
             focusModeApplier = FocusModeApplier(
                 activity, backgroundExecutor, appListManager, appDockManager,
-                views.searchContainer, activity.adapterOrNull, fullAppList, appList,
+                views.searchContainer, activity.adapter, fullAppList, appList,
                 onUpdateAppSearchManager = { updateAppSearchManager() },
                 onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() }
             )
             
             serviceManager = ServiceManager(activity, sharedPreferences)
 
-            FinanceWidgetInitializer(activity, sharedPreferences, 100)
-                .onInitialized { manager -> 
-                    financeWidgetManager = manager
-                }
-                .initialize(handler)
-            
-            ContextCompat.startForegroundService(activity, Intent(activity, AppUsageMonitor::class.java))
+            AppUsageMonitor.syncMonitoring(activity)
             
             serviceManager.updateShakeDetectionService()
+            serviceManager.updateWalkDetectionService()
             serviceManager.updateScreenDimmerService()
             serviceManager.updateFlipToDndService()
             serviceManager.updateBackTapService()
             
             initializeLifecycleManager()
             initializeBroadcastReceivers()
-            lifecycleManager.setBroadcastReceiverManager(broadcastReceiverManager)
+            lifecycleManager.updateDependencies {
+                copy(broadcastReceiverManager = activity.broadcastReceiverManager)
+            }
 
             this@AppInitializer.updateRegistryDependencies()
 
@@ -244,15 +212,15 @@ class AppInitializer(private val activity: MainActivity) {
     fun updateRegistryDependencies() {
         with(activity) {
             val deps = MainActivityResultRegistry.DependencyContainer(
-                widgetManager = widgetManager,
-                widgetVisibilityManager = widgetVisibilityManager,
-                widgetConfigurationManager = widgetConfigurationManager,
+                widgetManager = activity.widgetManager,
+                widgetVisibilityManager = activity.widgetVisibilityManager,
+                widgetConfigurationManager = activity.widgetConfigurationManager,
                 voiceCommandHandler = voiceCommandHandler,
-                activityResultHandler = activityResultHandlerOrNull,
+                activityResultHandler = activity.activityResultHandler,
                 packageManager = packageManager,
                 contentResolver = contentResolver,
                 searchBox = if (views.isSearchBoxInitialized()) views.searchBox else null,
-                appList = appListOrNull,
+                appList = appList,
                 widgetLifecycleCoordinator = widgetLifecycleCoordinator
             )
             resultRegistry.setDependencies(deps)

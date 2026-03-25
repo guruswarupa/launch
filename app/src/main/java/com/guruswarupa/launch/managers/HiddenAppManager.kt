@@ -4,11 +4,9 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import android.util.Log
 import javax.inject.Inject
+import javax.inject.Singleton
 
-
-
-
-
+@Singleton
 class HiddenAppManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
     
     companion object {
@@ -23,7 +21,7 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
     private fun getHiddenAppsInternal(): Set<String> {
         if (!cacheValid || hiddenAppsCache == null) {
             try {
-                hiddenAppsCache = sharedPreferences.getStringSet(HIDDEN_APPS_KEY, emptySet()) ?: emptySet()
+                hiddenAppsCache = (sharedPreferences.getStringSet(HIDDEN_APPS_KEY, emptySet()) ?: emptySet()).toSet()
             } catch (e: ClassCastException) {
                 Log.e(TAG, "Data corruption: $HIDDEN_APPS_KEY is not a Set. Attempting recovery.", e)
                 val stringValue = try { sharedPreferences.getString(HIDDEN_APPS_KEY, null) } catch (_: Exception) { null }
@@ -45,7 +43,7 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
                     remove(HIDDEN_APPS_KEY)
                     putStringSet(HIDDEN_APPS_KEY, recoveredSet)
                 }
-                hiddenAppsCache = recoveredSet
+                hiddenAppsCache = recoveredSet.toSet()
             }
             cacheValid = true
         }
@@ -64,7 +62,8 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
         val hiddenApps = getHiddenAppsInternal().toMutableSet()
         hiddenApps.add(packageName)
         sharedPreferences.edit { putStringSet(HIDDEN_APPS_KEY, hiddenApps) }
-        invalidateCache()
+        hiddenAppsCache = hiddenApps.toSet()
+        cacheValid = true
     }
     
     
@@ -74,7 +73,8 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
         val hiddenApps = getHiddenAppsInternal().toMutableSet()
         hiddenApps.remove(packageName)
         sharedPreferences.edit { putStringSet(HIDDEN_APPS_KEY, hiddenApps) }
-        invalidateCache()
+        hiddenAppsCache = hiddenApps.toSet()
+        cacheValid = true
     }
     
     

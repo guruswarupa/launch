@@ -220,6 +220,17 @@
                 android:layout_marginTop="0dp"
                 android:clipToPadding="false"
                 android:clipChildren="false" />
+
+            <TextView
+                android:id="@+id/app_list_empty_state"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:padding="24dp"
+                android:text="@string/app_list_no_apps_found"
+                android:textSize="16sp"
+                android:visibility="gone" />
         </LinearLayout>
 
         

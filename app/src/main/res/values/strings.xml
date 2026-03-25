@@ -82,6 +82,8 @@
     <string name="search_mode_youtube">YouTube</string>
     <string name="removed_from_favorites">Removed %1$s from favorites</string>
     <string name="added_to_favorites">Added %1$s to favorites</string>
+    <string name="application_restored">Application restored</string>
+    <string name="unable_to_open_app">Unable to open app</string>
     <string name="unhid_app">Unhid %1$s</string>
     <string name="hid_app">Hid %1$s</string>
     <string name="call_contact_title">Call %1$s?</string>
@@ -302,6 +304,7 @@
     <string name="app_list_no_apps_found">No apps found!</string>
     <string name="app_list_error_loading_apps">Error loading apps: %1$s</string>
     <string name="daily_usage_hint_minutes_disable">Enter minutes (0 to disable)</string>
+    <string name="daily_usage_set_limit_action">Set Daily Limit</string>
     <string name="daily_usage_set_limit_title">Set Daily Limit for %1$s</string>
     <string name="daily_usage_set_limit_message">Enter daily usage limit in minutes:</string>
     <string name="daily_usage_action_set">Set</string>
@@ -309,6 +312,17 @@
     <string name="daily_usage_limit_disabled">Daily limit disabled</string>
     <string name="daily_usage_invalid_number">Please enter a valid number</string>
     <string name="daily_usage_limit_reached">Daily limit reached for this app.</string>
+    <string name="app_context_usage_placeholder">Usage: ...</string>
+    <string name="app_context_usage_format">Usage: %1$s</string>
+    <string name="app_context_enable_session_timer">Enable Session Timer</string>
+    <string name="app_context_disable_session_timer">Disable Session Timer</string>
+    <string name="app_context_session_timer_enabled">enabled</string>
+    <string name="app_context_session_timer_disabled">disabled</string>
+    <string name="app_context_session_timer_changed">Session timer %1$s for %2$s</string>
+    <string name="app_context_app_info">App Info</string>
+    <string name="app_context_share">Share</string>
+    <string name="app_context_uninstall">Uninstall</string>
+    <string name="contact_phone_not_found">Not found</string>
     <string name="weather_today">Today</string>
     <string name="weather_condition_clear">Clear</string>
     <string name="weather_condition_cloudy">Cloudy</string>
@@ -375,6 +389,37 @@
     
     <string name="accessibility_shortcut">Accessibility Shortcut</string>
     <string name="accessibility_shortcut_description">Show a floating button for quick access to system controls</string>
+    <string name="edge_panel_permission_usage_title">Usage Access Required</string>
+    <string name="edge_panel_permission_usage_message">Allow Launch to read usage access so the edge panel can show your recent apps.</string>
+    <string name="edge_panel_config_title">Edge Panel</string>
+    <string name="edge_panel_config_subtitle">Pick the pinned apps that stay in your side panel. Recent apps appear automatically above them.</string>
+    <string name="edge_panel_config_saved">Edge panel apps updated</string>
+    <string name="edge_panel_no_recent_apps">Use a few apps first and your recent apps will appear here.</string>
+    <string name="edge_panel_grant_usage_access">Grant usage access to show recent apps</string>
+    <string name="edge_panel_handle_section_title">Handle</string>
+    <string name="edge_panel_handle_position">Position</string>
+    <string name="edge_panel_handle_lock">Lock panel position</string>
+    <string name="edge_panel_show_recent">Show recent apps</string>
+    <string name="edge_panel_handle_transparency">Transparency</string>
+    <string name="edge_panel_handle_size">Size</string>
+    <string name="edge_panel_handle_width">Width</string>
+    <string name="edge_panel_position_left">Left</string>
+    <string name="edge_panel_position_right">Right</string>
+    
+    <!-- Control Center Trigger -->
+    <string name="control_center_trigger_section_title">Trigger Line</string>
+    <string name="control_center_trigger_position">Position</string>
+    <string name="control_center_trigger_lock">Lock trigger position</string>
+    <string name="control_center_trigger_transparency">Transparency</string>
+    <string name="control_center_trigger_size">Size</string>
+    <string name="control_center_trigger_width">Width</string>
+    <string name="control_center_trigger_position_left">Left</string>
+    <string name="control_center_trigger_position_right">Right</string>
+    
+    <!-- Control Center Config Activity -->
+    <string name="control_center_config_title">Control Center</string>
+    <string name="control_center_config_subtitle">Drag handles to reorder shortcuts. Toggle visibility to customize your control center panel.</string>
+    <string name="control_center_config_saved">Control center layout updated</string>
     
     
     <string name="year_progress_enable">Enable</string>

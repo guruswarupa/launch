@@ -11,10 +11,13 @@ import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.core.content.edit
+import androidx.core.view.doOnLayout
+import androidx.core.view.doOnPreDraw
 import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.ScreenPagerManager
 import com.guruswarupa.launch.ui.activities.SettingsActivity
 import kotlin.math.abs
 
@@ -31,6 +34,7 @@ class FeatureTutorialManager(
     private var isTutorialActive = false
     private var renderToken = 0
     private var onTutorialCompleteCallback: (() -> Unit)? = null
+    private var waitingForUserSwipe = false
 
     companion object {
         private const val PREF_TUTORIAL_SHOWN = "feature_tutorial_shown"
@@ -60,7 +64,9 @@ class FeatureTutorialManager(
         val highlightPosition: HighlightPosition = HighlightPosition.BOTTOM,
         val targetViewTag: String? = null,
         val highlightVisible: Boolean = true,
-        val scrollToTarget: Boolean = true
+        val scrollToTarget: Boolean = true,
+        val waitForUserSwipe: Boolean = false,
+        val waitForUserScroll: Boolean = false
     ) {
         HOME_OVERVIEW(
             page = TutorialPage.HOME,
@@ -70,24 +76,6 @@ class FeatureTutorialManager(
             highlightPosition = HighlightPosition.CENTER,
             highlightVisible = false,
             scrollToTarget = false
-        ),
-        SEARCH_BAR(
-            page = TutorialPage.HOME,
-            title = "Universal Search",
-            description = "Search apps, contacts, and quick actions from here. Keep it empty to browse normally, or type to filter instantly.",
-            targetViewId = R.id.search_box
-        ),
-        TIME_AND_WEATHER(
-            page = TutorialPage.HOME,
-            title = "Top Widgets",
-            description = "The top card keeps time, date, weather, and status info visible without leaving the home page.",
-            targetViewId = R.id.top_widget_container
-        ),
-        APP_DOCK(
-            page = TutorialPage.HOME,
-            title = "Dock Shortcuts",
-            description = "The dock holds your quick actions like workspace switching and focus mode.",
-            targetViewId = R.id.app_dock
         ),
         WORKSPACE_TOGGLE(
             page = TutorialPage.HOME,
@@ -110,20 +98,14 @@ class FeatureTutorialManager(
             targetViewId = R.id.app_dock,
             targetViewTag = "work_profile_container"
         ),
-        APP_LIST(
-            page = TutorialPage.HOME,
-            title = "App List Actions",
-            description = "Your installed apps live here. Long press any app to open actions like Add to Favorites, share, app info, and limits.",
-            targetViewId = R.id.app_list,
-            highlightPosition = HighlightPosition.TOP
-        ),
         LAUNCH_SETTINGS_SHORTCUT(
             page = TutorialPage.HOME,
             title = "Launch Settings",
             description = "At the bottom of the app list you can quickly open Launch Settings without searching for it.",
             targetViewId = R.id.app_list,
             targetViewTag = "launcher_settings_shortcut",
-            highlightPosition = HighlightPosition.TOP
+            highlightPosition = HighlightPosition.TOP,
+            waitForUserScroll = true
         ),
         LAUNCH_VAULT_SHORTCUT(
             page = TutorialPage.HOME,
@@ -133,34 +115,10 @@ class FeatureTutorialManager(
             targetViewTag = "launcher_vault_shortcut",
             highlightPosition = HighlightPosition.TOP
         ),
-        NEWS_FEED_PAGE(
-            page = TutorialPage.RSS,
-            title = "News Feed",
-            description = "The far-left page is your news feed. Use the topic chips to focus on enabled categories and tap any article to open it full screen.",
-            targetViewId = R.id.rss_header,
-            highlightPosition = HighlightPosition.BOTTOM,
-            scrollToTarget = false
-        ),
-        WIDGETS_PAGE(
-            page = TutorialPage.WIDGETS,
-            title = "Widgets Page",
-            description = "The left page is your widgets page. Swipe here for larger widgets and utility panels, and use the settings action to choose what appears.",
-            targetViewId = R.id.widget_settings_header,
-            scrollToTarget = false
-        ),
-        WALLPAPER_PAGE(
-            page = TutorialPage.WALLPAPER,
-            title = "Wallpaper Page",
-            description = "The right page gives you a clean wallpaper-focused view with a large ambient clock.",
-            targetViewId = R.id.wallpaper_drawer,
-            highlightPosition = HighlightPosition.CENTER,
-            highlightVisible = false,
-            scrollToTarget = false
-        ),
-        PAGE_NAVIGATION(
+        PAGE_SWIPE_HINT(
             page = TutorialPage.HOME,
-            title = "Pager Navigation",
-            description = "Swipe left for widgets, stay in the middle for home, and swipe right for the wallpaper page. The tutorial will always return here when it finishes.",
+            title = "More Pages",
+            description = "Swipe sideways to move between pages. You can explore widgets and other pages by swiping left or right from home anytime.",
             targetViewId = R.id.main_content,
             highlightPosition = HighlightPosition.CENTER,
             highlightVisible = false,
@@ -196,8 +154,108 @@ class FeatureTutorialManager(
         removeTutorialOverlay()
         val step = TutorialStep.entries[currentStep]
         val token = ++renderToken
+        if (step.waitForUserSwipe && !isTutorialPageOpen(step.page)) {
+            showSwipeHint(step, token)
+            return
+        }
+        if (step.waitForUserScroll && !isStepTargetVisible(step)) {
+            showScrollHint(step, token)
+            return
+        }
         openPage(step.page, animated = false) {
             renderStep(step, token, attempt = 0)
+        }
+    }
+
+    private fun showSwipeHint(step: TutorialStep, token: Int) {
+        waitingForUserSwipe = true
+        openPage(TutorialPage.HOME, animated = false) {
+            if (!isTutorialActive || token != renderToken) return@openPage
+            val homeRoot = activity.findViewById<ViewGroup>(TutorialPage.HOME.rootViewId) ?: return@openPage
+            val homeTarget = activity.findViewById<View>(R.id.main_content) ?: homeRoot
+            showTutorialOverlay(
+                step = step,
+                parentView = homeRoot,
+                targetView = homeTarget,
+                titleOverride = step.title,
+                descriptionOverride = swipeHintDescription(step.page),
+                allowTouchThrough = true,
+                showNextButton = false
+            )
+            waitForExpectedPage(step, token)
+        }
+    }
+
+    private fun waitForExpectedPage(step: TutorialStep, token: Int) {
+        val contentRoot = activity.findViewById<View>(android.R.id.content) ?: return
+        contentRoot.postDelayed({
+            if (!isTutorialActive || token != renderToken || !waitingForUserSwipe) return@postDelayed
+            if (isTutorialPageOpen(step.page)) {
+                waitingForUserSwipe = false
+                removeTutorialOverlay()
+                openPage(step.page, animated = false) {
+                    renderStep(step, token, attempt = 0)
+                }
+            } else {
+                waitForExpectedPage(step, token)
+            }
+        }, RETRY_DELAY_MS)
+    }
+
+    private fun showScrollHint(step: TutorialStep, token: Int) {
+        openPage(step.page, animated = false) {
+            if (!isTutorialActive || token != renderToken) return@openPage
+            val pageRoot = activity.findViewById<ViewGroup>(step.page.rootViewId) ?: return@openPage
+            val appList = pageRoot.findViewById<View>(R.id.app_list) ?: pageRoot
+            showTutorialOverlay(
+                step = step,
+                parentView = pageRoot,
+                targetView = appList,
+                titleOverride = step.title,
+                descriptionOverride = "Scroll to the bottom of the app list. The tutorial will continue when Launch Settings comes into view.",
+                allowTouchThrough = true,
+                showNextButton = false
+            )
+            waitForUserScrollTarget(step, token)
+        }
+    }
+
+    private fun waitForUserScrollTarget(step: TutorialStep, token: Int) {
+        val contentRoot = activity.findViewById<View>(android.R.id.content) ?: return
+        contentRoot.postDelayed({
+            if (!isTutorialActive || token != renderToken) return@postDelayed
+            if (isStepTargetVisible(step)) {
+                removeTutorialOverlay()
+                openPage(step.page, animated = false) {
+                    renderStep(step, token, attempt = 0)
+                }
+            } else {
+                waitForUserScrollTarget(step, token)
+            }
+        }, RETRY_DELAY_MS)
+    }
+
+    private fun isStepTargetVisible(step: TutorialStep): Boolean {
+        val pageRoot = activity.findViewById<ViewGroup>(step.page.rootViewId) ?: return false
+        return resolveTargetView(step, pageRoot)?.isAttachedToWindow == true
+    }
+
+    private fun isTutorialPageOpen(page: TutorialPage): Boolean {
+        val currentPager = activity.screenPagerManager
+        return when (page) {
+            TutorialPage.RSS -> currentPager.isPageOpen(ScreenPagerManager.Page.RSS)
+            TutorialPage.HOME -> currentPager.isPageOpen(ScreenPagerManager.Page.CENTER)
+            TutorialPage.WIDGETS -> currentPager.isPageOpen(ScreenPagerManager.Page.WIDGETS)
+            TutorialPage.WALLPAPER -> currentPager.isPageOpen(ScreenPagerManager.Page.RIGHT)
+        }
+    }
+
+    private fun swipeHintDescription(page: TutorialPage): String {
+        return when (page) {
+            TutorialPage.RSS -> "Swipe right until you reach the News Feed page. The tutorial will continue there once you land on it."
+            TutorialPage.WIDGETS -> "Swipe right to the Widgets page. The tutorial will continue after you open that page yourself."
+            TutorialPage.WALLPAPER -> "Swipe left to the Wallpaper page. The tutorial will continue there once you reach it."
+            TutorialPage.HOME -> ""
         }
     }
 
@@ -206,9 +264,10 @@ class FeatureTutorialManager(
 
         val pageRoot = activity.findViewById<ViewGroup>(step.page.rootViewId)
         if (pageRoot != null && scrollRecyclerToTutorialTarget(step, pageRoot)) {
-            pageRoot.postDelayed({
+            // Use doOnLayout instead of postDelayed for retry
+            pageRoot.doOnLayout {
                 renderStep(step, token, attempt + 1)
-            }, RETRY_DELAY_MS)
+            }
             return
         }
         val targetView = resolveTargetView(step, pageRoot)
@@ -217,9 +276,10 @@ class FeatureTutorialManager(
                 nextStep()
                 return
             }
-            (pageRoot ?: activity.findViewById(android.R.id.content))?.postDelayed({
+            // Use doOnLayout instead of postDelayed for retry
+            (pageRoot ?: activity.findViewById(android.R.id.content))?.doOnLayout {
                 renderStep(step, token, attempt + 1)
-            }, RETRY_DELAY_MS)
+            }
             return
         }
 
@@ -227,10 +287,12 @@ class FeatureTutorialManager(
             scrollToView(targetView)
         }
 
-        pageRoot.postDelayed({
-            if (!isTutorialActive || token != renderToken) return@postDelayed
-            showTutorialOverlay(step, pageRoot, targetView)
-        }, if (step.scrollToTarget) SCROLL_SETTLE_DELAY_MS else 60L)
+        // Use doOnPreDraw instead of postDelayed for rendering overlay
+        pageRoot.doOnPreDraw {
+            if (isTutorialActive && token == renderToken) {
+                showTutorialOverlay(step, pageRoot, targetView)
+            }
+        }
     }
 
     private fun resolveTargetView(step: TutorialStep, pageRoot: ViewGroup?): View? {
@@ -256,18 +318,35 @@ class FeatureTutorialManager(
             TutorialPage.WALLPAPER -> activity.openWallpaperPage(animated)
         }
 
+        // Use doOnLayout instead of postDelayed for page settle
         val rootView = activity.findViewById<View>(page.rootViewId)
-        rootView?.postDelayed(onReady, if (animated) PAGE_SETTLE_DELAY_MS else 80L) ?: onReady()
+        if (animated) {
+            rootView?.doOnLayout { onReady() } ?: onReady()
+        } else {
+            onReady()
+        }
     }
 
     @SuppressLint("InflateParams")
-    private fun showTutorialOverlay(step: TutorialStep, parentView: ViewGroup, targetView: View) {
+    private fun showTutorialOverlay(
+        step: TutorialStep,
+        parentView: ViewGroup,
+        targetView: View,
+        titleOverride: String? = null,
+        descriptionOverride: String? = null,
+        allowTouchThrough: Boolean = false,
+        showNextButton: Boolean? = null
+    ) {
         removeTutorialOverlay()
 
         tutorialOverlay = LayoutInflater.from(activity).inflate(R.layout.tutorial_overlay, null)
         parentView.addView(tutorialOverlay)
 
-        tutorialOverlay?.setOnClickListener { }
+        tutorialOverlay?.isClickable = !allowTouchThrough
+        tutorialOverlay?.isFocusable = !allowTouchThrough
+        if (!allowTouchThrough) {
+            tutorialOverlay?.setOnClickListener { }
+        }
         tutorialOverlay?.bringToFront()
 
         val titleText = tutorialOverlay?.findViewById<TextView>(R.id.tutorial_title)
@@ -277,12 +356,16 @@ class FeatureTutorialManager(
         val nextButton = tutorialOverlay?.findViewById<Button>(R.id.tutorial_next)
         val gotItButton = tutorialOverlay?.findViewById<Button>(R.id.tutorial_got_it)
 
-        titleText?.text = step.title
-        descriptionText?.text = step.description
+        titleText?.text = titleOverride ?: step.title
+        descriptionText?.text = descriptionOverride ?: step.description
 
         val isLastStep = currentStep == TutorialStep.entries.lastIndex
         buttonsContainer?.visibility = if (isLastStep) View.GONE else View.VISIBLE
-        nextButton?.visibility = if (isLastStep) View.GONE else View.VISIBLE
+        nextButton?.visibility = when {
+            showNextButton != null -> if (showNextButton) View.VISIBLE else View.GONE
+            isLastStep -> View.GONE
+            else -> View.VISIBLE
+        }
         gotItButton?.visibility = if (isLastStep) View.VISIBLE else View.GONE
 
         skipButton?.setOnClickListener { finishTutorial() }
@@ -451,6 +534,7 @@ class FeatureTutorialManager(
     }
 
     private fun nextStep() {
+        waitingForUserSwipe = false
         currentStep++
         sharedPreferences.edit { putInt(PREF_TUTORIAL_STEP, currentStep) }
 
@@ -480,6 +564,7 @@ class FeatureTutorialManager(
     private fun finishTutorial() {
         removeTutorialOverlay()
         isTutorialActive = false
+        waitingForUserSwipe = false
         renderToken++
         activity.openHomePage(animated = false)
         markTutorialComplete()
@@ -506,6 +591,7 @@ class FeatureTutorialManager(
         renderToken++
         removeTutorialOverlay()
         isTutorialActive = false
+        waitingForUserSwipe = false
         sharedPreferences.edit {
             putBoolean(PREF_TUTORIAL_SHOWN, false)
             putInt(PREF_TUTORIAL_STEP, 0)

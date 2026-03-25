@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppTimerManager
+import com.guruswarupa.launch.managers.AppUsageMonitor
 import com.guruswarupa.launch.managers.DailyUsageManager
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
@@ -160,16 +161,16 @@ class AppTimerManagementActivity : ComponentActivity() {
 
         val input = EditText(this).apply {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            hint = "Enter minutes (0 to disable)"
+            hint = getString(R.string.daily_usage_hint_minutes_disable)
             setText(currentLimitMinutes.toString())
             DialogStyler.styleInput(this@AppTimerManagementActivity, this)
         }
 
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Set Daily Limit for ${item.name}")
-            .setMessage("Enter daily usage limit in minutes:")
+            .setTitle(getString(R.string.daily_usage_set_limit_title, item.name))
+            .setMessage(getString(R.string.daily_usage_set_limit_message))
             .setDialogInputView(this, input)
-            .setPositiveButton("Set") { _, _ ->
+            .setPositiveButton(R.string.daily_usage_action_set) { _, _ ->
                 try {
                     val minutes = input.text.toString().toLongOrNull() ?: 0L
                     val limitMs = minutes * 60000L
@@ -182,11 +183,12 @@ class AppTimerManagementActivity : ComponentActivity() {
 
                     Toast.makeText(
                         this,
-                        if (limitMs > 0) "Daily limit set to ${formatTime(limitMs)}" else "Daily limit disabled",
+                        if (limitMs > 0) getString(R.string.daily_usage_limit_set, formatTime(limitMs))
+                        else getString(R.string.daily_usage_limit_disabled),
                         Toast.LENGTH_SHORT
                     ).show()
                 } catch (_: NumberFormatException) {
-                    Toast.makeText(this, "Please enter a valid number", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.daily_usage_invalid_number), Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -269,6 +271,7 @@ class AppTimerManagementActivity : ComponentActivity() {
                 if (currentPosition == RecyclerView.NO_POSITION) return@setOnCheckedChangeListener
                 val currentItem = items[currentPosition]
                 dailyUsageManager.setTimerEnabled(currentItem.packageName, isChecked)
+                AppUsageMonitor.syncMonitoring(this@AppTimerManagementActivity)
                 items[currentPosition] = currentItem.copy(enabled = isChecked)
                 notifyItemChanged(currentPosition)
             }

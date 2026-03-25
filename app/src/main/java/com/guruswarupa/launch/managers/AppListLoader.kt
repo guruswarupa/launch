@@ -24,6 +24,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import com.guruswarupa.launch.core.CacheManager
 import com.guruswarupa.launch.models.AppMetadata
+import com.guruswarupa.launch.models.Constants
 
 class AppListLoader(
     private val activity: MainActivity,
@@ -70,13 +71,16 @@ class AppListLoader(
     fun loadApps(forceRefresh: Boolean = false) {
         if (activity.isFinishing || activity.isDestroyed) return
         
-        val adapter = activity.adapterOrNull
+        val adapter = activity.adapter
         loadApps(forceRefresh, activity.fullAppList, activity.appList, adapter)
     }
     
     fun loadApps(forceRefresh: Boolean = false, fullAppList: MutableList<ResolveInfo>, appList: MutableList<ResolveInfo>, adapter: AppAdapter?) {
-        val viewPreference = sharedPreferences.getString("view_preference", "list")
-        val isGridMode = viewPreference == "grid"
+        val viewPreference = sharedPreferences.getString(
+            Constants.Prefs.VIEW_PREFERENCE,
+            Constants.Prefs.VIEW_PREFERENCE_LIST
+        )
+        val isGridMode = viewPreference == Constants.Prefs.VIEW_PREFERENCE_GRID
         
         val currentTime = System.currentTimeMillis()
         if (forceRefresh) {
@@ -194,6 +198,7 @@ class AppListLoader(
                         safeExecute {
                             try {
                                 cm.saveAppListToCache(list)
+                                // Pre-populate label cache in background before UI update
                                 cm.preloadAppMetadata(list)
                             } catch (_: Exception) {}
                         }
@@ -205,60 +210,75 @@ class AppListLoader(
 
                 if (fullList.isEmpty()) {
                     handler.post {
-                        if (appList.isEmpty()) {
-                            Toast.makeText(activity, R.string.app_list_no_apps_found, Toast.LENGTH_SHORT).show()
+                        if (activity.isFinishing || activity.isDestroyed) return@post
+                        onAppListUpdated?.invoke(emptyList(), emptyList(), true)
+                        if (adapter == null) {
+                            onAdapterNeedsUpdate?.invoke(isGridMode)
                         }
-                        recyclerView.visibility = View.VISIBLE
                     }
                 } else {
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     val finalAppList = appListManager.filterAndPrepareApps(fullList, focusMode, workspaceMode)
-                    val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
                     
-                    handler.post {
-                        if (activity.isFinishing || activity.isDestroyed) return@post
-                        onAppListUpdated?.invoke(initiallySorted, fullList, false)
-                        if (adapter == null) {
-                            onAdapterNeedsUpdate?.invoke(isGridMode)
-                        } else if (recyclerView.adapter != adapter) {
-                            recyclerView.adapter = adapter
-                        }
+                    // Pre-populate label cache for all apps BEFORE sorting and UI update
+                    // This ensures labels are ready when adapter binds views
+                    safeExecute {
+                        try {
+                            val metadataCacheInner = cacheManager?.getMetadataCache() ?: emptyMap()
+                            finalAppList.forEach { app ->
+                                val packageName = app.activityInfo.packageName
+                                val cacheKey = "${packageName}|${app.preferredOrder}"
+                                val cached = metadataCacheInner[cacheKey]
+                                if (cached == null) {
+                                    try {
+                                        val label = app.loadLabel(packageManager).toString()
+                                        cacheManager?.updateMetadataCache(cacheKey,
+                                            AppMetadata(
+                                                packageName = packageName,
+                                                activityName = app.activityInfo.name,
+                                                label = label,
+                                                lastUpdated = System.currentTimeMillis()
+                                            )
+                                        )
+                                    } catch (_: Exception) {}
+                                }
+                            }
+                            
+                            cacheManager?.saveAppMetadataToCache(cacheManager.getMetadataCache())
+                            
+                            // Now update UI with sorted apps after cache is populated
+                            val sortedApps = appListManager.sortAppsAlphabetically(finalAppList)
+                            handler.post {
+                                if (activity.isFinishing || activity.isDestroyed) return@post
+                                onAppListUpdated?.invoke(sortedApps, fullList, true)
+                                if (adapter == null) {
+                                    onAdapterNeedsUpdate?.invoke(isGridMode)
+                                } else if (recyclerView.adapter != adapter) {
+                                    recyclerView.adapter = adapter
+                                }
+                            }
+                        } catch (_: Exception) {}
                     }
                     
-                    handler.postDelayed({
-                        safeExecute {
-                            try {
-                                val metadataCacheInner = cacheManager?.getMetadataCache() ?: emptyMap()
-                                finalAppList.forEach { app ->
-                                    val packageName = app.activityInfo.packageName
-                                    val cacheKey = "${packageName}|${app.preferredOrder}"
-                                    val cached = metadataCacheInner[cacheKey]
-                                    if (cached == null) {
-                                        try {
-                                            val label = app.loadLabel(packageManager).toString()
-                                            cacheManager?.updateMetadataCache(cacheKey,
-                                                AppMetadata(
-                                                    packageName = packageName,
-                                                    activityName = app.activityInfo.name,
-                                                    label = label,
-                                                    lastUpdated = System.currentTimeMillis()
-                                                )
-                                            )
-                                        } catch (_: Exception) {}
-                                    }
-                                }
-                                
-                                val sortedApps = appListManager.sortAppsAlphabetically(finalAppList)
-                                cacheManager?.saveAppMetadataToCache(cacheManager.getMetadataCache())
-                                
-                                handler.post {
-                                    if (activity.isFinishing || activity.isDestroyed) return@post
-                                    onAppListUpdated?.invoke(sortedApps, fullList, true)
-                                }
-                            } catch (_: Exception) {}
+                    // If we already have cached metadata, show UI immediately without waiting
+                    val hasAllCachedLabels = finalAppList.all { app ->
+                        val cacheKey = "${app.activityInfo.packageName}|${app.preferredOrder}"
+                        cacheManager?.getMetadataCache()?.containsKey(cacheKey) == true
+                    }
+                    
+                    if (hasAllCachedLabels) {
+                        val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
+                        handler.post {
+                            if (activity.isFinishing || activity.isDestroyed) return@post
+                            onAppListUpdated?.invoke(initiallySorted, fullList, false)
+                            if (adapter == null) {
+                                onAdapterNeedsUpdate?.invoke(isGridMode)
+                            } else if (recyclerView.adapter != adapter) {
+                                recyclerView.adapter = adapter
+                            }
                         }
-                    }, 100)
+                    }
                 }
             } catch (e: Exception) {
                 handler.post {

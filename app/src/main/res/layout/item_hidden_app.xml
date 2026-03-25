@@ -30,7 +30,7 @@
         android:id="@+id/unhide_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Unhide"
+        android:text="@string/unhide_app_plain"
         android:textColor="@color/nord7"
         android:background="@android:color/transparent"
         android:textSize="14sp"

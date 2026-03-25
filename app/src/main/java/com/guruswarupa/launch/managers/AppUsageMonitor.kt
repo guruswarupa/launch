@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import com.guruswarupa.launch.managers.AppTimerManager
 import com.guruswarupa.launch.R
 
@@ -21,7 +22,24 @@ class AppUsageMonitor : Service() {
 
     companion object {
         private const val SERVICE_NAME = "App Usage Monitor"
-        private const val POLLING_INTERVAL_MS = 3000L 
+        private const val POLLING_INTERVAL_MS = 3000L
+
+        fun shouldRun(context: Context): Boolean {
+            val usageManager = AppUsageStatsManager(context)
+            if (!usageManager.hasUsageStatsPermission()) {
+                return false
+            }
+            return DailyUsageManager(context).getAppsWithTimers().isNotEmpty()
+        }
+
+        fun syncMonitoring(context: Context) {
+            val intent = Intent(context, AppUsageMonitor::class.java)
+            if (shouldRun(context)) {
+                ContextCompat.startForegroundService(context, intent)
+            } else {
+                context.stopService(intent)
+            }
+        }
     }
 
     override fun onCreate() {

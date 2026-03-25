@@ -34,7 +34,7 @@ class PhysicalActivityTrackingService : Service() {
         
         
         activityManager = PhysicalActivityManager(this)
-        activityManager?.initializeAsync()
+        activityManager?.initializeAsync(autoStartTracking = true)
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

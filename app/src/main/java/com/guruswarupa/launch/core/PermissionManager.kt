@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.receivers.ScreenOffAdminReceiver
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
 import com.guruswarupa.launch.services.LaunchNotificationListenerService
@@ -58,7 +59,7 @@ class PermissionManager(
             != PackageManager.PERMISSION_GRANTED
         ) {
             if (ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_CONTACTS) ||
-                !sharedPreferences.getBoolean("contacts_permission_denied", false)) {
+                !sharedPreferences.getBoolean(Constants.Prefs.CONTACTS_PERMISSION_DENIED, false)) {
                 isRequestingPermissions = true
                 ActivityCompat.requestPermissions(
                     activity,
@@ -113,20 +114,20 @@ class PermissionManager(
         if (isRequestingPermissions) return
         
         if (!usageStatsManager.hasUsageStatsPermission()) {
-            if (!sharedPreferences.getBoolean("usage_stats_permission_denied", false)) {
+            if (!sharedPreferences.getBoolean(Constants.Prefs.USAGE_STATS_PERMISSION_DENIED, false)) {
                 isRequestingPermissions = true
                 val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
                     .setTitle(R.string.usage_stats_permission_title)
                     .setMessage(R.string.usage_stats_permission_message)
                     .setPositiveButton(R.string.usage_stats_permission_grant) { _, _ ->
                         
-                        sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", true) }
+                        sharedPreferences.edit { putBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, true) }
                         isRequestingPermissions = false
                         val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
                         activity.startActivity(intent)
                     }
                     .setNegativeButton(R.string.usage_stats_permission_skip) { _, _ ->
-                        sharedPreferences.edit { putBoolean("usage_stats_permission_denied", true) }
+                        sharedPreferences.edit { putBoolean(Constants.Prefs.USAGE_STATS_PERMISSION_DENIED, true) }
                         isRequestingPermissions = false
                         onComplete()
                     }
@@ -439,11 +440,11 @@ class PermissionManager(
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    sharedPreferences.edit { putBoolean("contacts_permission_denied", false) }
+                    sharedPreferences.edit { putBoolean(Constants.Prefs.CONTACTS_PERMISSION_DENIED, false) }
                     onContactsGranted()
                 } else {
                     if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.READ_CONTACTS)) {
-                        sharedPreferences.edit { putBoolean("contacts_permission_denied", true) }
+                        sharedPreferences.edit { putBoolean(Constants.Prefs.CONTACTS_PERMISSION_DENIED, true) }
                     }
                 }
             }

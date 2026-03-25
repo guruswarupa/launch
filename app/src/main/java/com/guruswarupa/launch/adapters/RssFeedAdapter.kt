@@ -64,8 +64,12 @@ class RssFeedAdapter(
 
             itemView.setOnClickListener {
                 val intent = Intent(itemView.context, WebAppActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, article.source)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
+                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                    )
+                    putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, article.title.ifBlank { article.source })
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, article.link)
                 }
                 itemView.context.startActivity(intent)

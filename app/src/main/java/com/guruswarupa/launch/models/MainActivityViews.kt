@@ -16,6 +16,7 @@ import com.guruswarupa.launch.ui.views.WeeklyUsageGraphView
 
 class MainActivityViews {
     lateinit var recyclerView: RecyclerView
+    lateinit var appListEmptyState: TextView
     lateinit var fastScroller: FastScroller
     lateinit var timeTextView: TextView
     lateinit var dateTextView: TextView

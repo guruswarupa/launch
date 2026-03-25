@@ -1,95 +1,60 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ResolveInfo
-import android.content.Context
 import android.database.Cursor
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.Process
+import android.os.UserManager
 import android.provider.ContactsContract
 import android.provider.Settings
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.Gravity
 import android.view.animation.AnimationUtils
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.ImageView
 import android.widget.PopupMenu
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Path
-import android.graphics.RectF
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.AdaptiveIconDrawable
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import androidx.core.content.edit
 import androidx.core.net.toUri
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
-import java.io.File
-import java.util.concurrent.*
-import androidx.core.content.FileProvider
-import android.content.ComponentName
-import android.os.Handler
-import android.os.Looper
-import android.os.UserManager
-import android.os.Process
-import androidx.core.view.size
-
-import com.guruswarupa.launch.managers.AppUsageStatsManager
-import com.guruswarupa.launch.managers.WebAppIconFetcher
-import com.guruswarupa.launch.managers.TypographyManager
-import com.guruswarupa.launch.managers.WebAppManager
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.core.ShareManager
+import com.guruswarupa.launch.managers.AppUsageStatsManager
+import com.guruswarupa.launch.managers.TypographyManager
+import com.guruswarupa.launch.managers.WebAppIconFetcher
+import com.guruswarupa.launch.managers.WebAppManager
 import com.guruswarupa.launch.models.AppMetadata
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.ui.activities.WebAppActivity
 import com.guruswarupa.launch.ui.activities.WebAppSettingsActivity
-import com.google.android.material.shape.ShapeAppearanceModel
-import com.google.android.material.shape.CornerFamily
-import com.google.android.material.shape.RelativeCornerSize
-import com.google.android.material.shape.CornerSize
-import kotlin.math.roundToInt
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 class AppAdapter(
     private val activity: MainActivity,
-    var appList: MutableList<ResolveInfo>,
+    appList: MutableList<ResolveInfo>,
     private val searchBox: AutoCompleteTextView,
     private var isGridMode: Boolean,
     private val context: Context
-) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
-
-    private var lastAnimatedPosition = -1
-    private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
-    private val mainUserSerial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
-    
-    init {
-        setHasStableIds(true)
-    }
-    
-    override fun getItemId(position: Int): Long {
-        val item = appList[position]
-        // Use package name + activity name + serial for unique ID
-        return ("${item.activityInfo.packageName}|${item.activityInfo.name}|${item.preferredOrder}").hashCode().toLong()
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    fun updateViewMode(isGrid: Boolean) {
-        if (this.isGridMode != isGrid) {
-            this.isGridMode = isGrid
-            lastAnimatedPosition = -1
-            notifyDataSetChanged()
-        }
-    }
+) : ListAdapter<ResolveInfo, AppAdapter.ViewHolder>(AppListDiffCallback()) {
 
     companion object {
         const val VIEW_TYPE_LIST = 0
@@ -97,129 +62,148 @@ class AppAdapter(
         const val VIEW_TYPE_SEPARATOR = 2
         const val SEPARATOR_PACKAGE = "com.guruswarupa.launch.SEPARATOR"
         
+        // Payloads for partial view updates
+        const val PAYLOAD_ICON_STYLE = 1
+        const val PAYLOAD_ICON_SIZE = 2
+        const val PAYLOAD_VIEW_MODE = 3
+        const val PAYLOAD_ICON_VISUAL_STATE = 4
+
         private val SPECIAL_PACKAGE_NAMES = setOf(
             "contact_unified", "play_store_search", "maps_search", "yt_search", "browser_search", "math_result",
             "file_result", "settings_result", "system_settings_result",
             "launcher_settings_shortcut", "launcher_vault_shortcut"
         )
-        
-        private const val PRIORITY_HIGH = 100
-        private const val PRIORITY_MEDIUM = 50
-        private const val PRIORITY_LOW = 10
-        private const val PRIORITY_BACKGROUND = 0
     }
 
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val appIcon: com.google.android.material.imageview.ShapeableImageView? = view.findViewById(R.id.app_icon)
+        val appName: TextView? = view.findViewById(R.id.app_name)
+        val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
+        val container: View? = view.findViewById(R.id.app_item_container)
+        var lastClickTime = 0L
+    }
+
+    private var lastAnimatedPosition = -1
+    private val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+    private val mainUserSerial = userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
     private val usageStatsManager = AppUsageStatsManager(activity)
-    
-    private val iconCache = ConcurrentHashMap<String, Drawable>()
     private val labelCache = ConcurrentHashMap<String, String>()
-    private val specialAppIconCache = ConcurrentHashMap<String, Drawable>()
-    private val contactPhotoCache = ConcurrentHashMap<String, Drawable>()
     private val usageCache = ConcurrentHashMap<String, String>()
-    
     private val executor = Executors.newSingleThreadExecutor()
+    private val pendingLabelTasks = ConcurrentHashMap<String, Future<*>>()
     private var itemsRendered = 0
     private var isFastScrolling = false
-    private var fastScrollDebounceHandler = Handler(Looper.getMainLooper())
+    private val fastScrollDebounceHandler = Handler(Looper.getMainLooper())
     private var fastScrollDebounceRunnable: Runnable? = null
-    
     private val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
     private var currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
-    private var grayscaleIconsEnabled = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
-    
+    private var currentShowAppNamesInGrid = prefs.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+    // Cache the animation object to avoid repeated loadAnimation() calls
+    private val itemFadeInAnimation = AnimationUtils.loadAnimation(context, R.anim.item_fade_in)
+    private val iconLoader = IconLoader(
+        activity = activity,
+        context = context,
+        separatorPackage = SEPARATOR_PACKAGE,
+        specialPackageNames = SPECIAL_PACKAGE_NAMES
+    ).apply {
+        updateIconStyle(currentIconStyle)
+        updateIconSize(currentIconSize)
+    }
+
+    private val appClickHandler = AppClickHandler(
+        activity = activity,
+        context = context,
+        searchBox = searchBox,
+        userManager = userManager,
+        mainUserSerial = mainUserSerial,
+        labelResolver = { packageName, appInfo ->
+            labelCache["${packageName}|${appInfo.preferredOrder}"] ?: packageName
+        }
+    )
+
+    private val searchResultBinderRegistry = createSearchResultBinderRegistry(
+        activity = activity,
+        context = context,
+        searchBox = searchBox,
+        iconLoader = iconLoader,
+        showContactChoiceDialog = ::showContactChoiceDialog,
+        getPhotoUriForContact = ::getPhotoUriForContact,
+        applyIconVisualState = { packageName, holder -> applyIconVisualState(packageName, holder.appIcon) }
+    )
+
+    init {
+        setHasStableIds(true)
+        submitList(ArrayList(appList))
+    }
+
+    override fun getItemId(position: Int): Long {
+        val item = getItem(position)
+        return ("${item.activityInfo.packageName}|${item.activityInfo.name}|${item.preferredOrder}").hashCode().toLong()
+    }
+
+    fun updateViewMode(isGrid: Boolean) {
+        if (this.isGridMode != isGrid) {
+            this.isGridMode = isGrid
+            lastAnimatedPosition = -1
+            notifyItemRangeChanged(0, currentList.size, PAYLOAD_VIEW_MODE)
+        }
+    }
+
     fun setFastScrollingState(isScrolling: Boolean) {
         isFastScrolling = isScrolling
         fastScrollDebounceRunnable?.let { fastScrollDebounceHandler.removeCallbacks(it) }
-        
         if (!isScrolling) {
-            fastScrollDebounceRunnable = Runnable {
-                forceRefreshVisibleIcons()
-            }
+            fastScrollDebounceRunnable = Runnable { forceRefreshVisibleIcons() }
             fastScrollDebounceHandler.postDelayed(fastScrollDebounceRunnable!!, 100)
         }
     }
-    
+
     private fun forceRefreshVisibleIcons() {}
 
-    private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
-        override fun run() = action.run()
-        override fun compareTo(other: PriorityRunnable): Int = other.priority.compareTo(this.priority)
-    }
-    
-    private class TrackedTask(
-        private val priorityRunnable: PriorityRunnable
-    ) : Runnable, Comparable<TrackedTask>, Future<Boolean> {
-        @Volatile private var isDone = false
-        @Volatile private var isCancelled = false
-        
-        override fun run() {
-            try {
-                priorityRunnable.run()
-            } finally {
-                isDone = true
-            }
-        }
-        
-        override fun compareTo(other: TrackedTask): Int {
-            return this.priorityRunnable.compareTo(other.priorityRunnable)
-        }
-        
-        override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
-            if (isDone || isCancelled) return false
-            isCancelled = true
-            return true
-        }
-        
-        override fun isCancelled(): Boolean = isCancelled
-        override fun isDone(): Boolean = isDone
-        override fun get(): Boolean? = null
-        override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
-    }
-    
-    private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
-    private val pendingLabelTasks = ConcurrentHashMap<String, Future<*>>()
-
-    private val iconPreloadExecutor = ThreadPoolExecutor(
-        2, 2, 0L, TimeUnit.MILLISECONDS,
-        PriorityBlockingQueue()
-    )
-    
     fun clearUsageCache() {
         usageCache.clear()
     }
 
     fun clearContactPhotoCache() {
-        contactPhotoCache.clear()
+        iconLoader.clearContactPhotoCache()
     }
-    
-    @SuppressLint("NotifyDataSetChanged")
+
     fun updateIconStyle(style: String) {
         currentIconStyle = style
-        iconCache.clear()
-        specialAppIconCache.clear()
+        iconLoader.updateIconStyle(style)
         (context as? Activity)?.runOnUiThread {
-            notifyDataSetChanged()
+            notifyItemRangeChanged(0, currentList.size, PAYLOAD_ICON_STYLE)
         }
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun updateIconSize(size: Int) {
         currentIconSize = size
-        iconCache.clear()
-        specialAppIconCache.clear()
+        iconLoader.updateIconSize(size)
         (context as? Activity)?.runOnUiThread {
-            notifyDataSetChanged()
+            notifyItemRangeChanged(0, currentList.size, PAYLOAD_ICON_SIZE)
         }
     }
 
-    @SuppressLint("NotifyDataSetChanged")
-    fun updateGrayscaleIcons(enabled: Boolean) {
-        grayscaleIconsEnabled = enabled
-        (context as? Activity)?.runOnUiThread {
-            notifyDataSetChanged()
+    fun updateShowAppNamesInGrid(show: Boolean) {
+        if (currentShowAppNamesInGrid != show) {
+            currentShowAppNamesInGrid = show
+            if (isGridMode) {
+                (context as? Activity)?.runOnUiThread {
+                    notifyItemRangeChanged(0, currentList.size, PAYLOAD_VIEW_MODE)
+                }
+            }
         }
     }
+
+    // Helper method to get item at position for FastScroller
+    fun getItemAtPosition(position: Int): ResolveInfo? {
+        if (position < 0 || position >= currentList.size) return null
+        return getItem(position)
+    }
+
+    // Helper method to get current list size for FastScroller
+    fun getCurrentListSize(): Int = currentList.size
 
     private fun applyIconVisualState(packageName: String, imageView: ImageView?) {
         if (imageView == null) return
@@ -229,10 +213,10 @@ class AppAdapter(
             !WebAppManager.isWebAppPackage(packageName) &&
             activity.appTimerManager.isAppOverDailyLimit(packageName)
 
-        if (grayscaleIconsEnabled || overDailyLimit) {
+        if (overDailyLimit) {
             val matrix = ColorMatrix().apply { setSaturation(0f) }
             imageView.colorFilter = ColorMatrixColorFilter(matrix)
-            imageView.alpha = if (overDailyLimit) 0.5f else 0.72f
+            imageView.alpha = 0.5f
         } else {
             imageView.colorFilter = null
             imageView.clearColorFilter()
@@ -241,144 +225,15 @@ class AppAdapter(
         }
     }
 
-    private fun getShapeAppearanceModel(): ShapeAppearanceModel {
-        val density = context.resources.displayMetrics.density
-        val builder = ShapeAppearanceModel.builder()
-        
-        when (currentIconStyle) {
-            "round" -> {
-                builder.setAllCorners(CornerFamily.ROUNDED, 0f)
-                builder.setAllCornerSizes(RelativeCornerSize(0.5f) as CornerSize)
-            }
-            "squircle" -> {
-                builder.setAllCorners(CornerFamily.ROUNDED, 0f)
-                builder.setAllCornerSizes(RelativeCornerSize(0.2f) as CornerSize)
-            }
-            "squared" -> {
-                builder.setAllCorners(CornerFamily.ROUNDED, 4f * density)
-            }
-            "teardrop" -> {
-                builder.setTopLeftCorner(CornerFamily.ROUNDED, 0f)
-                builder.setTopLeftCornerSize(RelativeCornerSize(0.5f) as CornerSize)
-                builder.setTopRightCorner(CornerFamily.ROUNDED, 0f)
-                builder.setTopRightCornerSize(RelativeCornerSize(0.5f) as CornerSize)
-                builder.setBottomLeftCorner(CornerFamily.ROUNDED, 0f)
-                builder.setBottomLeftCornerSize(RelativeCornerSize(0.5f) as CornerSize)
-                builder.setBottomRightCorner(CornerFamily.ROUNDED, 0f)
-                builder.setBottomRightCornerSize(RelativeCornerSize(0.1f) as CornerSize)
-            }
-            "vortex" -> {
-                builder.setAllCorners(CornerFamily.CUT, 0f)
-                builder.setAllCornerSizes(RelativeCornerSize(0.2f) as CornerSize)
-            }
-            "overlay" -> {
-                builder.setAllCorners(CornerFamily.ROUNDED, 12f * density)
-            }
-            else -> {
-                builder.setAllCorners(CornerFamily.ROUNDED, 0f)
-                builder.setAllCornerSizes(RelativeCornerSize(0.5f) as CornerSize)
-            }
-        }
-        return builder.build()
-    }
-
-    private fun setIconDrawable(imageView: ImageView?, drawable: Drawable?) {
-        imageView?.setImageDrawable(drawable?.let { shapeIconDrawable(it) })
-    }
-
-    private fun setIconResource(imageView: ImageView?, resId: Int) {
-        val drawable = ContextCompat.getDrawable(context, resId)
-        setIconDrawable(imageView, drawable)
-    }
-
-    private fun shapeIconDrawable(drawable: Drawable): Drawable {
-        val density = context.resources.displayMetrics.density
-        val size = (currentIconSize * density).roundToInt().coerceAtLeast(1)
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        val bounds = RectF(0f, 0f, size.toFloat(), size.toFloat())
-        val path = createIconMaskPath(bounds)
-
-        canvas.save()
-        canvas.clipPath(path)
-        if (drawable is AdaptiveIconDrawable) {
-            val background = drawable.background?.constantState?.newDrawable(context.resources)?.mutate()
-                ?: drawable.background?.mutate()
-            val foreground = drawable.foreground?.constantState?.newDrawable(context.resources)?.mutate()
-                ?: drawable.foreground?.mutate()
-            background?.setBounds(0, 0, size, size)
-            foreground?.setBounds(0, 0, size, size)
-            background?.draw(canvas)
-            foreground?.draw(canvas)
-        } else {
-            val copy = drawable.constantState?.newDrawable(context.resources)?.mutate() ?: drawable.mutate()
-            copy.setBounds(0, 0, size, size)
-            copy.draw(canvas)
-        }
-        canvas.restore()
-
-        return BitmapDrawable(context.resources, bitmap)
-    }
-
-    private fun createIconMaskPath(bounds: RectF): Path {
-        val width = bounds.width()
-        val height = bounds.height()
-        val minSize = minOf(width, height)
-        val path = Path()
-
-        when (currentIconStyle) {
-            "round" -> path.addOval(bounds, Path.Direction.CW)
-            "squircle" -> path.addRoundRect(bounds, minSize * 0.28f, minSize * 0.28f, Path.Direction.CW)
-            "squared" -> path.addRoundRect(bounds, minSize * 0.08f, minSize * 0.08f, Path.Direction.CW)
-            "teardrop" -> {
-                path.addRoundRect(
-                    bounds,
-                    floatArrayOf(
-                        minSize * 0.5f, minSize * 0.5f,
-                        minSize * 0.5f, minSize * 0.5f,
-                        minSize * 0.18f, minSize * 0.18f,
-                        minSize * 0.5f, minSize * 0.5f
-                    ),
-                    Path.Direction.CW
-                )
-            }
-            "vortex" -> {
-                path.moveTo(bounds.left + minSize * 0.2f, bounds.top)
-                path.lineTo(bounds.right - minSize * 0.2f, bounds.top)
-                path.lineTo(bounds.right, bounds.top + minSize * 0.2f)
-                path.lineTo(bounds.right, bounds.bottom - minSize * 0.2f)
-                path.lineTo(bounds.right - minSize * 0.2f, bounds.bottom)
-                path.lineTo(bounds.left + minSize * 0.2f, bounds.bottom)
-                path.lineTo(bounds.left, bounds.bottom - minSize * 0.2f)
-                path.lineTo(bounds.left, bounds.top + minSize * 0.2f)
-                path.close()
-            }
-            "overlay" -> path.addRoundRect(bounds, minSize * 0.18f, minSize * 0.18f, Path.Direction.CW)
-            else -> path.addOval(bounds, Path.Direction.CW)
-        }
-
-        return path
-    }
-
     fun getAppLabel(position: Int): String {
-        if (position < 0 || position >= appList.size) return ""
-        val appInfo = appList[position]
+        if (position < 0 || position >= currentList.size) return ""
+        val appInfo = getItem(position)
         val packageName = appInfo.activityInfo.packageName
         if (packageName == SEPARATOR_PACKAGE) return ""
         if (WebAppManager.isWebAppPackage(packageName)) return appInfo.activityInfo.name ?: ""
-        if (packageName in SPECIAL_PACKAGE_NAMES) {
-            return appInfo.activityInfo.name ?: ""
-        }
+        if (packageName in SPECIAL_PACKAGE_NAMES) return appInfo.activityInfo.name ?: ""
         val cacheKey = "${packageName}|${appInfo.preferredOrder}"
         return labelCache[cacheKey] ?: appInfo.activityInfo.name ?: packageName
-    }
-
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val appIcon: com.google.android.material.imageview.ShapeableImageView? = view.findViewById(R.id.app_icon)
-        val appName: TextView? = view.findViewById(R.id.app_name)
-        val appUsageTime: TextView? = view.findViewById(R.id.app_usage_time)
-        val container: View? = view.findViewById(R.id.app_item_container)
-        var lastClickTime = 0L
     }
 
     fun updateAppList(newAppList: List<ResolveInfo>) {
@@ -391,161 +246,51 @@ class AppAdapter(
             for (app in newItems) {
                 val packageName = app.activityInfo.packageName
                 if (packageName == SEPARATOR_PACKAGE) continue
-                val cachedMetadata = metadataCache[packageName]
                 val cacheKey = "${packageName}|${app.preferredOrder}"
+                // Pre-populate label cache from metadata cache
+                val cachedMetadata = metadataCache[cacheKey]
                 if (cachedMetadata != null && !labelCache.containsKey(cacheKey)) {
                     labelCache[cacheKey] = cachedMetadata.label
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
 
-        (context as? Activity)?.runOnUiThread {
-            val diffCallback = AppListDiffCallback(appList, newItems)
-            val diffResult = DiffUtil.calculateDiff(diffCallback)
-            
-            diffResult.dispatchUpdatesTo(this)
-            
-            appList.clear()
-            appList.addAll(newItems)
-            
+        // AsyncListDiffer computes diff on background thread automatically
+        submitList(newItems) {
+            // This callback runs on the main thread after diff is applied
             if (isFirstLoad && newItems.isNotEmpty()) {
                 itemsRendered = newItems.size
-                executor.execute { preloadIcons(newItems.filter { it.activityInfo.packageName != SEPARATOR_PACKAGE }) }
+                executor.execute {
+                    iconLoader.preloadIcons(newItems.filter { it.activityInfo.packageName != SEPARATOR_PACKAGE })
+                }
             }
         }
     }
-    
+
     fun forceRebindViewHolder(viewHolder: ViewHolder, position: Int) {
-        if (position < 0 || position >= appList.size) return
+        if (position < 0 || position >= currentList.size) return
         onBindViewHolder(viewHolder, position)
     }
-    
-    private class AppListDiffCallback(
-        private val oldList: List<ResolveInfo>,
-        private val newList: List<ResolveInfo>
-    ) : DiffUtil.Callback() {
-        override fun getOldListSize(): Int = oldList.size
-        override fun getNewListSize(): Int = newList.size
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            val oldItem = oldList[oldItemPosition]
-            val newItem = newList[newItemPosition]
+
+    private class AppListDiffCallback : DiffUtil.ItemCallback<ResolveInfo>() {
+        override fun areItemsTheSame(oldItem: ResolveInfo, newItem: ResolveInfo): Boolean {
             if (oldItem.activityInfo.packageName == SEPARATOR_PACKAGE && newItem.activityInfo.packageName == SEPARATOR_PACKAGE) {
                 return oldItem.activityInfo.name == newItem.activityInfo.name
             }
-            return oldItem.activityInfo.packageName == newItem.activityInfo.packageName && 
-                   oldItem.preferredOrder == newItem.preferredOrder
-        }
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            val oldItem = oldList[oldItemPosition]
-            val newItem = newList[newItemPosition]
             return oldItem.activityInfo.packageName == newItem.activityInfo.packageName &&
-                   oldItem.activityInfo.name == newItem.activityInfo.name &&
-                   oldItem.preferredOrder == newItem.preferredOrder
-        }
-    }
-    
-    private fun preloadIcons(apps: List<ResolveInfo>) {
-        val immediateLoad = apps.take(30)
-        for (app in immediateLoad) {
-            submitIconLoadTask(app, PRIORITY_LOW)
+                oldItem.preferredOrder == newItem.preferredOrder
         }
 
-        val remainingApps = apps.drop(30)
-        if (!executor.isShutdown) {
-            executor.execute {
-                for (batch in remainingApps.chunked(20)) {
-                    for (app in batch) {
-                        submitIconLoadTask(app, PRIORITY_BACKGROUND)
-                    }
-                    try { Thread.sleep(50) } catch (_: InterruptedException) {}
-                }
-            }
-        }
-    }
-    
-    private fun submitIconLoadTask(app: ResolveInfo, priority: Int, holder: ViewHolder? = null, position: Int = -1) {
-        val packageName = app.activityInfo.packageName
-        if (packageName == SEPARATOR_PACKAGE) return
-        
-        val cacheKey = "${packageName}|${app.preferredOrder}"
-        
-        if (packageName in SPECIAL_PACKAGE_NAMES || iconCache.containsKey(cacheKey)) {
-            if (holder != null && holder.appIcon != null && iconCache.containsKey(cacheKey)) {
-                val icon = iconCache[cacheKey]
-                (context as? Activity)?.runOnUiThread {
-                    val currentPosition = holder.bindingAdapterPosition
-                    val currentTag = holder.itemView.tag
-                    if (currentPosition != RecyclerView.NO_POSITION && 
-                        currentPosition == position && 
-                        currentTag != null && 
-                        currentTag.toString() == cacheKey) {
-                        setIconDrawable(holder.appIcon, icon)
-                        applyIconVisualState(packageName, holder.appIcon)
-                    }
-                }
-            }
-            return
-        }
-        
-        pendingIconTasks[cacheKey]?.cancel(true)
-        
-        val priorityRunnable = PriorityRunnable(priority) {
-            try {
-                if (!iconCache.containsKey(cacheKey)) {
-                    var icon = app.loadIcon(activity.packageManager)
-                    
-                    // Badge icon if it's from work profile
-                    if (app.preferredOrder != mainUserSerial) {
-                        val userHandle = userManager.getUserForSerialNumber(app.preferredOrder.toLong())
-                        if (userHandle != null) {
-                            icon = activity.packageManager.getUserBadgedIcon(icon, userHandle)
-                        }
-                    }
-
-                    val shapedIcon = shapeIconDrawable(icon)
-                    iconCache[cacheKey] = shapedIcon
-                    
-                    if (holder != null && holder.appIcon != null) {
-                        (context as? Activity)?.runOnUiThread {
-                            val currentPosition = holder.bindingAdapterPosition
-                            val currentTag = holder.itemView.tag
-                            if (currentPosition != RecyclerView.NO_POSITION && 
-                                currentPosition == position && 
-                                currentTag != null && 
-                                currentTag.toString() == cacheKey) {
-                                holder.appIcon.setImageDrawable(shapedIcon)
-                                applyIconVisualState(packageName, holder.appIcon)
-                            }
-                        }
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-        
-        val trackedTask = TrackedTask(priorityRunnable)
-        iconPreloadExecutor.execute(trackedTask)
-        pendingIconTasks[cacheKey] = trackedTask
-        
-        if (pendingIconTasks.size > 100) {
-            pendingIconTasks.entries.removeAll { it.value.isDone }
-        }
-    }
-
-    private fun preloadNextIcons(startPosition: Int, endPosition: Int) {
-        val size = appList.size
-        if (startPosition >= size) return
-        val appsToPreload = try {
-            ArrayList(appList.subList(startPosition, minOf(endPosition, size)))
-        } catch (_: Exception) { return }
-        for (app in appsToPreload) { 
-            if (app.activityInfo.packageName != SEPARATOR_PACKAGE) {
-                submitIconLoadTask(app, PRIORITY_MEDIUM)
-            }
+        override fun areContentsTheSame(oldItem: ResolveInfo, newItem: ResolveInfo): Boolean {
+            return oldItem.activityInfo.packageName == newItem.activityInfo.packageName &&
+                oldItem.activityInfo.name == newItem.activityInfo.name &&
+                oldItem.preferredOrder == newItem.preferredOrder
         }
     }
 
     override fun getItemViewType(position: Int): Int {
-        if (appList[position].activityInfo.packageName == SEPARATOR_PACKAGE) return VIEW_TYPE_SEPARATOR
+        if (getItem(position).activityInfo.packageName == SEPARATOR_PACKAGE) return VIEW_TYPE_SEPARATOR
         return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
     }
 
@@ -562,17 +307,56 @@ class AppAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val appInfo = appList[position]
+        onBindViewHolder(holder, position, mutableListOf())
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int, payloads: MutableList<Any>) {
+        val appInfo = getItem(position)
         val packageName = appInfo.activityInfo.packageName
         val serial = appInfo.preferredOrder
         val cacheKey = "${packageName}|${serial}"
 
         if (packageName == SEPARATOR_PACKAGE) return
 
-        
+        // Handle partial updates with payloads for better performance
+        if (payloads.isNotEmpty()) {
+            var needsFullBind = false
+            
+            for (payload in payloads) {
+                when (payload) {
+                    PAYLOAD_ICON_STYLE -> {
+                        // Only update icon appearance
+                        iconLoader.applyShapeAppearance(holder.appIcon)
+                        holder.appIcon?.setImageDrawable(null)
+                        bindCachedOrAsyncIcon(holder, appInfo, position, cacheKey)
+                    }
+                    PAYLOAD_ICON_SIZE -> {
+                        // Only update icon size
+                        iconLoader.updateIconSize(holder.appIcon)
+                        holder.appIcon?.setImageDrawable(null)
+                        bindCachedOrAsyncIcon(holder, appInfo, position, cacheKey)
+                    }
+                    PAYLOAD_VIEW_MODE -> {
+                        // View mode changed - need full rebind
+                        needsFullBind = true
+                    }
+                    PAYLOAD_ICON_VISUAL_STATE -> {
+                        // Only update icon visual state (grayscale for daily limit)
+                        applyIconVisualState(packageName, holder.appIcon)
+                    }
+                }
+            }
+            
+            if (!needsFullBind && payloads.none { it == PAYLOAD_VIEW_MODE }) {
+                return
+            }
+        }
+
+        // Full bind for new views or view mode changes
         if (position > lastAnimatedPosition) {
-            val animation = AnimationUtils.loadAnimation(context, R.anim.item_fade_in)
-            holder.itemView.startAnimation(animation)
+            // Reset animation state before starting
+            holder.itemView.clearAnimation()
+            holder.itemView.startAnimation(itemFadeInAnimation)
             lastAnimatedPosition = position
         }
 
@@ -580,483 +364,179 @@ class AppAdapter(
             bindWebApp(holder, appInfo, packageName)
             return
         }
-        
+
         val needsRefresh = holder.itemView.tag != null && holder.itemView.tag != cacheKey
-        
         if (needsRefresh) {
             TypographyManager.applyToView(holder.itemView)
-            holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
         }
-        
-        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
-        val currentParams = holder.appIcon?.layoutParams
-        if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
-            currentParams.width = sizeInPx
-            currentParams.height = sizeInPx
-            holder.appIcon.layoutParams = currentParams
-            holder.appIcon.requestLayout()
-        }
-        
-        if (needsRefresh) {
-            holder.appIcon?.setImageDrawable(null)
-        }
-        
+
+        iconLoader.updateIconSize(holder.appIcon)
+        iconLoader.applyShapeAppearance(holder.appIcon)
+        if (needsRefresh) holder.appIcon?.setImageDrawable(null)
+
         holder.appIcon?.background = null
         holder.itemView.elevation = 0f
         holder.itemView.tag = cacheKey
+        configureLabelVisibility(holder)
+        holder.appUsageTime?.visibility = View.GONE
 
+        if (searchResultBinderRegistry.bind(holder, appInfo, position)) {
+            return
+        }
+
+        bindStandardApp(holder, appInfo, position, packageName, cacheKey, serial)
+    }
+
+    private fun configureLabelVisibility(holder: ViewHolder) {
         if (isGridMode) {
-            val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-                .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
-            holder.appName?.visibility = if (showAppNamesInGrid) View.VISIBLE else View.GONE
+            holder.appName?.visibility = if (currentShowAppNamesInGrid) View.VISIBLE else View.GONE
         } else {
             holder.appName?.visibility = View.VISIBLE
         }
-        holder.appUsageTime?.visibility = View.GONE
+    }
 
-        when (packageName) {
-            "contact_unified" -> {
-                val contactName = appInfo.activityInfo.name
-                val cachedPhoto = contactPhotoCache[contactName]
-                if (cachedPhoto != null) {
-                    setIconDrawable(holder.appIcon, cachedPhoto)
-                } else if (holder.itemView.tag.toString() != contactName) {
-                    setIconResource(holder.appIcon, R.drawable.ic_person)
-                    executor.execute {
-                        try {
-                            val photoUri = getPhotoUriForContact(contactName)
-                            if (photoUri != null) {
-                                val drawable = activity.contentResolver.openInputStream(photoUri.toUri())?.use { inputStream ->
-                                    Drawable.createFromStream(inputStream, photoUri)
-                                }
-                                if (drawable != null) {
-                                    contactPhotoCache[contactName] = drawable
-                                    (context as? Activity)?.runOnUiThread {
-                                        if (holder.itemView.tag.toString() == contactName) { 
-                                            setIconDrawable(holder.appIcon, drawable)
-                                            applyIconVisualState(packageName, holder.appIcon)
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (_: Exception) {}
-                    }
+    private fun bindStandardApp(
+        holder: ViewHolder,
+        appInfo: ResolveInfo,
+        position: Int,
+        packageName: String,
+        cacheKey: String,
+        serial: Int
+    ) {
+        val activityName = appInfo.activityInfo.name
+        if (packageName == activity.packageName) {
+            when {
+                activityName.contains("SettingsActivity") -> {
+                    holder.appName?.text = activity.getString(R.string.settings_app_name)
+                    iconLoader.setIconResource(holder.appIcon, R.mipmap.ic_launcher)
                 }
-                holder.appName?.text = contactName
-                holder.itemView.setOnClickListener {
-                    showContactChoiceDialog(contactName)
-                    searchBox.text.clear()
+                activityName.contains("EncryptedVaultActivity") -> {
+                    holder.appName?.text = activity.getString(R.string.vault_app_name)
+                    iconLoader.setIconResource(holder.appIcon, R.drawable.ic_vault_icon)
+                }
+                else -> {
+                    // Always use cached label - should be pre-populated by AppListLoader
+                    holder.appName?.text = labelCache[cacheKey] ?: packageName
+                    bindCachedOrAsyncIcon(holder, appInfo, position, cacheKey)
                 }
             }
+        } else {
+            bindAppLabel(holder, position, appInfo, packageName, cacheKey)
+            bindCachedOrAsyncIcon(holder, appInfo, position, cacheKey)
+        }
 
-            "play_store_search" -> {
-                val cachedIcon = specialAppIconCache["com.android.vending"]
-                if (cachedIcon != null) {
-                    holder.appIcon?.setImageDrawable(cachedIcon)
-                } else {
-                    setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
-                    executor.execute {
-                        try {
-                            val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("com.android.vending"))
-                            specialAppIconCache["com.android.vending"] = icon
-                            (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) {
-                                    holder.appIcon?.setImageDrawable(icon)
-                                    applyIconVisualState(packageName, holder.appIcon)
-                                }
-                            }
-                        } catch (_: Exception) {}
-                    }
-                }
-                holder.appName?.text = activity.getString(R.string.search_on_play_store, appInfo.activityInfo.name)
-                holder.itemView.setOnClickListener {
-                    val encodedQuery = Uri.encode(appInfo.activityInfo.name)
-                    activity.startActivity(Intent(Intent.ACTION_VIEW, "https://play.google.com/store/search?q=$encodedQuery".toUri()))
-                    searchBox.text.clear()
-                }
-            }
+        applyIconVisualState(packageName, holder.appIcon)
+        if (position < currentList.size - 1 && position % 5 == 0) {
+            iconLoader.preloadNextIcons(currentList, position + 1, minOf(position + 11, currentList.size))
+        }
 
-            "maps_search" -> {
-                val cachedIcon = specialAppIconCache["com.google.android.apps.maps"]
-                if (cachedIcon != null) {
-                    holder.appIcon?.setImageDrawable(cachedIcon)
-                } else {
-                    setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
-                    executor.execute {
-                        try {
-                            val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("com.google.android.apps.maps"))
-                            specialAppIconCache["com.google.android.apps.maps"] = icon
-                            (context as? Activity)?.runOnUiThread {
-                                if (holder.bindingAdapterPosition == position) {
-                                    holder.appIcon?.setImageDrawable(icon)
-                                    applyIconVisualState(packageName, holder.appIcon)
-                                }
-                            }
-                        } catch (_: Exception) {}
-                    }
-                }
-                holder.appName?.text = activity.getString(R.string.search_in_google_maps, appInfo.activityInfo.name)
-                holder.itemView.setOnClickListener {
-                    val gmmIntentUri = "geo:0,0?q=${Uri.encode(appInfo.activityInfo.name)}".toUri()
-                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                    mapIntent.setPackage("com.google.android.apps.maps")
-                    try {
-                        activity.startActivity(mapIntent)
-                    } catch (_: Exception) {
-                        Toast.makeText(activity, activity.getString(R.string.google_maps_not_installed), Toast.LENGTH_SHORT).show()
-                    }
-                    searchBox.text.clear()
-                }
-            }
-
-            "yt_search" -> {
-                val cachedRevanced = specialAppIconCache["app.revanced.android.youtube"]
-                val cachedYouTube = specialAppIconCache["com.google.android.youtube"]
-                val cachedIcon = cachedRevanced ?: cachedYouTube
-                
-                if (cachedIcon != null) {
-                    holder.appIcon?.setImageDrawable(cachedIcon)
-                } else {
-                    setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
-                    executor.execute {
-                        try {
-                            try {
-                                val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("app.revanced.android.youtube"))
-                                specialAppIconCache["app.revanced.android.youtube"] = icon
-                                (context as? Activity)?.runOnUiThread {
-                                    if (holder.bindingAdapterPosition == position) {
-                                        holder.appIcon?.setImageDrawable(icon)
-                                        applyIconVisualState(packageName, holder.appIcon)
-                                    }
-                                }
-                            } catch (_: Exception) {
-                                try {
-                                    val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon("com.google.android.youtube"))
-                                    specialAppIconCache["com.google.android.youtube"] = icon
-                                    (context as? Activity)?.runOnUiThread {
-                                        if (holder.bindingAdapterPosition == position) {
-                                            holder.appIcon?.setImageDrawable(icon)
-                                            applyIconVisualState(packageName, holder.appIcon)
-                                        }
-                                    }
-                                } catch (_: Exception) {}
-                            }
-                        } catch (_: Exception) {}
-                    }
-                }
-                holder.appName?.text = activity.getString(R.string.search_on_youtube, appInfo.activityInfo.name)
-                holder.itemView.setOnClickListener {
-                    val ytIntentUri = "https://www.youtube.com/results?search_query=${Uri.encode(appInfo.activityInfo.name)}".toUri()
-                    val ytIntent = Intent(Intent.ACTION_VIEW, ytIntentUri)
-                    var appOpened = false
-                    try {
-                        ytIntent.setPackage("app.revanced.android.youtube")
-                        activity.startActivity(ytIntent)
-                        appOpened = true
-                    } catch (_: Exception) {
-                        try {
-                            ytIntent.setPackage("com.google.android.youtube")
-                            activity.startActivity(ytIntent)
-                            appOpened = true
-                        } catch (_: Exception) {}
-                    }
-                    if (!appOpened) {
-                        Toast.makeText(activity, activity.getString(R.string.youtube_not_installed_opening_browser), Toast.LENGTH_SHORT).show()
-                        activity.startActivity(Intent(Intent.ACTION_VIEW, ytIntentUri))
-                    }
-                    searchBox.text.clear()
-                }
-            }
-
-            "browser_search" -> {
-                setIconResource(holder.appIcon, R.drawable.ic_browser)
-                holder.appName?.text = activity.getString(R.string.search_in_browser, appInfo.activityInfo.name)
-                holder.itemView.setOnClickListener {
-                    val engine = prefs.getString(Constants.Prefs.SEARCH_ENGINE, "Google")
-                    val baseUrl = when (engine) {
-                        "Bing" -> "https://www.bing.com/search?q="
-                        "DuckDuckGo" -> "https://duckduckgo.com/?q="
-                        "Ecosia" -> "https://www.ecosia.org/search?q="
-                        "Brave" -> "https://search.brave.com/search?q="
-                        "Startpage" -> "https://www.startpage.com/sp/search?query="
-                        "Yahoo" -> "https://search.yahoo.com/search?p="
-                        "Qwant" -> "https://www.qwant.com/?q="
-                        else -> "https://www.google.com/search?q="
-                    }
-                    activity.startActivity(Intent(Intent.ACTION_VIEW, "$baseUrl${Uri.encode(appInfo.activityInfo.name)}".toUri()))
-                    searchBox.text.clear()
-                }
-            }
-
-            "settings_result" -> {
-                setIconResource(holder.appIcon, R.drawable.ic_settings)
-                holder.appName?.text = appInfo.activityInfo.name
-                holder.itemView.setOnClickListener {
-                    val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
-                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(settingAction)
-                    activity.startActivity(intent)
-                    searchBox.text.clear()
-                }
-            }
-            
-            "system_settings_result" -> {
-                setIconResource(holder.appIcon, R.drawable.ic_settings)
-                holder.appName?.text = appInfo.activityInfo.name
-                holder.itemView.setOnClickListener {
-                    val settingAction = appInfo.activityInfo.nonLocalizedLabel?.toString() ?: ""
-                    val intent = com.guruswarupa.launch.utils.AndroidSettingsHelper.createSettingsIntent(settingAction)
-                    activity.startActivity(intent)
-                    searchBox.text.clear()
-                }
-            }
-
-            "file_result" -> {
-                setIconResource(holder.appIcon, R.drawable.ic_file)
-                holder.appName?.text = appInfo.activityInfo.name
-                holder.itemView.setOnClickListener {
-                    val filePath = appInfo.activityInfo.nonLocalizedLabel.toString()
-                    val file = File(filePath)
-                    if (file.exists()) {
-                        val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", file)
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(uri, activity.contentResolver.getType(uri))
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        try { activity.startActivity(intent) } catch (_: Exception) {
-                            Toast.makeText(activity, "No app found to open this file", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    searchBox.text.clear()
-                }
-            }
-
-            "math_result" -> {
-                setIconResource(holder.appIcon, R.drawable.ic_calculator)
-                holder.appName?.text = appInfo.activityInfo.name
-            }
-
-            "launcher_settings_shortcut" -> {
-                holder.itemView.tag = packageName
-                setIconResource(holder.appIcon, R.drawable.ic_settings)
-                holder.appName?.text = activity.getString(R.string.settings_app_name)
-                holder.itemView.setOnClickListener {
-                    val settingsIntent = Intent(activity, com.guruswarupa.launch.ui.activities.SettingsActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    }
-                    activity.startActivity(settingsIntent)
-                    searchBox.text.clear()
-                }
-            }
-
-            "launcher_vault_shortcut" -> {
-                holder.itemView.tag = packageName
-                setIconResource(holder.appIcon, R.drawable.ic_vault_icon)
-                holder.appName?.text = activity.getString(R.string.vault_app_name)
-                holder.itemView.setOnClickListener {
-                    val vaultIntent = Intent(activity, com.guruswarupa.launch.ui.activities.EncryptedVaultActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    }
-                    activity.startActivity(vaultIntent)
-                    searchBox.text.clear()
-                }
-            }
-
-            else -> {
-                val activityName = appInfo.activityInfo.name
-                if (packageName == activity.packageName) {
-                    when {
-                        activityName.contains("SettingsActivity") -> {
-                            holder.appName?.text = activity.getString(R.string.settings_app_name)
-                            setIconResource(holder.appIcon, R.mipmap.ic_launcher)
-                        }
-                        activityName.contains("EncryptedVaultActivity") -> {
-                            holder.appName?.text = activity.getString(R.string.vault_app_name)
-                            setIconResource(holder.appIcon, R.drawable.ic_vault_icon)
-                        }
-                        else -> {
-                            holder.appName?.text = labelCache[cacheKey] ?: appInfo.loadLabel(activity.packageManager).toString()
-                            val cachedIcon = iconCache[cacheKey]
-                            if (cachedIcon != null) {
-                                holder.appIcon?.setImageDrawable(cachedIcon)
-                                applyIconVisualState(packageName, holder.appIcon)
-                            } else {
-                                setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
-                                val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
-                                submitIconLoadTask(appInfo, priority, holder, position)
-                            }
-                        }
-                    }
-                } else {
-                    val cachedLabel = labelCache[cacheKey]
-                    if (cachedLabel != null) {
-                        holder.appName?.text = cachedLabel
-                    } else {
-                        if (position < 50) {
-                            try {
-                                val label = appInfo.loadLabel(activity.packageManager).toString()
-                                labelCache[cacheKey] = label
-                                holder.appName?.text = label
-                            } catch (_: Exception) {
-                                holder.appName?.text = packageName
-                                loadLabelAsync(holder, position, appInfo, packageName, cacheKey)
-                            }
-                        } else {
-                            holder.appName?.text = packageName
-                            loadLabelAsync(holder, position, appInfo, packageName, cacheKey)
-                        }
-                    }
-
-                    val cachedIcon = iconCache[cacheKey]
-                    if (cachedIcon != null) {
-                        holder.appIcon?.setImageDrawable(cachedIcon)
-                        applyIconVisualState(packageName, holder.appIcon)
-                    } else {
-                        setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
-                        val priority = if (isFastScrolling) PRIORITY_HIGH else PRIORITY_MEDIUM
-                        submitIconLoadTask(appInfo, priority, holder, position)
-                    }
-                }
-
-                applyIconVisualState(packageName, holder.appIcon)
-                
-                if (position < appList.size - 1 && position % 5 == 0) {
-                    preloadNextIcons(position + 1, minOf(position + 11, appList.size))
-                }
-
-                val clickDebounceDelay = 500L
-                holder.itemView.setOnClickListener {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - holder.lastClickTime < clickDebounceDelay) return@setOnClickListener
-                    holder.lastClickTime = currentTime
-                    
-                    if (activity.appTimerManager.isAppOverDailyLimit(packageName)) {
-                        val appName = labelCache[cacheKey] ?: packageName
-                        Toast.makeText(activity, "Daily limit reached for $appName", Toast.LENGTH_SHORT).show()
-                        return@setOnClickListener
-                    }
-                    
-                    val intent = if (packageName == activity.packageName) {
-                        Intent().apply {
-                            component = ComponentName(packageName, appInfo.activityInfo.name)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                    } else {
-                        // For work profile apps, we should use LauncherApps.startMainActivity
-                        if (serial != mainUserSerial) {
-                            val userHandle = userManager.getUserForSerialNumber(serial.toLong())
-                            if (userHandle != null) {
-                                val launcherApps = activity.getSystemService(Context.LAUNCHER_APPS_SERVICE) as android.content.pm.LauncherApps
-                                launcherApps.startMainActivity(ComponentName(packageName, activityName), userHandle, null, null)
-                                activity.runOnUiThread {
-                                    searchBox.text.clear()
-                                    activity.appSearchManager.filterAppsAndContacts("")
-                                }
-                                return@setOnClickListener
-                            }
-                        }
-                        activity.packageManager.getLaunchIntentForPackage(packageName)
-                    }
-                    
-                    if (intent != null) {
-                        val currentCount = prefs.getInt("usage_$packageName", 0)
-                        prefs.edit { putInt("usage_$packageName", currentCount + 1) }
-
-                        val appName = labelCache[cacheKey] ?: packageName
-                        val isSessionTimerEnabled = activity.appTimerManager.isSessionTimerEnabled(packageName)
-                        
-                        if (isSessionTimerEnabled) {
-                            activity.appTimerManager.showTimerDialog(appName) { timerDuration ->
-                                if (activity.appLockManager.isAppLocked(packageName)) {
-                                    activity.appLockManager.verifyPin { isAuthenticated ->
-                                        if (isAuthenticated) {
-                                            activity.startActivity(intent)
-                                            activity.appTimerManager.startTimer(packageName, timerDuration)
-                                        }
-                                    }
-                                } else {
-                                    activity.startActivity(intent)
-                                    activity.appTimerManager.startTimer(packageName, timerDuration)
-                                }
-                                activity.runOnUiThread {
-                                    searchBox.text.clear()
-                                    activity.appSearchManager.filterAppsAndContacts("")
-                                }
-                            }
-                        } else {
-                            if (activity.appLockManager.isAppLocked(packageName)) {
-                                activity.appLockManager.verifyPin { isAuthenticated ->
-                                    if (isAuthenticated) activity.startActivity(intent)
-                                }
-                            } else {
-                                activity.startActivity(intent)
-                            }
-                            activity.runOnUiThread {
-                                searchBox.text.clear()
-                                activity.appSearchManager.filterAppsAndContacts("")
-                            }
-                        }
-                    } else {
-                        Toast.makeText(activity, activity.getString(R.string.cannot_launch_app), Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                holder.itemView.setOnLongClickListener {
-                    showAppContextMenu(holder.itemView, packageName, appInfo)
-                    true
-                }
-            }
+        holder.itemView.setOnClickListener {
+            appClickHandler.handleAppClick(holder, appInfo, packageName, serial)
+        }
+        holder.itemView.setOnLongClickListener {
+            showAppContextMenu(holder.itemView, packageName, appInfo)
+            true
         }
     }
 
-    override fun getItemCount(): Int = appList.size
+    private fun bindAppLabel(
+        holder: ViewHolder,
+        position: Int,
+        appInfo: ResolveInfo,
+        packageName: String,
+        cacheKey: String
+    ) {
+        val cachedLabel = labelCache[cacheKey]
+        if (cachedLabel != null) {
+            holder.appName?.text = cachedLabel
+            return
+        }
+
+        // Never call loadLabel() synchronously - always load asynchronously
+        holder.appName?.text = packageName
+        loadLabelAsync(holder, position, appInfo, packageName, cacheKey)
+    }
+
+    private fun bindCachedOrAsyncIcon(
+        holder: ViewHolder,
+        appInfo: ResolveInfo,
+        position: Int,
+        cacheKey: String
+    ) {
+        val packageName = appInfo.activityInfo.packageName
+        val cachedIcon = iconLoader.getCachedIcon(cacheKey)
+        if (cachedIcon != null) {
+            // Safety check: ensure bitmap is not recycled before setting
+            if (!(cachedIcon is android.graphics.drawable.BitmapDrawable && cachedIcon.bitmap.isRecycled)) {
+                holder.appIcon?.setImageDrawable(cachedIcon)
+                applyIconVisualState(packageName, holder.appIcon)
+            } else {
+                // Icon was recycled, reload it
+                iconLoader.setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
+                val priority = if (isFastScrolling) IconLoader.PRIORITY_HIGH else IconLoader.PRIORITY_MEDIUM
+                iconLoader.submitIconLoadTask(appInfo, priority, holder, position) { readyPackageName, readyHolder ->
+                    applyIconVisualState(readyPackageName, readyHolder.appIcon)
+                }
+            }
+            return
+        }
+
+        iconLoader.setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
+        val priority = if (isFastScrolling) IconLoader.PRIORITY_HIGH else IconLoader.PRIORITY_MEDIUM
+        iconLoader.submitIconLoadTask(appInfo, priority, holder, position) { readyPackageName, readyHolder ->
+            applyIconVisualState(readyPackageName, readyHolder.appIcon)
+        }
+    }
+
+    override fun getItemCount(): Int = currentList.size
 
     private fun loadLabelAsync(holder: ViewHolder, position: Int, appInfo: ResolveInfo, packageName: String, cacheKey: String) {
-        if (labelCache.containsKey(cacheKey)) return 
+        if (labelCache.containsKey(cacheKey)) return
         pendingLabelTasks[cacheKey]?.cancel(true)
-        
+
         val labelTask = object : Runnable, Future<Boolean> {
             @Volatile private var isDone = false
             @Volatile private var isCancelled = false
-            
+
             override fun run() {
                 try {
                     val label = appInfo.loadLabel(activity.packageManager).toString()
                     labelCache[cacheKey] = label
                     try {
-                        activity.cacheManager.updateMetadataCache(packageName,
+                        activity.cacheManager.updateMetadataCache(
+                            packageName,
                             AppMetadata(packageName, appInfo.activityInfo.name, label, System.currentTimeMillis())
                         )
-                    } catch (_: Exception) {}
-                    
+                    } catch (_: Exception) {
+                    }
+
                     (context as? Activity)?.runOnUiThread {
                         if (holder.bindingAdapterPosition == position) holder.appName?.text = label else notifyItemChanged(position)
                     }
                 } catch (_: Exception) {
                     labelCache[cacheKey] = packageName
                     (context as? Activity)?.runOnUiThread {
-                        if (holder.bindingAdapterPosition == position) holder.appName?.text =
-                            packageName else notifyItemChanged(position)
+                        if (holder.bindingAdapterPosition == position) holder.appName?.text = packageName else notifyItemChanged(position)
                     }
                 } finally {
                     isDone = true
                 }
             }
-            
+
             override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
                 if (isDone || isCancelled) return false
                 isCancelled = true
                 return true
             }
-            
+
             override fun isCancelled(): Boolean = isCancelled
             override fun isDone(): Boolean = isDone
             override fun get(): Boolean? = null
             override fun get(timeout: Long, unit: TimeUnit): Boolean? = null
         }
-        
+
         executor.execute(labelTask)
         pendingLabelTasks[cacheKey] = labelTask
-        
         if (pendingLabelTasks.size > 50) {
             pendingLabelTasks.entries.removeAll { it.value.isDone }
         }
@@ -1069,8 +549,8 @@ class AppAdapter(
         val textColor = ContextCompat.getColor(activity, R.color.text)
         val cacheKey = "${packageName}|${appInfo.preferredOrder}"
         val appName = labelCache[cacheKey] ?: packageName
-        
-        val dailyLimitItem = popupMenu.menu.add(0, 100, 0, "Set Daily Limit")
+
+        val dailyLimitItem = popupMenu.menu.add(0, 100, 0, activity.getString(R.string.daily_usage_set_limit_action))
         val limitSpannable = android.text.SpannableString(dailyLimitItem.title)
         limitSpannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, limitSpannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
         dailyLimitItem.title = limitSpannable
@@ -1081,7 +561,7 @@ class AppAdapter(
                 val usageTime = usageStatsManager.getAppUsageTime(packageName)
                 val formattedTime = usageStatsManager.formatUsageTime(usageTime)
                 activity.runOnUiThread {
-                    usageHeader.title = "Usage: $formattedTime"
+                    usageHeader.title = activity.getString(R.string.app_context_usage_format, formattedTime)
                     val spannable = android.text.SpannableString(usageHeader.title)
                     spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     usageHeader.title = spannable
@@ -1092,7 +572,9 @@ class AppAdapter(
         val toggleSessionTimerItem = popupMenu.menu.findItem(R.id.toggle_session_timer)
         if (toggleSessionTimerItem != null) {
             val isEnabled = activity.appTimerManager.isSessionTimerEnabled(packageName)
-            toggleSessionTimerItem.title = if (isEnabled) "Disable Session Timer" else "Enable Session Timer"
+            toggleSessionTimerItem.title = activity.getString(
+                if (isEnabled) R.string.app_context_disable_session_timer else R.string.app_context_enable_session_timer
+            )
             val spannable = android.text.SpannableString(toggleSessionTimerItem.title)
             spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             toggleSessionTimerItem.title = spannable
@@ -1119,8 +601,8 @@ class AppAdapter(
                 hideMenuItem.isVisible = false
             }
         }
-        
-        for (i in 0 until popupMenu.menu.size) {
+
+        for (i in 0 until popupMenu.menu.size()) {
             val item = popupMenu.menu.getItem(i)
             val itemTitle = item.title?.toString() ?: continue
             val spannable = android.text.SpannableString(itemTitle)
@@ -1131,20 +613,44 @@ class AppAdapter(
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 100 -> {
-                    activity.appTimerManager.showDailyLimitDialog(appName, packageName) { notifyDataSetChanged() }
+                    activity.appTimerManager.showDailyLimitDialog(appName, packageName) {
+                        notifyItemRangeChanged(0, currentList.size, PAYLOAD_ICON_VISUAL_STATE)
+                    }
                     true
                 }
                 R.id.toggle_session_timer -> {
                     val isEnabled = activity.appTimerManager.isSessionTimerEnabled(packageName)
                     activity.appTimerManager.setSessionTimerEnabled(packageName, !isEnabled)
-                    Toast.makeText(activity, "Session timer ${if (!isEnabled) "enabled" else "disabled"} for $appName", Toast.LENGTH_SHORT).show()
+                    val sessionTimerStatus = activity.getString(
+                        if (!isEnabled) R.string.app_context_session_timer_enabled else R.string.app_context_session_timer_disabled
+                    )
+                    Toast.makeText(
+                        activity,
+                        activity.getString(R.string.app_context_session_timer_changed, sessionTimerStatus, appName),
+                        Toast.LENGTH_SHORT
+                    ).show()
                     true
                 }
-                R.id.app_info -> { showAppInfo(packageName); true }
-                R.id.share_app -> { shareApp(packageName, appInfo); true }
-                R.id.uninstall_app -> { uninstallApp(packageName); true }
-                R.id.toggle_favorite -> { toggleFavoriteApp(packageName, appInfo); true }
-                R.id.toggle_hide -> { toggleHideApp(packageName, appInfo); true }
+                R.id.app_info -> {
+                    showAppInfo(packageName)
+                    true
+                }
+                R.id.share_app -> {
+                    shareApp(packageName, appInfo)
+                    true
+                }
+                R.id.uninstall_app -> {
+                    uninstallApp(packageName)
+                    true
+                }
+                R.id.toggle_favorite -> {
+                    toggleFavoriteApp(packageName, appInfo)
+                    true
+                }
+                R.id.toggle_hide -> {
+                    toggleHideApp(packageName, appInfo)
+                    true
+                }
                 else -> false
             }
         }
@@ -1164,7 +670,7 @@ class AppAdapter(
         popupMenu.menu.add(0, 204, 4, if (activity.favoriteAppManager.isFavoriteApp(packageName)) activity.getString(R.string.remove_from_favorites_plain) else activity.getString(R.string.add_to_favorites_plain))
         popupMenu.menu.add(0, 205, 5, if (activity.hiddenAppManager.isAppHidden(packageName)) activity.getString(R.string.unhide_app_plain) else activity.getString(R.string.hide_app_plain))
 
-        for (i in 0 until popupMenu.menu.size) {
+        for (i in 0 until popupMenu.menu.size()) {
             val item = popupMenu.menu.getItem(i)
             val spannable = android.text.SpannableString(item.title)
             spannable.setSpan(android.text.style.ForegroundColorSpan(textColor), 0, spannable.length, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -1173,8 +679,14 @@ class AppAdapter(
 
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
-                200 -> { openWebApp(appInfo); true }
-                201 -> { activity.startActivity(Intent(activity, WebAppSettingsActivity::class.java)); true }
+                200 -> {
+                    openWebApp(appInfo)
+                    true
+                }
+                201 -> {
+                    activity.startActivity(Intent(activity, WebAppSettingsActivity::class.java))
+                    true
+                }
                 202 -> {
                     val url = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
                     if (url.isNotBlank()) activity.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
@@ -1189,8 +701,14 @@ class AppAdapter(
                     }
                     true
                 }
-                204 -> { toggleFavoriteApp(packageName, appInfo); true }
-                205 -> { toggleHideApp(packageName, appInfo); true }
+                204 -> {
+                    toggleFavoriteApp(packageName, appInfo)
+                    true
+                }
+                205 -> {
+                    toggleHideApp(packageName, appInfo)
+                    true
+                }
                 else -> false
             }
         }
@@ -1198,7 +716,7 @@ class AppAdapter(
         popupMenu.show()
         fixPopupMenuTextColors(popupMenu)
     }
-    
+
     @SuppressLint("DiscouragedPrivateApi")
     private fun fixPopupMenuTextColors(popupMenu: PopupMenu) {
         try {
@@ -1209,34 +727,47 @@ class AppAdapter(
             val menuPopupHelperClass = menuPopupHelper?.javaClass
             val listViewFieldNames = arrayOf("mDropDownList", "mPopup", "mListView")
             var listView: android.widget.ListView? = null
-            
+
             for (fieldName in listViewFieldNames) {
                 try {
                     val listViewField = menuPopupHelperClass?.getDeclaredField(fieldName)
                     listViewField?.isAccessible = true
                     val result = listViewField?.get(menuPopupHelper)
-                    if (result is android.widget.ListView) { listView = result; break }
-                } catch (_: NoSuchFieldException) {}
+                    if (result is android.widget.ListView) {
+                        listView = result
+                        break
+                    }
+                } catch (_: NoSuchFieldException) {
+                }
             }
-            
+
             fun fixTextColors(view: View) {
-                if (view is TextView) view.setTextColor(textColor) else if (view is ViewGroup) findTextViewsAndSetColor(view, textColor)
+                if (view is TextView) {
+                    view.setTextColor(textColor)
+                } else if (view is ViewGroup) {
+                    findTextViewsAndSetColor(view, textColor)
+                }
             }
-            
+
             listView?.let { lv ->
-                try { for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i)) } catch (_: Exception) {}
-                lv.post { 
-                    try { 
-                        for (i in 0 until lv.childCount) { 
+                try {
+                    for (i in 0 until lv.childCount) fixTextColors(lv.getChildAt(i))
+                } catch (_: Exception) {
+                }
+                lv.post {
+                    try {
+                        for (i in 0 until lv.childCount) {
                             val itemView = lv.getChildAt(i)
                             if (itemView is TextView) itemView.setTextColor(textColor) else if (itemView is ViewGroup) findTextViewsAndSetColor(itemView, textColor)
                         }
-                    } catch (_: Exception) {} 
+                    } catch (_: Exception) {
+                    }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
-    
+
     private fun findTextViewsAndSetColor(viewGroup: ViewGroup, color: Int) {
         for (i in 0 until viewGroup.childCount) {
             val child = viewGroup.getChildAt(i)
@@ -1250,7 +781,7 @@ class AppAdapter(
 
     private fun shareApp(packageName: String, appInfo: ResolveInfo) {
         val cacheKey = "${packageName}|${appInfo.preferredOrder}"
-        val appName = labelCache[cacheKey] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
+        val appName = labelCache[cacheKey] ?: packageName
         ShareManager(activity).shareApk(packageName, appName)
     }
 
@@ -1261,7 +792,7 @@ class AppAdapter(
 
     private fun toggleFavoriteApp(packageName: String, appInfo: ResolveInfo) {
         val cacheKey = "${packageName}|${appInfo.preferredOrder}"
-        val appName = labelCache[cacheKey] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
+        val appName = labelCache[cacheKey] ?: packageName
         if (activity.favoriteAppManager.isFavoriteApp(packageName)) {
             activity.favoriteAppManager.removeFavoriteApp(packageName)
             Toast.makeText(activity, activity.getString(R.string.removed_from_favorites, appName), Toast.LENGTH_SHORT).show()
@@ -1275,7 +806,7 @@ class AppAdapter(
     private fun toggleHideApp(packageName: String, appInfo: ResolveInfo) {
         try {
             val cacheKey = "${packageName}|${appInfo.preferredOrder}"
-            val appName = labelCache[cacheKey] ?: try { appInfo.loadLabel(activity.packageManager).toString() } catch (_: Exception) { packageName }
+            val appName = labelCache[cacheKey] ?: packageName
             if (activity.hiddenAppManager.isAppHidden(packageName)) {
                 activity.hiddenAppManager.unhideApp(packageName)
                 Toast.makeText(activity, activity.getString(R.string.unhid_app, appName), Toast.LENGTH_SHORT).show()
@@ -1290,34 +821,21 @@ class AppAdapter(
     }
 
     private fun bindWebApp(holder: ViewHolder, appInfo: ResolveInfo, packageName: String) {
-        val sizeInPx = (currentIconSize * context.resources.displayMetrics.density).toInt()
-        val currentParams = holder.appIcon?.layoutParams
-        if (currentParams != null && (currentParams.width != sizeInPx || currentParams.height != sizeInPx)) {
-            currentParams.width = sizeInPx
-            currentParams.height = sizeInPx
-            holder.appIcon.layoutParams = currentParams
-            holder.appIcon.requestLayout()
-        }
-
+        iconLoader.updateIconSize(holder.appIcon)
         holder.itemView.tag = packageName
-        holder.appIcon?.shapeAppearanceModel = getShapeAppearanceModel()
-        setIconResource(holder.appIcon, R.drawable.ic_browser)
+        iconLoader.applyShapeAppearance(holder.appIcon)
+        iconLoader.setIconResource(holder.appIcon, R.drawable.ic_browser)
         holder.appIcon?.background = null
         holder.appName?.text = appInfo.activityInfo.name
         holder.appUsageTime?.visibility = View.GONE
-        if (isGridMode) {
-            val showAppNamesInGrid = activity.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-                .getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
-            holder.appName?.visibility = if (showAppNamesInGrid) View.VISIBLE else View.GONE
-        } else {
-            holder.appName?.visibility = View.VISIBLE
-        }
+        configureLabelVisibility(holder)
         applyIconVisualState(packageName, holder.appIcon)
+
         val siteUrl = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
         if (siteUrl.isNotBlank()) {
             WebAppIconFetcher.loadIcon(activity, siteUrl) { drawable ->
                 if (holder.itemView.tag == packageName && drawable != null) {
-                    setIconDrawable(holder.appIcon, drawable)
+                    iconLoader.setIconDrawable(holder.appIcon, drawable, useLegacyIconPlate = true)
                     applyIconVisualState(packageName, holder.appIcon)
                 }
             }
@@ -1368,10 +886,9 @@ class AppAdapter(
             }
         }
         val builder = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
-        
+
         @SuppressLint("InflateParams")
         val titleView = LayoutInflater.from(activity).inflate(R.layout.dialog_contact_title, null)
-        
         titleView.findViewById<TextView>(R.id.contact_name).text = contactName
         titleView.findViewById<TextView>(R.id.contact_number).text = phoneNumber
         val photoImageView = titleView.findViewById<ImageView>(R.id.contact_photo)
@@ -1379,24 +896,39 @@ class AppAdapter(
             try {
                 activity.contentResolver.openInputStream(photoUri.toUri())?.use { inputStream ->
                     val drawable = Drawable.createFromStream(inputStream, photoUri)
-                    if (drawable != null) photoImageView.setImageDrawable(drawable)
-                    else photoImageView.setImageResource(R.drawable.ic_person)
+                    if (drawable != null) photoImageView.setImageDrawable(drawable) else photoImageView.setImageResource(R.drawable.ic_person)
                 }
-            } catch (_: Exception) { photoImageView.setImageResource(R.drawable.ic_person) }
-        } else { photoImageView.setImageResource(R.drawable.ic_person) }
+            } catch (_: Exception) {
+                photoImageView.setImageResource(R.drawable.ic_person)
+            }
+        } else {
+            photoImageView.setImageResource(R.drawable.ic_person)
+        }
+
         builder.setCustomTitle(titleView).setAdapter(adapter) { _, which ->
-                when (which) {
-                    0 -> call(phoneNumber)
-                    1 -> activity.contactActionHandler.openWhatsAppChat(contactName)
-                    2 -> activity.contactActionHandler.openSMSChat(contactName)
-                }
-            }.setNegativeButton(activity.getString(R.string.cancel_button), null).show()
+            when (which) {
+                0 -> call(phoneNumber)
+                1 -> activity.contactActionHandler.openWhatsAppChat(contactName)
+                2 -> activity.contactActionHandler.openSMSChat(contactName)
+            }
+        }.setNegativeButton(activity.getString(R.string.cancel_button), null).show()
     }
 
     private fun getPhotoUriForContact(contactName: String): String? {
-        val cursor = activity.contentResolver.query(ContactsContract.Contacts.CONTENT_URI, arrayOf(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI), "${ContactsContract.Contacts.DISPLAY_NAME} = ?", arrayOf(contactName), null)
+        val cursor = activity.contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            arrayOf(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI),
+            "${ContactsContract.Contacts.DISPLAY_NAME} = ?",
+            arrayOf(contactName),
+            null
+        )
         var photoUri: String? = null
-        cursor?.use { if (it.moveToFirst()) { val index = it.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI); if (index != -1) photoUri = it.getString(index) } }
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val index = it.getColumnIndex(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI)
+                if (index != -1) photoUri = it.getString(index)
+            }
+        }
         return photoUri
     }
 
@@ -1405,9 +937,20 @@ class AppAdapter(
     }
 
     private fun getPhoneNumberForContact(contactName: String): String {
-        val cursor: Cursor? = activity.contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER), "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?", arrayOf(contactName), null)
+        val cursor: Cursor? = activity.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
+            arrayOf(contactName),
+            null
+        )
         var phoneNumber: String? = null
-        cursor?.use { if (it.moveToFirst()) { val index = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER); if (index != -1) phoneNumber = it.getString(index) } }
-        return phoneNumber ?: "Not found"
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val index = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                if (index != -1) phoneNumber = it.getString(index)
+            }
+        }
+        return phoneNumber ?: activity.getString(R.string.contact_phone_not_found)
     }
 }

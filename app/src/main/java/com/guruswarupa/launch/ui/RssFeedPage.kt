@@ -33,7 +33,9 @@ class RssFeedPage(
 ) {
     private val swipeRefreshLayout: SwipeRefreshLayout = rootView.findViewById(R.id.rss_swipe_refresh)
     private val recyclerView: RecyclerView = rootView.findViewById(R.id.rss_recycler_view)
-    private val emptyState: TextView = rootView.findViewById(R.id.rss_empty_state)
+    private val emptyState: View = rootView.findViewById(R.id.rss_empty_state)
+    private val emptyStateTitle: TextView = rootView.findViewById(R.id.rss_empty_title)
+    private val emptyStateMessage: TextView = rootView.findViewById(R.id.rss_empty_message)
     private val refreshButton: View = rootView.findViewById(R.id.rss_refresh_button)
     private val manageButton: View = rootView.findViewById(R.id.rss_manage_button)
     private val headerButton: View = rootView.findViewById(R.id.rss_header)
@@ -46,7 +48,13 @@ class RssFeedPage(
         recyclerView.layoutManager = LinearLayoutManager(activity)
         recyclerView.adapter = adapter
 
-        swipeRefreshLayout.isEnabled = false
+        swipeRefreshLayout.isEnabled = true
+        swipeRefreshLayout.setOnRefreshListener {
+            refresh()
+        }
+        swipeRefreshLayout.setOnChildScrollUpCallback { _, _ ->
+            recyclerView.canScrollVertically(-1)
+        }
         updateContentTopPadding()
         topicChips.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateContentTopPadding()
@@ -107,16 +115,40 @@ class RssFeedPage(
         updateTopicChips()
         val filteredArticles = filterArticles()
         adapter.submitArticles(filteredArticles)
+        applyEmptyState(filteredArticles)
+    }
+
+    private fun applyEmptyState(filteredArticles: List<RssArticle>) {
         val hasFeeds = activity.rssFeedManager.getFeedUrls().isNotEmpty()
         recyclerView.isVisible = filteredArticles.isNotEmpty()
         emptyState.isVisible = filteredArticles.isEmpty()
-        emptyState.text = when {
-            !activity.sharedPreferences.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true) ->
-                "News feed is disabled in Settings."
-            !hasFeeds -> "No sources enabled yet. Open settings and switch on the feeds you want."
-            selectedCategory != null -> "No ${selectedCategory.orEmpty()} articles right now."
-            else -> "No articles right now. Tap refresh or check your feed sources."
+        when {
+            !activity.sharedPreferences.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true) -> {
+                emptyStateTitle.text = "News feed is disabled"
+                emptyStateMessage.text = "Turn it back on from Settings whenever you want headlines here again."
+            }
+            !hasFeeds -> {
+                emptyStateTitle.text = "No news sources enabled"
+                emptyStateMessage.text = "Use the settings gear above to switch on the sources you want to read here."
+            }
+            selectedCategory != null -> {
+                emptyStateTitle.text = "No ${selectedCategory.orEmpty()} articles"
+                emptyStateMessage.text = "Try another topic, refresh the page, or check your enabled feed sources from the gear above."
+                return
+            }
+            else -> {
+                emptyStateTitle.text = "No articles right now"
+                emptyStateMessage.text = "Refresh the page or use the settings gear above to adjust your feed sources."
+                return
+            }
         }
+    }
+
+    private fun applySelectedCategory(category: String?) {
+        selectedCategory = category
+        val filteredArticles = filterArticles()
+        adapter.submitArticles(filteredArticles)
+        applyEmptyState(filteredArticles)
     }
 
     private fun updateTopicChips() {
@@ -146,6 +178,16 @@ class RssFeedPage(
                 if (index > 0) {
                     (layoutParams as? ViewGroup.MarginLayoutParams)?.marginStart = 0
                 }
+                setOnClickListener {
+                    if (selectedCategory != category) {
+                        applySelectedCategory(category)
+                    } else {
+                        applySelectedCategory(selectedCategory)
+                    }
+                    if (!isChecked) {
+                        topicChips.check(id)
+                    }
+                }
             }
             topicChips.addView(chip)
             if (category == selectedCategory) {
@@ -155,14 +197,7 @@ class RssFeedPage(
         topicChips.setOnCheckedStateChangeListener { group, checkedIds ->
             val checkedId = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
             val chip = group.findViewById<Chip>(checkedId) ?: return@setOnCheckedStateChangeListener
-            selectedCategory = chip.text.toString()
-            adapter.submitArticles(filterArticles())
-            val filteredArticles = filterArticles()
-            recyclerView.isVisible = filteredArticles.isNotEmpty()
-            emptyState.isVisible = filteredArticles.isEmpty()
-            if (filteredArticles.isEmpty() && selectedCategory != null) {
-                emptyState.text = "No ${selectedCategory.orEmpty()} articles right now."
-            }
+            applySelectedCategory(chip.text.toString())
         }
         updateContentTopPadding()
     }

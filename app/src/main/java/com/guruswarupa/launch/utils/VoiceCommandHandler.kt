@@ -3,6 +3,7 @@ package com.guruswarupa.launch.utils
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ComponentInfo
 import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.provider.ContactsContract
@@ -97,17 +98,16 @@ class VoiceCommandHandler(
             command.startsWith("open ", ignoreCase = true) -> {
                 val appName = command.substringAfter("open ", "").trim()
                 if (appName.isNotEmpty()) {
-                    
+                    val normalizedAppName = appName.lowercase()
                     val matchingApp = appList.find { resolveInfo ->
-                        val label = resolveInfo.loadLabel(packageManager).toString().lowercase()
-                        label == appName.lowercase()
+                        resolveInfo.safeLabel(packageManager) == normalizedAppName
                     } ?: appList.find { resolveInfo ->
-                        val label = resolveInfo.loadLabel(packageManager).toString().lowercase()
-                        label.contains(appName.lowercase())
+                        resolveInfo.safeLabel(packageManager)?.contains(normalizedAppName) == true
                     }
 
                     matchingApp?.let { app ->
-                        val intent = packageManager.getLaunchIntentForPackage(app.activityInfo.packageName)
+                        val packageName = app.safePackageName() ?: return@let false
+                        val intent = packageManager.getLaunchIntentForPackage(packageName)
                         intent?.let { launchIntent ->
                             activity.startActivity(launchIntent)
                             searchBox.text.clear()
@@ -119,13 +119,13 @@ class VoiceCommandHandler(
             command.startsWith("uninstall ", ignoreCase = true) -> {
                 val appName = command.substringAfter("uninstall ", "").trim()
                 if (appName.isNotEmpty()) {
+                    val normalizedAppName = appName.lowercase()
                     val matchingApp = appList.find { resolveInfo ->
-                        val label = resolveInfo.loadLabel(packageManager).toString().lowercase()
-                        label.contains(appName.lowercase())
+                        resolveInfo.safeLabel(packageManager)?.contains(normalizedAppName) == true
                     }
                     
                     matchingApp?.let { app ->
-                        val packageName = app.activityInfo.packageName
+                        val packageName = app.safePackageName() ?: return@let false
                         val intent = Intent(Intent.ACTION_DELETE).apply {
                             data = "package:$packageName".toUri()
                         }
@@ -273,5 +273,25 @@ class VoiceCommandHandler(
         } catch (_: Exception) {
             Toast.makeText(activity, "Failed to open messaging app.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun ResolveInfo.safeLabel(packageManager: android.content.pm.PackageManager): String? {
+        val component = safeComponentInfo() ?: return null
+        return try {
+            loadLabel(packageManager)
+                ?.toString()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.lowercase()
+                ?: component.packageName.lowercase()
+        } catch (_: RuntimeException) {
+            component.packageName.lowercase()
+        }
+    }
+
+    private fun ResolveInfo.safePackageName(): String? = safeComponentInfo()?.packageName
+
+    private fun ResolveInfo.safeComponentInfo(): ComponentInfo? {
+        return activityInfo ?: serviceInfo ?: providerInfo
     }
 }

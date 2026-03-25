@@ -30,6 +30,7 @@ import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.createBitmap
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -37,6 +38,10 @@ import com.guruswarupa.launch.R
 import com.guruswarupa.launch.services.LaunchNotificationListenerService
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 data class NotificationAction(
     val title: String,
@@ -495,9 +500,17 @@ class NotificationsWidget(rootView: View) {
                     service.dismissNotificationByKey(item.key)
                 }
                 
-                handler.postDelayed({
-                    updateNotifications()
-                }, 200)
+                // Use lifecycle-aware coroutine instead of postDelayed
+                val lifecycleOwner = notificationRecyclerView.findViewTreeLifecycleOwner()
+                if (lifecycleOwner != null) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                        // Check lifecycle state before executing
+                        if (lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+                            delay(200)
+                            updateNotifications()
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()

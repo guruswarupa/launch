@@ -70,11 +70,14 @@ class SettingsChangeCoordinator(
         TypographyManager.applyToActivity(activity)
         views.fastScroller.refreshTypography(sharedPreferences)
 
-        activity.timeDateManagerOrNull?.setUse24HourFormat(use24HourClock)
+        activity.timeDateManager.setUse24HourFormat(use24HourClock)
         
         
-        val viewPreference = sharedPreferences.getString("view_preference", "list") ?: "list"
-        val newIsGridMode = viewPreference == "grid"
+        val viewPreference = sharedPreferences.getString(
+            Constants.Prefs.VIEW_PREFERENCE,
+            Constants.Prefs.VIEW_PREFERENCE_LIST
+        ) ?: Constants.Prefs.VIEW_PREFERENCE_LIST
+        val newIsGridMode = viewPreference == Constants.Prefs.VIEW_PREFERENCE_GRID
         val desiredColumns = activity.getPreferredGridColumns()
         val currentIsGridMode = if (views.isRecyclerViewInitialized()) views.recyclerView.layoutManager is GridLayoutManager else false
 
@@ -131,15 +134,16 @@ class SettingsChangeCoordinator(
         
         val iconSize = sharedPreferences.getInt(Constants.Prefs.ICON_SIZE, 40)
         adapter?.updateIconSize(iconSize)
+        
+        // Update cached show app names in grid setting
+        val showAppNamesInGrid = sharedPreferences.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+        adapter?.updateShowAppNamesInGrid(showAppNamesInGrid)
 
-        val grayscaleIconsEnabled = sharedPreferences.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
-        adapter?.updateGrayscaleIcons(grayscaleIconsEnabled)
-        
-        
         activity.updateFastScrollerVisibility()
 
         
         activity.serviceManager.updateShakeDetectionService()
+        activity.serviceManager.updateWalkDetectionService()
         activity.serviceManager.updateScreenDimmerService()
         activity.serviceManager.updateNightModeService()
         activity.serviceManager.updateFlipToDndService()
@@ -152,7 +156,7 @@ class SettingsChangeCoordinator(
         activity.appListLoader.loadApps(forceRefresh = false)
         
         try {
-            activity.financeWidgetManagerOrNull?.updateDisplay()
+            activity.financeWidgetManager.updateDisplay()
         } catch (_: Exception) {
         }
         

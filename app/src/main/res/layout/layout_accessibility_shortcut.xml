@@ -1,63 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#A6000000">
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:id="@+id/menu_container"
-        android:layout_width="340dp"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="center"
-        android:background="@drawable/rounded_background"
-        android:backgroundTint="@color/card_background"
-        android:elevation="16dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Control Center"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:fontFamily="sans-serif-medium"
-            android:layout_marginBottom="24dp"
-            android:letterSpacing="0.05"/>
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:gravity="center_horizontal"
+        android:background="@drawable/bg_edge_panel_sheet"
+        android:elevation="16dp"
+        android:clickable="true"
+        android:focusable="true">
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxHeight="500dp"
+            android:maxHeight="600dp"
             android:scrollbars="none"
-            android:overScrollMode="never">
+            android:overScrollMode="never"
+            android:fillViewport="true">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingHorizontal="10dp">
 
-                
+                <!-- Shortcut Icons - Linear Horizontal Arrangement -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:overScrollMode="never"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:id="@+id/shortcuts_linear_layout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center"
+                        android:paddingVertical="4dp">
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <View
+                    android:layout_width="40dp"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="8dp"
+                    android:background="#26FFFFFF" />
+
+                <!-- Sliders Section -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:paddingHorizontal="4dp">
 
-                    
+                    <!-- Brightness Slider -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="@drawable/rounded_background"
-                        android:backgroundTint="#1AFFFFFF"
-                        android:padding="12dp"
-                        android:layout_marginBottom="12dp">
+                        android:padding="8dp"
+                        android:layout_marginBottom="8dp">
                         <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:src="@drawable/ic_brightness_stat"
                             android:tint="@color/nord8"/>
                         <SeekBar
@@ -69,24 +84,22 @@
                             android:progressTint="@color/nord8"
                             android:thumbTint="@color/nord8"
                             android:splitTrack="false"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"/>
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"/>
                     </LinearLayout>
 
-                    
+                    <!-- Media Volume Slider -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="@drawable/rounded_background"
-                        android:backgroundTint="#1AFFFFFF"
-                        android:padding="12dp"
-                        android:layout_marginBottom="12dp">
+                        android:padding="8dp"
+                        android:layout_marginBottom="8dp">
                         <ImageView
                             android:id="@+id/img_volume_media_icon"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:src="@drawable/ic_volume_up_stat"
                             android:tint="@color/nord9"/>
                         <SeekBar
@@ -97,24 +110,22 @@
                             android:progressTint="@color/nord9"
                             android:thumbTint="@color/nord9"
                             android:splitTrack="false"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"/>
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"/>
                     </LinearLayout>
 
-                    
+                    <!-- Ring Volume Slider -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="@drawable/rounded_background"
-                        android:backgroundTint="#1AFFFFFF"
-                        android:padding="12dp"
-                        android:layout_marginBottom="12dp">
+                        android:padding="8dp"
+                        android:layout_marginBottom="8dp">
                         <ImageView
                             android:id="@+id/img_volume_ring_icon"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
                             android:src="@drawable/ic_vibrate_stat"
                             android:tint="@color/nord13"/>
                         <SeekBar
@@ -125,20 +136,18 @@
                             android:progressTint="@color/nord13"
                             android:thumbTint="@color/nord13"
                             android:splitTrack="false"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"/>
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"/>
                     </LinearLayout>
 
-                    
+                    <!-- Alarm Volume Slider -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="@drawable/rounded_background"
-                        android:backgroundTint="#1AFFFFFF"
-                        android:padding="12dp"
-                        android:layout_marginBottom="16dp">
+                        android:padding="8dp"
+                        android:layout_marginBottom="8dp">
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -146,18 +155,18 @@
                             android:gravity="center">
                             <ImageView
                                 android:id="@+id/img_volume_alarm_icon"
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:src="@android:drawable/ic_lock_silent_mode"
                                 android:tint="@color/nord11"/>
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="ALARM"
+                                android:text="ALM"
                                 android:textColor="@color/nord11"
-                                android:textSize="8sp"
-                                android:textStyle="bold"
-                                android:layout_marginTop="2dp"/>
+                                android:textSize="7sp"
+                                android:fontFamily="sans-serif-medium"
+                                android:layout_marginTop="1dp"/>
                         </LinearLayout>
                         <SeekBar
                             android:id="@+id/volume_alarm_seekbar"
@@ -167,22 +176,11 @@
                             android:progressTint="@color/nord11"
                             android:thumbTint="@color/nord11"
                             android:splitTrack="false"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"/>
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"/>
                     </LinearLayout>
                 </LinearLayout>
-
-                
-                <GridLayout
-                    android:id="@+id/shortcuts_grid"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:columnCount="3"
-                    android:alignmentMode="alignMargins">
-                    
-                </GridLayout>
             </LinearLayout>
         </ScrollView>
-
     </LinearLayout>
 </FrameLayout>

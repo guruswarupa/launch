@@ -2,35 +2,35 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/usage_header"
-        android:title="Usage: ..."
+        android:title="@string/app_context_usage_placeholder"
         android:enabled="false" />
 
     <item
         android:id="@+id/toggle_session_timer"
-        android:title="Enable Session Timer" />
+        android:title="@string/app_context_enable_session_timer" />
 
     <item
         android:id="@+id/app_info"
-        android:title="App Info"
+        android:title="@string/app_context_app_info"
         android:icon="@drawable/ic_settings" />
 
     <item
         android:id="@+id/share_app"
-        android:title="Share"
+        android:title="@string/app_context_share"
         android:icon="@drawable/ic_share" />
 
     <item
         android:id="@+id/uninstall_app"
-        android:title="Uninstall"
+        android:title="@string/app_context_uninstall"
         android:icon="@drawable/ic_settings" />
 
     <item
         android:id="@+id/toggle_favorite"
-        android:title="Toggle Favorite"
+        android:title="@string/add_to_favorites_plain"
         android:icon="@drawable/ic_add" />
 
     <item
         android:id="@+id/toggle_hide"
-        android:title="Hide App"
+        android:title="@string/hide_app_plain"
         android:icon="@drawable/ic_settings" />
 </menu>

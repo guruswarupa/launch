@@ -237,11 +237,9 @@ class AppListManager @Inject constructor(
         val activityName = app.activityInfo.name
         return when {
             activityName.isNotBlank() && packageName.startsWith("launcher_") -> activityName
-            else -> try {
-                app.loadLabel(context.packageManager).toString().ifBlank { packageName }
-            } catch (_: Exception) {
-                packageName
-            }
+            // Never call loadLabel() - return packageName as fallback
+            // Labels should be pre-populated by AppListLoader in background
+            else -> packageName
         }
     }
 }

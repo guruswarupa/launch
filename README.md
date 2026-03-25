@@ -48,149 +48,90 @@
 ## ✨ Features
 
 ### 🔍 Smart App Management
-- Apps are sorted by usage frequency automatically
-- Rarely used apps grouped and sorted alphabetically
-- App usage stats shown beside each app icon
-- Weekly phone usage summary with interactive graph
-- Daily usage breakdowns with pie charts
-- One-tap uninstall with long-press gesture
-- Toggle between smooth grid and list views
+- Usage-aware app list with weekly and daily usage insights
+- Favorite apps pinned to the top of the list
+- Hidden apps support with a dedicated hidden-apps settings page
+- Long-press app actions for uninstall, app info, APK sharing, timers, favorites, and hide/unhide
+- Grid and list layouts with customizable icon size/style, grayscale mode, and fast scroller
+- Workspaces and work profile support for separating personal and work apps
 
-### 🔎 Smart Universal Search
-- Search apps, contacts, and perform web queries
-- Built-in calculator directly in search bar
-- Quick links to Play Store, browser, YouTube, and Google Maps
-- Tap-to-call, SMS, or WhatsApp directly from contact results
+### 🔎 Universal Search & Actions
+- Search apps, contacts, and web results from a single search bar
+- Built-in calculator in the search box
+- Quick actions for Play Store, browser, YouTube, and Google Maps
+- Contact actions for call, SMS, and WhatsApp
+- Voice search and voice-command shortcuts
 
-### ⚡ Quick Actions
-- **Time Widget** → Tap to open the Clock app
-- **Date Widget** → Tap to open the Calendar app
-- **Search Bar**:
-  - Long press → Open Google in browser
-  - Calculator support built-in
-- **Weather Widget**:
-  - Shows real-time weather and forecast
-  - Change API key via Settings
-- **Battery Widget**:
-  - Real-time battery percentage display
-  - Charging status indicator
-  - Always visible on home screen
+### 🔕 Focus, Locking & Usage Control
+- Focus Mode with allowed-app configuration and session countdown
+- Pomodoro support for timed work sessions
+- App Lock with PIN and biometric unlock support
+- Daily app limits, quick session timers, and over-limit visual dimming
+- Automatic return-to-home behavior when time limits are reached
 
+### 🧰 Widgets & Productivity Tools
+- Todo widget with due times, priorities, recurring tasks, and alarms
+- Calculator widget with basic, scientific, and converter modes
+- Notifications widget with quick open, dismiss, reply, and media-aware cards
+- Finance tracker widget with income/expense logging and transaction history
+- Notes widget with editor support
+- Calendar events widget with list and calendar views
+- Countdown widget with manual timers and calendar-event countdowns
+- Weather forecast widget with hourly and daily forecasts
+- Workout widget and physical activity tracking widgets
+- Media controller widget
+- Year progress widget
+- Battery and battery health widgets
+- Device info and network stats widgets
+- Compass, pressure, temperature, and noise meter widgets
+- DNS / Private DNS widget with preset and custom providers
+- GitHub contributions widget
+- Standard Android third-party widget hosting
 
-### 🔕 Focus Mode
-- Long press focus icon to configure apps allowed during Focus Mode
-- Temporarily hide distracting apps
-- Set a countdown timer to auto-disable mode
-- Cannot exit until timer ends — stay on track
-- Visible timer countdown displayed on screen
+### 🌐 Web, Documents & Content
+- Progressive-style web apps with icon fetching and settings management
+- Built-in web app ad blocking support
+- RSS feed page and feed settings
+- Document viewer support for PDF, Office, and other common file formats
+- APK sharing for installed apps
 
-### 🔐 App Lock
-- Lock any app via settings
-- **PIN-based authentication** before launching locked apps  
-- **Fingerprint unlock supported** (if available on your device)  
-- **1-minute timeout** after unlocking — no need to re-enter PIN during that window  
-- After timeout, locked apps require authentication again  
-- Ideal for securing sensitive apps like WhatsApp, Instagram, etc.
+### 🔐 Privacy, Vault & Security
+- Encrypted vault for protected files and private content
+- Privacy dashboard activity
+- App data disclosure screen
+- Local-first settings/data backup support
 
-### ✅ Todo List Widget (Now Smarter)
-- Add and manage daily tasks directly from the home screen  
-- Set **due time** for each task  
-- Assign **priority**: High, Medium, or Low  
-- Enable **recurring tasks**: Daily, Weekly, or Custom  
-- Mark tasks as complete with visual strikethrough  
-- Tap "Add Todo" to schedule tasks with advanced options  
-- Persistent task tracking with clean UI  
+### 📱 Sensors, Gestures & Automation
+- Shake to toggle torch
+- Back tap support
+- Flip-to-DND service
+- Screen dimmer and night mode services
+- Screen recording shortcut flow
+- Calendar, steps, temperature, pressure, compass, and ambient noise integrations where hardware is available
 
-### 🔔 Notifications Widget
-- View unread notification count badge
-- Quick access to recent notifications on home screen
-- Swipe to dismiss notifications directly from launcher
-- Tap notifications to open the related app
-- Requires notification access permission
-
-### 🧮 Calculator Widget
-- Full-featured calculator directly on home screen
-- **Basic Mode**: Standard arithmetic operations
-- **Scientific Mode**: Advanced functions (sin, cos, log, etc.)
-- **Converter Mode**: Unit conversions and base conversions
-- Calculation history with easy access
-- Toggle between radians and degrees
-
-### ⏱️ App Usage & Session Timers
-- **Daily App Usage Limits**: Set maximum daily time limits for any app.
-- **Visual Feedback**: Icons automatically gray out when a daily limit is reached.
-- **Auto-Enforcement**: Launcher automatically closes apps and returns to home screen once the limit is hit.
-- **Session Timers**: Set quick usage timers (1, 5, or 10 minutes) for focused sessions.
-- **Custom Timer Durations**: Full control over session and daily limit lengths.
-- Helps manage screen time and combat app addiction.
-
-### 📱 App Categories & Organization
-- Organize apps by type (Social, Productivity, Games, etc.)
-- Filter apps by category
-- Smart grouping of rarely used apps
-
-### ⭐ Favorite Apps & Show All Mode
-- Mark apps as favorites for quick access
-- Toggle between "Favorites Only" and "Show All Apps" modes
-- Customize which apps appear in main list
-- Quick access to your most-used apps
-
-### 📊 Enhanced Usage Statistics
-- **Weekly Usage Graph**: Visual representation of your app usage over the past 7 days
-- **Daily Usage Breakdown**: Tap any day in the weekly graph to see detailed usage
-- **Interactive Pie Charts**: Visual breakdown of app usage for each day
-- **App-by-App Analysis**: See exactly how much time you spent on each app
-- **Total Time Tracking**: View total screen time per day at a glance
-- Automatically refreshes when date changes
-
-### 📱 Shake to Toggle Torch
-- **Quick Flashlight Access**: Shake your device twice to toggle the torch
-- **Background Service**: Works even when the launcher is in the background
-- **Battery Efficient**: Only active when screen is on
-- **One-Tap Enable**: Enable from settings to start using immediately
-- Perfect for quick flashlight access without unlocking your phone
-
-### 🎓 Interactive Feature Tutorial
-- **Comprehensive Guide**: Step-by-step walkthrough of all launcher features
-- **Visual Highlights**: Interactive overlays highlight each feature as you learn
-- **Smart Navigation**: Automatically opens drawers and scrolls to relevant sections
-- **Resume Support**: Pick up where you left off if interrupted
-- **Skip Anytime**: Skip the tutorial or complete it at your own pace
-- Perfect for new users to discover all features quickly
-
-### 📦 APK Sharing
-- Share APK files of installed apps
-- Access from app context menu or dock
-- Share via any installed app (Bluetooth, email, messaging, etc.)
-- Useful for backing up apps or sharing with others
-
-### 🎨 Third-Party Widget Support
-- Add Android widgets from other apps
-- Full widget management system
-- Configure and customize widgets on home screen
-- Support for all standard Android widgets
+### 🎨 Customization
+- Wallpaper customization
+- Widget theming and translucency controls
+- Downloadable font support and typography options
+- Workspace configuration and control center shortcut configuration
+- Interactive feature tutorial for onboarding
 
 ---
 
 ## 💰 Finance Tracker
-- Tap **"Add Income"** or **"Add Expense"** to track your finances
-- Monthly income and expenses tracked automatically
-- Long press on **Balance** to view recent transaction history
-- Add custom descriptions to your transactions
-- Net savings computed for the current month
-- Lightweight, offline-first design
+- Add income and expense entries directly from the launcher
+- Track monthly balance, savings, and recent transactions
+- Add descriptions and review history from the widget UI
+- Designed to work offline with local storage
 
 ---
 
 ## ⚙️ Settings Features
-- **Import/Export Data**: Backup or restore your launcher settings and data
-- **Change Display Style**: Toggle between grid and list view easily
-- **Change Wallpaper**: Set custom wallpapers for your home screen
-- **Set Weather Location**: Enter the city/country that the Open-Meteo widget should use for live forecasts
-- **Manage App Locks**: Configure PIN and fingerprint authentication
-- **App Timer Settings**: Configure default timer durations and daily limits
-- **Widget Management**: Add, remove, and configure widgets
-- **Workspace Configuration**: Customize workspace layouts
+- Import/export launcher settings and local data
+- Change display mode, icon appearance, and wallpaper
+- Manage app locks, hidden apps, favorites, timers, and widgets
+- Configure workspaces, control center shortcuts, web apps, RSS feeds, and vault settings
+- Adjust weather location, background translucency, and privacy-related options
 
 ---
 
@@ -209,6 +150,7 @@
 | **Swipe Notification**      | Dismiss notification from widget            |
 | **Shake Device (2x)**       | Toggle torch/flashlight                     |
 | **Tap Weekly Usage Day**    | View detailed daily usage breakdown         |
+| **Tap Hidden App**      | Launch hidden app from Hidden Apps settings |
 
 ---
 
@@ -227,22 +169,21 @@ Use voice in the search bar for fast interactions.
 | `Uninstall WhatsApp`      | Opens uninstall screen                        |
 | `Bangalore to Mysore`     | Opens Google Maps with route                  |
 
-> **Permissions Required**: Contacts, Phone, SMS
-
+> **Permissions Required**: Contacts and microphone.
 ---
 
 ## 🔐 Privacy & Permissions
 
 Launch requires **minimal permissions**:
 - **Contacts** → for contact search and quick actions
-- **SMS** → to send messages
-- **Phone** → to make calls
-- **Storage** → for notes, wallpapers, and backups
+- **Calendar** → for calendar events and countdown integration
+- **Storage / Media** → for notes, wallpapers, documents, vault files, and backups
 - **Usage Stats** → for app usage tracking, daily limits, and sorting (optional)
 - **Notification Access** → for notifications widget (optional)
-- **Location** → for weather widget location-based forecasts (optional)
-- **Audio** → for voice search functionality (optional)
-- **Camera** → for shake-to-toggle torch feature (optional)
+- **Activity Recognition** → for steps and physical activity widgets (optional)
+- **Audio** → for voice search and noise meter functionality (optional)
+- **Camera** → for torch and related quick actions (optional)
+- **Biometric** → for fingerprint-based app lock and vault access (optional)
 
 All permissions are optional except for core launcher functionality. You can use the launcher with minimal permissions and enable additional features as needed.
 
@@ -265,8 +206,8 @@ All permissions are optional except for core launcher functionality. You can use
 
 - **Android Studio** (Hedgehog or later recommended)
 - **JDK 11** or higher
-- **Android SDK** with API level 24+ (minimum) and API level 35 (target)
-- **Gradle** 8.8.0+ (included via wrapper)
+- **Android SDK** with API level 26+ (minimum) and API level 35 (target)
+- **Gradle** 8.10.2 (included via wrapper)
 
 ### Setup
 
@@ -313,10 +254,13 @@ launch/
 ### Key Technologies
 
 - **Kotlin** - Primary programming language
-- **Jetpack Compose** - Modern UI toolkit
-- **AndroidX** - Android support libraries
-- **Room** - Local database
-- **Material Design 3** - UI components
+- **Android Views + RecyclerView** - Primary UI foundation
+- **Jetpack Compose** - Used where applicable alongside the view-based UI
+- **AndroidX** - Core Android support libraries
+- **Material Components / Material 3** - UI components
+- **Hilt** - Dependency injection
+- **Glide** - Image loading
+- **Apache POI** - Office document parsing
 
 ### Building for Release
 

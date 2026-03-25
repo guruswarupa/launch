@@ -103,7 +103,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         widgetSectionDecoration = WidgetSectionDecoration(this)
         widgetsRecyclerView.addItemDecoration(widgetSectionDecoration)
         
-        val saveButton = findViewById<View>(R.id.save_button)
         val searchInput = findViewById<EditText>(R.id.search_widget_input)
 
         val configuredFontColor = TypographyManager.getConfiguredFontColor(this)
@@ -167,13 +166,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         })
         itemTouchHelper.attachToRecyclerView(widgetsRecyclerView)
 
-        saveButton?.setOnClickListener {
-            widgetConfigManager.saveWidgetOrder(allWidgets)
-            setResult(RESULT_OK)
-            finish()
-        }
-        
-        
         searchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             
@@ -207,6 +199,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
 
         refreshSectionHeaders()
+        persistWidgetConfiguration()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
@@ -271,6 +264,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         if (originalPosition >= 0) {
             allWidgets[originalPosition] = allWidgets[originalPosition].copy(enabled = enabled)
         }
+
+        persistWidgetConfiguration()
         
         val widget = allWidgets.find { it.id == widgetId }
         if (widget != null) {
@@ -308,6 +303,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             val index = orderedIds.indexOf(widget.id)
             if (index >= 0) index else Int.MAX_VALUE
         }
+        persistWidgetConfiguration()
+    }
+
+    private fun persistWidgetConfiguration() {
+        widgetConfigManager.saveWidgetOrder(allWidgets)
+        setResult(RESULT_OK)
     }
 
     private fun refreshSectionHeaders() {

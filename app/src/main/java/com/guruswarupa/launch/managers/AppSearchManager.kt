@@ -38,6 +38,9 @@ class AppSearchManager @Inject constructor(
     private val lifecycleScope = (context as LifecycleOwner).lifecycleScope
     private var searchJob: Job? = null
     private var searchListenerAttached = false
+    
+    // Callback for search query changes
+    var onSearchQueryChanged: ((String) -> Unit)? = null
 
     private val appLabelCache = mutableMapOf<String, String>()
     private val searchCache = mutableMapOf<String, List<ResolveInfo>>()
@@ -62,6 +65,8 @@ class AppSearchManager @Inject constructor(
         attachSearchListener(searchBox)
     }
 
+    fun isConfigured(): Boolean = searchListenerAttached
+
     private fun attachSearchListener(searchBox: AutoCompleteTextView) {
         if (searchListenerAttached) {
             return
@@ -71,6 +76,8 @@ class AppSearchManager @Inject constructor(
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val query = s?.toString()?.trim() ?: ""
+                onSearchQueryChanged?.invoke(query)
                 scheduleSearch(debounceMs = 10)
             }
 
@@ -311,7 +318,16 @@ class AppSearchManager @Inject constructor(
         return newFilteredList
     }
 
-    private val cachedResolveInfos = mutableMapOf<String, ResolveInfo>()
+    // LRU cache for ResolveInfo objects with bounded size to prevent memory issues
+    private val cachedResolveInfos = object : LinkedHashMap<String, ResolveInfo>(MAX_CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ResolveInfo>?): Boolean {
+            return size > MAX_CACHE_SIZE
+        }
+    }
+
+    companion object {
+        private const val MAX_CACHE_SIZE = 100
+    }
 
     private fun evaluateMathExpression(expression: String): String? {
         return try {

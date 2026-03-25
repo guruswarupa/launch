@@ -33,6 +33,8 @@ class AppListUIUpdater(
         appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
             val listWithSeparators = appListManager.addSeparators(sortedList)
             updateAppListUI(listWithSeparators, filteredList, isFinal)
+            // Update FastScroller visibility after app list is populated
+            activity.updateFastScrollerVisibility()
         }
         appListLoader.onAdapterNeedsUpdate = { isGrid ->
             this.isGridMode = isGrid
@@ -62,6 +64,7 @@ class AppListUIUpdater(
             } else {
                 val newAdapter = AppAdapter(activity, appList, searchBox, isGrid, activity)
                 adapter = newAdapter
+                activity.adapter = newAdapter
                 recyclerView.adapter = newAdapter
             }
             activity.updateFastScrollerVisibility()
@@ -81,9 +84,19 @@ class AppListUIUpdater(
             fullAppList.clear()
             fullAppList.addAll(deduplicatedFullAppList)
         }
+
+        if (activity.appList !== appList) {
+            appList.clear()
+            appList.addAll(newAppList)
+        } else {
+            activity.appList.clear()
+            activity.appList.addAll(newAppList)
+        }
         
         adapter?.updateAppList(newAppList)
-        recyclerView.visibility = View.VISIBLE
+        val isEmpty = newAppList.isEmpty()
+        recyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
+        activity.views.appListEmptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
         activity.updateFastScrollerVisibility()
         
         activity.updateAppSearchManager(newFullAppList, newAppList)

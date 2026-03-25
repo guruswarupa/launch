@@ -113,6 +113,7 @@ class RssFeedSettingsActivity : ComponentActivity() {
     private fun getSectionSubtitle(category: String): String {
         return when (category) {
             "News" -> "Top headlines and general daily coverage from major outlets."
+            "India" -> "Coverage focused on India from major Indian publishers."
             "Technology" -> "Product launches, startups, software, AI, and the wider tech industry."
             "Finance" -> "Markets, business moves, companies, money, and the economy."
             "Sports" -> "Scores, analysis, leagues, athletes, and major sporting events."
@@ -153,11 +154,19 @@ class RssFeedSettingsActivity : ComponentActivity() {
             notifySettingsChanged()
         }
 
+        val editButton = itemView.findViewById<ImageButton>(R.id.rss_feed_edit)
         val deleteButton = itemView.findViewById<ImageButton>(R.id.rss_feed_delete)
         if (source.isCustom) {
+            editButton.visibility = View.VISIBLE
             deleteButton.visibility = View.VISIBLE
-            deleteButton.setOnClickListener { confirmDelete(source.url) }
+            editButton.setOnClickListener { showSourceEditor(source.url) }
+            deleteButton.setOnClickListener {
+                rssFeedManager.removeFeedUrl(source.url)
+                notifySettingsChanged()
+                renderSources()
+            }
         } else {
+            editButton.visibility = View.GONE
             deleteButton.visibility = View.GONE
         }
 
@@ -276,21 +285,35 @@ class RssFeedSettingsActivity : ComponentActivity() {
         return (value * resources.displayMetrics.density).toInt()
     }
 
-    private fun showSourceEditor() {
+    private fun showSourceEditor(existingUrl: String? = null) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_rss_source, null)
         val input = dialogView.findViewById<EditText>(R.id.rss_source_url_input)
+        input.setText(existingUrl.orEmpty())
+        input.setSelection(input.text.length)
 
         val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
-            .setTitle("Add Custom RSS Link")
+            .setTitle(if (existingUrl == null) "Add Custom RSS Link" else "Edit Custom RSS Link")
             .setView(dialogView)
-            .setPositiveButton("Add", null)
+            .setPositiveButton(if (existingUrl == null) "Add" else "Save", null)
             .setNegativeButton("Cancel", null)
             .create()
 
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val newUrl = input.text.toString().trim()
+                if (existingUrl != null && newUrl.equals(existingUrl, ignoreCase = true)) {
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+
+                if (existingUrl != null) {
+                    rssFeedManager.removeFeedUrl(existingUrl)
+                }
+
                 if (!rssFeedManager.addFeedUrl(newUrl)) {
+                    if (existingUrl != null) {
+                        rssFeedManager.addFeedUrl(existingUrl)
+                    }
                     Toast.makeText(this, "Enter a valid, unique feed URL", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
@@ -301,19 +324,6 @@ class RssFeedSettingsActivity : ComponentActivity() {
         }
 
         dialog.show()
-    }
-
-    private fun confirmDelete(source: String) {
-        AlertDialog.Builder(this, R.style.Theme_Launch_Settings)
-            .setTitle("Remove Custom RSS Link")
-            .setMessage(source)
-            .setPositiveButton("Remove") { _, _ ->
-                rssFeedManager.removeFeedUrl(source)
-                notifySettingsChanged()
-                renderSources()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     private fun applyBackgroundTranslucency() {

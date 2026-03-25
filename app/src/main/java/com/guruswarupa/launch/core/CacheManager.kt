@@ -10,13 +10,13 @@ import android.os.Looper
 import android.os.UserManager
 import com.guruswarupa.launch.di.BackgroundExecutor
 import com.guruswarupa.launch.models.AppMetadata
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.ExecutorService
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,6 +27,8 @@ class CacheManager @Inject constructor(
 ) {
     companion object {
         private const val CACHE_DURATION = 300000L 
+        private val moshi = Moshi.Builder().build()
+        private val mapType = Types.newParameterizedType(Map::class.java, String::class.java, AppMetadata::class.java)
     }
 
     private val appListCacheFile: File = File(context.cacheDir, "app_list_cache.dat")
@@ -163,16 +165,16 @@ class CacheManager @Inject constructor(
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun loadAppMetadataFromCache(): Map<String, AppMetadata> {
         return try {
             if (!appMetadataCacheFile.exists()) return emptyMap()
 
             val inputStream = FileInputStream(appMetadataCacheFile)
-            val objectInputStream = ObjectInputStream(inputStream)
-            val metadata = objectInputStream.readObject() as? Map<String, AppMetadata> ?: emptyMap()
-            objectInputStream.close()
+            val json = inputStream.bufferedReader().use { it.readText() }
             inputStream.close()
+            
+            val adapter = moshi.adapter<Map<String, AppMetadata>>(mapType)
+            val metadata = adapter.fromJson(json) ?: emptyMap()
 
             appMetadataCache.clear()
             appMetadataCache.putAll(metadata)
@@ -201,10 +203,11 @@ class CacheManager @Inject constructor(
     fun saveAppMetadataToCache(metadata: Map<String, AppMetadata>) {
         backgroundExecutor.execute {
             try {
+                val adapter = moshi.adapter<Map<String, AppMetadata>>(mapType)
+                val json = adapter.toJson(metadata)
+                
                 val outputStream = FileOutputStream(appMetadataCacheFile)
-                val objectOutputStream = ObjectOutputStream(outputStream)
-                objectOutputStream.writeObject(metadata)
-                objectOutputStream.close()
+                outputStream.bufferedWriter().use { it.write(json) }
                 outputStream.close()
             } catch (_: Exception) {
             }
@@ -219,13 +222,14 @@ class CacheManager @Inject constructor(
 
                 apps.forEach { app ->
                     val packageName = app.activityInfo.packageName
+                    val cacheKey = "${packageName}|${app.preferredOrder}"
                     try {
-                        val cached = appMetadataCache[packageName]
+                        val cached = appMetadataCache[cacheKey]
                         if (cached != null && (currentTime - cached.lastUpdated) < CACHE_DURATION) {
-                            metadata[packageName] = cached
+                            metadata[cacheKey] = cached
                         } else {
                             val label = app.loadLabel(packageManager).toString()
-                            metadata[packageName] = AppMetadata(
+                            metadata[cacheKey] = AppMetadata(
                                 packageName = packageName,
                                 activityName = app.activityInfo.name,
                                 label = label,
@@ -257,8 +261,8 @@ class CacheManager @Inject constructor(
     
     fun getMetadataCache(): Map<String, AppMetadata> = appMetadataCache
     
-    fun updateMetadataCache(packageName: String, metadata: AppMetadata) {
-        appMetadataCache[packageName] = metadata
+    fun updateMetadataCache(cacheKey: String, metadata: AppMetadata) {
+        appMetadataCache[cacheKey] = metadata
     }
     
     fun removeMetadata(packageName: String) {

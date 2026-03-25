@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.os.Handler
 import android.widget.Button
 import android.widget.TextView
+import androidx.core.view.doOnLayout
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.util.Calendar
@@ -110,10 +111,10 @@ class UsageStatsDisplayManager(
     
     @SuppressLint("NotifyDataSetChanged")
     fun refreshUsageStats() {
-        
-        adapter.clearUsageCache()
-        
-        handler.postDelayed({
+        // Always run on main thread to avoid ViewRootImpl$CalledFromWrongThreadException
+        activity.runOnUiThread {
+            adapter.clearUsageCache()
+            
             val layoutManager = recyclerView.layoutManager
             if (layoutManager is LinearLayoutManager) {
                 val firstVisible = layoutManager.findFirstVisibleItemPosition()
@@ -126,7 +127,7 @@ class UsageStatsDisplayManager(
             } else {
                 adapter.notifyDataSetChanged()
             }
-        }, 100)
+        }
     }
     
     private fun showDailyUsageDialog(day: String, appUsages: Map<String, Long>) {

@@ -204,19 +204,20 @@ class FastScroller @JvmOverloads constructor(
         if (firstVisiblePos == RecyclerView.NO_POSITION) return
 
         val adapter = rv.adapter as? AppAdapter ?: return
-        val appList = adapter.appList
-        if (firstVisiblePos >= appList.size) return
+        val appListSize = adapter.getCurrentListSize()
+        if (firstVisiblePos >= appListSize) return
 
         var newIndex = -1
         
         
         var favoritesStartSeparatorIndex = -1
         var favoritesEndSeparatorIndex = -1
-        for (i in appList.indices) {
-            if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
-                if (appList[i].activityInfo.name == "favorites_separator") {
+        for (i in 0 until appListSize) {
+            val app = adapter.getItemAtPosition(i) ?: continue
+            if (app.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
+                if (app.activityInfo.name == "favorites_separator") {
                     favoritesStartSeparatorIndex = i
-                } else if (appList[i].activityInfo.name == "favorites_end_separator") {
+                } else if (app.activityInfo.name == "favorites_end_separator") {
                     favoritesEndSeparatorIndex = i
                 }
             }
@@ -239,7 +240,7 @@ class FastScroller @JvmOverloads constructor(
             
             
             for (i in firstVisiblePos downTo 0) {
-                val currentApp = appList[i]
+                val currentApp = adapter.getItemAtPosition(i) ?: continue
                 if (currentApp.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
                     val separatorId = currentApp.activityInfo.name ?: ""
                     if (separatorId.startsWith("letter_separator_")) {
@@ -519,7 +520,7 @@ class FastScroller @JvmOverloads constructor(
 
     private fun scrollToLetter(letter: String) {
         val adapter = recyclerView?.adapter as? AppAdapter ?: return
-        val appList = adapter.appList
+        val appListSize = adapter.getCurrentListSize()
         var targetPosition = -1
         
         if (letter == "★") {
@@ -528,9 +529,10 @@ class FastScroller @JvmOverloads constructor(
             
             
             var searchStartIndex = 0
-            for (i in appList.indices) {
-                if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
-                    appList[i].activityInfo.name == "favorites_end_separator") {
+            for (i in 0 until appListSize) {
+                val app = adapter.getItemAtPosition(i) ?: continue
+                if (app.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
+                    app.activityInfo.name == "favorites_end_separator") {
                     searchStartIndex = i + 1
                     break
                 }
@@ -538,17 +540,18 @@ class FastScroller @JvmOverloads constructor(
             
             
             if (searchStartIndex == 0) {
-                for (i in appList.indices) {
-                    if (appList[i].activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
-                        appList[i].activityInfo.name == "favorites_separator") {
+                for (i in 0 until appListSize) {
+                    val app = adapter.getItemAtPosition(i) ?: continue
+                    if (app.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
+                        app.activityInfo.name == "favorites_separator") {
                         searchStartIndex = i + 1
                         break
                     }
                 }
             }
             
-            for (i in searchStartIndex until appList.size) {
-                val app = appList[i]
+            for (i in searchStartIndex until appListSize) {
+                val app = adapter.getItemAtPosition(i) ?: continue
                 val packageName = app.activityInfo.packageName
                 
                 if (packageName == AppAdapter.SEPARATOR_PACKAGE) {

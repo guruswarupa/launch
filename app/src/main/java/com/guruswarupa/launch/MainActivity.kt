@@ -1,499 +1,203 @@
 package com.guruswarupa.launch
 
 import android.annotation.SuppressLint
+import android.content.ComponentCallbacks2
 import android.app.NotificationManager
 import android.content.SharedPreferences
+import android.content.pm.ActivityInfo
 import android.content.pm.ResolveInfo
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.Toast
-import androidx.fragment.app.FragmentActivity
+import androidx.activity.viewModels
 import androidx.core.content.edit
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.guruswarupa.launch.di.BackgroundExecutor
-import com.guruswarupa.launch.core.CacheManager
-import com.guruswarupa.launch.core.PermissionManager
-import com.guruswarupa.launch.core.SystemBarManager
-import com.guruswarupa.launch.core.BroadcastReceiverManager
-import com.guruswarupa.launch.core.LifecycleManager
-import com.guruswarupa.launch.core.ShareManager
-
+import com.guruswarupa.launch.core.*
 import com.guruswarupa.launch.managers.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.models.MainActivityViews
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.ui.RssFeedPage
 
-import com.guruswarupa.launch.widgets.WidgetSetupManager
-import com.guruswarupa.launch.widgets.WidgetThemeManager
-import com.guruswarupa.launch.widgets.WidgetVisibilityManager
-import com.guruswarupa.launch.widgets.DeferredWidgetInitializer
-import com.guruswarupa.launch.widgets.CalendarEventsWidget
-import com.guruswarupa.launch.widgets.CountdownWidget
-
-import com.guruswarupa.launch.utils.TimeDateManager
-import com.guruswarupa.launch.utils.WeatherManager
-import com.guruswarupa.launch.utils.TodoManager
-import com.guruswarupa.launch.utils.TodoAlarmManager
-import com.guruswarupa.launch.utils.FinanceWidgetManager
-import com.guruswarupa.launch.utils.VoiceCommandHandler
-import com.guruswarupa.launch.utils.WallpaperDisplayHelper
-import com.guruswarupa.launch.utils.FeatureTutorialManager
-import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
+import com.guruswarupa.launch.widgets.*
+import com.guruswarupa.launch.utils.*
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.concurrent.ExecutorService
 import javax.inject.Inject
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
     companion object {
         private const val EXTRA_START_TUTORIAL = "start_tutorial"
-
-        var instance: MainActivity? = null
-            private set
     }
 
-    private val coreManagers = CoreManagers()
-    private val dataManagers = DataManagers()
-    private val widgetManagers = WidgetManagers()
-    private val uiManagers = UIManagers()
-
-    private fun <T> required(value: T?, name: String): T = requireNotNull(value) { "$name not initialized" }
-
     @Inject
-    lateinit var injectedSharedPreferences: SharedPreferences
+    lateinit var sharedPreferences: SharedPreferences
 
     @Inject
     @BackgroundExecutor
-    lateinit var injectedBackgroundExecutor: ExecutorService
+    lateinit var backgroundExecutor: ExecutorService
 
     @Inject
-    lateinit var injectedCacheManager: CacheManager
+    lateinit var cacheManager: CacheManager
 
     @Inject
-    lateinit var injectedWeatherManager: WeatherManager
+    lateinit var appListManager: AppListManager
 
     @Inject
-    lateinit var injectedAppListManager: AppListManager
+    lateinit var appSearchManager: AppSearchManager
 
     @Inject
-    lateinit var injectedAppSearchManager: AppSearchManager
+    lateinit var favoriteAppManager: FavoriteAppManager
 
     @Inject
-    lateinit var injectedFavoriteAppManager: FavoriteAppManager
+    lateinit var hiddenAppManager: HiddenAppManager
 
     @Inject
-    lateinit var injectedHiddenAppManager: HiddenAppManager
+    lateinit var webAppManager: WebAppManager
 
     @Inject
-    lateinit var injectedWebAppManager: WebAppManager
+    lateinit var shareManager: ShareManager
 
-    internal lateinit var sharedPreferences: SharedPreferences
+    @Inject
+    lateinit var permissionManager: PermissionManager
+
+    @Inject
+    lateinit var systemBarManager: SystemBarManager
+
+    @Inject
+    lateinit var activityInitializer: ActivityInitializer
+
+    @Inject
+    lateinit var appLockManager: AppLockManager
+
+    @Inject
+    lateinit var appTimerManager: AppTimerManager
+
+    @Inject
+    lateinit var appLauncher: AppLauncher
+
+    @Inject
+    lateinit var widgetLifecycleCoordinator: WidgetLifecycleCoordinator
+
+    @Inject
+    lateinit var resultRegistry: MainActivityResultRegistry
+
+    @Inject
+    lateinit var usageStatsManager: AppUsageStatsManager
+
+    @Inject
+    lateinit var weatherManager: WeatherManager
+
     internal val prefsName = "com.guruswarupa.launch.PREFS"
     internal val handler = Handler(Looper.getMainLooper())
-    internal lateinit var backgroundExecutor: ExecutorService
 
-    internal var activityInitializer: ActivityInitializer
-        get() = required(coreManagers.activityInitializer, "ActivityInitializer")
-        set(value) {
-            coreManagers.activityInitializer = value
-        }
-    val views: MainActivityViews get() = activityInitializer.views
+    lateinit var adapter: AppAdapter
 
-    internal var appList: MutableList<ResolveInfo>
-        get() = required(dataManagers.appList, "App list")
-        set(value) {
-            dataManagers.appList = value
-        }
-    internal val appListOrNull: MutableList<ResolveInfo>? get() = dataManagers.appList
-
-    internal var adapter: AppAdapter
-        get() = required(uiManagers.adapter, "AppAdapter")
-        set(value) {
-            uiManagers.adapter = value
-        }
-    internal val adapterOrNull: AppAdapter? get() = uiManagers.adapter
-
-    internal var searchTypeMenuManager: SearchTypeMenuManager
-        get() = required(uiManagers.searchTypeMenuManager, "SearchTypeMenuManager")
-        set(value) {
-            uiManagers.searchTypeMenuManager = value
-        }
-
-    internal var fullAppList: MutableList<ResolveInfo>
-        get() = dataManagers.fullAppList
-        set(value) {
-            dataManagers.fullAppList = value
-        }
-
-    internal var widgetThemeManager: WidgetThemeManager
-        get() = required(widgetManagers.widgetThemeManager, "WidgetThemeManager")
-        set(value) {
-            widgetManagers.widgetThemeManager = value
-        }
-    internal val widgetThemeManagerOrNull: WidgetThemeManager? get() = widgetManagers.widgetThemeManager
-
-    internal var cacheManager: CacheManager
-        get() = required(dataManagers.cacheManager, "CacheManager")
-        set(value) {
-            dataManagers.cacheManager = value
-        }
-
-    internal var permissionManager: PermissionManager
-        get() = required(coreManagers.permissionManager, "PermissionManager")
-        set(value) {
-            coreManagers.permissionManager = value
-        }
-
-    internal var systemBarManager: SystemBarManager
-        get() = required(coreManagers.systemBarManager, "SystemBarManager")
-        set(value) {
-            coreManagers.systemBarManager = value
-        }
-
-    internal var gestureHandler: GestureHandler
-        get() = required(uiManagers.gestureHandler, "GestureHandler")
-        set(value) {
-            uiManagers.gestureHandler = value
-        }
-    internal val gestureHandlerOrNull: GestureHandler? get() = uiManagers.gestureHandler
-
-    internal var broadcastReceiverManager: BroadcastReceiverManager
-        get() = required(coreManagers.broadcastReceiverManager, "BroadcastReceiverManager")
-        set(value) {
-            coreManagers.broadcastReceiverManager = value
-        }
-    internal val broadcastReceiverManagerOrNull: BroadcastReceiverManager? get() = coreManagers.broadcastReceiverManager
-
-    internal var wallpaperManagerHelper: WallpaperManagerHelper
-        get() = required(uiManagers.wallpaperManagerHelper, "WallpaperManagerHelper")
-        set(value) {
-            uiManagers.wallpaperManagerHelper = value
-        }
-    internal val wallpaperManagerHelperOrNull: WallpaperManagerHelper? get() = uiManagers.wallpaperManagerHelper
-
-    internal var appListManager: AppListManager
-        get() = required(dataManagers.appListManager, "AppListManager")
-        set(value) {
-            dataManagers.appListManager = value
-        }
-
-    internal var appListLoader: AppListLoader
-        get() = required(dataManagers.appListLoader, "AppListLoader")
-        set(value) {
-            dataManagers.appListLoader = value
-        }
-    internal val appListLoaderOrNull: AppListLoader? get() = dataManagers.appListLoader
-
-    internal var contactManager: ContactManager
-        get() = required(dataManagers.contactManager, "ContactManager")
-        set(value) {
-            dataManagers.contactManager = value
-        }
-
-    internal var usageStatsCacheManager: UsageStatsCacheManager
-        get() = required(dataManagers.usageStatsCacheManager, "UsageStatsCacheManager")
-        set(value) {
-            dataManagers.usageStatsCacheManager = value
-        }
-
-    internal var lifecycleManager: LifecycleManager
-        get() = required(coreManagers.lifecycleManager, "LifecycleManager")
-        set(value) {
-            coreManagers.lifecycleManager = value
-        }
-    internal val lifecycleManagerOrNull: LifecycleManager? get() = coreManagers.lifecycleManager
-
-    internal var appSearchManager: AppSearchManager
-        get() = required(dataManagers.appSearchManager, "AppSearchManager")
-        set(value) {
-            dataManagers.appSearchManager = value
-        }
-    internal val appSearchManagerOrNull: AppSearchManager? get() = dataManagers.appSearchManager
-
-    internal var appDockManager: AppDockManager
-        get() = required(uiManagers.appDockManager, "AppDockManager")
-        set(value) {
-            uiManagers.appDockManager = value
-        }
-    internal val appDockManagerOrNull: AppDockManager? get() = uiManagers.appDockManager
-
-    internal var usageStatsManager: AppUsageStatsManager
-        get() = required(dataManagers.usageStatsManager, "AppUsageStatsManager")
-        set(value) {
-            dataManagers.usageStatsManager = value
-        }
-
-    internal var weatherManager: WeatherManager
-        get() = required(dataManagers.weatherManager, "WeatherManager")
-        set(value) {
-            dataManagers.weatherManager = value
-        }
-
-    internal var timeDateManager: TimeDateManager
-        get() = required(dataManagers.timeDateManager, "TimeDateManager")
-        set(value) {
-            dataManagers.timeDateManager = value
-        }
-    internal val timeDateManagerOrNull: TimeDateManager? get() = dataManagers.timeDateManager
-
-    internal var todoManager: TodoManager
-        get() = required(dataManagers.todoManager, "TodoManager")
-        set(value) {
-            dataManagers.todoManager = value
-        }
-    internal val todoManagerOrNull: TodoManager? get() = dataManagers.todoManager
-
-    internal var todoAlarmManager: TodoAlarmManager
-        get() = required(dataManagers.todoAlarmManager, "TodoAlarmManager")
-        set(value) {
-            dataManagers.todoAlarmManager = value
-        }
-
-    internal var financeWidgetManager: FinanceWidgetManager
-        get() = required(dataManagers.financeWidgetManager, "FinanceWidgetManager")
-        set(value) {
-            dataManagers.financeWidgetManager = value
-        }
-    internal val financeWidgetManagerOrNull: FinanceWidgetManager? get() = dataManagers.financeWidgetManager
-
-    internal var usageStatsDisplayManager: UsageStatsDisplayManager
-        get() = required(dataManagers.usageStatsDisplayManager, "UsageStatsDisplayManager")
-        set(value) {
-            dataManagers.usageStatsDisplayManager = value
-        }
-
-    internal var rssFeedManager: RssFeedManager
-        get() = required(dataManagers.rssFeedManager, "RssFeedManager")
-        set(value) {
-            dataManagers.rssFeedManager = value
-        }
-
-    internal var widgetSetupManager: WidgetSetupManager
-        get() = required(widgetManagers.widgetSetupManager, "WidgetSetupManager")
-        set(value) {
-            widgetManagers.widgetSetupManager = value
-        }
-    internal val widgetSetupManagerOrNull: WidgetSetupManager? get() = widgetManagers.widgetSetupManager
-
-    internal var shareManager: ShareManager
-        get() = required(coreManagers.shareManager, "ShareManager")
-        set(value) {
-            coreManagers.shareManager = value
-        }
-
-    internal var appLockManager: AppLockManager
-        get() = required(coreManagers.appLockManager, "AppLockManager")
-        set(value) {
-            coreManagers.appLockManager = value
-        }
-
-    internal var appTimerManager: AppTimerManager
-        get() = required(coreManagers.appTimerManager, "AppTimerManager")
-        set(value) {
-            coreManagers.appTimerManager = value
-        }
-
-    internal var widgetLifecycleCoordinator: WidgetLifecycleCoordinator
-        get() = required(widgetManagers.widgetLifecycleCoordinator, "WidgetLifecycleCoordinator")
-        set(value) {
-            widgetManagers.widgetLifecycleCoordinator = value
-        }
-
-    internal var favoriteAppManager: FavoriteAppManager
-        get() = required(coreManagers.favoriteAppManager, "FavoriteAppManager")
-        set(value) {
-            coreManagers.favoriteAppManager = value
-        }
-
-    internal var hiddenAppManager: HiddenAppManager
-        get() = required(coreManagers.hiddenAppManager, "HiddenAppManager")
-        set(value) {
-            coreManagers.hiddenAppManager = value
-        }
-
-    internal var webAppManager: WebAppManager
-        get() = required(coreManagers.webAppManager, "WebAppManager")
-        set(value) {
-            coreManagers.webAppManager = value
-        }
-
-    internal var widgetManager: WidgetManager
-        get() = required(widgetManagers.widgetManager, "WidgetManager")
-        set(value) {
-            widgetManagers.widgetManager = value
-        }
-
-    internal var resultRegistry: MainActivityResultRegistry
-        get() = required(uiManagers.resultRegistry, "MainActivityResultRegistry")
-        set(value) {
-            uiManagers.resultRegistry = value
-        }
-
-    internal var voiceCommandHandler: VoiceCommandHandler? = null
-
-    internal var appLauncher: AppLauncher
-        get() = required(coreManagers.appLauncher, "AppLauncher")
-        set(value) {
-            coreManagers.appLauncher = value
-        }
-
-    internal var voiceSearchManager: VoiceSearchManager
-        get() = required(uiManagers.voiceSearchManager, "VoiceSearchManager")
-        set(value) {
-            uiManagers.voiceSearchManager = value
-        }
-    internal val voiceSearchManagerOrNull: VoiceSearchManager? get() = uiManagers.voiceSearchManager
-
-    internal var usageStatsRefreshManager: UsageStatsRefreshManager
-        get() = required(uiManagers.usageStatsRefreshManager, "UsageStatsRefreshManager")
-        set(value) {
-            uiManagers.usageStatsRefreshManager = value
-        }
-    internal val usageStatsRefreshManagerOrNull: UsageStatsRefreshManager? get() = uiManagers.usageStatsRefreshManager
-
-    internal var activityResultHandler: ActivityResultHandler
-        get() = required(uiManagers.activityResultHandler, "ActivityResultHandler")
-        set(value) {
-            uiManagers.activityResultHandler = value
-        }
-    internal val activityResultHandlerOrNull: ActivityResultHandler? get() = uiManagers.activityResultHandler
-
-    internal var navigationManager: NavigationManager
-        get() = required(uiManagers.navigationManager, "NavigationManager")
-        set(value) {
-            uiManagers.navigationManager = value
-        }
-
-    internal var focusModeApplier: FocusModeApplier
-        get() = required(uiManagers.focusModeApplier, "FocusModeApplier")
-        set(value) {
-            uiManagers.focusModeApplier = value
-        }
-    internal val focusModeApplierOrNull: FocusModeApplier? get() = uiManagers.focusModeApplier
-
-    internal var widgetConfigurationManager: WidgetConfigurationManager
-        get() = required(widgetManagers.widgetConfigurationManager, "WidgetConfigurationManager")
-        set(value) {
-            widgetManagers.widgetConfigurationManager = value
-        }
-
-    internal var widgetVisibilityManager: WidgetVisibilityManager
-        get() = required(widgetManagers.widgetVisibilityManager, "WidgetVisibilityManager")
-        set(value) {
-            widgetManagers.widgetVisibilityManager = value
-        }
-
-    internal var serviceManager: ServiceManager
-        get() = required(dataManagers.serviceManager, "ServiceManager")
-        set(value) {
-            dataManagers.serviceManager = value
-        }
-
-    internal var appListUIUpdater: AppListUIUpdater
-        get() = required(uiManagers.appListUIUpdater, "AppListUIUpdater")
-        set(value) {
-            uiManagers.appListUIUpdater = value
-        }
-    internal val appListUIUpdaterOrNull: AppListUIUpdater? get() = uiManagers.appListUIUpdater
-
-    internal var drawerManager: DrawerManager
-        get() = required(uiManagers.drawerManager, "DrawerManager")
-        set(value) {
-            uiManagers.drawerManager = value
-        }
-
-    internal var screenPagerManager: ScreenPagerManager
-        get() = required(uiManagers.screenPagerManager, "ScreenPagerManager")
-        set(value) {
-            uiManagers.screenPagerManager = value
-        }
-    internal val screenPagerManagerOrNull: ScreenPagerManager? get() = uiManagers.screenPagerManager
-
-    internal var contactActionHandler: ContactActionHandler
-        get() = required(uiManagers.contactActionHandler, "ContactActionHandler")
-        set(value) {
-            uiManagers.contactActionHandler = value
-        }
-
-    internal var settingsChangeCoordinator: SettingsChangeCoordinator
-        get() = required(uiManagers.settingsChangeCoordinator, "SettingsChangeCoordinator")
-        set(value) {
-            uiManagers.settingsChangeCoordinator = value
-        }
-    internal val settingsChangeCoordinatorOrNull: SettingsChangeCoordinator? get() = uiManagers.settingsChangeCoordinator
-
-    internal var donationPromptManager: DonationPromptManager
-        get() = required(uiManagers.donationPromptManager, "DonationPromptManager")
-        set(value) {
-            uiManagers.donationPromptManager = value
-        }
-    internal val donationPromptManagerOrNull: DonationPromptManager? get() = uiManagers.donationPromptManager
-
-    internal var reviewPromptManager: ReviewPromptManager
-        get() = required(uiManagers.reviewPromptManager, "ReviewPromptManager")
-        set(value) {
-            uiManagers.reviewPromptManager = value
-        }
-    internal val reviewPromptManagerOrNull: ReviewPromptManager? get() = uiManagers.reviewPromptManager
-
+    lateinit var searchTypeMenuManager: SearchTypeMenuManager
     
-    private var hasAskedDefaultLauncherThisOpen = false
-    internal var deferredWidgetsInitialized = false
+    lateinit var widgetThemeManager: WidgetThemeManager
+
+    lateinit var gestureHandler: GestureHandler
+
+    lateinit var broadcastReceiverManager: BroadcastReceiverManager
+
+    lateinit var wallpaperManagerHelper: WallpaperManagerHelper
+
+    lateinit var appListLoader: AppListLoader
+
+    lateinit var contactManager: ContactManager
+    lateinit var usageStatsCacheManager: UsageStatsCacheManager
+    
+    lateinit var lifecycleManager: LifecycleManager
+
+    lateinit var appDockManager: AppDockManager
+
+    lateinit var timeDateManager: TimeDateManager
+
+    lateinit var todoManager: TodoManager
+
+    lateinit var todoAlarmManager: TodoAlarmManager
+    
+    lateinit var financeWidgetManager: FinanceWidgetManager
+
+    lateinit var usageStatsDisplayManager: UsageStatsDisplayManager
+    lateinit var rssFeedManager: RssFeedManager
+    
+    lateinit var widgetSetupManager: WidgetSetupManager
+
+    lateinit var widgetManager: WidgetManager
+
+    lateinit var voiceSearchManager: VoiceSearchManager
+
+    lateinit var usageStatsRefreshManager: UsageStatsRefreshManager
+
+    lateinit var activityResultHandler: ActivityResultHandler
+
+    lateinit var navigationManager: NavigationManager
+    
+    lateinit var focusModeApplier: FocusModeApplier
+
+    lateinit var widgetConfigurationManager: WidgetConfigurationManager
+    
+    lateinit var widgetVisibilityManager: WidgetVisibilityManager
+
+    lateinit var serviceManager: ServiceManager
+
+    lateinit var appListUIUpdater: AppListUIUpdater
+
+    lateinit var drawerManager: DrawerManager
+    
+    lateinit var screenPagerManager: ScreenPagerManager
+
+    lateinit var contactActionHandler: ContactActionHandler
+    
+    lateinit var settingsChangeCoordinator: SettingsChangeCoordinator
+
+    lateinit var donationPromptManager: DonationPromptManager
+
+    lateinit var reviewPromptManager: ReviewPromptManager
+    
+    var voiceCommandHandler: VoiceCommandHandler? = null
+    var widgetPrewarmScheduled = false
+    var appList: MutableList<ResolveInfo> = mutableListOf()
+    var fullAppList: MutableList<ResolveInfo> = mutableListOf()
+
+    val views: MainActivityViews get() = activityInitializer.views
+    private val viewModel: MainActivityViewModel by viewModels()
+
+    internal val deferredWidgetsInitialized: Boolean
+        get() = viewModel.uiState.value.deferredWidgetsInitialized
 
     fun isTablet(): Boolean {
         return (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
     }
 
-    
-
-
-    internal fun initializeCoreManagers() {
-        shareManager = ShareManager(this)
-        appLockManager = AppLockManager(this)
-        appTimerManager = AppTimerManager(this)
-        favoriteAppManager = injectedFavoriteAppManager
-        hiddenAppManager = injectedHiddenAppManager
-        webAppManager = injectedWebAppManager
-        
-        
-        appLauncher = AppLauncher(this, packageManager, appLockManager)
-        
-        
-        activityInitializer = ActivityInitializer(this, sharedPreferences, appLauncher)
-        
-        
-        widgetLifecycleCoordinator = WidgetLifecycleCoordinator()
-    }
-    
-    
-
-
     fun applyThemeBasedWidgetBackgrounds() {
-        settingsChangeCoordinatorOrNull?.applyThemeBasedWidgetBackgrounds()
+        settingsChangeCoordinator.applyThemeBasedWidgetBackgrounds()
     }
-    
-    
-
 
     internal fun checkAndUpdateThemeIfNeeded() {
-        widgetThemeManagerOrNull?.checkAndUpdateThemeIfNeeded(
-            todoManager = todoManagerOrNull,
-            appDockManager = appDockManagerOrNull,
+        widgetThemeManager.checkAndUpdateThemeIfNeeded(
+            todoManager = todoManager,
+            appDockManager = appDockManager,
             searchBox = if (views.isSearchBoxInitialized()) views.searchBox else null,
             searchContainer = if (views.isSearchContainerInitialized()) views.searchContainer else null,
             voiceSearchButton = if (views.isVoiceSearchButtonInitialized()) views.voiceSearchButton else null,
             searchTypeButton = if (views.isSearchTypeButtonInitialized()) views.searchTypeButton else null
         )
     }
-    
-    
-
 
     internal fun initializeBroadcastReceivers() {
         broadcastReceiverManager = BroadcastReceiverManager(
@@ -521,7 +225,6 @@ class MainActivity : FragmentActivity() {
             },
             onDndStateChanged = {
                 if (appDockManager.getCurrentMode()) {
-                    
                     val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                     if (notificationManager.isNotificationPolicyAccessGranted && 
                         notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
@@ -538,74 +241,57 @@ class MainActivity : FragmentActivity() {
     @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
-        
         WallpaperDisplayHelper.applySystemWallpaper(views.rightDrawerWallpaper)
     }
-
-    
-
 
     internal fun initializeViews() {
         activityInitializer.initializeViews()
         views.fastScroller.refreshTypography(sharedPreferences)
-
-        usageStatsManager = AppUsageStatsManager(this)
-        weatherManager = injectedWeatherManager
-        
         
         searchTypeMenuManager = SearchTypeMenuManager(
             context = this,
             searchTypeButton = views.searchTypeButton,
-            appSearchManagerProvider = { appSearchManagerOrNull },
-            isFocusModeActive = { appDockManagerOrNull?.getCurrentMode() ?: false }
+            appSearchManagerProvider = { appSearchManager },
+            isFocusModeActive = { appDockManager.getCurrentMode() }
         )
         searchTypeMenuManager.setup()
-
-        
-        setupSearchBoxListener()
     }
     
-    
 
 
-    private fun setupSearchBoxListener() {
-        views.searchBox.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val query = s?.toString()?.trim() ?: ""
-                if (query.isNotEmpty()) {
-                    
-                    activityInitializer.setHeaderVisibility(false)
-                } else {
-                    
-                    activityInitializer.setHeaderVisibility(true)
-                    
-                    handler.postDelayed({
-                        views.recyclerView.scrollToPosition(0)
-                    }, 100)
-                }
-                updateFastScrollerVisibility()
-            }
-            
-            override fun afterTextChanged(s: android.text.Editable?) {}
-        })
+    private fun ensureContactsLoadedForSearch() {
+        if (contactManager.hasLoadedContacts()) return
+
+        contactManager.loadContacts { loadedContacts ->
+            if (isFinishing || isDestroyed || loadedContacts.isEmpty()) return@loadContacts
+            updateAppSearchManager()
+        }
     }
-
     
-
+    internal fun updateSearchQueryAndUI(query: String) {
+        viewModel.updateSearchQuery(query)
+        if (query.isNotEmpty()) {
+            ensureContactsLoadedForSearch()
+            activityInitializer.setHeaderVisibility(false)
+        } else {
+            activityInitializer.setHeaderVisibility(true)
+            handler.postDelayed({
+                views.recyclerView.scrollToPosition(0)
+            }, 100)
+        }
+        updateFastScrollerVisibility()
+    }
 
     internal fun updateFastScrollerVisibility() {
-        if (!views.isSearchBoxInitialized() || appListOrNull == null) return
+        if (!views.isSearchBoxInitialized()) return
         
-        
-        val focusMode = appDockManagerOrNull?.getCurrentMode() ?: false
-        val workspaceMode = appDockManagerOrNull?.isWorkspaceModeActive() ?: false
+        val focusMode = appDockManager.getCurrentMode()
+        val workspaceMode = appDockManager.isWorkspaceModeActive()
         val showFastScroller = sharedPreferences.getBoolean(Constants.Prefs.SHOW_FAST_SCROLLER, true)
+        val hasVisibleItems = (::adapter.isInitialized && adapter.getCurrentListSize() > 0) || appList.isNotEmpty()
         views.fastScroller.setFavoritesVisible(!focusMode && !workspaceMode)
 
-        
-        if (showFastScroller && appList.isNotEmpty()) {
+        if (showFastScroller && hasVisibleItems) {
             views.fastScroller.visibility = View.VISIBLE
         } else {
             views.fastScroller.visibility = View.GONE
@@ -623,39 +309,21 @@ class MainActivity : FragmentActivity() {
         }
     }
     
-    
-
-
     internal fun requestInitialPermissions(onComplete: () -> Unit = {}) {
-        
         permissionManager.requestContactsPermission { 
             contactManager.loadContacts { loadedContacts ->
-                val existingAppSearchManager = appSearchManagerOrNull
-                if (existingAppSearchManager != null) {
-                    
-                    existingAppSearchManager.updateData(
-                        newFullAppList = existingAppSearchManager.getFullAppList(),
-                        newHomeAppList = existingAppSearchManager.getHomeAppList(),
-                        newContactsList = loadedContacts
-                    )
-                } else if (!isFinishing && !isDestroyed && adapterOrNull != null) {
-                    updateAppSearchManager()
-                }
+                updateAppSearchManager()
             }
             
             permissionManager.requestUsageStatsPermission(usageStatsManager) {
-                
                 permissionManager.requestDefaultLauncher {
-                    hasAskedDefaultLauncherThisOpen = true
+                    viewModel.markDefaultLauncherAsked()
                     onComplete()
                 }
             }
         }
     }
     
-    
-
-
     fun startFeatureTutorialAndRequestPermissions() {
         val tutorialManager = FeatureTutorialManager(this, sharedPreferences)
         if (tutorialManager.shouldShowTutorial()) {
@@ -666,9 +334,6 @@ class MainActivity : FragmentActivity() {
             requestInitialPermissions()
         }
     }
-
-    
-
 
     internal fun initializeTimeDateAndWeather() {
         val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
@@ -685,11 +350,8 @@ class MainActivity : FragmentActivity() {
         widgetSetupManager.setupWeather(views.weatherIcon, views.weatherText)
     }
     
-    
-
-
     internal fun initializeDeferredWidgets() {
-        if (!sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)) {
+        if (!sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true) || deferredWidgetsInitialized) {
             return
         }
 
@@ -700,31 +362,53 @@ class MainActivity : FragmentActivity() {
             widgetConfigurationManager = widgetConfigurationManager,
             widgetLifecycleCoordinator = widgetLifecycleCoordinator,
             onComplete = {
-                
+                initializeFinanceWidgetIfNeeded()
                 todoAlarmManager = TodoAlarmManager(this)
                 todoManager = TodoManager(this, sharedPreferences, views.todoRecyclerView, views.addTodoButton, todoAlarmManager)
                 todoManager.initialize()
-                
-                
                 updateLifecycleManagerWithDeferredWidgets()
             }
         )
         
         initializer.initialize()
-        deferredWidgetsInitialized = true
-        
-        
+        viewModel.markDeferredWidgetsInitialized()
         updateRegistryDependencies()
-        
         
         widgetVisibilityManager.update(
             if (widgetLifecycleCoordinator.isYearProgressWidgetInitialized()) widgetLifecycleCoordinator.yearProgressWidget else null,
             if (widgetLifecycleCoordinator.isGithubContributionWidgetInitialized()) widgetLifecycleCoordinator.githubContributionWidget else null)
     }
-    
-    
 
+    private fun scheduleDeferredWidgetPrewarm() {
+        if (widgetPrewarmScheduled ||
+            deferredWidgetsInitialized ||
+            !sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
+        ) {
+            return
+        }
 
+        widgetPrewarmScheduled = true
+        lifecycleScope.launch {
+            try {
+                delay(1200)
+                widgetPrewarmScheduled = false
+                if (!isFinishing && !isDestroyed && !deferredWidgetsInitialized) {
+                    initializeDeferredWidgets()
+                }
+            } finally {
+                widgetPrewarmScheduled = false
+            }
+        }
+    }
+
+    private fun initializeFinanceWidgetIfNeeded() {
+        FinanceWidgetInitializer(this, sharedPreferences, 0)
+            .onInitialized { manager ->
+                financeWidgetManager = manager
+            }
+            .initialize(handler)
+    }
+    
     internal fun updateAppSearchManager(
         newFullList: List<ResolveInfo>? = null,
         newHomeList: List<ResolveInfo>? = null
@@ -734,39 +418,44 @@ class MainActivity : FragmentActivity() {
         val targetFullList = newFullList ?: fullAppList
         val targetHomeList = newHomeList ?: appList
         
-        val existingAppSearchManager = appSearchManagerOrNull
-        if (existingAppSearchManager != null) {
-            existingAppSearchManager.updateData(targetFullList, targetHomeList, contactManager.getContactsList())
-        } else {
+        // Check if appSearchManager needs initial configuration
+        if (!appSearchManager.isConfigured()) {
+            // Only configure if adapter is initialized
+            if (!::adapter.isInitialized) return
             
-            appSearchManager = injectedAppSearchManager
+            // Set up search query callback before configuring
+            appSearchManager.onSearchQueryChanged = { query ->
+                updateSearchQueryAndUI(query)
+            }
+            
             appSearchManager.configure(
                 fullAppList = targetFullList.toMutableList(),
                 homeAppList = targetHomeList,
-                adapter = adapterOrNull,
+                adapter = adapter,
                 searchBox = views.searchBox,
                 contactsList = contactManager.getContactsList(),
-                appMetadataCache = dataManagers.cacheManager?.getMetadataCache(),
+                appMetadataCache = cacheManager.getMetadataCache(),
                 isAppFiltered = { packageName ->
-                    appDockManagerOrNull?.isAppHiddenInFocusMode(packageName) == true
+                    appDockManager.isAppHiddenInFocusMode(packageName)
                 },
-                isFocusModeActive = { appDockManagerOrNull?.getCurrentMode() ?: false }
+                isFocusModeActive = { appDockManager.getCurrentMode() }
             )
+        } else {
+            appSearchManager.updateData(targetFullList, targetHomeList, contactManager.getContactsList())
         }
     }
     
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!isTablet()) {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            if (resources.configuration.orientation != Configuration.ORIENTATION_PORTRAIT) {
-                window.decorView.post { recreate() }
-                return
-            }
-        }
-        instance = this
+        
+        applyOrientationPreference()
         AppInitializer(this).initialize()
+        
+        if (isFinishing || isDestroyed) return
+        
+        handleSettingsUpdate()
+        observeViewModelState()
         if (!isFinishing) {
             reviewPromptManager = ReviewPromptManager(this, sharedPreferences)
             donationPromptManager = DonationPromptManager(this, sharedPreferences)
@@ -777,11 +466,8 @@ class MainActivity : FragmentActivity() {
         }
 
         handleStartTutorialIntent(intent)
-        
-        
-        if (!isFinishing) {
-            contactManager.loadContactsEagerly()
-        }
+        scheduleDeferredWidgetPrewarm()
+        scheduleDeferredContactsLoad()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -797,11 +483,10 @@ class MainActivity : FragmentActivity() {
 
         handleStartTutorialIntent(intent)
 
-        
         if (intent.getBooleanExtra("request_permissions_after_disclosure", false)) {
-            if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+            if (!sharedPreferences.getBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, false)) {
                 requestInitialPermissions {
-                    sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                    sharedPreferences.edit { putBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, true) }
                 }
             }
         }
@@ -828,120 +513,169 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    private fun scheduleDeferredContactsLoad() {
+        if (isFinishing || isDestroyed) return
+
+        handler.postDelayed({
+            if (isFinishing || isDestroyed) return@postDelayed
+            ensureContactsLoadedForSearch()
+        }, 800)
+    }
+
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        screenPagerManagerOrNull?.updatePageWidth()
+        activityInitializer.handleConfigurationChange()
+        screenPagerManager.handleConfigurationChange()
     }
-    
-    
 
+    private fun observeViewModelState() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    if (views.isSearchBoxInitialized()) {
+                        val currentQuery = views.searchBox.text?.toString().orEmpty()
+                        if (currentQuery != state.searchQuery) {
+                            views.searchBox.setText(state.searchQuery)
+                            views.searchBox.setSelection(state.searchQuery.length)
+                        }
+                    }
 
+                    val targetPage = state.currentPage
+                    if (targetPage != null && screenPagerManager.getCurrentPage() != targetPage) {
+                        when (targetPage) {
+                            ScreenPagerManager.Page.RSS -> screenPagerManager.openRssPage(animated = false)
+                            ScreenPagerManager.Page.WIDGETS -> screenPagerManager.openWidgetsPage(animated = false)
+                            ScreenPagerManager.Page.CENTER -> screenPagerManager.openCenterPage(animated = false)
+                            ScreenPagerManager.Page.RIGHT -> screenPagerManager.openRightPage(animated = false)
+                        }
+                    }
+                }
+            }
+        }
+
+        screenPagerManager.setOnPageChanged { page ->
+            viewModel.updateCurrentPage(page)
+            if (page == ScreenPagerManager.Page.WIDGETS) {
+                initializeDeferredWidgets()
+            }
+        }
+        if (screenPagerManager.getCurrentPage() == ScreenPagerManager.Page.WIDGETS) {
+            initializeDeferredWidgets()
+        }
+    }
 
     internal fun initializeLifecycleManager() {
-        lifecycleManager = LifecycleManager(this, handler, sharedPreferences)
-        lifecycleManager.setSystemBarManager(systemBarManager)
-        lifecycleManager.setAppLockManager(appLockManager)
-        
-        if (widgetLifecycleCoordinator.isNotificationsWidgetInitialized()) {
-            lifecycleManager.setNotificationsWidget(widgetLifecycleCoordinator.notificationsWidget)
-        }
-        
-        lifecycleManager.setWallpaperManagerHelper(wallpaperManagerHelper)
-        lifecycleManager.setGestureHandler(gestureHandler)
-        lifecycleManager.setAppDockManager(appDockManager)
-        lifecycleManager.setAdapter(adapter)
-        lifecycleManager.setAppList(appList)
-        lifecycleManager.setAppListLoader(appListLoader)
-        lifecycleManager.setWidgetManager(widgetManager)
-        lifecycleManager.setUsageStatsManager(usageStatsManager)
-        lifecycleManager.setUsageStatsDisplayManager(usageStatsDisplayManager)
-        lifecycleManager.setTimeDateManager(timeDateManager)
-        lifecycleManager.setWeeklyUsageGraph(views.weeklyUsageGraph)
-        
-        todoManagerOrNull?.let(lifecycleManager::setTodoManager)
-        
-        lifecycleManager.setBackgroundExecutor(backgroundExecutor)
-        lifecycleManager.setWidgetLifecycleCoordinator(widgetLifecycleCoordinator)
-        lifecycleManager.setWidgetThemeManager(widgetThemeManager)
-        lifecycleManager.setViews(views)
-        
-        broadcastReceiverManagerOrNull?.let(lifecycleManager::setBroadcastReceiverManager)
-        
-        lifecycleManager.setShareManager(shareManager)
-        
-        dataManagers.serviceManager?.let(lifecycleManager::setServiceManager)
-        
-        lifecycleManager.setAppTimerManager(appTimerManager)
-        
-        lifecycleManager.setHiddenAppManager(hiddenAppManager)
-        
-        
-        lifecycleManager.onBatteryUpdate = { updateBatteryInBackground() }
-        lifecycleManager.onUsageUpdate = { updateUsageInBackground() }
+        lifecycleManager = LifecycleManager(
+            activity = this,
+            handler = handler,
+            sharedPreferences = sharedPreferences,
+            dependencies = LifecycleManager.Dependencies(
+                systemBarManager = systemBarManager,
+                appLockManager = appLockManager,
+                notificationsWidget = widgetLifecycleCoordinator
+                    .takeIf { it.isNotificationsWidgetInitialized() }
+                    ?.notificationsWidget,
+                wallpaperManagerHelper = wallpaperManagerHelper,
+                gestureHandler = gestureHandler,
+                appDockManager = appDockManager,
+                adapter = adapter,
+                appList = appList,
+                appListLoader = appListLoader,
+                widgetManager = widgetManager,
+                usageStatsManager = usageStatsManager,
+                timeDateManager = timeDateManager,
+                weeklyUsageGraph = views.weeklyUsageGraph,
+                usageStatsDisplayManager = usageStatsDisplayManager,
+                todoManager = null,
+                backgroundExecutor = backgroundExecutor,
+                widgetLifecycleCoordinator = widgetLifecycleCoordinator,
+                widgetThemeManager = widgetThemeManager,
+                views = views,
+                broadcastReceiverManager = null,
+                shareManager = shareManager,
+                serviceManager = serviceManager,
+                appTimerManager = appTimerManager,
+                hiddenAppManager = hiddenAppManager
+            )
+        )
+
+        lifecycleManager.onBatteryUpdate = { usageStatsRefreshManager.updateBatteryInBackground() }
+        lifecycleManager.onUsageUpdate = { usageStatsRefreshManager.updateUsageInBackground() }
         lifecycleManager.onFocusModeApply = { isFocusMode -> applyFocusMode(isFocusMode) }
         lifecycleManager.onLoadApps = { forceRefresh -> appListLoader.loadApps(forceRefresh) }
     }
     
-    
-
-
     private fun updateLifecycleManagerWithDeferredWidgets() {
-        lifecycleManagerOrNull?.let { activeLifecycleManager ->
-            if (widgetLifecycleCoordinator.isNotificationsWidgetInitialized()) {
-                activeLifecycleManager.setNotificationsWidget(widgetLifecycleCoordinator.notificationsWidget)
-            }
-            todoManagerOrNull?.let(activeLifecycleManager::setTodoManager)
+        val coordinator = widgetLifecycleCoordinator
+        lifecycleManager.updateDependencies {
+            copy(
+                notificationsWidget = coordinator
+                    .takeIf { it.isNotificationsWidgetInitialized() }
+                    ?.notificationsWidget,
+                todoManager = todoManager
+            )
         }
     }
 
     fun refreshAppsForFocusMode() {
-        appListUIUpdaterOrNull?.refreshAppsForFocusMode()
+        appListUIUpdater.refreshAppsForFocusMode()
     }
 
     fun openWidgetsPage(animated: Boolean = true) {
-        screenPagerManagerOrNull?.openWidgetsPage(animated)
+        screenPagerManager.openWidgetsPage(animated)
     }
 
     fun openRssPage(animated: Boolean = true) {
-        screenPagerManagerOrNull?.openRssPage(animated)
+        screenPagerManager.openRssPage(animated)
     }
 
     fun openHomePage(animated: Boolean = true) {
-        screenPagerManagerOrNull?.openCenterPage(animated)
+        screenPagerManager.openCenterPage(animated)
     }
 
     fun openWallpaperPage(animated: Boolean = true) {
-        screenPagerManagerOrNull?.openRightPage(animated)
+        screenPagerManager.openRightPage(animated)
     }
 
     fun openDefaultHomePage(animated: Boolean = true) {
-        screenPagerManagerOrNull?.openDefaultHomePage(animated)
+        screenPagerManager.openDefaultHomePage(animated)
     }
 
     fun setWidgetsPageLocked(locked: Boolean) {
-        screenPagerManagerOrNull?.setLeftPageLocked(locked)
+        screenPagerManager.setLeftPageLocked(locked)
     }
     
     fun refreshAppsForWorkspace() {
-        appListUIUpdaterOrNull?.refreshAppsForWorkspace()
+        appListUIUpdater.refreshAppsForWorkspace()
     }
     
     fun clearAppCacheAndReload() {
-        appListLoaderOrNull?.loadApps(forceRefresh = true)
+        appListLoader.loadApps(forceRefresh = true)
     }
     
     fun filterAppsWithoutReload() {
-        appListUIUpdaterOrNull?.filterAppsWithoutReload()
+        appListUIUpdater.filterAppsWithoutReload()
     }
 
     private fun handleSettingsUpdate() {
-        settingsChangeCoordinatorOrNull?.handleSettingsUpdate()
+        applyOrientationPreference()
+        settingsChangeCoordinator.handleSettingsUpdate()
         syncOptionalPagesAfterSettingsUpdate()
     }
 
+    private fun applyOrientationPreference() {
+        if (!::sharedPreferences.isInitialized) return
+        requestedOrientation = if (sharedPreferences.getBoolean(Constants.Prefs.LANDSCAPE_ORIENTATION_ENABLED, false)) {
+            ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+    }
+
     private fun syncOptionalPagesAfterSettingsUpdate() {
-        val widgetsEnabled = sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
-        if (widgetsEnabled && !deferredWidgetsInitialized) {
+        if (sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true) &&
+            screenPagerManager.getCurrentPage() == ScreenPagerManager.Page.WIDGETS
+        ) {
             handler.post {
                 if (!isFinishing && !isDestroyed) {
                     initializeDeferredWidgets()
@@ -962,10 +696,7 @@ class MainActivity : FragmentActivity() {
     
     private fun handlePackageChange(packageName: String?, isRemoved: Boolean) {
         if (packageName == null) return
-        
-        
         cacheManager.removeMetadata(packageName)
-        
         
         if (isRemoved) {
             cacheManager.clearCache()
@@ -981,65 +712,77 @@ class MainActivity : FragmentActivity() {
         }
         
         if (!isRemoved) {
-            
             appListLoader.clearCache()
-            appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapterOrNull)
+            appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        instance = null
-        lifecycleManagerOrNull?.onDestroy()
-        
-        
-        
-    }
-
-    
-    private fun updateBatteryInBackground() {
-        usageStatsRefreshManagerOrNull?.updateBatteryInBackground()
-    }
-
-    private fun updateUsageInBackground() {
-        usageStatsRefreshManagerOrNull?.updateUsageInBackground()
+        if (::lifecycleManager.isInitialized) {
+            lifecycleManager.onDestroy()
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
-            gestureHandlerOrNull?.updateGestureExclusion()
+            gestureHandler.updateGestureExclusion()
         }
     }
 
     override fun onResume() {
         super.onResume()
-        lifecycleManagerOrNull?.onResume()
+        if (!::sharedPreferences.isInitialized) return
+        if (::lifecycleManager.isInitialized) {
+            lifecycleManager.onResume()
+        }
         
-        
-        if (sharedPreferences.getBoolean("waiting_for_usage_stats_return", false)) {
-            
-            sharedPreferences.edit { putBoolean("waiting_for_usage_stats_return", false) }
-            
-            
+        if (sharedPreferences.getBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, false)) {
+            sharedPreferences.edit { putBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, false) }
             permissionManager.requestDefaultLauncher {
-                hasAskedDefaultLauncherThisOpen = true
-                
-                if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
-                    sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                viewModel.markDefaultLauncherAsked()
+                if (!sharedPreferences.getBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, false)) {
+                    sharedPreferences.edit { putBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, true) }
                 }
             }
             return 
         }
-        if (reviewPromptManagerOrNull?.promptIfEligible() == true) {
+        if (reviewPromptManager.promptIfEligible()) {
             return
         }
-        donationPromptManagerOrNull?.promptIfEligible()
+        donationPromptManager.promptIfEligible()
     }
 
     override fun onPause() {
         super.onPause()
-        lifecycleManagerOrNull?.onPause()
+        if (::lifecycleManager.isInitialized) {
+            lifecycleManager.onPause()
+        }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            cacheManager.getMetadataCache().keys
+                .filter { it.startsWith("com.guruswarupa.launch.webapp.") }
+                .forEach { cacheManager.removeMetadata(it) }
+            wallpaperManagerHelper.clearCache()
+        }
+
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+            cacheManager.clearCache()
+            appListLoader.clearCache()
+            wallpaperManagerHelper.clearCache()
+        }
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        cacheManager.clearCache()
+        appListLoader.clearCache()
+        wallpaperManagerHelper.clearCache()
     }
 
     override fun onRequestPermissionsResult(
@@ -1055,22 +798,12 @@ class MainActivity : FragmentActivity() {
             grantResults,
             onContactsGranted = { 
                 contactManager.loadContacts { loadedContacts ->
-                    val existingAppSearchManager = appSearchManagerOrNull
-                    if (existingAppSearchManager != null) {
-                        
-                        existingAppSearchManager.updateData(
-                            newFullAppList = existingAppSearchManager.getFullAppList(),
-                            newHomeAppList = existingAppSearchManager.getHomeAppList(),
-                            newContactsList = loadedContacts
-                        )
-                    } else if (!isFinishing && !isDestroyed && adapterOrNull != null) {
-                        updateAppSearchManager()
-                    }
+                    updateAppSearchManager()
                 }
             },
             onCallPhoneGranted = {  },
             onNotificationGranted = {
-                todoManagerOrNull?.rescheduleTodoAlarms()
+                todoManager.rescheduleTodoAlarms()
             },
             onStorageGranted = {
                 
@@ -1082,34 +815,30 @@ class MainActivity : FragmentActivity() {
             }
         )
 
-        
         if (requestCode == PermissionManager.CONTACTS_PERMISSION_REQUEST) {
-            
-            if (!sharedPreferences.getBoolean("initial_permissions_asked", false)) {
+            if (!sharedPreferences.getBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, false)) {
                 handler.postDelayed({
                     permissionManager.requestUsageStatsPermission(usageStatsManager) {
                         permissionManager.requestDefaultLauncher {
-                            hasAskedDefaultLauncherThisOpen = true
-                            sharedPreferences.edit { putBoolean("initial_permissions_asked", true) }
+                            viewModel.markDefaultLauncherAsked()
+                            sharedPreferences.edit { putBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, true) }
                         }
                     }
                 }, 300)
             }
         }
         
-        
         if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && 
             grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            voiceSearchManagerOrNull?.startVoiceSearch()
+            voiceSearchManager.startVoiceSearch()
             if (widgetLifecycleCoordinator.isNoiseDecibelWidgetInitialized()) {
                 widgetLifecycleCoordinator.noiseDecibelWidget.onPermissionGranted()
             }
         }
         
-        
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             when (requestCode) {
-                105 -> if (widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
+                Constants.RequestCodes.ACTIVITY_RECOGNITION_PERMISSION -> if (widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
                     widgetLifecycleCoordinator.physicalActivityWidget.onPermissionGranted()
                 }
                 CalendarEventsWidget.REQUEST_CODE_CALENDAR_PERMISSION -> if (widgetLifecycleCoordinator.isCalendarEventsWidgetInitialized()) {
@@ -1123,31 +852,25 @@ class MainActivity : FragmentActivity() {
     }
 
     fun applyFocusMode(isFocusMode: Boolean) {
-        focusModeApplierOrNull?.applyFocusMode(isFocusMode)
+        focusModeApplier.applyFocusMode(isFocusMode)
     }
-
-    
-
 
     internal fun showWidgetConfigurationDialog() {
         resultRegistry.showWidgetConfigurationDialog()
     }
 
-    
-
-
     fun updateRegistryDependencies() {
         val deps = MainActivityResultRegistry.DependencyContainer(
-            widgetManager = widgetManagers.widgetManager,
-            widgetVisibilityManager = widgetManagers.widgetVisibilityManager,
-            widgetConfigurationManager = widgetManagers.widgetConfigurationManager,
+            widgetManager = widgetManager,
+            widgetVisibilityManager = widgetVisibilityManager,
+            widgetConfigurationManager = widgetConfigurationManager,
             voiceCommandHandler = voiceCommandHandler,
-            activityResultHandler = uiManagers.activityResultHandler,
+            activityResultHandler = activityResultHandler,
             packageManager = packageManager,
             contentResolver = contentResolver,
             searchBox = if (views.isSearchBoxInitialized()) views.searchBox else null,
-            appList = dataManagers.appList,
-            widgetLifecycleCoordinator = widgetManagers.widgetLifecycleCoordinator
+            appList = appList,
+            widgetLifecycleCoordinator = widgetLifecycleCoordinator
         )
         resultRegistry.setDependencies(deps)
     }

@@ -17,9 +17,8 @@ import androidx.fragment.app.FragmentActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.ActivityData
 import com.guruswarupa.launch.managers.PhysicalActivityManager
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.PhysicalActivityTrackingService
-import com.guruswarupa.launch.utils.DialogStyler
-import com.guruswarupa.launch.utils.setDialogInputView
 import com.guruswarupa.launch.ui.views.HourlyStepsChartView
 import com.guruswarupa.launch.ui.views.PhysicalActivityCalendarView
 import java.text.DecimalFormat
@@ -31,6 +30,9 @@ class PhysicalActivityWidget(
     private val container: LinearLayout,
     private val sharedPreferences: android.content.SharedPreferences
 ) {
+    companion object {
+        private const val PREF_PHYSICAL_ACTIVITY_TRACKING_ENABLED = "physical_activity_tracking_enabled"
+    }
     
     private lateinit var activityManager: PhysicalActivityManager
     private val handler = Handler(Looper.getMainLooper())
@@ -40,7 +42,6 @@ class PhysicalActivityWidget(
     private lateinit var distanceText: TextView
     private lateinit var permissionButton: Button
     private lateinit var viewToggleButton: Button
-    private lateinit var calibrationButton: ImageButton
     private lateinit var statsViewContainer: LinearLayout
     private lateinit var calendarViewContainer: FrameLayout
     
@@ -70,7 +71,6 @@ class PhysicalActivityWidget(
         distanceText = widgetView.findViewById(R.id.distance_text)
         permissionButton = widgetView.findViewById(R.id.request_permission_button)
         viewToggleButton = widgetView.findViewById(R.id.view_toggle_button)
-        calibrationButton = widgetView.findViewById(R.id.calibration_button)
         statsViewContainer = widgetView.findViewById(R.id.stats_view_container)
         calendarViewContainer = widgetView.findViewById(R.id.calendar_view_container)
         
@@ -78,7 +78,7 @@ class PhysicalActivityWidget(
         
         
         activityManager = PhysicalActivityManager(context)
-        activityManager.initializeAsync {
+        activityManager.initializeAsync(autoStartTracking = false) {
             
             if (activityManager.hasActivityRecognitionPermission()) {
                 setupWithPermission()
@@ -92,17 +92,6 @@ class PhysicalActivityWidget(
             toggleView()
         }
 
-        calibrationButton.setOnClickListener {
-            
-            val activityData = activityManager.getTodayActivity()
-            if (activityData.steps > 100000 || activityData.distanceKm > 100.0) {
-                showResetDataDialog()
-            } else {
-                showCalibrationDialog()
-            }
-        }
-        
-        
         initializeCalendarView()
         
         isInitialized = true
@@ -218,14 +207,9 @@ class PhysicalActivityWidget(
     private fun setupWithPermission() {
         permissionButton.visibility = View.GONE
         viewToggleButton.visibility = View.VISIBLE
-        calibrationButton.visibility = View.VISIBLE
         
         
         startTrackingService()
-        
-        
-        activityManager.startTracking()
-        
         
         handler.postDelayed({
             updateDisplay()
@@ -236,6 +220,7 @@ class PhysicalActivityWidget(
     }
     
     private fun startTrackingService() {
+        sharedPreferences.edit().putBoolean(PREF_PHYSICAL_ACTIVITY_TRACKING_ENABLED, true).apply()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val intent = Intent(context, PhysicalActivityTrackingService::class.java)
             context.startForegroundService(intent)
@@ -253,7 +238,6 @@ class PhysicalActivityWidget(
     private fun setupWithoutPermission() {
         permissionButton.visibility = View.VISIBLE
         viewToggleButton.visibility = View.GONE
-        calibrationButton.visibility = View.GONE
         
         statsViewContainer.visibility = View.VISIBLE
         calendarViewContainer.visibility = View.GONE
@@ -293,7 +277,7 @@ class PhysicalActivityWidget(
                             ActivityCompat.requestPermissions(
                                 context,
                                 arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION),
-                                105
+                                Constants.RequestCodes.ACTIVITY_RECOGNITION_PERMISSION
                             )
                         }
                     }
@@ -337,101 +321,8 @@ class PhysicalActivityWidget(
         }
     }
     
-    private fun showCalibrationDialog() {
-        val options = arrayOf("Enter Height (cm)", "Enter Stride Length (m)", "Reset to Default")
-        
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Calibrate Distance")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> showHeightInputDialog()
-                    1 -> showStrideLengthInputDialog()
-                    2 -> {
-                        activityManager.resetStrideLengthToDefault()
-                        updateDisplay()
-                        Toast.makeText(context, "Reset to default stride length", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
-    private fun showHeightInputDialog() {
-        val input = EditText(context).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            val currentHeight = activityManager.getUserHeightCm()
-            if (currentHeight > 0) setText(currentHeight.toString())
-            hint = "Height in cm (e.g. 175)"
-            DialogStyler.styleInput(context, this)
-        }
-        
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Enter Your Height")
-            .setMessage("Your stride length will be calculated based on your height (approx. 43% of height).")
-            .setDialogInputView(context, input)
-            .setPositiveButton("Save") { _, _ ->
-                val height = input.text.toString().toIntOrNull()
-                if (height != null && height in 50..250) {
-                    activityManager.setUserHeightCm(height)
-                    updateDisplay()
-                    Toast.makeText(context, "Calibration saved", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Invalid height entered", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
-    private fun showStrideLengthInputDialog() {
-        val input = EditText(context).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            val currentStride = activityManager.getStrideLengthMeters()
-            setText(String.format(Locale.US, "%.2f", currentStride))
-            hint = "Stride length in meters (e.g. 0.75)"
-            DialogStyler.styleInput(context, this)
-        }
-        
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Enter Stride Length")
-            .setMessage("Enter the average distance of one step in meters.")
-            .setDialogInputView(context, input)
-            .setPositiveButton("Save") { _, _ ->
-                val stride = input.text.toString().toDoubleOrNull()
-                if (stride != null && stride in 0.1..2.0) {
-                    activityManager.setStrideLengthMeters(stride)
-                    updateDisplay()
-                    Toast.makeText(context, "Calibration saved", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Invalid stride length", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
-    private fun showResetDataDialog() {
-        AlertDialog.Builder(context, R.style.CustomDialogTheme)
-            .setTitle("Data Integrity Check")
-            .setMessage(String.format(Locale.getDefault(), "The step count or distance appears to be corrupted (%d steps, %.2f km). Would you like to reset all activity data?", 
-                activityManager.getTodaySteps(), activityManager.getTodayDistanceKm()))
-            .setPositiveButton("Reset All Data") { _, _ ->
-                activityManager.resetAllData()
-                updateDisplay()
-                calendarView?.refreshData()
-                Toast.makeText(context, "Activity data has been reset", Toast.LENGTH_LONG).show()
-            }
-            .setNeutralButton("Recalibrate Only") { _, _ ->
-                showCalibrationDialog()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
     fun onResume() {
         if (isInitialized && activityManager.hasActivityRecognitionPermission()) {
-            activityManager.startTracking()
             updateDisplay()
             handler.post(updateRunnable)
         }
@@ -439,16 +330,9 @@ class PhysicalActivityWidget(
     
     fun onPause() {
         handler.removeCallbacks(updateRunnable)
-        
-        if (isInitialized) {
-            activityManager.stopTracking()
-        }
     }
     
     fun cleanup() {
-        onPause()
-        if (isInitialized) {
-            activityManager.cleanup()
-        }
+        handler.removeCallbacks(updateRunnable)
     }
 }

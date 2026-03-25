@@ -57,9 +57,9 @@ class WidgetSetupManager(
     }
     
     fun setupCalculatorWidget(): CalculatorWidget {
-        val calculatorContainer = activity.findViewById<ViewGroup>(R.id.calculator_widget_container)
+        val calculatorContainer = activity.findViewById<ViewGroup?>(R.id.calculator_widget_container)
         val calculatorView = LayoutInflater.from(activity).inflate(R.layout.calculator_widget, calculatorContainer, false)
-        calculatorContainer.addView(calculatorView)
+        calculatorContainer?.addView(calculatorView)
         return CalculatorWidget(calculatorView)
     }
     

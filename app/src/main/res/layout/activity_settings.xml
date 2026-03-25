@@ -282,29 +282,6 @@
                                     android:gravity="end"/>
                             </LinearLayout>
 
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="20dp"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:text="Grayscale app icons"
-                                    android:textColor="@color/white"
-                                    android:textSize="14sp"
-                                    android:fontFamily="sans-serif-medium" />
-
-                                <androidx.appcompat.widget.SwitchCompat
-                                    android:id="@+id/grayscale_icons_switch"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:thumbTint="@color/nord8"
-                                    android:trackTint="@color/nord8" />
-                            </LinearLayout>
                         </LinearLayout>
 
                         <View
@@ -354,6 +331,29 @@
 
                             <androidx.appcompat.widget.SwitchCompat
                                 android:id="@+id/show_fast_scroller_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Enable Landscape Orientation"
+                                android:textColor="@color/white"
+                                android:textSize="15sp"/>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/landscape_orientation_switch"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 app:thumbTint="@color/nord8"
@@ -887,6 +887,243 @@
                         android:paddingHorizontal="16dp"
                         android:paddingBottom="16dp">
 
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Edge Panel"
+                                    android:textColor="@color/white"
+                                    android:textSize="15sp"/>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Corner handle with recent and pinned apps"
+                                    android:textColor="@color/white"
+                                    android:alpha="0.5"
+                                    android:textSize="11sp"/>
+                            </LinearLayout>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/edge_panel_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF"/>
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/config_edge_panel_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="16dp"
+                            android:text="Customize Edge Panel"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:visibility="gone"/>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:alpha="0.05"
+                            android:background="@color/white" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingVertical="12dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Walk to Play"
+                                    android:textColor="@color/white"
+                                    android:textSize="15sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Launch an action after sustained walking"
+                                    android:textColor="@color/white"
+                                    android:alpha="0.5"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/walk_detect_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="#30FFFFFF" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/walk_detect_settings_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <Spinner
+                                android:id="@+id/walk_detect_action_spinner"
+                                style="@style/TranslucentSpinnerStyle"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp" />
+
+                            <Button
+                                android:id="@+id/walk_detect_choose_app_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:layout_marginTop="12dp"
+                                android:text="Choose App"
+                                android:textAllCaps="false"
+                                android:textColor="@color/white"
+                                android:background="@drawable/settings_card_background"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/walk_detect_selected_app_text"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="No app selected"
+                                android:textSize="12sp"
+                                android:textColor="@color/nord8"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Step Threshold"
+                                android:textSize="12sp"
+                                android:textColor="@color/white"
+                                android:alpha="0.5"
+                                android:layout_marginTop="12dp"
+                                android:layout_marginBottom="4dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <SeekBar
+                                    android:id="@+id/walk_detect_threshold_seekbar"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:paddingHorizontal="0dp"
+                                    android:thumbTint="@color/nord8"
+                                    android:progressTint="@color/nord8"
+                                    android:progressBackgroundTint="#20FFFFFF" />
+
+                                <TextView
+                                    android:id="@+id/walk_detect_threshold_value"
+                                    android:layout_width="72dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="10 steps"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:textColor="@color/nord8"
+                                    android:gravity="end" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Time Window"
+                                android:textSize="12sp"
+                                android:textColor="@color/white"
+                                android:alpha="0.5"
+                                android:layout_marginTop="12dp"
+                                android:layout_marginBottom="4dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <SeekBar
+                                    android:id="@+id/walk_detect_time_window_seekbar"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:paddingHorizontal="0dp"
+                                    android:thumbTint="@color/nord8"
+                                    android:progressTint="@color/nord8"
+                                    android:progressBackgroundTint="#20FFFFFF" />
+
+                                <TextView
+                                    android:id="@+id/walk_detect_time_window_value"
+                                    android:layout_width="72dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="15 sec"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:textColor="@color/nord8"
+                                    android:gravity="end" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Cooldown"
+                                android:textSize="12sp"
+                                android:textColor="@color/white"
+                                android:alpha="0.5"
+                                android:layout_marginTop="12dp"
+                                android:layout_marginBottom="4dp" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <SeekBar
+                                    android:id="@+id/walk_detect_cooldown_seekbar"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:paddingHorizontal="0dp"
+                                    android:thumbTint="@color/nord8"
+                                    android:progressTint="@color/nord8"
+                                    android:progressBackgroundTint="#20FFFFFF" />
+
+                                <TextView
+                                    android:id="@+id/walk_detect_cooldown_value"
+                                    android:layout_width="72dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="5 min"
+                                    android:textSize="14sp"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:textColor="@color/nord8"
+                                    android:gravity="end" />
+                            </LinearLayout>
+                        </LinearLayout>
+
                         
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -904,7 +1141,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="Float Shortcut"
+                                    android:text="Control Center Shortcut"
                                     android:textColor="@color/white"
                                     android:textSize="15sp"/>
 
@@ -924,6 +1161,17 @@
                                 app:thumbTint="@color/nord8"
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
+
+                        <Button
+                            android:id="@+id/config_control_center_button"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:layout_marginTop="16dp"
+                            android:text="Customize Control Center"
+                            android:textAllCaps="false"
+                            android:background="@drawable/settings_card_background"
+                            android:textColor="@color/white"
+                            android:visibility="gone"/>
 
                         <View
                             android:layout_width="match_parent"
@@ -1279,16 +1527,6 @@
                                 app:thumbTint="@color/nord8"
                                 app:trackTint="#30FFFFFF"/>
                         </LinearLayout>
-
-                        <Button
-                            android:id="@+id/config_control_center_button"
-                            android:layout_width="match_parent"
-                            android:layout_height="52dp"
-                            android:layout_marginTop="16dp"
-                            android:text="Customize Control Center"
-                            android:textAllCaps="false"
-                            android:background="@drawable/settings_card_background"
-                            android:textColor="@color/white"/>
 
                     </LinearLayout>
                 </LinearLayout>
@@ -2239,17 +2477,29 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/translucent_black_pill"
+                    android:paddingStart="14dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="6dp"
                     android:text="Developed by Guru Swarupa"
-                    android:textColor="#60FFFFFF"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
                     android:textSize="11sp"/>
 
                 <TextView
                     android:id="@+id/version_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/translucent_black_pill"
+                    android:paddingStart="14dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="14dp"
+                    android:paddingBottom="6dp"
                     android:text="v1.0"
-                    android:textColor="#30FFFFFF"
-                    android:textSize="10sp"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="11sp"
                     android:layout_marginTop="4dp"/>
             </LinearLayout>
 

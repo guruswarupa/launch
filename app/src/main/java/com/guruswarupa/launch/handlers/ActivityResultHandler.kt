@@ -64,7 +64,7 @@ class ActivityResultHandler(
                 prefs.edit().putBoolean("work_profile_enabled", true).apply()
                 activity.refreshAppsForWorkspace()
                 
-                activity.appDockManagerOrNull?.updateDockIcons()
+                activity.appDockManager.updateDockIcons()
             }
         } else {
             Toast.makeText(activity, "Work profile setup failed or cancelled", Toast.LENGTH_SHORT).show()

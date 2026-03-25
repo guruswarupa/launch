@@ -65,28 +65,6 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/save_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="22dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#66000000"
-                app:strokeWidth="1dp"
-                app:strokeColor="#40FFFFFF"
-                android:clickable="true"
-                android:focusable="true">
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SAVE"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:fontFamily="sans-serif-black"
-                    android:paddingHorizontal="24dp"
-                    android:paddingVertical="12dp"/>
-            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
         
@@ -147,7 +125,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             android:layout_marginStart="12dp"
-            android:text="Drag handles to reorder. Tap a card to toggle."
+            android:text="Changes save automatically. Drag handles to reorder. Tap a card to toggle."
             android:textColor="@color/white"
             android:alpha="0.5"
             android:textSize="13sp"

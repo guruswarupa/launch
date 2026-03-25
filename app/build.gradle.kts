@@ -2,8 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.google.ksp)
 }
 
 android {
@@ -12,16 +12,12 @@ android {
 
     defaultConfig {
         applicationId = "com.guruswarupa.launch"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
-        versionCode = 45
-        versionName = "7.2"
+        versionCode = 52
+        versionName = "7.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        
-        
-        resConfigs("en")
     }
 
     buildTypes {
@@ -75,14 +71,19 @@ android {
     }
 }
 
-kapt {
-    correctErrorTypes = true
+// Suppress Moshi kapt deprecation warning (Hilt bug, not actual kapt usage)
+gradle.projectsEvaluated {
+    tasks.withType<JavaCompile>().configureEach {
+        options.compilerArgs.add("-Xlint:-processing")
+    }
 }
 
 dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.savedstate)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -90,12 +91,12 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.recyclerview)
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.cardview)
     implementation(libs.material)
     implementation(libs.exp4j)
     implementation(libs.glide)
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -107,5 +108,14 @@ dependencies {
     implementation(libs.google.play.billing)
     implementation(libs.google.play.review)
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
+    
+    // Moshi for JSON serialization (using KSP)
+    implementation("com.squareup.moshi:moshi:1.15.1")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
+    
+    // Apache POI for Office document parsing
+    implementation("org.apache.poi:poi:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("org.apache.poi:poi-scratchpad:5.2.5")
 }

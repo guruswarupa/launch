@@ -2,6 +2,7 @@ package com.guruswarupa.launch.managers
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -46,7 +47,8 @@ class ScreenPagerManager(
     private val minimumFlingVelocity = viewConfiguration.scaledMinimumFlingVelocity
     private val touchSlop = viewConfiguration.scaledTouchSlop
     private val pageViews = linkedMapOf<Page, View>()
-    private var activePages = listOf(Page.WIDGETS, Page.CENTER, Page.RIGHT)
+    private var activePages = listOf(Page.RIGHT, Page.CENTER, Page.WIDGETS)
+    private var suppressNextLayoutSnap = false
 
     companion object {
         private const val PAGE_SWITCH_THRESHOLD = 0.12f
@@ -74,13 +76,15 @@ class ScreenPagerManager(
             )
         }
 
-        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-        ViewCompat.setAccessibilityDelegate(drawerLayout, AccessibilityDelegateCompat())
-        drawerLayout.removeAllViews()
+        runWithAccessibilityTraversalSuppressed(drawerLayout) {
+            drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+            ViewCompat.setAccessibilityDelegate(drawerLayout, AccessibilityDelegateCompat())
+            drawerLayout.removeAllViews()
 
-        pageViews.values.forEach { page ->
-            (page.parent as? ViewGroup)?.removeView(page)
-            setupDoubleTapToLock(page)
+            pageViews.values.forEach { page ->
+                (page.parent as? ViewGroup)?.removeView(page)
+                setupDoubleTapToLock(page)
+            }
         }
 
         pagerScrollView = object : SafeHorizontalScrollView(activity) {
@@ -146,9 +150,24 @@ class ScreenPagerManager(
                     notifyPageChanged(page, force = false)
                 }
             }
+            addOnLayoutChangeListener { _, left, _, right, _, oldLeft, _, oldRight, _ ->
+                val newWidth = right - left
+                val oldWidth = oldRight - oldLeft
+                if (newWidth > 0 && oldWidth > 0 && newWidth != oldWidth) {
+                    if (suppressNextLayoutSnap) {
+                        suppressNextLayoutSnap = false
+                    } else {
+                        post {
+                            snapToCurrentPageAfterLayout()
+                        }
+                    }
+                }
+            }
         }
 
-        drawerLayout.addView(pagerScrollView)
+        runWithAccessibilityTraversalSuppressed(drawerLayout) {
+            drawerLayout.addView(pagerScrollView)
+        }
         rebuildPageStrip()
 
         pagerScrollView.post {
@@ -186,18 +205,20 @@ class ScreenPagerManager(
     private fun rebuildPageStrip() {
         activePages = buildActivePages()
         val pageStrip = pagerScrollView.getChildAt(0) as? LinearLayout ?: return
-        pageStrip.removeAllViews()
+        runWithAccessibilityTraversalSuppressed(pagerScrollView) {
+            pageStrip.removeAllViews()
 
-        activePages.forEach { page ->
-            pageViews[page]?.let { view ->
-                (view.parent as? ViewGroup)?.removeView(view)
-                pageStrip.addView(
-                    view,
-                    LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
+            activePages.forEach { page ->
+                pageViews[page]?.let { view ->
+                    (view.parent as? ViewGroup)?.removeView(view)
+                    pageStrip.addView(
+                        view,
+                        LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
                     )
-                )
+                }
             }
         }
     }
@@ -207,14 +228,14 @@ class ScreenPagerManager(
         val rssEnabled = prefs.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true)
         val widgetsEnabled = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
         val pages = mutableListOf<Page>()
-        if (rssEnabled) {
-            pages.add(Page.RSS)
-        }
+        pages.add(Page.RIGHT)
+        pages.add(Page.CENTER)
         if (widgetsEnabled) {
             pages.add(Page.WIDGETS)
         }
-        pages.add(Page.CENTER)
-        pages.add(Page.RIGHT)
+        if (rssEnabled) {
+            pages.add(Page.RSS)
+        }
         return pages
     }
 
@@ -305,7 +326,7 @@ class ScreenPagerManager(
 
     fun isPageOpen(page: Page): Boolean = currentPage == page
 
-    fun openLeftPage(animated: Boolean = true) = openWidgetsPage(animated)
+    fun openLeftPage(animated: Boolean = true) = openRightPage(animated)
 
     fun openRssPage(animated: Boolean = true) = scrollToPage(Page.RSS, animated)
 
@@ -417,6 +438,34 @@ class ScreenPagerManager(
         }
     }
 
+    fun handleConfigurationChange() {
+        if (!::pagerScrollView.isInitialized) {
+            return
+        }
+        suppressNextLayoutSnap = false
+        pagerScrollView.requestLayout()
+        pagerScrollView.post {
+            snapToCurrentPageAfterLayout()
+            pagerScrollView.postDelayed({
+                snapToCurrentPageAfterLayout()
+            }, 32L)
+        }
+    }
+
+    private fun snapToCurrentPageAfterLayout() {
+        updatePageWidth(force = true)
+        if (pageWidth <= 0) {
+            return
+        }
+
+        val targetPage = sanitizePage(currentPage)
+        val targetX = pageIndex(targetPage) * pageWidth
+        suppressNextLayoutSnap = true
+        pagerScrollView.scrollTo(targetX, 0)
+        notifyPageChanged(targetPage, force = true)
+        applyPageTransitions(targetX)
+    }
+
     private fun nearestPageFor(scrollX: Int): Page {
         if (pageWidth <= 0 || activePages.isEmpty()) {
             return Page.CENTER
@@ -495,5 +544,34 @@ class ScreenPagerManager(
 
     fun openDefaultHomePage(animated: Boolean = true) {
         scrollToPage(getDefaultPage(), animated)
+    }
+
+    private inline fun runWithAccessibilityTraversalSuppressed(
+        container: ViewGroup,
+        block: () -> Unit
+    ) {
+        val previousAccessibility = container.importantForAccessibility
+        val previousContentCapture = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            container.importantForContentCapture
+        } else {
+            null
+        }
+
+        container.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            container.importantForContentCapture =
+                View.IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
+        }
+
+        try {
+            block()
+        } finally {
+            container.post {
+                container.importantForAccessibility = previousAccessibility
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && previousContentCapture != null) {
+                    container.importantForContentCapture = previousContentCapture
+                }
+            }
+        }
     }
 }

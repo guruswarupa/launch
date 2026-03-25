@@ -10,10 +10,16 @@ import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.FlipToDndService
 import com.guruswarupa.launch.services.NightModeService
+import com.guruswarupa.launch.services.PhysicalActivityTrackingService
 import com.guruswarupa.launch.services.ScreenDimmerService
 import com.guruswarupa.launch.services.ShakeDetectionService
+import com.guruswarupa.launch.services.WalkDetectionService
 
 class BootReceiver : BroadcastReceiver() {
+    companion object {
+        private const val PREF_PHYSICAL_ACTIVITY_TRACKING_ENABLED = "physical_activity_tracking_enabled"
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED || intent.action == "android.intent.action.QUICKBOOT_POWERON") {
             val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
@@ -57,6 +63,20 @@ class BootReceiver : BroadcastReceiver() {
                     action = ShakeDetectionService.ACTION_START
                 }
                 ContextCompat.startForegroundService(context, shakeIntent)
+            }
+
+            val isWalkDetectEnabled = prefs.getBoolean(Constants.Prefs.WALK_DETECT_ENABLED, false)
+            if (isWalkDetectEnabled) {
+                val walkIntent = Intent(context, WalkDetectionService::class.java).apply {
+                    action = WalkDetectionService.ACTION_START
+                }
+                ContextCompat.startForegroundService(context, walkIntent)
+            }
+
+            val isPhysicalActivityTrackingEnabled = prefs.getBoolean(PREF_PHYSICAL_ACTIVITY_TRACKING_ENABLED, false)
+            if (isPhysicalActivityTrackingEnabled) {
+                val physicalActivityIntent = Intent(context, PhysicalActivityTrackingService::class.java)
+                ContextCompat.startForegroundService(context, physicalActivityIntent)
             }
         }
     }

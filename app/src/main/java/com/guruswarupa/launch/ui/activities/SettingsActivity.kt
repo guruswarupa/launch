@@ -7,11 +7,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -20,7 +20,6 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.Html
 import android.text.method.LinkMovementMethod
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -54,8 +53,8 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
-import com.guruswarupa.launch.managers.EncryptedFolderManager
 import com.guruswarupa.launch.managers.DownloadableFontManager
+import com.guruswarupa.launch.managers.AppUsageStatsManager
 import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.ThemeOption
@@ -63,6 +62,7 @@ import com.guruswarupa.launch.services.BackTapService
 import com.guruswarupa.launch.services.NightModeService
 import com.guruswarupa.launch.services.ScreenDimmerService
 import com.guruswarupa.launch.services.ScreenLockAccessibilityService
+import com.guruswarupa.launch.services.WalkDetectionService
 import com.guruswarupa.launch.ui.views.SafeHorizontalScrollView
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import org.json.JSONArray
@@ -79,11 +79,11 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         const val EXTRA_OPEN_SUPPORT_SECTION = "open_support_section"
         private const val STATE_WIDGETS_SECTION_EXPANDED = "state_widgets_section_expanded"
         private const val STATE_NEWS_SECTION_EXPANDED = "state_news_section_expanded"
+        private const val PHYSICAL_ACTIVITY_PREFS_NAME = "physical_activity_prefs"
     }
 
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
     private val handler = Handler(Looper.getMainLooper())
-    private val vaultManager by lazy { EncryptedFolderManager(this) }
     private var settingsTutorialStepIndex = 0
     private var settingsTutorialActive = false
     private var selectedThemeId: String = "stardust"
@@ -129,6 +129,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyOrientationPreference()
 
         
         enableEdgeToEdge(
@@ -165,6 +166,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
     override fun onResume() {
         super.onResume()
+        applyOrientationPreference()
         if (billingClient?.isReady == true) {
             queryExistingSupportPurchases()
         }
@@ -187,7 +189,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         Toast.makeText(this, "Preparing wallpaper picker...", Toast.LENGTH_SHORT).show()
 
-        Glide.with(this)
+        Glide.with(this as android.app.Activity)
             .asFile()
             .load(theme.wallpaperUrl)
             .into(object : CustomTarget<File>() {
@@ -207,7 +209,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                             
                             val intent = wm.getCropAndSetWallpaperIntent(uri)
                             startActivity(intent)
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             
                             val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
                                 addCategory(Intent.CATEGORY_DEFAULT)
@@ -264,7 +266,10 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         var selectedCols = prefs.getInt(Constants.Prefs.GRID_COLUMNS, resources.getInteger(R.integer.app_grid_columns))
             .coerceIn(minCols, maxCols)
 
-        var selectedStyle = prefs.getString("view_preference", "list") ?: "list"
+        var selectedStyle = prefs.getString(
+            Constants.Prefs.VIEW_PREFERENCE,
+            Constants.Prefs.VIEW_PREFERENCE_LIST
+        ) ?: Constants.Prefs.VIEW_PREFERENCE_LIST
 
         gridSeek.max = maxCols - minCols
         gridSeek.progress = selectedCols - minCols
@@ -283,22 +288,22 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         })
 
         updateDisplayStyleButtons(gridBtn, listBtn, selectedStyle)
-        gridSection.isVisible = selectedStyle == "grid"
+        gridSection.isVisible = selectedStyle == Constants.Prefs.VIEW_PREFERENCE_GRID
 
         listBtn.setOnClickListener {
-            selectedStyle = "list"
-            updateDisplayStyleButtons(gridBtn, listBtn, "list")
+            selectedStyle = Constants.Prefs.VIEW_PREFERENCE_LIST
+            updateDisplayStyleButtons(gridBtn, listBtn, Constants.Prefs.VIEW_PREFERENCE_LIST)
             gridSection.isVisible = false
-            prefs.edit { putString("view_preference", "list") }
+            prefs.edit { putString(Constants.Prefs.VIEW_PREFERENCE, Constants.Prefs.VIEW_PREFERENCE_LIST) }
             notifySettingsChanged()
         }
 
         
         val showAppNameInSection = findViewById<LinearLayout>(R.id.show_app_name_in_grid_section)
-        val showAppNameSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.show_app_name_in_grid_switch)
-        showAppNameInSection.isVisible = selectedStyle == "grid"
+        val showAppNameSwitch = findViewById<SwitchCompat>(R.id.show_app_name_in_grid_switch)
+        showAppNameInSection.isVisible = selectedStyle == Constants.Prefs.VIEW_PREFERENCE_GRID
         
-        var showAppNamesInGrid = prefs.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
+        val showAppNamesInGrid = prefs.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
         showAppNameSwitch.isChecked = showAppNamesInGrid
         
         showAppNameSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -308,20 +313,18 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         
         gridBtn.setOnClickListener {
-            selectedStyle = "grid"
-            updateDisplayStyleButtons(gridBtn, listBtn, "grid")
+            updateDisplayStyleButtons(gridBtn, listBtn, Constants.Prefs.VIEW_PREFERENCE_GRID)
             gridSection.isVisible = true
             showAppNameInSection.isVisible = true
-            prefs.edit { putString("view_preference", "grid") }
+            prefs.edit { putString(Constants.Prefs.VIEW_PREFERENCE, Constants.Prefs.VIEW_PREFERENCE_GRID) }
             notifySettingsChanged()
         }
 
         listBtn.setOnClickListener {
-            selectedStyle = "list"
-            updateDisplayStyleButtons(gridBtn, listBtn, "list")
+            updateDisplayStyleButtons(gridBtn, listBtn, Constants.Prefs.VIEW_PREFERENCE_LIST)
             gridSection.isVisible = false
             showAppNameInSection.isVisible = false
-            prefs.edit { putString("view_preference", "list") }
+            prefs.edit { putString(Constants.Prefs.VIEW_PREFERENCE, Constants.Prefs.VIEW_PREFERENCE_LIST) }
             notifySettingsChanged()
         }
 
@@ -329,8 +332,6 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
         val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
         val iconVal = findViewById<TextView>(R.id.icon_size_value)
-        val grayscaleIconsSwitch = findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.grayscale_icons_switch)
-
         val shapes = arrayOf("Round", "Squircle", "Squared", "Teardrop", "Vortex", "Overlay")
         val values = arrayOf("round", "squircle", "squared", "teardrop", "vortex", "overlay")
         iconSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, shapes).apply {
@@ -361,21 +362,14 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             override fun onStopTrackingTouch(s: SeekBar?) {}
         })
 
-        grayscaleIconsSwitch.isChecked = prefs.getBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, false)
-        grayscaleIconsSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit { putBoolean(Constants.Prefs.GRAYSCALE_ICONS_ENABLED, isChecked) }
-            notifySettingsChanged()
-        }
-
-        
         val homePageSpinner = findViewById<Spinner>(R.id.default_home_page_spinner)
         val rssEnabled = prefs.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true)
         val widgetsEnabled = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
         val pageEntries = buildList {
-            if (rssEnabled) add("News Feed (Far Left)" to "rss")
-            if (widgetsEnabled) add("Widgets (Left)" to "widgets")
+            add("Wallpaper (Left)" to "right")
             add("Home (Center)" to "center")
-            add("Wallpaper (Right)" to "right")
+            if (widgetsEnabled) add("Widgets (Right)" to "widgets")
+            if (rssEnabled) add("News Feed (Far Right)" to "rss")
         }
         val pages = pageEntries.map { it.first }.toTypedArray()
         homePageSpinner.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, pages).apply {
@@ -441,6 +435,23 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             setOnCheckedChangeListener { _, isChecked ->
                 applyFastScrollerSwitchColors(isChecked)
                 prefs.edit { putBoolean(Constants.Prefs.SHOW_FAST_SCROLLER, !isChecked) }
+                notifySettingsChanged()
+            }
+        }
+
+        findViewById<SwitchCompat>(R.id.landscape_orientation_switch).apply {
+            fun applyLandscapeSwitchColors(isEnabled: Boolean) {
+                val color = if (isEnabled) ContextCompat.getColor(this@SettingsActivity, R.color.nord8) else Color.WHITE
+                thumbTintList = ColorStateList.valueOf(color)
+                trackTintList = ColorStateList.valueOf(color)
+            }
+
+            isChecked = prefs.getBoolean(Constants.Prefs.LANDSCAPE_ORIENTATION_ENABLED, false)
+            applyLandscapeSwitchColors(isChecked)
+            setOnCheckedChangeListener { _, isChecked ->
+                applyLandscapeSwitchColors(isChecked)
+                prefs.edit { putBoolean(Constants.Prefs.LANDSCAPE_ORIENTATION_ENABLED, isChecked) }
+                applyOrientationPreference()
                 notifySettingsChanged()
             }
         }
@@ -643,8 +654,10 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         setupSectionToggle(qHeader, qContent, qArrow)
 
         setupAccessibilityShortcut()
+        setupEdgePanel()
         setupBackTap()
         setupShakeTorch()
+        setupWalkDetection()
         setupExtraDimmer()
         setupNightMode()
         setupFlipToDnd()
@@ -652,6 +665,9 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         findViewById<View>(R.id.config_control_center_button).setOnClickListener {
             startActivity(Intent(this, ControlCenterConfigActivity::class.java))
+        }
+        findViewById<View>(R.id.config_edge_panel_button).setOnClickListener {
+            startActivity(Intent(this, EdgePanelConfigActivity::class.java))
         }
     }
 
@@ -755,7 +771,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                 data = Uri.fromParts("package", packageName, null)
             }
             startActivity(intent)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             Toast.makeText(this, "Failed to open app info", Toast.LENGTH_SHORT).show()
         }
     }
@@ -1054,7 +1070,14 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
     private fun setupAccessibilityShortcut() {
         val sw = findViewById<SwitchCompat>(R.id.accessibility_shortcut_switch)
-        sw.isChecked = prefs.getBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, false)
+        val configButton = findViewById<View>(R.id.config_control_center_button)
+        
+        fun applyConfigButtonState(enabled: Boolean) {
+            configButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        }
+        
+        sw.isChecked = prefs.getBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_ENABLED, false)
+        applyConfigButtonState(sw.isChecked)
         sw.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked && !hasAccessibilityServicePermission()) {
                 sw.isChecked = false
@@ -1062,12 +1085,59 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 }
             } else {
-                prefs.edit { putBoolean(Constants.Prefs.ACCESSIBILITY_SHORTCUT_ENABLED, isChecked) }
+                prefs.edit { putBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_ENABLED, isChecked) }
+                applyConfigButtonState(isChecked)
                 startService(Intent(this, ScreenLockAccessibilityService::class.java).apply {
-                    action = "TOGGLE_SHORTCUT"
+                    action = "TOGGLE_CONTROL_CENTER_TRIGGER"
                     putExtra("enabled", isChecked)
                 })
             }
+        }
+        
+        configButton.setOnClickListener {
+            startActivity(Intent(this, ControlCenterConfigActivity::class.java))
+        }
+    }
+
+    private fun setupEdgePanel() {
+        val sw = findViewById<SwitchCompat>(R.id.edge_panel_switch)
+        val configButton = findViewById<View>(R.id.config_edge_panel_button)
+        val usageStatsManager = AppUsageStatsManager(this)
+
+        fun applyConfigButtonState(enabled: Boolean) {
+            configButton.visibility = if (enabled) View.VISIBLE else View.GONE
+        }
+
+        sw.isChecked = prefs.getBoolean(Constants.Prefs.EDGE_PANEL_ENABLED, false)
+        applyConfigButtonState(sw.isChecked)
+
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && !hasAccessibilityServicePermission()) {
+                sw.isChecked = false
+                showPermissionDialog("Accessibility Required", "Enable Launch in Accessibility settings.") {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }
+                return@setOnCheckedChangeListener
+            }
+
+            if (isChecked && !usageStatsManager.hasUsageStatsPermission()) {
+                sw.isChecked = false
+                showPermissionDialog(
+                    getString(R.string.edge_panel_permission_usage_title),
+                    getString(R.string.edge_panel_permission_usage_message)
+                ) {
+                    startActivity(usageStatsManager.requestUsageStatsPermission())
+                }
+                return@setOnCheckedChangeListener
+            }
+
+            prefs.edit { putBoolean(Constants.Prefs.EDGE_PANEL_ENABLED, isChecked) }
+            applyConfigButtonState(isChecked)
+            startService(Intent(this, ScreenLockAccessibilityService::class.java).apply {
+                action = "TOGGLE_EDGE_PANEL"
+                putExtra("enabled", isChecked)
+            })
+            notifySettingsChanged()
         }
     }
 
@@ -1148,6 +1218,153 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         })
     }
 
+    private fun setupWalkDetection() {
+        val sw = findViewById<SwitchCompat>(R.id.walk_detect_switch)
+        val cont = findViewById<View>(R.id.walk_detect_settings_container)
+        val spin = findViewById<Spinner>(R.id.walk_detect_action_spinner)
+        val thresholdSeek = findViewById<SeekBar>(R.id.walk_detect_threshold_seekbar)
+        val thresholdVal = findViewById<TextView>(R.id.walk_detect_threshold_value)
+        val timeWindowSeek = findViewById<SeekBar>(R.id.walk_detect_time_window_seekbar)
+        val timeWindowVal = findViewById<TextView>(R.id.walk_detect_time_window_value)
+        val cooldownSeek = findViewById<SeekBar>(R.id.walk_detect_cooldown_seekbar)
+        val cooldownVal = findViewById<TextView>(R.id.walk_detect_cooldown_value)
+        val chooseAppButton = findViewById<View>(R.id.walk_detect_choose_app_button)
+        val selectedAppText = findViewById<TextView>(R.id.walk_detect_selected_app_text)
+
+        val en = prefs.getBoolean(Constants.Prefs.WALK_DETECT_ENABLED, false)
+        sw.isChecked = en
+        cont.isVisible = en
+
+        val acts = arrayOf("Music App", "Custom App", "Torch", "Sound Toggle", "None")
+        val vals = arrayOf(
+            WalkDetectionService.ACTION_LAUNCH_MUSIC,
+            WalkDetectionService.ACTION_LAUNCH_APP,
+            WalkDetectionService.ACTION_TORCH_TOGGLE,
+            WalkDetectionService.ACTION_SOUND_TOGGLE,
+            WalkDetectionService.ACTION_NONE
+        )
+        spin.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, acts).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
+        val currentAction = prefs.getString(
+            Constants.Prefs.WALK_DETECT_ACTION,
+            WalkDetectionService.ACTION_LAUNCH_MUSIC
+        ) ?: WalkDetectionService.ACTION_LAUNCH_MUSIC
+        spin.setSelection(vals.indexOf(currentAction).coerceAtLeast(0))
+
+        fun updateSelectedAppText() {
+            val pkg = prefs.getString(Constants.Prefs.WALK_DETECT_CUSTOM_APP_PACKAGE, null)
+            selectedAppText.text = if (pkg != null) {
+                try {
+                    packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+                } catch (_: Exception) {
+                    pkg
+                }
+            } else {
+                "No app selected"
+            }
+        }
+
+        fun updateAppChooserVisibility(action: String) {
+            val isCustomApp = action == WalkDetectionService.ACTION_LAUNCH_APP
+            chooseAppButton.isVisible = isCustomApp
+            selectedAppText.isVisible = isCustomApp
+            if (isCustomApp) updateSelectedAppText()
+        }
+        updateAppChooserVisibility(currentAction)
+
+        val curThreshold = prefs.getInt(Constants.Prefs.WALK_DETECT_STEP_THRESHOLD, 10).coerceIn(5, 30)
+        thresholdSeek.max = 25
+        thresholdSeek.progress = curThreshold - 5
+        thresholdVal.text = "$curThreshold steps"
+
+        val curTimeWindow = prefs.getInt(Constants.Prefs.WALK_DETECT_TIME_WINDOW_SECONDS, 15).coerceIn(5, 60)
+        timeWindowSeek.max = 55
+        timeWindowSeek.progress = curTimeWindow - 5
+        timeWindowVal.text = "$curTimeWindow sec"
+
+        val curCooldown = prefs.getInt(Constants.Prefs.WALK_DETECT_COOLDOWN_MINUTES, 5).coerceIn(1, 30)
+        cooldownSeek.max = 29
+        cooldownSeek.progress = curCooldown - 1
+        cooldownVal.text = "$curCooldown min"
+
+        sw.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACTIVITY_RECOGNITION)
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    sw.isChecked = false
+                    requestPermissions(
+                        arrayOf(android.Manifest.permission.ACTIVITY_RECOGNITION),
+                        Constants.RequestCodes.ACTIVITY_RECOGNITION_PERMISSION
+                    )
+                    return@setOnCheckedChangeListener
+                }
+            }
+
+            prefs.edit { putBoolean(Constants.Prefs.WALK_DETECT_ENABLED, isChecked) }
+            cont.isVisible = isChecked
+            notifySettingsChanged()
+        }
+
+        spin.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+                prefs.edit { putString(Constants.Prefs.WALK_DETECT_ACTION, vals[position]) }
+                updateAppChooserVisibility(vals[position])
+                notifySettingsChanged()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) = Unit
+        }
+
+        thresholdSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                thresholdVal.text = "${progress + 5} steps"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.WALK_DETECT_STEP_THRESHOLD, progress + 5) }
+                    notifySettingsChanged()
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+
+        timeWindowSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                timeWindowVal.text = "${progress + 5} sec"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.WALK_DETECT_TIME_WINDOW_SECONDS, progress + 5) }
+                    notifySettingsChanged()
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+
+        cooldownSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                cooldownVal.text = "${progress + 1} min"
+                if (fromUser) {
+                    prefs.edit { putInt(Constants.Prefs.WALK_DETECT_COOLDOWN_MINUTES, progress + 1) }
+                    notifySettingsChanged()
+                }
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+
+        chooseAppButton.setOnClickListener {
+            showWalkDetectionAppPicker {
+                updateSelectedAppText()
+                notifySettingsChanged()
+            }
+        }
+    }
+
     private fun setupExtraDimmer() {
         val sw = findViewById<SwitchCompat>(R.id.screen_dimmer_switch)
         val seek = findViewById<SeekBar>(R.id.screen_dimmer_seekbar)
@@ -1221,7 +1438,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         sw.isChecked = prefs.getBoolean(Constants.Prefs.FLIP_DND_ENABLED, false)
         sw.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                 if (!nm.isNotificationPolicyAccessGranted) {
                     sw.isChecked = false
                     showPermissionDialog("DND Permission", "Grant DND access to use this feature.") { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
@@ -1247,20 +1464,20 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             } catch (e: Exception) {
                 e.printStackTrace()
                 sw.isChecked = !isChecked
-                showProtectedPermissionDialog("WRITE_SECURE_SETTINGS")
+                showProtectedPermissionDialog()
             }
         }
     }
 
-    private fun showProtectedPermissionDialog(permission: String) {
+    private fun showProtectedPermissionDialog() {
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Permission Required")
-            .setMessage("This feature requires the $permission permission.\n\n" +
+            .setMessage("This feature requires the WRITE_SECURE_SETTINGS permission.\n\n" +
                     "Please run this command via ADB:\n\n" +
-                    "adb shell pm grant $packageName android.permission.$permission")
+                    "adb shell pm grant $packageName android.permission.WRITE_SECURE_SETTINGS")
             .setPositiveButton("Copy Command") { _, _ ->
-                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                val clip = android.content.ClipData.newPlainText("ADB Command", "adb shell pm grant $packageName android.permission.$permission")
+                val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("ADB Command", "adb shell pm grant $packageName android.permission.WRITE_SECURE_SETTINGS")
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(this, "Command copied to clipboard", Toast.LENGTH_SHORT).show()
             }
@@ -1448,7 +1665,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     updateDownloadableFontsList(cont)
                 } else {
                     btn.text = "Fetching…"
-                    DownloadableFontManager.requestFont(this, opt.styleKey) { success ->
+                    DownloadableFontManager.requestFont(this, opt.styleKey) {
                         handler.post {
                             
                             setupTypographySettings()
@@ -1474,6 +1691,34 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         AlertDialog.Builder(this, R.style.CustomDialogTheme).setTitle(t).setMessage(m).setPositiveButton("Settings") { _, _ -> onP() }.setNegativeButton("Cancel", null).show()
     }
 
+    private fun showWalkDetectionAppPicker(onAppSelected: () -> Unit) {
+        val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = packageManager.queryIntentActivities(launcherIntent, 0)
+            .mapNotNull { resolveInfo ->
+                val packageName = resolveInfo.activityInfo.packageName
+                if (packageManager.getLaunchIntentForPackage(packageName) == null) return@mapNotNull null
+                val label = resolveInfo.loadLabel(packageManager).toString().takeIf { it.isNotBlank() }
+                    ?: packageName
+                packageName to label
+            }
+            .distinctBy { it.first }
+            .sortedBy { it.second.lowercase() }
+
+        if (apps.isEmpty()) {
+            Toast.makeText(this, "No launchable apps found", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle("Choose App")
+            .setItems(apps.map { it.second }.toTypedArray()) { _, which ->
+                prefs.edit { putString(Constants.Prefs.WALK_DETECT_CUSTOM_APP_PACKAGE, apps[which].first) }
+                onAppSelected()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun chooseWallpaper() { wallpaperLauncher.launch(Intent(Intent.ACTION_SET_WALLPAPER)) }
 
     private fun showTutorial() {
@@ -1497,11 +1742,11 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         }
     }
 
-    private fun makeSystemBarsTransparent() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-            window.statusBarColor = Color.TRANSPARENT
-            window.navigationBarColor = Color.TRANSPARENT
+    private fun applyOrientationPreference() {
+        requestedOrientation = if (prefs.getBoolean(Constants.Prefs.LANDSCAPE_ORIENTATION_ENABLED, false)) {
+            ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
 
@@ -1554,9 +1799,8 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         try {
             contentResolver.openOutputStream(uri)?.use { os ->
                 ZipOutputStream(os).use { zos ->
-                    val j = JSONObject(); val p = JSONObject()
-                    prefs.all.forEach { (k, v) -> p.put(k, v) }
-                    j.put("main_preferences", p)
+                    val j = JSONObject()
+                    j.put("main_preferences", sharedPreferencesToJson(prefs))
                     zos.putNextEntry(ZipEntry("settings.json"))
                     zos.write(j.toString(2).toByteArray())
                     zos.closeEntry()
@@ -1572,17 +1816,21 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     zos.putNextEntry(ZipEntry("weather.json"))
                     zos.write(weatherData.toString(2).toByteArray())
                     zos.closeEntry()
+
+                    val physicalActivityPrefs = getSharedPreferences(PHYSICAL_ACTIVITY_PREFS_NAME, MODE_PRIVATE)
+                    val physicalActivityJson = JSONObject().apply {
+                        put("physical_activity_preferences", sharedPreferencesToJson(physicalActivityPrefs))
+                    }
+                    zos.putNextEntry(ZipEntry("physical_activity.json"))
+                    zos.write(physicalActivityJson.toString(2).toByteArray())
+                    zos.closeEntry()
                     
                     // Export notes data
                     try {
-                        val mainActivity = com.guruswarupa.launch.MainActivity.instance
-                        if (mainActivity != null &&
-                            mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
-                            val notesJson = mainActivity.widgetLifecycleCoordinator.noteWidget.exportNotesToJson()
-                            zos.putNextEntry(ZipEntry("notes.json"))
-                            zos.write(notesJson.toByteArray())
-                            zos.closeEntry()
-                        }
+                        val notesJson = prefs.getString("note_widget_items", "[]") ?: "[]"
+                        zos.putNextEntry(ZipEntry("notes.json"))
+                        zos.write(notesJson.toByteArray())
+                        zos.closeEntry()
                     } catch (e: Exception) {
                         // Notes export failed, but continue with other exports
                         e.printStackTrace()
@@ -1666,19 +1914,18 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                                     }
                                 }
                             }
+                            "physical_activity.json" -> {
+                                val physicalActivityJson = JSONObject(zis.bufferedReader().readText())
+                                val physicalPrefs = physicalActivityJson.optJSONObject("physical_activity_preferences")
+                                if (physicalPrefs != null) {
+                                    val activityPrefs = getSharedPreferences(PHYSICAL_ACTIVITY_PREFS_NAME, MODE_PRIVATE)
+                                    restorePreferencesFromJson(activityPrefs, physicalPrefs)
+                                }
+                            }
                             "notes.json" -> {
                                 try {
                                     val notesJsonString = zis.bufferedReader().readText()
-                                    val mainActivity = com.guruswarupa.launch.MainActivity.instance
-                                    if (mainActivity != null &&
-                                        mainActivity.widgetLifecycleCoordinator.isNoteWidgetInitialized()) {
-                                        val importedCount = mainActivity.widgetLifecycleCoordinator.noteWidget.importNotesFromJson(notesJsonString)
-                                        if (importedCount > 0) {
-                                            zis.closeEntry()
-                                            entry = zis.nextEntry
-                                            return@use // Exit early to avoid duplicate closeEntry
-                                        }
-                                    }
+                                    prefs.edit { putString("note_widget_items", notesJsonString) }
                                 } catch (e: Exception) {
                                     // Notes import failed, but continue with other imports
                                     e.printStackTrace()
@@ -1692,6 +1939,49 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             }
             restartLauncher()
         } catch (e: Exception) { Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun sharedPreferencesToJson(sharedPreferences: SharedPreferences): JSONObject {
+        val json = JSONObject()
+        sharedPreferences.all.forEach { (key, value) ->
+            when (value) {
+                is Set<*> -> json.put(key, JSONArray(value.toList()))
+                else -> json.put(key, value)
+            }
+        }
+        return json
+    }
+
+    private fun restorePreferencesFromJson(sharedPreferences: SharedPreferences, json: JSONObject) {
+        sharedPreferences.edit {
+            clear()
+            val stringSetKeys = setOf("favorite_apps", "hidden_apps", "focus_mode_allowed_apps", "locked_apps")
+            json.keys().forEach { key ->
+                val value = json.get(key)
+                if (key in stringSetKeys) {
+                    val set = when (value) {
+                        is JSONArray -> {
+                            val items = mutableSetOf<String>()
+                            for (i in 0 until value.length()) items.add(value.getString(i))
+                            items
+                        }
+                        is String -> setOf(value)
+                        else -> emptySet()
+                    }
+                    putStringSet(key, set)
+                } else {
+                    when (value) {
+                        is String -> putString(key, value)
+                        is Boolean -> putBoolean(key, value)
+                        is Int -> putInt(key, value)
+                        is Long -> putLong(key, value)
+                        is Double -> putFloat(key, value.toFloat())
+                        is Float -> putFloat(key, value)
+                        is JSONArray -> putString(key, value.toString())
+                    }
+                }
+            }
+        }
     }
 
     private fun startSettingsTutorial() { settingsTutorialStepIndex = 0; settingsTutorialActive = true; showCurrentSettingsTutorialStep() }
@@ -1713,9 +2003,11 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
     override fun onBackPressed() {
         if (hasUnsavedThemeChanges) {
             showUnsavedChangesDialog {
+                @Suppress("DEPRECATION")
                 super.onBackPressed()
             }
         } else {
+            @Suppress("DEPRECATION")
             super.onBackPressed()
         }
     }
@@ -1726,7 +2018,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
 class ThemedArrayAdapter(
     context: Context,
-    private val resource: Int,
+    resource: Int,
     objects: Array<String>,
     private val itemColors: Array<String>? = null
 ) : ArrayAdapter<String>(context, resource, objects) {
@@ -1737,7 +2029,7 @@ class ThemedArrayAdapter(
         return view
     }
 
-    override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup?): View {
+    override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
         val view = super.getDropDownView(position, convertView, parent)
         applyThemeColor(view, position)
         return view
@@ -1751,7 +2043,7 @@ class ThemedArrayAdapter(
                     
                     Color.WHITE
                 } else {
-                    try { Color.parseColor(colorStr) } catch (e: Exception) { Color.WHITE }
+                    try { Color.parseColor(colorStr) } catch (_: Exception) { Color.WHITE }
                 }
             } else {
                 TypographyManager.getConfiguredFontColor(context) ?: Color.WHITE

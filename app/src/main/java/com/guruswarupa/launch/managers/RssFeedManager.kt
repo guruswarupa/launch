@@ -52,6 +52,7 @@ class RssFeedManager(
 
         private val CATEGORY_ORDER = listOf(
             "News",
+            "India",
             "Technology",
             "Finance",
             "Sports",
@@ -68,6 +69,9 @@ class RssFeedManager(
             "Arts"
         )
         private val PRESET_FEEDS = listOf(
+            RssFeedSource("The Hindu", "https://www.thehindu.com/feeder/default.rss", "India"),
+            RssFeedSource("Hindustan Times India", "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml", "India"),
+            RssFeedSource("The Indian Express India", "https://indianexpress.com/section/india/feed/", "India"),
             RssFeedSource("Reuters Technology", googleNewsFeed("Reuters Technology"), "Technology"),
             RssFeedSource("Hacker News", "https://hnrss.org/frontpage", "Technology"),
             RssFeedSource("The Verge", "https://www.theverge.com/rss/index.xml", "Technology"),
@@ -76,11 +80,15 @@ class RssFeedManager(
             RssFeedSource("Engadget", "https://www.engadget.com/rss.xml", "Technology"),
             RssFeedSource("Wired", "https://www.wired.com/feed/rss", "Technology"),
             RssFeedSource("Gizmodo", "https://gizmodo.com/rss", "Technology"),
+            RssFeedSource("Android Authority", "https://www.androidauthority.com/feed/", "Technology"),
+            RssFeedSource("BBC Technology", "https://feeds.bbci.co.uk/news/technology/rss.xml", "Technology"),
+            RssFeedSource("Search Engine Journal", "https://www.searchenginejournal.com/feed/", "Technology"),
             RssFeedSource("ScienceDaily", "https://www.sciencedaily.com/rss/top/science.xml", "Science"),
             RssFeedSource("NASA Breaking News", "https://www.nasa.gov/rss/dyn/breaking_news.rss", "Science"),
             RssFeedSource("New Scientist", googleNewsFeed("\"New Scientist\""), "Science"),
             RssFeedSource("Scientific American", googleNewsFeed("\"Scientific American\""), "Science"),
             RssFeedSource("Live Science", googleNewsFeed("\"Live Science\""), "Science"),
+            RssFeedSource("Phys.org", "https://phys.org/rss-feed/", "Science"),
             RssFeedSource("Politico Politics", googleNewsFeed("Politico politics"), "Politics"),
             RssFeedSource("NPR Politics", "https://feeds.npr.org/1014/rss.xml", "Politics"),
             RssFeedSource("AP Politics", googleNewsFeed("\"Associated Press\" politics"), "Politics"),
@@ -94,15 +102,19 @@ class RssFeedManager(
             RssFeedSource("Rolling Stone Culture", "https://www.rollingstone.com/culture/culture-news/feed/", "Entertainment"),
             RssFeedSource("The Hollywood Reporter", "https://www.hollywoodreporter.com/feed/", "Entertainment"),
             RssFeedSource("Billboard", "https://www.billboard.com/feed/", "Entertainment"),
+            RssFeedSource("TMZ", "https://tmz.com/rss.xml", "Entertainment"),
             RssFeedSource("ESPN Top Headlines", "https://www.espn.com/espn/rss/news", "Sports"),
             RssFeedSource("Sky Sports", "https://www.skysports.com/rss/12040", "Sports"),
             RssFeedSource("CBS Sports", "https://www.cbssports.com/rss/headlines/", "Sports"),
             RssFeedSource("Yahoo Sports", "https://sports.yahoo.com/rss/", "Sports"),
+            RssFeedSource("BBC Sport", "https://feeds.bbci.co.uk/sport/rss.xml", "Sports"),
             RssFeedSource("Reuters Business", googleNewsFeed("Reuters business"), "Finance"),
             RssFeedSource("MarketWatch Top Stories", "https://feeds.marketwatch.com/marketwatch/topstories/", "Finance"),
             RssFeedSource("CNBC Top News", "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114", "Finance"),
             RssFeedSource("Yahoo Finance", "https://finance.yahoo.com/news/rssindex", "Finance"),
             RssFeedSource("Forbes Money", googleNewsFeed("Forbes money"), "Finance"),
+            RssFeedSource("BBC Business", "https://feeds.bbci.co.uk/news/business/rss.xml", "Finance"),
+            RssFeedSource("Business Insider", "https://feeds.businessinsider.com/custom/all", "Finance"),
             RssFeedSource("EdSurge", "https://www.edsurge.com/articles_rss", "Education"),
             RssFeedSource("Education Week", googleNewsFeed("\"Education Week\""), "Education"),
             RssFeedSource("Inside Higher Ed", "https://www.insidehighered.com/rss.xml", "Education"),
@@ -127,6 +139,7 @@ class RssFeedManager(
             RssFeedSource("Harvard Health", googleNewsFeed("\"Harvard Health\""), "Health"),
             RssFeedSource("MedlinePlus", googleNewsFeed("MedlinePlus health"), "Health"),
             RssFeedSource("WebMD", googleNewsFeed("WebMD health"), "Health"),
+            RssFeedSource("BBC Health", "https://feeds.bbci.co.uk/news/health/rss.xml", "Health"),
             RssFeedSource("Hyperallergic", "https://hyperallergic.com/feed/", "Arts"),
             RssFeedSource("ARTnews", "https://www.artnews.com/feed/", "Arts"),
             RssFeedSource("Smithsonian Magazine Arts", "https://www.smithsonianmag.com/rss/arts-culture/", "Arts"),
@@ -135,7 +148,9 @@ class RssFeedManager(
             RssFeedSource("Reuters World", googleNewsFeed("Reuters world"), "News"),
             RssFeedSource("NPR News", "https://feeds.npr.org/1001/rss.xml", "News"),
             RssFeedSource("AP Top News", googleNewsFeed("\"Associated Press\" top news"), "News"),
-            RssFeedSource("USA Today", googleNewsFeed("\"USA Today\""), "News")
+            RssFeedSource("USA Today", googleNewsFeed("\"USA Today\""), "News"),
+            RssFeedSource("The Guardian World", "https://www.theguardian.com/world/rss", "News"),
+            RssFeedSource("New York Times Home", "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml", "News")
         )
 
         private fun readStringList(sharedPreferences: SharedPreferences, key: String): List<String> {

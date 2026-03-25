@@ -38,8 +38,12 @@ class DeferredWidgetInitializer(
             yearProgressWidget = widgetSetupManager.setupYearProgressWidget(sharedPreferences)
             githubContributionWidget = widgetSetupManager.setupGithubContributionWidget(sharedPreferences)
             
-            lifecycleManager.setNetworkStatsWidget(networkStatsWidget)
-            lifecycleManager.setDeviceInfoWidget(deviceInfoWidget)
+            lifecycleManager.updateDependencies {
+                copy(
+                    networkStatsWidget = networkStatsWidget,
+                    deviceInfoWidget = deviceInfoWidget
+                )
+            }
             
             
             setupDefaultLifecycle()
