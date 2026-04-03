@@ -9,6 +9,9 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.WebAppIconFetcher
+import com.guruswarupa.launch.managers.WebAppManager
+import com.guruswarupa.launch.utils.AppDisplayHelper
 
 class WorkspacesAppsAdapter(
     private val apps: List<ResolveInfo>,
@@ -32,35 +35,37 @@ class WorkspacesAppsAdapter(
         val app = apps[position]
         val packageName = app.activityInfo.packageName
         val packageManager = holder.itemView.context.packageManager
-        
-        
-        try {
-            holder.appName.text = app.loadLabel(packageManager).toString()
-        } catch (_: Exception) {
-            holder.appName.text = packageName
+
+        holder.itemView.tag = packageName
+        holder.appName.text = AppDisplayHelper.getLabel(app, packageManager)
+
+        if (WebAppManager.isWebAppPackage(packageName)) {
+            holder.appIcon.setImageResource(R.drawable.ic_browser)
+            val siteUrl = app.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+            if (siteUrl.isNotBlank()) {
+                WebAppIconFetcher.loadIcon(holder.itemView.context, siteUrl) { drawable ->
+                    if (holder.itemView.tag == packageName && drawable != null) {
+                        holder.appIcon.setImageDrawable(drawable)
+                    }
+                }
+            }
+        } else {
+            try {
+                holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
+            } catch (_: Exception) {
+                holder.appIcon.setImageDrawable(null)
+            }
         }
-        
-        
-        try {
-            holder.appIcon.setImageDrawable(app.loadIcon(packageManager))
-        } catch (_: Exception) {
-            holder.appIcon.setImageDrawable(null)
-        }
-        
-        
+
         holder.appCheckbox.setOnCheckedChangeListener(null)
-        
-        
         holder.appCheckbox.isChecked = selectedPackages.contains(packageName)
-        
-        
+
         holder.appCheckbox.setOnCheckedChangeListener { _, isChecked ->
             if (selectedPackages.contains(packageName) != isChecked) {
                 onSelectionChanged(packageName, isChecked)
             }
         }
-        
-        
+
         holder.itemView.setOnClickListener {
             val newState = !holder.appCheckbox.isChecked
             holder.appCheckbox.isChecked = newState

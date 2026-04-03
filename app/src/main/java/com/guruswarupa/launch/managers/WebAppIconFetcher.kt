@@ -18,21 +18,13 @@ import java.util.concurrent.RejectedExecutionException
 
 object WebAppIconFetcher {
     private val memoryCache = ConcurrentHashMap<String, Drawable>()
+    private val pendingCallbacks = ConcurrentHashMap<String, MutableList<(Drawable?) -> Unit>>()
     private val executor = Executors.newFixedThreadPool(2)
     private val mainHandler = Handler(Looper.getMainLooper())
-    
-    
-
-
 
     fun clearCache() {
         memoryCache.clear()
     }
-    
-    
-
-
-
 
     fun shutdown() {
         if (!executor.isShutdown) {
@@ -46,6 +38,7 @@ object WebAppIconFetcher {
             }
         }
         memoryCache.clear()
+        pendingCallbacks.clear()
     }
 
     fun loadIcon(
@@ -53,38 +46,49 @@ object WebAppIconFetcher {
         siteUrl: String,
         onResult: (Drawable?) -> Unit
     ) {
-        
         memoryCache[siteUrl]?.let {
             // Safety check: ensure bitmap is not recycled
             if (!(it is android.graphics.drawable.BitmapDrawable && it.bitmap.isRecycled)) {
                 onResult(it)
             } else {
-                // Cached icon was recycled, remove from cache and reload
                 memoryCache.remove(siteUrl)
                 loadIcon(context, siteUrl, onResult)
             }
             return
         }
 
-        
         if (executor.isShutdown || executor.isTerminated) {
             onResult(null)
             return
         }
 
+        val callbacks = pendingCallbacks.compute(siteUrl) { _, existing ->
+            (existing ?: mutableListOf()).also { it.add(onResult) }
+        } ?: mutableListOf(onResult)
+
+        if (callbacks.size > 1) {
+            return
+        }
+
         try {
             executor.execute {
-                try {
-                    val drawable = loadFromDisk(context, siteUrl) ?: fetchAndCache(context, siteUrl)
-                    drawable?.let { memoryCache[siteUrl] = it }
-                    mainHandler.post { onResult(drawable) }
+                val drawable = try {
+                    val loaded = loadFromDisk(context, siteUrl) ?: fetchAndCache(context, siteUrl)
+                    loaded?.let { memoryCache[siteUrl] = it }
+                    loaded
                 } catch (_: Exception) {
-                    
-                    mainHandler.post { onResult(null) }
+                    null
                 }
+
+                val waitingCallbacks = pendingCallbacks.remove(siteUrl).orEmpty()
+                try {
+                    mainHandler.post {
+                        waitingCallbacks.forEach { callback -> callback(drawable) }
+                    }
+                } catch (_: Exception) {}
             }
         } catch (_: RejectedExecutionException) {
-            
+            pendingCallbacks.remove(siteUrl)?.forEach { callback -> callback(null) }
             onResult(null)
         }
     }
@@ -183,7 +187,7 @@ object WebAppIconFetcher {
     }
 
     private fun getIconFile(context: Context, siteUrl: String): File {
-        return File(File(context.cacheDir, "web_app_icons"), "${hash(siteUrl)}.bin")
+        return File(File(context.filesDir, "web_app_icons"), "${hash(siteUrl)}.bin")
     }
 
     private fun hash(value: String): String {

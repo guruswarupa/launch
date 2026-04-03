@@ -12,10 +12,12 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.managers.WorkspaceManager
+import com.guruswarupa.launch.managers.WebAppManager
 import java.util.concurrent.Executors
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.Workspace
 import com.guruswarupa.launch.ui.adapters.WorkspacesAppsAdapter
+import com.guruswarupa.launch.utils.AppDisplayHelper
 import com.guruswarupa.launch.utils.DialogStyler
 import com.guruswarupa.launch.utils.setDialogInputView
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
@@ -24,6 +26,7 @@ import com.guruswarupa.launch.models.Constants
 
 class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var workspaceManager: WorkspaceManager
+    private lateinit var webAppManager: WebAppManager
     private lateinit var workspaceList: ListView
     private lateinit var createWorkspaceButton: Button
     private lateinit var wallpaperBackground: ImageView
@@ -47,6 +50,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
         setContentView(R.layout.activity_workspace_config)
         
         workspaceManager = WorkspaceManager(prefs)
+        webAppManager = WebAppManager(prefs)
         
         workspaceList = findViewById(R.id.workspace_list)
         createWorkspaceButton = findViewById(R.id.create_workspace_button)
@@ -156,20 +160,19 @@ class WorkspaceConfigActivity : ComponentActivity() {
         val mainIntent = Intent(Intent.ACTION_MAIN, null)
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
         val pm = packageManager
-        
-        
-        val allAppsRaw = pm.queryIntentActivities(mainIntent, 0)
+
+        val launcherApps = pm.queryIntentActivities(mainIntent, 0)
             .filter { it.activityInfo.packageName != "com.guruswarupa.launch" }
-        
-        
+        val allAppsRaw = (launcherApps + webAppManager.getResolveInfos())
+            .distinctBy { it.activityInfo.packageName }
+
         val appsInOtherWorkspaces = workspaceManager.getAppsInWorkspaces(existingWorkspaceId)
-        
-        
+
         val allApps = allAppsRaw.filter { app ->
             val packageName = app.activityInfo.packageName
             !appsInOtherWorkspaces.contains(packageName)
-        }.sortedBy { it.loadLabel(pm).toString().lowercase() }
-        
+        }.sortedBy { AppDisplayHelper.getLabel(it, pm).lowercase() }
+
         if (allApps.isEmpty()) {
             if (appsInOtherWorkspaces.isNotEmpty()) {
                 Toast.makeText(this, "All apps are already assigned to other workspaces", Toast.LENGTH_LONG).show()

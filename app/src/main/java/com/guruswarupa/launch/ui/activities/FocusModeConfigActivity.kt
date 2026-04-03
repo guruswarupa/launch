@@ -13,7 +13,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.managers.FocusModeManager
+import com.guruswarupa.launch.managers.WebAppManager
 import com.guruswarupa.launch.models.Constants
+import com.guruswarupa.launch.utils.AppDisplayHelper
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import com.guruswarupa.launch.ui.adapters.FocusModeAppAdapter
 import java.util.concurrent.Executors
@@ -21,6 +23,7 @@ import java.util.concurrent.Executors
 class FocusModeConfigActivity : ComponentActivity() {
 
     private lateinit var focusModeManager: FocusModeManager
+    private lateinit var webAppManager: WebAppManager
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: FocusModeAppAdapter
     private lateinit var appList: MutableList<ResolveInfo>
@@ -47,6 +50,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         setContentView(R.layout.activity_focus_mode_config)
 
         focusModeManager = FocusModeManager(this, getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
+        webAppManager = WebAppManager(prefs)
 
         
         recyclerView = findViewById(R.id.focus_mode_app_list)
@@ -114,9 +118,10 @@ class FocusModeConfigActivity : ComponentActivity() {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
 
-        val apps = packageManager.queryIntentActivities(intent, 0)
+        val apps = (packageManager.queryIntentActivities(intent, 0) + webAppManager.getResolveInfos())
             .filter { it.activityInfo.packageName != packageName }
-            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+            .distinctBy { it.activityInfo.packageName }
+            .sortedBy { AppDisplayHelper.getLabel(it, packageManager).lowercase() }
 
         appList = apps.toMutableList()
     }

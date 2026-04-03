@@ -10,6 +10,9 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.managers.FocusModeManager
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.WebAppIconFetcher
+import com.guruswarupa.launch.managers.WebAppManager
+import com.guruswarupa.launch.utils.AppDisplayHelper
 
 class FocusModeAppAdapter(
     private val appList: List<ResolveInfo>,
@@ -35,10 +38,27 @@ class FocusModeAppAdapter(
         val packageName = appInfo.activityInfo.packageName
         val packageManager = holder.itemView.context.packageManager
 
-        holder.appIcon.setImageDrawable(appInfo.loadIcon(packageManager))
-        holder.appName.text = appInfo.loadLabel(packageManager)
-        
-        
+        holder.itemView.tag = packageName
+        holder.appName.text = AppDisplayHelper.getLabel(appInfo, packageManager)
+
+        if (WebAppManager.isWebAppPackage(packageName)) {
+            holder.appIcon.setImageResource(R.drawable.ic_browser)
+            val siteUrl = appInfo.activityInfo.nonLocalizedLabel?.toString().orEmpty()
+            if (siteUrl.isNotBlank()) {
+                WebAppIconFetcher.loadIcon(holder.itemView.context, siteUrl) { drawable ->
+                    if (holder.itemView.tag == packageName && drawable != null) {
+                        holder.appIcon.setImageDrawable(drawable)
+                    }
+                }
+            }
+        } else {
+            try {
+                holder.appIcon.setImageDrawable(appInfo.loadIcon(packageManager))
+            } catch (_: Exception) {
+                holder.appIcon.setImageDrawable(null)
+            }
+        }
+
         holder.appCheckbox.setOnCheckedChangeListener(null)
         holder.appCheckbox.isChecked = selectedApps.contains(packageName)
 
