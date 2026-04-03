@@ -67,7 +67,6 @@ class WidgetPreviewManager(private val context: Context) {
         return when (widgetId) {
             "calculator_widget_container" -> createCalculatorPreview()
             "compass_widget_container" -> createCompassPreview()
-            "notifications_widget_container" -> createNotificationsPreview()
             "calendar_events_widget_container" -> createCalendarPreview()
             "countdown_widget_container" -> createCountdownPreview()
             "physical_activity_widget_container" -> createPhysicalActivityPreview()
@@ -127,7 +126,6 @@ class WidgetPreviewManager(private val context: Context) {
     
     private fun createCalculatorPreview(): Bitmap? = inflateAndCapture(R.layout.widget_calculator_preview)
     private fun createCompassPreview(): Bitmap? = inflateAndCapture(R.layout.widget_compass_preview)
-    private fun createNotificationsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_notifications_preview)
     private fun createCalendarPreview(): Bitmap? = inflateAndCapture(R.layout.widget_calendar_preview)
     private fun createCountdownPreview(): Bitmap? = inflateAndCapture(R.layout.widget_countdown_preview)
     private fun createPhysicalActivityPreview(): Bitmap? = inflateAndCapture(R.layout.widget_physical_activity_preview)

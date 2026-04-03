@@ -72,7 +72,6 @@
 ### 🧰 Widgets & Productivity Tools
 - Todo widget with due times, priorities, recurring tasks, and alarms
 - Calculator widget with basic, scientific, and converter modes
-- Notifications widget with quick open, dismiss, reply, and media-aware cards
 - Finance tracker widget with income/expense logging and transaction history
 - Notes widget with editor support
 - Calendar events widget with list and calendar views
@@ -147,7 +146,6 @@
 | **Type in Search Bar**      | Instant calculator                          |
 | **Long Press Focus Icon**   | Enter Focus Mode setup                      |
 | **Long Press Balance**      | View transaction history                    |
-| **Swipe Notification**      | Dismiss notification from widget            |
 | **Shake Device (2x)**       | Toggle torch/flashlight                     |
 | **Tap Weekly Usage Day**    | View detailed daily usage breakdown         |
 | **Tap Hidden App**      | Launch hidden app from Hidden Apps settings |
@@ -179,7 +177,6 @@ Launch requires **minimal permissions**:
 - **Calendar** → for calendar events and countdown integration
 - **Storage / Media** → for notes, wallpapers, documents, vault files, and backups
 - **Usage Stats** → for app usage tracking, daily limits, and sorting (optional)
-- **Notification Access** → for notifications widget (optional)
 - **Activity Recognition** → for steps and physical activity widgets (optional)
 - **Audio** → for voice search and noise meter functionality (optional)
 - **Camera** → for torch and related quick actions (optional)

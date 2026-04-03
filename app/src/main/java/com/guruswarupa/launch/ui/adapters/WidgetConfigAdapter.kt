@@ -102,7 +102,6 @@ class WidgetConfigAdapter(
         return when (widget.id) {
             "calculator_widget_container" -> "Calculator & converter"
             "compass_widget_container" -> "Digital compass"
-            "notifications_widget_container" -> "Recent notifications"
             "calendar_events_widget_container" -> "Calendar events"
             "countdown_widget_container" -> "Countdown timer"
             "physical_activity_widget_container" -> "Step counter"

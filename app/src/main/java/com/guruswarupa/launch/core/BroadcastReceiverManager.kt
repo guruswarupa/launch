@@ -16,7 +16,6 @@ class BroadcastReceiverManager(
     private val activity: FragmentActivity,
     @Suppress("UNUSED_PARAMETER") private val sharedPreferences: android.content.SharedPreferences,
     private val onSettingsUpdated: () -> Unit,
-    private val onNotificationsUpdated: () -> Unit,
     private val onPackageChanged: (String?, Boolean) -> Unit, 
     private val onWallpaperChanged: () -> Unit,
     private val onBatteryChanged: () -> Unit,
@@ -28,16 +27,6 @@ class BroadcastReceiverManager(
             if (intent?.action == "com.guruswarupa.launch.SETTINGS_UPDATED") {
                 activity.runOnUiThread {
                     onSettingsUpdated()
-                }
-            }
-        }
-    }
-    
-    private val notificationUpdateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.guruswarupa.launch.NOTIFICATIONS_UPDATED") {
-                activity.runOnUiThread {
-                    onNotificationsUpdated()
                 }
             }
         }
@@ -113,11 +102,6 @@ class BroadcastReceiverManager(
         val settingsFilter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         registerReceiverCompat(settingsUpdateReceiver, settingsFilter, exported = false)
         
-        
-        val notificationFilter = IntentFilter("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
-        registerReceiverCompat(notificationUpdateReceiver, notificationFilter, exported = false)
-        
-        
         val packageFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -162,7 +146,6 @@ class BroadcastReceiverManager(
     fun unregisterReceivers() {
         val receivers = listOf(
             settingsUpdateReceiver,
-            notificationUpdateReceiver,
             packageReceiver,
             wallpaperChangeReceiver,
             batteryChangeReceiver,

@@ -41,7 +41,6 @@ The documentation is organized into **4 main categories**:
 - Device Info Widget
 - Network Stats Widget
 - Noise Decibel Widget
-- Notifications Widget
 - Physical Activity Widget
 - Pressure Widget
 - Temperature Widget

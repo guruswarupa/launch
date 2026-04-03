@@ -49,8 +49,6 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         try {
             if (isListenerConnected) {
                 super.onNotificationPosted(sbn)
-                
-                updateWidget()
             }
         } catch (_: Exception) {
         }
@@ -60,19 +58,11 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         try {
             if (isListenerConnected) {
                 super.onNotificationRemoved(sbn)
-                
-                updateWidget()
             }
         } catch (_: Exception) {
         }
     }
-    
-    private fun updateWidget() {
-        val intent = android.content.Intent("com.guruswarupa.launch.NOTIFICATIONS_UPDATED")
-        intent.setPackage(packageName)
-        sendBroadcast(intent)
-    }
-    
+
     override fun getActiveNotifications(): Array<StatusBarNotification> {
         return try {
             if (isListenerConnected) {

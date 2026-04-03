@@ -49,22 +49,15 @@ class WidgetSetupManager(
         weatherText.setOnLongClickListener(weatherLongClickListener)
     }
     
-    fun setupNotificationsWidget(): NotificationsWidget {
-        val notificationsContainer = activity.findViewById<ViewGroup>(R.id.notifications_widget_container)
-        val notificationsView = LayoutInflater.from(activity).inflate(R.layout.notifications_widget, notificationsContainer, false)
-        notificationsContainer.addView(notificationsView)
-        return NotificationsWidget(notificationsView)
-    }
-    
     fun setupCalculatorWidget(): CalculatorWidget {
-        val calculatorContainer = activity.findViewById<ViewGroup?>(R.id.calculator_widget_container)
+        val calculatorContainer = activity.findViewById<android.view.ViewGroup?>(R.id.calculator_widget_container)
         val calculatorView = LayoutInflater.from(activity).inflate(R.layout.calculator_widget, calculatorContainer, false)
         calculatorContainer?.addView(calculatorView)
         return CalculatorWidget(calculatorView)
     }
     
     fun setupMediaControllerWidget(): MediaControllerWidget {
-        val mediaContainer = activity.findViewById<ViewGroup>(R.id.media_controller_widget_container)
+        val mediaContainer = activity.findViewById<android.view.ViewGroup>(R.id.media_controller_widget_container)
         val mediaView = LayoutInflater.from(activity).inflate(R.layout.media_controller_widget, mediaContainer, false)
         mediaContainer.addView(mediaView)
         return MediaControllerWidget(activity, mediaView)

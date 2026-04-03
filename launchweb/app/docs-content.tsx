@@ -105,7 +105,7 @@ Sets Launch as your default home screen. You can change this in Android settings
 Enables contact search in unified search bar and quick call actions from search results.
 
 **Notification Access**
-Powers the notifications widget with unread counts and swipe-to-dismiss functionality.
+Enables integration with active media sessions for the media controller widget.
 
 **Accessibility Service**
 Enables screen locking with double-tap gesture and fingerprint unlock integration.
@@ -286,18 +286,6 @@ Long press the search bar to quickly open Google in your browser.`
 • Filter active/completed tasks
 • Search tasks by keyword
 • Color-coded priority indicators`
-      },
-      {
-        heading: 'Notifications Widget',
-        content: `**Features**
-• Shows unread notification count badge
-• Lists recent notifications
-• Swipe left to dismiss individual notifications
-• Tap notification to open related app
-• Clear all button
-
-**Setup Required**
-Grant notification access permission in Settings > Apps > Launch > Notifications`
       },
       {
         heading: 'Weather Widget',

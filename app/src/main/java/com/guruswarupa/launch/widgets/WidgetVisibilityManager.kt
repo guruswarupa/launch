@@ -24,9 +24,6 @@ class WidgetVisibilityManager(
         activity.findViewById<View>(com.guruswarupa.launch.R.id.media_controller_widget_container)?.visibility = 
             if (widgetMap["media_controller_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
             
-        val notificationsParent = activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.notifications_widget_container)?.parent as? ViewGroup
-        notificationsParent?.visibility = if (widgetMap["notifications_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
         activity.findViewById<View>(com.guruswarupa.launch.R.id.calendar_events_widget_container)?.visibility = 
             if (widgetMap["calendar_events_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
         
@@ -99,7 +96,6 @@ class WidgetVisibilityManager(
                 } else {
                     when (widget.id) {
                         "media_controller_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.media_controller_widget_container)
-                        "notifications_widget_container" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.notifications_widget_container)?.parent as? View
                         "calendar_events_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.calendar_events_widget_container)
                         "countdown_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.countdown_widget_container)
                         "dns_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.dns_widget_container)

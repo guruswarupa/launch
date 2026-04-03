@@ -96,17 +96,6 @@ Example voice commands:
 * Visual completion tracking
 * Persistent clean task interface
 
----
-
-🔔 **Notifications Widget**
-
-* View unread notification counts
-* Quick access to recent notifications
-* Swipe to dismiss directly
-* Tap to open related app
-
----
-
 🧮 **Calculator Widget**
 
 * Basic arithmetic operations

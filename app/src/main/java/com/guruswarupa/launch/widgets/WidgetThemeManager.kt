@@ -30,9 +30,6 @@ class WidgetThemeManager(
         
         
         activity.findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
-        activity.findViewById<View>(R.id.notifications_widget_container)?.parent?.let { parent ->
-            if (parent is View) parent.setBackgroundResource(widgetBackground)
-        }
         activity.findViewById<View>(R.id.calendar_events_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.countdown_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.dns_widget_container)?.setBackgroundResource(widgetBackground)

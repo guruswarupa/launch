@@ -363,7 +363,6 @@ class AppDockManager(
                                     // Work profile already enabled, just refresh
                                     updateWorkProfileIcon()
                                     refreshAppsForWorkspace()
-                                    Toast.makeText(context, "Work Profile active", Toast.LENGTH_SHORT).show()
                                 }
                             } else {
                                 // Swipe down - disable work profile
@@ -414,7 +413,6 @@ class AppDockManager(
             updateWorkProfileIcon()
             updateDockVisibility()
             activity.refreshAppsForWorkspace()
-            Toast.makeText(context, "Work Profile disabled", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -433,7 +431,6 @@ class AppDockManager(
         updateWorkProfileIcon()
         updateDockVisibility()
         activity.refreshAppsForWorkspace()
-        Toast.makeText(context, "Work Profile enabled", Toast.LENGTH_SHORT).show()
     }
     
     private fun showWorkProfileSettings() {
@@ -548,11 +545,9 @@ class AppDockManager(
             .setItems(itemsArray) { _, which ->
                 if (isWorkspaceActive && which == itemsArray.size - 1) {
                     workspaceManager.setActiveWorkspaceId(null)
-                    Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
                 } else {
                     val selectedWorkspace = workspaces[which]
                     workspaceManager.setActiveWorkspaceId(selectedWorkspace.id)
-                    Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
                 }
                 updateWorkspaceIcon()
                 refreshAppsForWorkspace()
@@ -582,7 +577,6 @@ class AppDockManager(
         updateWorkspaceIcon()
         refreshAppsForWorkspace()
         scrollToTop()
-        Toast.makeText(context, "Workspace '${selectedWorkspace.name}' activated", Toast.LENGTH_SHORT).show()
     }
 
     private fun turnOffWorkspace() {
@@ -591,7 +585,6 @@ class AppDockManager(
             updateWorkspaceIcon()
             refreshAppsForWorkspace()
             scrollToTop()
-            Toast.makeText(context, "Workspace mode disabled", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -815,7 +808,6 @@ class AppDockManager(
         
         if (enableDnd) updateDndState(true)
 
-        Toast.makeText(context, "Focus mode enabled for $durationMinutes minutes", Toast.LENGTH_LONG).show()
         startFocusModeTimer(endTime)
     }
 
@@ -1020,8 +1012,6 @@ class AppDockManager(
         stopTimerDisplay()
         
         if (dndWasEnabled) updateDndState(false)
-
-        Toast.makeText(context, "Focus mode disabled", Toast.LENGTH_SHORT).show()
     }
 
     private fun startFocusModeTimer(endTime: Long) {

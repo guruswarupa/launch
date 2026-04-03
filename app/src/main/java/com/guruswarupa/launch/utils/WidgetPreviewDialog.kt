@@ -91,7 +91,6 @@ class WidgetPreviewDialog(
         return when (widgetId) {
             "calculator_widget_container" -> "Perform calculations and unit conversions"
             "compass_widget_container" -> "Digital compass with direction tracking"
-            "notifications_widget_container" -> "Quick access to recent notifications"
             "calendar_events_widget_container" -> "Upcoming calendar events and reminders"
             "countdown_widget_container" -> "Countdown timers for important events"
             "physical_activity_widget_container" -> "Track steps and physical activity"

@@ -9,7 +9,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 
 import com.guruswarupa.launch.managers.*
-import com.guruswarupa.launch.widgets.NotificationsWidget
 import com.guruswarupa.launch.widgets.WidgetLifecycleCoordinator
 import com.guruswarupa.launch.AppAdapter
 import com.guruswarupa.launch.models.Constants
@@ -41,7 +40,6 @@ class LifecycleManager(
     data class Dependencies(
         val systemBarManager: SystemBarManager? = null,
         val appLockManager: AppLockManager? = null,
-        val notificationsWidget: NotificationsWidget? = null,
         val wallpaperManagerHelper: WallpaperManagerHelper? = null,
         val gestureHandler: GestureHandler? = null,
         val appDockManager: AppDockManager? = null,
@@ -92,10 +90,6 @@ class LifecycleManager(
         
         
         deps.appLockManager?.clearAuthTimeout()
-        
-        
-        deps.notificationsWidget?.updateNotifications()
-        
         
         deps.wallpaperManagerHelper?.setWallpaperBackground()
         

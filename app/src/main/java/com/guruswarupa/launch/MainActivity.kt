@@ -204,11 +204,6 @@ class MainActivity : FragmentActivity() {
             this,
             sharedPreferences,
             onSettingsUpdated = { handleSettingsUpdate() },
-            onNotificationsUpdated = { 
-                if (widgetLifecycleCoordinator.isNotificationsWidgetInitialized()) {
-                    widgetLifecycleCoordinator.notificationsWidget.updateNotifications()
-                }
-            },
             onPackageChanged = { packageName, isRemoved -> handlePackageChange(packageName, isRemoved) },
             onWallpaperChanged = { 
                 wallpaperManagerHelper.clearCache()
@@ -572,9 +567,6 @@ class MainActivity : FragmentActivity() {
             dependencies = LifecycleManager.Dependencies(
                 systemBarManager = systemBarManager,
                 appLockManager = appLockManager,
-                notificationsWidget = widgetLifecycleCoordinator
-                    .takeIf { it.isNotificationsWidgetInitialized() }
-                    ?.notificationsWidget,
                 wallpaperManagerHelper = wallpaperManagerHelper,
                 gestureHandler = gestureHandler,
                 appDockManager = appDockManager,
@@ -609,9 +601,6 @@ class MainActivity : FragmentActivity() {
         val coordinator = widgetLifecycleCoordinator
         lifecycleManager.updateDependencies {
             copy(
-                notificationsWidget = coordinator
-                    .takeIf { it.isNotificationsWidgetInitialized() }
-                    ?.notificationsWidget,
                 todoManager = todoManager
             )
         }

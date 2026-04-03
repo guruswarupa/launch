@@ -2,7 +2,6 @@ package com.guruswarupa.launch.widgets
 
 class WidgetLifecycleCoordinator {
     lateinit var calculatorWidget: CalculatorWidget
-    lateinit var notificationsWidget: NotificationsWidget
     lateinit var mediaControllerWidget: MediaControllerWidget
     lateinit var workoutWidget: WorkoutWidget
     lateinit var physicalActivityWidget: PhysicalActivityWidget
@@ -21,7 +20,6 @@ class WidgetLifecycleCoordinator {
     lateinit var networkStatsWidget: NetworkStatsWidget
     lateinit var deviceInfoWidget: DeviceInfoWidget
 
-    fun isNotificationsWidgetInitialized() = ::notificationsWidget.isInitialized
     fun isMediaControllerWidgetInitialized() = ::mediaControllerWidget.isInitialized
     fun isPhysicalActivityWidgetInitialized() = ::physicalActivityWidget.isInitialized
     fun isCompassWidgetInitialized() = ::compassWidget.isInitialized

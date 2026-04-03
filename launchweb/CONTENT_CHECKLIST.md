@@ -34,7 +34,6 @@
 - [x] Productivity Widgets
   - Calculator (3 modes)
   - Todo List
-  - Notifications Widget
   - Weather Widget
   - Countdown Timer
 
@@ -136,7 +135,6 @@ All widgets have dedicated documentation sections in the Core Features area:
 - [x] Device Info Widget
 - [x] Network Stats Widget
 - [x] Noise Decibel Widget
-- [x] Notifications Widget
 - [x] Physical Activity Widget
 - [x] Pressure Widget
 - [x] Temperature Widget

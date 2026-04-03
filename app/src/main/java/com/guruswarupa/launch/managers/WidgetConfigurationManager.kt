@@ -15,10 +15,10 @@ class WidgetConfigurationManager(
     companion object {
         private const val PREF_WIDGET_ORDER = "widget_order"
         private const val PREFS_SYSTEM_WIDGETS_KEY = "saved_widgets"
+        private const val REMOVED_NOTIFICATIONS_WIDGET_ID = "notifications_widget_container"
         
         val IN_APP_WIDGETS = listOf(
             WidgetInfo("media_controller_widget_container", "Media Controller", false),
-            WidgetInfo("notifications_widget_container", "Notifications", false),
             WidgetInfo("calendar_events_widget_container", "Calendar Events", false),
             WidgetInfo("countdown_widget_container", "Countdown", false),
             WidgetInfo("dns_widget_container", "DNS Provider", false),
@@ -67,11 +67,13 @@ class WidgetConfigurationManager(
                     val name = jsonObject.getString("name")
                     val enabled = jsonObject.getBoolean("enabled")
                     val isSystem = jsonObject.optBoolean("isSystemWidget", false)
-                    val pkg = jsonObject.optString("providerPackage", null)
-                    val cls = jsonObject.optString("providerClass", null)
+                    val pkg = jsonObject.optString("providerPackage").takeIf { it.isNotEmpty() }
+                    val cls = jsonObject.optString("providerClass").takeIf { it.isNotEmpty() }
                     val widgetId = if (jsonObject.has("appWidgetId")) jsonObject.getInt("appWidgetId") else null
                     
-                    savedWidgetsList.add(WidgetInfo(id, name, enabled, isSystem, pkg, cls, widgetId, appName = getAppName(pkg)))
+                    if (id != REMOVED_NOTIFICATIONS_WIDGET_ID) {
+                        savedWidgetsList.add(WidgetInfo(id, name, enabled, isSystem, pkg, cls, widgetId, appName = getAppName(pkg)))
+                    }
                 }
             } catch (_: Exception) {}
         }
@@ -183,7 +185,7 @@ class WidgetConfigurationManager(
     fun saveWidgetOrder(widgets: List<WidgetInfo>) {
         val jsonArray = JSONArray()
         widgets.forEach { widget ->
-            if (!widget.isProvider) {
+            if (!widget.isProvider && widget.id != REMOVED_NOTIFICATIONS_WIDGET_ID) {
                 val jsonObject = JSONObject()
                 jsonObject.put("id", widget.id)
                 jsonObject.put("name", widget.name)
