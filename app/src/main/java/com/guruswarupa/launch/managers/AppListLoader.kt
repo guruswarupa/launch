@@ -40,9 +40,16 @@ class AppListLoader(
     private val voiceSearchButton: ImageButton,
     private val sharedPreferences: android.content.SharedPreferences
 ) {
+    companion object {
+        private const val TAG = "AppListLoader"
+        private const val WORK_PROFILE_EMPTY_RETRY_DELAY_MS = 350L
+        private const val MAX_WORK_PROFILE_EMPTY_RETRIES = 2
+    }
+
     private var cachedUnsortedList: List<ResolveInfo>? = null
     private var lastCacheTime = 0L
-    private val cacheDuration = 300000L 
+    private val cacheDuration = 300000L
+    private var workProfileEmptyRetryCount = 0
     private val currentUserSerial by lazy {
         val userManager = activity.getSystemService(Context.USER_SERVICE) as UserManager
         userManager.getSerialNumberForUser(Process.myUserHandle()).toInt()
@@ -57,13 +64,13 @@ class AppListLoader(
         }
         try {
             if ((backgroundExecutor as? java.util.concurrent.ExecutorService)?.isShutdown == true) {
-                Log.w("AppListLoader", "Background executor is shut down, skipping task")
+                Log.w(TAG, "Background executor is shut down, skipping task")
                 return false
             }
             backgroundExecutor.execute(task)
             return true
         } catch (e: RejectedExecutionException) {
-            Log.w("AppListLoader", "Task rejected by executor", e)
+            Log.w(TAG, "Task rejected by executor", e)
             return false
         }
     }
@@ -220,6 +227,14 @@ class AppListLoader(
                     val focusMode = appDockManager.getCurrentMode()
                     val workspaceMode = appDockManager.isWorkspaceModeActive()
                     val finalAppList = appListManager.filterAndPrepareApps(fullList, focusMode, workspaceMode)
+
+                    if (shouldRetryForEmptyWorkProfileList(fullList, finalAppList)) {
+                        return@safeExecute
+                    }
+
+                    if (finalAppList.isNotEmpty()) {
+                        workProfileEmptyRetryCount = 0
+                    }
                     
                     // Pre-populate label cache for all apps BEFORE sorting and UI update
                     // This ensures labels are ready when adapter binds views
@@ -298,6 +313,52 @@ class AppListLoader(
             }
         }
         updateSearchVisibility()
+    }
+
+    private fun shouldRetryForEmptyWorkProfileList(
+        fullList: List<ResolveInfo>,
+        finalAppList: List<ResolveInfo>
+    ): Boolean {
+        val isWorkProfileModeEnabled = sharedPreferences.getBoolean("work_profile_enabled", false)
+        if (!isWorkProfileModeEnabled || finalAppList.isNotEmpty()) {
+            if (!isWorkProfileModeEnabled) {
+                workProfileEmptyRetryCount = 0
+            }
+            return false
+        }
+
+        val hasLoadedWorkApps = fullList.any(::isWorkProfileApp)
+        if (hasLoadedWorkApps) {
+            workProfileEmptyRetryCount = 0
+            return false
+        }
+
+        if (workProfileEmptyRetryCount >= MAX_WORK_PROFILE_EMPTY_RETRIES) {
+            Log.w(TAG, "Work profile list still empty after retries; showing empty state")
+            return false
+        }
+
+        workProfileEmptyRetryCount += 1
+        Log.d(
+            TAG,
+            "Work profile apps not available yet; retrying load (${workProfileEmptyRetryCount}/$MAX_WORK_PROFILE_EMPTY_RETRIES)"
+        )
+        handler.postDelayed({
+            if (!activity.isFinishing && !activity.isDestroyed) {
+                loadApps(
+                    forceRefresh = true,
+                    fullAppList = activity.fullAppList,
+                    appList = activity.appList,
+                    adapter = activity.adapter
+                )
+            }
+        }, WORK_PROFILE_EMPTY_RETRY_DELAY_MS)
+        return true
+    }
+
+    private fun isWorkProfileApp(app: ResolveInfo): Boolean {
+        val packageName = app.activityInfo.packageName
+        return !WebAppManager.isWebAppPackage(packageName) && app.preferredOrder != currentUserSerial
     }
     
     private fun updateSearchVisibility() {

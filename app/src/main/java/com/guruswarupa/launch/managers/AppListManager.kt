@@ -214,6 +214,8 @@ class AppListManager @Inject constructor(
     
     fun getFocusMode(): Boolean = requireAppDockManager().getCurrentMode()
     fun getWorkspaceMode(): Boolean = requireAppDockManager().isWorkspaceModeActive()
+    fun isWorkProfileModeEnabled(): Boolean = workProfileManager.isWorkProfileEnabled()
+    fun isWorkProfileApp(app: ResolveInfo): Boolean = app.preferredOrder != mainUserSerial
 
     private fun isInternalApp(app: ResolveInfo): Boolean {
         val packageName = app.activityInfo.packageName

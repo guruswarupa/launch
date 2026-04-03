@@ -26,7 +26,7 @@ class WorkProfileManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "WorkProfileManager"
-        private const val WORK_PROFILE_ENABLED_KEY = "work_profile_enabled"
+        const val WORK_PROFILE_ENABLED_KEY = "work_profile_enabled"
         const val REQUEST_CODE_CREATE_WORK_PROFILE = 2000
         const val WORK_PROFILE_WORKSPACE_ID = "work_profile_workspace"
     }
@@ -119,9 +119,8 @@ class WorkProfileManager @Inject constructor(
 
     private fun isWorkProfileQuietModeEnabled(userHandle: UserHandle): Boolean {
         return try {
-            val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-            val apps = launcherApps.getActivityList(null, userHandle)
-            apps.isEmpty()
+            val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+            userManager.isQuietModeEnabled(userHandle)
         } catch (e: Exception) {
             Log.e(TAG, "Error checking work profile quiet mode", e)
             true

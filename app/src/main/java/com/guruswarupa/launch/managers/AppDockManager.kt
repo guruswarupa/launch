@@ -404,14 +404,17 @@ class AppDockManager(
     }
     
     private fun toggleWorkProfile() {
-        val isWorkModeEnabled = workProfileManager.isWorkProfileEnabled()
+        val isWorkModeEnabled = workProfileManager.syncWorkProfileEnabledState()
 
         if (isWorkModeEnabled) {
-            workProfileManager.setWorkProfileEnabled(false)
+            if (!workProfileManager.setWorkProfileQuietMode(false)) {
+                Toast.makeText(context, "Unable to pause the work profile", Toast.LENGTH_SHORT).show()
+                return
+            }
             updateWorkProfileIcon()
             updateDockVisibility()
             activity.refreshAppsForWorkspace()
-            Toast.makeText(context, "Normal mode enabled", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Work Profile disabled", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -426,7 +429,7 @@ class AppDockManager(
             return
         }
 
-        workProfileManager.setWorkProfileEnabled(true)
+        workProfileManager.syncWorkProfileEnabledState()
         updateWorkProfileIcon()
         updateDockVisibility()
         activity.refreshAppsForWorkspace()
@@ -671,6 +674,10 @@ class AppDockManager(
     
     fun isWorkspaceModeActive(): Boolean {
         return workspaceManager.isWorkspaceModeActive()
+    }
+
+    fun isWorkProfileModeEnabled(): Boolean {
+        return workProfileManager.isWorkProfileEnabled()
     }
     
     fun isAppInActiveWorkspace(packageName: String): Boolean {

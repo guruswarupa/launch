@@ -24,6 +24,7 @@ class AppListUIUpdater(
     private val searchBox: AutoCompleteTextView
 ) {
     private var isGridMode: Boolean = false
+    private var preservedWorkProfileListOnce = false
 
     fun setAdapter(adapter: AppAdapter) {
         this.adapter = adapter
@@ -77,6 +78,16 @@ class AppListUIUpdater(
         isFinal: Boolean = false
     ) {
         if (activity.isFinishing || activity.isDestroyed) return
+
+        if (shouldKeepCurrentWorkProfileList(newAppList, newFullAppList)) {
+            preservedWorkProfileListOnce = true
+            appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
+            return
+        }
+
+        if (newAppList.isNotEmpty() || !appListManager.isWorkProfileModeEnabled()) {
+            preservedWorkProfileListOnce = false
+        }
         
         val deduplicatedFullAppList = newFullAppList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
         
@@ -100,6 +111,30 @@ class AppListUIUpdater(
         activity.updateFastScrollerVisibility()
         
         activity.updateAppSearchManager(newFullAppList, newAppList)
+    }
+
+    private fun shouldKeepCurrentWorkProfileList(
+        newAppList: List<ResolveInfo>,
+        newFullAppList: List<ResolveInfo>
+    ): Boolean {
+        if (preservedWorkProfileListOnce) return false
+        if (!appListManager.isWorkProfileModeEnabled()) return false
+        if (newAppList.isNotEmpty()) return false
+        if (appList.isEmpty()) return false
+
+        val currentHasVisibleWorkApps = appList.any { app ->
+            val packageName = app.activityInfo.packageName
+            packageName != "com.guruswarupa.launch.SEPARATOR" &&
+                !packageName.startsWith("launcher_") &&
+                appListManager.isWorkProfileApp(app)
+        }
+        if (!currentHasVisibleWorkApps) return false
+
+        val incomingHasWorkApps = newFullAppList.any { app ->
+            appListManager.isWorkProfileApp(app)
+        }
+
+        return !incomingHasWorkApps
     }
 
     fun filterAppsWithoutReload() {

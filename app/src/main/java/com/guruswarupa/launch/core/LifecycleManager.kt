@@ -133,14 +133,17 @@ class LifecycleManager(
         deps.widgetLifecycleCoordinator?.onResume()
         
         
+        val shouldForceWorkProfileRefresh = deps.appDockManager?.isWorkProfileModeEnabled() == true
         val shouldRefreshAppList =
-            (deps.appList?.isEmpty() == true) || now - lastAppListRefreshAt >= APP_LIST_REFRESH_INTERVAL_MS
+            shouldForceWorkProfileRefresh ||
+                (deps.appList?.isEmpty() == true) ||
+                now - lastAppListRefreshAt >= APP_LIST_REFRESH_INTERVAL_MS
         if (shouldRefreshAppList) {
             handler.postDelayed({
                 if (!activity.isFinishing && !activity.isDestroyed) {
                     deps.hiddenAppManager?.forceRefresh()
-                    deps.appListLoader?.loadApps(forceRefresh = false) ?: run {
-                        onLoadApps?.invoke(false)
+                    deps.appListLoader?.loadApps(forceRefresh = shouldForceWorkProfileRefresh) ?: run {
+                        onLoadApps?.invoke(shouldForceWorkProfileRefresh)
                     }
                     lastAppListRefreshAt = SystemClock.elapsedRealtime()
                 }
