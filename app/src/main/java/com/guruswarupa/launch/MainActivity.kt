@@ -251,6 +251,14 @@ class MainActivity : FragmentActivity() {
         )
         searchTypeMenuManager.setup()
     }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (::activityResultHandler.isInitialized) {
+            activityResultHandler.handleActivityResult(requestCode, resultCode, data)
+        }
+    }
     
 
 

@@ -110,7 +110,7 @@
             android:id="@+id/widgets_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="ENABLED WIDGETS"
+            android:text="0 widgets available"
             android:textSize="12sp"
             android:fontFamily="sans-serif-medium"
             android:textColor="@color/nord8"
@@ -125,7 +125,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="12dp"
             android:layout_marginStart="12dp"
-            android:text="Changes save automatically. Drag handles to reorder. Tap a card to toggle."
+            android:text="Changes save automatically. Tap a widget to enable, disable, or add it. Reordering works when search is clear."
             android:textColor="@color/white"
             android:alpha="0.5"
             android:textSize="13sp"
@@ -150,6 +150,18 @@
                 android:clipToPadding="false"
                 android:overScrollMode="never"
                 android:padding="8dp" />
+
+            <TextView
+                android:id="@+id/empty_state_text"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:padding="24dp"
+                android:text="No widgets match your search."
+                android:textAlignment="center"
+                android:textColor="@color/widget_config_text_secondary"
+                android:textSize="15sp"
+                android:visibility="gone" />
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
