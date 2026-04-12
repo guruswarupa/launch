@@ -44,8 +44,18 @@ class ActivityResultHandler(
             widgetManager.handleWidgetPicked(activity, data)
         } else if (requestCode == REQUEST_CONFIGURE_WIDGET && resultCode == Activity.RESULT_OK) {
             onBlockBackGestures()
-            val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: return
-            widgetManager.handleWidgetConfigured(appWidgetId)
+            val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
+            widgetManager.handleWidgetConfigured(appWidgetId?.takeIf { it != -1 })
+        } else if (requestCode == REQUEST_CONFIGURE_WIDGET) {
+            widgetManager.handleWidgetConfigurationCanceled(
+                data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
+                    ?.takeIf { it != -1 }
+            )
+        } else if (requestCode == REQUEST_BIND_WIDGET && resultCode == Activity.RESULT_OK) {
+            onBlockBackGestures()
+            widgetManager.handleBindRequestResult(activity, approved = true)
+        } else if (requestCode == REQUEST_BIND_WIDGET) {
+            widgetManager.handleBindRequestResult(activity, approved = false)
         } else if (requestCode == WALLPAPER_REQUEST_CODE) {
             wallpaperManagerHelper?.let {
                 it.clearCache()
