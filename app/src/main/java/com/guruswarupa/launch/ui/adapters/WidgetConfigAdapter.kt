@@ -1,34 +1,35 @@
 package com.guruswarupa.launch.ui.adapters
 
-import android.content.Context
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.guruswarupa.launch.R
+import com.guruswarupa.launch.managers.TypographyManager
 import com.guruswarupa.launch.managers.WidgetConfigurationManager
 import com.guruswarupa.launch.utils.WidgetPreviewManager
-import com.guruswarupa.launch.R
-import com.guruswarupa.launch.ui.activities.WidgetConfigurationActivity
-import com.guruswarupa.launch.utils.WidgetPreviewDialog
-import com.guruswarupa.launch.managers.TypographyManager
 
 class WidgetConfigAdapter(
-    private val context: Context,
     private var widgets: MutableList<WidgetConfigurationManager.WidgetInfo>,
     private val previewManager: WidgetPreviewManager,
-    private val onToggleChanged: (Int, Boolean) -> Unit
+    private val onWidgetTapped: (WidgetConfigurationManager.WidgetInfo) -> Unit,
+    private val onWidgetResized: (WidgetConfigurationManager.WidgetInfo, Int) -> Unit
 ) : RecyclerView.Adapter<WidgetConfigAdapter.WidgetViewHolder>() {
 
     class WidgetViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val previewContainer: FrameLayout = itemView.findViewById(R.id.widget_preview_container)
         val previewImage: ImageView = itemView.findViewById(R.id.widget_preview_image)
         val loadingProgress: ProgressBar = itemView.findViewById(R.id.preview_loading_progress)
         val disabledOverlay: View = itemView.findViewById(R.id.disabled_overlay)
         val disabledText: TextView = itemView.findViewById(R.id.disabled_text)
+        val resizeBorder: View = itemView.findViewById(R.id.resize_border)
+        val resizeHandle: ImageView = itemView.findViewById(R.id.resize_handle)
         val widgetName: TextView = itemView.findViewById(R.id.widget_name)
-        val widgetDescription: TextView = itemView.findViewById(R.id.widget_description)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WidgetViewHolder {
@@ -41,26 +42,32 @@ class WidgetConfigAdapter(
     override fun onBindViewHolder(holder: WidgetViewHolder, position: Int) {
         val widget = widgets[position]
         holder.widgetName.text = widget.name
-        holder.widgetDescription.text = getWidgetDescription(widget)
-        
+
+        applyPreviewHeight(holder, widget)
+        setupResizeInteraction(holder, widget)
+
         if (widget.isProvider) {
             holder.disabledOverlay.visibility = View.VISIBLE
             holder.disabledText.visibility = View.VISIBLE
             holder.disabledText.text = "TAP TO ADD"
             holder.widgetName.alpha = 0.6f
-            holder.widgetDescription.alpha = 0.6f
-            holder.previewImage.alpha = 0.4f
+            holder.previewImage.alpha = 1.0f
         } else {
             updateWidgetState(holder, widget.enabled)
             holder.disabledText.text = "DISABLED"
         }
-        
+
         loadPreviewImage(holder, widget)
-        
+
         holder.itemView.setOnClickListener {
             val currentPos = holder.bindingAdapterPosition
             if (currentPos != RecyclerView.NO_POSITION) {
-                showWidgetPreview(widgets[currentPos])
+                val selectedWidget = widgets[currentPos]
+                if (!selectedWidget.isProvider) {
+                    widgets[currentPos] = selectedWidget.copy(enabled = !selectedWidget.enabled)
+                    notifyItemChanged(currentPos)
+                }
+                onWidgetTapped(selectedWidget)
             }
         }
     }
@@ -68,24 +75,111 @@ class WidgetConfigAdapter(
     override fun getItemCount(): Int = widgets.size
 
     fun getWidgets(): List<WidgetConfigurationManager.WidgetInfo> = widgets.toList()
-    
+
     fun updateWidgets(newWidgets: MutableList<WidgetConfigurationManager.WidgetInfo>) {
         widgets = newWidgets
     }
-    
+
     private fun updateWidgetState(holder: WidgetViewHolder, isEnabled: Boolean) {
         holder.disabledOverlay.visibility = if (isEnabled) View.GONE else View.VISIBLE
         holder.disabledText.visibility = if (isEnabled) View.GONE else View.VISIBLE
         holder.widgetName.alpha = if (isEnabled) 1.0f else 0.5f
-        holder.widgetDescription.alpha = if (isEnabled) 1.0f else 0.5f
-        holder.previewImage.alpha = if (isEnabled) 1.0f else 0.4f
+        holder.previewImage.alpha = 1.0f
     }
-    
+
+    private fun applyPreviewHeight(holder: WidgetViewHolder, widget: WidgetConfigurationManager.WidgetInfo) {
+        val targetHeightDp = widget.customHeightDp?.coerceIn(MIN_PREVIEW_HEIGHT_DP, MAX_PREVIEW_HEIGHT_DP)
+            ?: DEFAULT_PREVIEW_HEIGHT_DP
+        val targetHeightPx = dpToPx(holder.itemView, targetHeightDp)
+        val layoutParams = holder.previewContainer.layoutParams
+        if (layoutParams.height != targetHeightPx) {
+            layoutParams.height = targetHeightPx
+            holder.previewContainer.layoutParams = layoutParams
+        }
+    }
+
+    private fun setupResizeInteraction(holder: WidgetViewHolder, widget: WidgetConfigurationManager.WidgetInfo) {
+        val canResize = widget.isSystemWidget && !widget.isProvider && widget.appWidgetId != null
+        holder.resizeBorder.visibility = View.GONE
+        holder.resizeHandle.visibility = View.GONE
+        holder.itemView.setOnLongClickListener(null)
+        holder.resizeHandle.setOnTouchListener(null)
+
+        if (!canResize) return
+
+        val hideResizeUi = Runnable {
+            holder.resizeBorder.visibility = View.GONE
+            holder.resizeHandle.visibility = View.GONE
+        }
+
+        holder.itemView.setOnLongClickListener {
+            holder.resizeBorder.visibility = View.VISIBLE
+            holder.resizeHandle.visibility = View.VISIBLE
+            holder.resizeHandle.removeCallbacks(hideResizeUi)
+            holder.resizeHandle.postDelayed(hideResizeUi, 4000L)
+            true
+        }
+
+        holder.resizeHandle.setOnTouchListener(object : View.OnTouchListener {
+            private var startRawY = 0f
+            private var startHeightPx = 0
+
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        holder.resizeBorder.visibility = View.VISIBLE
+                        holder.resizeHandle.visibility = View.VISIBLE
+                        holder.resizeHandle.removeCallbacks(hideResizeUi)
+                        startRawY = event.rawY
+                        startHeightPx = holder.previewContainer.height
+                            .takeIf { it > 0 }
+                            ?: dpToPx(holder.itemView, widget.customHeightDp ?: DEFAULT_PREVIEW_HEIGHT_DP)
+                        holder.itemView.parent?.requestDisallowInterceptTouchEvent(true)
+                        return true
+                    }
+
+                    MotionEvent.ACTION_MOVE -> {
+                        val deltaY = (event.rawY - startRawY).toInt()
+                        val targetHeightPx = (startHeightPx + deltaY).coerceIn(
+                            dpToPx(holder.itemView, MIN_PREVIEW_HEIGHT_DP),
+                            dpToPx(holder.itemView, MAX_PREVIEW_HEIGHT_DP)
+                        )
+                        val layoutParams = holder.previewContainer.layoutParams
+                        if (layoutParams.height != targetHeightPx) {
+                            layoutParams.height = targetHeightPx
+                            holder.previewContainer.layoutParams = layoutParams
+                        }
+                        return true
+                    }
+
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        val currentPos = holder.bindingAdapterPosition
+                        if (currentPos != RecyclerView.NO_POSITION) {
+                            val heightDp = pxToDp(holder.itemView, holder.previewContainer.height)
+                                .coerceIn(MIN_PREVIEW_HEIGHT_DP, MAX_PREVIEW_HEIGHT_DP)
+                            val updatedWidget = widgets[currentPos].copy(customHeightDp = heightDp)
+                            widgets[currentPos] = updatedWidget
+                            onWidgetResized(updatedWidget, heightDp)
+                        }
+                        holder.itemView.parent?.requestDisallowInterceptTouchEvent(false)
+                        holder.resizeHandle.postDelayed(hideResizeUi, 2500L)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+    }
+
     private fun loadPreviewImage(holder: WidgetViewHolder, widget: WidgetConfigurationManager.WidgetInfo) {
+        holder.previewImage.tag = widget.id
         holder.previewImage.setImageDrawable(null)
         holder.loadingProgress.visibility = View.VISIBLE
-        
+
         previewManager.generatePreview(widget.id, widget.name) { bitmap ->
+            if (holder.previewImage.tag != widget.id) {
+                return@generatePreview
+            }
             holder.loadingProgress.visibility = View.GONE
             if (bitmap != null && !bitmap.isRecycled) {
                 holder.previewImage.setImageBitmap(bitmap)
@@ -94,53 +188,18 @@ class WidgetConfigAdapter(
             }
         }
     }
-    
-    private fun getWidgetDescription(widget: WidgetConfigurationManager.WidgetInfo): String {
-        if (widget.isSystemWidget) {
-            return "System widget from ${widget.providerPackage ?: "unknown"}"
-        }
-        return when (widget.id) {
-            "calculator_widget_container" -> "Calculator & converter"
-            "compass_widget_container" -> "Digital compass"
-            "calendar_events_widget_container" -> "Calendar events"
-            "countdown_widget_container" -> "Countdown timer"
-            "physical_activity_widget_container" -> "Step counter"
-            "pressure_widget_container" -> "Pressure monitor"
-            "temperature_widget_container" -> "Temperature sensor"
-            "weather_forecast_widget_container" -> "Forecast, hourly, alerts"
-            "noise_decibel_widget_container" -> "Sound level meter"
-            "workout_widget_container" -> "Workout tracker"
-            "todo_recycler_view" -> "Task manager"
-            "finance_widget" -> "Finance tracker"
-            "weekly_usage_widget" -> "Usage stats"
-            "network_stats_widget_container" -> "Network monitor"
-            "device_info_widget_container" -> "Device info"
-            "battery_health_widget_container" -> "Battery health & info"
-            "note_widget_container" -> "Notes & reminders"
-            "media_controller_widget_container" -> "Music & media control"
-            "year_progress_widget_container" -> "Year progress tracker"
-            "github_contributions_widget_container" -> "GitHub contribution graph"
-            "dns_widget_container" -> "DNS provider info"
-            else -> "Widget"
-        }
+
+    private fun dpToPx(view: View, dp: Int): Int {
+        return (dp * view.resources.displayMetrics.density).toInt()
     }
-    
-    private fun showWidgetPreview(widget: WidgetConfigurationManager.WidgetInfo) {
-        val activity = context as? WidgetConfigurationActivity ?: return
-        
-        WidgetPreviewDialog.show(context, widget, previewManager) { shouldEnable ->
-            if (widget.isProvider) {
-                if (shouldEnable) {
-                    activity.addSystemWidgetProvider(widget)
-                }
-            } else {
-                val position = widgets.indexOfFirst { w -> w.id == widget.id }
-                if (position >= 0) {
-                    widgets[position] = widgets[position].copy(enabled = shouldEnable)
-                    notifyItemChanged(position)
-                    activity.updateWidgetState(widget.id, shouldEnable)
-                }
-            }
-        }
+
+    private fun pxToDp(view: View, px: Int): Int {
+        return (px / view.resources.displayMetrics.density).toInt()
+    }
+
+    companion object {
+        private const val DEFAULT_PREVIEW_HEIGHT_DP = 180
+        private const val MIN_PREVIEW_HEIGHT_DP = 140
+        private const val MAX_PREVIEW_HEIGHT_DP = 360
     }
 }

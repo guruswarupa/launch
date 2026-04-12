@@ -25,6 +25,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.handlers.ActivityResultHandler
 import com.guruswarupa.launch.ui.activities.WidgetConfigurationActivity
 import org.json.JSONArray
 import org.json.JSONObject
@@ -36,6 +37,8 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     private val prefs: SharedPreferences = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
     private val widgets = mutableListOf<WidgetInfo>()
     private val widgetOptionsCache = mutableMapOf<Int, String>()
+    private var pendingConfigureWidgetId: Int? = null
+    private var pendingBindRequest: PendingBindRequest? = null
     
     companion object {
         private const val APPWIDGET_HOST_ID = 1024
@@ -50,6 +53,12 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         val minWidth: Int,
         val minHeight: Int,
         val customHeightDp: Int? = null
+    )
+
+    private data class PendingBindRequest(
+        val appWidgetId: Int,
+        val providerPackage: String,
+        val providerClass: String
     )
     
     init {
@@ -97,19 +106,9 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         }
         
         if (success) {
-            bindWidget(appWidgetId, providerInfo)
-            
-            if (providerInfo.configure != null) {
-                val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
-                configIntent.component = providerInfo.configure
-                configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                activity.startActivityForResult(configIntent, 801) 
-            } else {
-                
-                (activity as? WidgetConfigurationActivity)?.loadWidgets()
-            }
+            launchConfigureOrBind(activity, appWidgetId, providerInfo)
         } else {
-            
+            pendingBindRequest = PendingBindRequest(appWidgetId, providerPackage, providerClass)
             val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
             intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, providerInfo.provider)
@@ -134,27 +133,92 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         
         
         if (appWidgetInfo.configure != null) {
-            
             val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
             configIntent.component = appWidgetInfo.configure
             configIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             try {
-                
-                activity.startActivityForResult(configIntent, 801) 
+                pendingConfigureWidgetId = appWidgetId
+                activity.startActivityForResult(configIntent, ActivityResultHandler.REQUEST_CONFIGURE_WIDGET)
             } catch (_: Exception) {
-                
+                pendingConfigureWidgetId = null
                 bindWidget(appWidgetId, appWidgetInfo)
             }
         } else {
-            
             bindWidget(appWidgetId, appWidgetInfo)
         }
     }
     
-    fun handleWidgetConfigured(appWidgetId: Int) {
-        val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
+    fun handleWidgetConfigured(appWidgetId: Int? = null) {
+        val resolvedWidgetId = appWidgetId ?: pendingConfigureWidgetId
+        pendingConfigureWidgetId = null
+        if (resolvedWidgetId == null || resolvedWidgetId == -1) {
+            return
+        }
+
+        val appWidgetInfo = appWidgetManager.getAppWidgetInfo(resolvedWidgetId)
         if (appWidgetInfo != null) {
-            bindWidget(appWidgetId, appWidgetInfo)
+            bindWidget(resolvedWidgetId, appWidgetInfo)
+        } else {
+            appWidgetHost.deleteAppWidgetId(resolvedWidgetId)
+        }
+    }
+
+    fun handleWidgetConfigurationCanceled(appWidgetId: Int? = null) {
+        val resolvedWidgetId = appWidgetId ?: pendingConfigureWidgetId
+        pendingConfigureWidgetId = null
+        if (resolvedWidgetId != null && resolvedWidgetId != -1) {
+            widgets.removeAll { it.appWidgetId == resolvedWidgetId }
+            widgetOptionsCache.remove(resolvedWidgetId)
+            appWidgetHost.deleteAppWidgetId(resolvedWidgetId)
+            saveWidgets()
+        }
+    }
+
+    fun handleBindRequestResult(activity: Activity, approved: Boolean) {
+        val pendingRequest = pendingBindRequest ?: return
+        pendingBindRequest = null
+
+        if (!approved) {
+            appWidgetHost.deleteAppWidgetId(pendingRequest.appWidgetId)
+            return
+        }
+
+        val providerInfo = appWidgetManager.installedProviders.find {
+            it.provider.packageName == pendingRequest.providerPackage &&
+                it.provider.className == pendingRequest.providerClass
+        }
+
+        if (providerInfo == null) {
+            appWidgetHost.deleteAppWidgetId(pendingRequest.appWidgetId)
+            Toast.makeText(context, "Widget provider is no longer available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        launchConfigureOrBind(activity, pendingRequest.appWidgetId, providerInfo)
+    }
+
+    private fun launchConfigureOrBind(
+        activity: Activity,
+        appWidgetId: Int,
+        providerInfo: AppWidgetProviderInfo
+    ) {
+        if (providerInfo.configure != null) {
+            val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+                component = providerInfo.configure
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            }
+            try {
+                pendingConfigureWidgetId = appWidgetId
+                activity.startActivityForResult(configIntent, ActivityResultHandler.REQUEST_CONFIGURE_WIDGET)
+            } catch (_: Exception) {
+                pendingConfigureWidgetId = null
+                bindWidget(appWidgetId, providerInfo)
+                (activity as? WidgetConfigurationActivity)?.loadWidgets()
+            }
+        } else {
+            pendingConfigureWidgetId = null
+            bindWidget(appWidgetId, providerInfo)
+            (activity as? WidgetConfigurationActivity)?.loadWidgets()
         }
     }
     
@@ -233,6 +297,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             widgetContainer.addView(widgetContainerView)
             
             saveWidgets()
+            (context as? WidgetConfigurationActivity)?.loadWidgets()
             
             Toast.makeText(context, "Widget added successfully", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -439,7 +504,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         ).toInt()
     }
 
-    private fun updateWidgetCustomHeight(appWidgetId: Int, customHeightDp: Int) {
+    fun updateWidgetCustomHeight(appWidgetId: Int, customHeightDp: Int) {
         val index = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
         if (index < 0) return
         widgets[index] = widgets[index].copy(customHeightDp = customHeightDp)

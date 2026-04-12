@@ -51,7 +51,8 @@ class WidgetConfigurationManager(
         val providerClass: String? = null,
         val appWidgetId: Int? = null,
         val isProvider: Boolean = false,
-        val appName: String? = null
+        val appName: String? = null,
+        val customHeightDp: Int? = null
     )
 
     fun getWidgetConfiguration(): List<WidgetInfo> {
@@ -72,7 +73,20 @@ class WidgetConfigurationManager(
                     val widgetId = if (jsonObject.has("appWidgetId")) jsonObject.getInt("appWidgetId") else null
                     
                     if (id != REMOVED_NOTIFICATIONS_WIDGET_ID) {
-                        savedWidgetsList.add(WidgetInfo(id, name, enabled, isSystem, pkg, cls, widgetId, appName = getAppName(pkg)))
+                        val customHeightDp = if (jsonObject.has("customHeightDp")) jsonObject.optInt("customHeightDp") else null
+                        savedWidgetsList.add(
+                            WidgetInfo(
+                                id,
+                                name,
+                                enabled,
+                                isSystem,
+                                pkg,
+                                cls,
+                                widgetId,
+                                appName = getAppName(pkg),
+                                customHeightDp = customHeightDp
+                            )
+                        )
                     }
                 }
             } catch (_: Exception) {}
@@ -174,7 +188,8 @@ class WidgetConfigurationManager(
                         providerPackage = packageName,
                         providerClass = className,
                         appWidgetId = appWidgetId,
-                        appName = getAppName(packageName)
+                        appName = getAppName(packageName),
+                        customHeightDp = if (json.has("customHeightDp")) json.optInt("customHeightDp") else null
                     ))
                 }
             }
@@ -194,6 +209,7 @@ class WidgetConfigurationManager(
                 widget.providerPackage?.let { jsonObject.put("providerPackage", it) }
                 widget.providerClass?.let { jsonObject.put("providerClass", it) }
                 widget.appWidgetId?.let { jsonObject.put("appWidgetId", it) }
+                widget.customHeightDp?.let { jsonObject.put("customHeightDp", it) }
                 jsonArray.put(jsonObject)
             }
         }

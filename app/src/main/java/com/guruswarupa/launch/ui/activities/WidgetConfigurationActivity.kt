@@ -48,10 +48,13 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private val backgroundExecutor = Executors.newFixedThreadPool(2)
     private lateinit var widgetsRecyclerView: RecyclerView
     private lateinit var widgetSectionDecoration: WidgetSectionDecoration
-    
-    
+    private lateinit var widgetsHeader: android.widget.TextView
+    private lateinit var instructionText: android.widget.TextView
+    private lateinit var emptyStateText: android.widget.TextView
+
     private var allWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
     private var filteredWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
+    private var currentQuery: String = ""
     
     private val prefs by lazy { getSharedPreferences(prefsName, MODE_PRIVATE) }
 
@@ -100,6 +103,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         wallpaperManagerHelper.setWallpaperBackground()
 
         widgetsRecyclerView = findViewById(R.id.widgets_recycler_view)
+        widgetsHeader = findViewById(R.id.widgets_header)
+        instructionText = findViewById(R.id.instruction_text)
+        emptyStateText = findViewById(R.id.empty_state_text)
         widgetSectionDecoration = WidgetSectionDecoration(this)
         widgetsRecyclerView.addItemDecoration(widgetSectionDecoration)
         
@@ -127,20 +133,35 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
+                if (currentQuery.isNotBlank()) {
+                    Toast.makeText(
+                        this@WidgetConfigurationActivity,
+                        "Clear search to reorder widgets",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return false
+                }
+
                 val fromPos = viewHolder.bindingAdapterPosition
                 val toPos = target.bindingAdapterPosition
                 if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION) {
                     return false
                 }
-                
-                
+
                 val movedItem = filteredWidgets.removeAt(fromPos)
                 filteredWidgets.add(toPos, movedItem)
-                
-                
-                updateOriginalListOrder()
-                
+
+                val movedId = movedItem.id
+                val originalFrom = allWidgets.indexOfFirst { it.id == movedId }
+                if (originalFrom >= 0) {
+                    allWidgets.removeAt(originalFrom)
+                    allWidgets.add(toPos, movedItem)
+                }
+
+                persistWidgetConfiguration()
                 adapter?.notifyItemMoved(fromPos, toPos)
+                refreshSectionHeaders()
+                updateListChrome()
                 return true
             }
 
@@ -170,7 +191,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                filterWidgets(s?.toString() ?: "")
+                filterWidgets(s?.toString().orEmpty())
             }
             
             override fun afterTextChanged(s: Editable?) {}
@@ -179,17 +200,23 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     
     @SuppressLint("NotifyDataSetChanged")
     fun loadWidgets() {
+        previewManager.clearCache()
         allWidgets = widgetConfigManager.getWidgetConfiguration().toMutableList()
         filteredWidgets = allWidgets.toMutableList()
         
         if (adapter == null) {
             adapter = WidgetConfigAdapter(
-                context = this,
                 widgets = filteredWidgets,
                 previewManager = previewManager,
-                onToggleChanged = { position, isChecked ->
-                    val widgetId = filteredWidgets[position].id
-                    updateWidgetState(widgetId, isChecked)
+                onWidgetTapped = { widget ->
+                    if (widget.isProvider) {
+                        addSystemWidgetProvider(widget)
+                    } else {
+                        updateWidgetState(widget.id, !widget.enabled)
+                    }
+                },
+                onWidgetResized = { widget, heightDp ->
+                    updateWidgetPreviewHeight(widget, heightDp)
                 }
             )
             widgetsRecyclerView.adapter = adapter
@@ -199,33 +226,31 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
 
         refreshSectionHeaders()
-        persistWidgetConfiguration()
+        updateListChrome()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == RESULT_OK) {
-            when (requestCode) {
-                ActivityResultHandler.REQUEST_PICK_WIDGET -> {
+        when (requestCode) {
+            ActivityResultHandler.REQUEST_PICK_WIDGET -> {
+                if (resultCode == RESULT_OK) {
                     widgetManager.handleWidgetPicked(this, data)
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        loadWidgets()
-                    }, 500)
                 }
-                ActivityResultHandler.REQUEST_CONFIGURE_WIDGET -> {
-                    val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
-                    if (appWidgetId != -1) {
-                        widgetManager.handleWidgetConfigured(appWidgetId)
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            loadWidgets()
-                        }, 500)
-                    }
+                scheduleWidgetReload()
+            }
+            ActivityResultHandler.REQUEST_CONFIGURE_WIDGET -> {
+                if (resultCode == RESULT_OK) {
+                    val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
+                    widgetManager.handleWidgetConfigured(appWidgetId?.takeIf { it != -1 })
+                } else {
+                    val appWidgetId = data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, -1)
+                    widgetManager.handleWidgetConfigurationCanceled(appWidgetId?.takeIf { it != -1 })
                 }
-                ActivityResultHandler.REQUEST_BIND_WIDGET -> {
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        loadWidgets()
-                    }, 500)
-                }
+                scheduleWidgetReload()
+            }
+            ActivityResultHandler.REQUEST_BIND_WIDGET -> {
+                widgetManager.handleBindRequestResult(this, approved = resultCode == RESULT_OK)
+                scheduleWidgetReload()
             }
         }
     }
@@ -239,6 +264,16 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             previewManager.cleanup()
         }
         backgroundExecutor.shutdown()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::widgetConfigManager.isInitialized) {
+            loadWidgets()
+            if (currentQuery.isNotBlank()) {
+                filterWidgets(currentQuery)
+            }
+        }
     }
     
     private fun Int.toPx(): Int {
@@ -274,6 +309,24 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateWidgetPreviewHeight(widget: WidgetConfigurationManager.WidgetInfo, heightDp: Int) {
+        val appWidgetId = widget.appWidgetId ?: return
+
+        val filteredPosition = filteredWidgets.indexOfFirst { it.id == widget.id }
+        if (filteredPosition >= 0) {
+            filteredWidgets[filteredPosition] = filteredWidgets[filteredPosition].copy(customHeightDp = heightDp)
+            adapter?.notifyItemChanged(filteredPosition)
+        }
+
+        val originalPosition = allWidgets.indexOfFirst { it.id == widget.id }
+        if (originalPosition >= 0) {
+            allWidgets[originalPosition] = allWidgets[originalPosition].copy(customHeightDp = heightDp)
+        }
+
+        widgetManager.updateWidgetCustomHeight(appWidgetId, heightDp)
+        persistWidgetConfiguration()
+    }
+
     fun addSystemWidgetProvider(widget: WidgetConfigurationManager.WidgetInfo) {
         val pkg = widget.providerPackage ?: return
         val cls = widget.providerClass ?: return
@@ -282,12 +335,13 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     
     @SuppressLint("NotifyDataSetChanged")
     private fun filterWidgets(query: String) {
-        filteredWidgets = if (query.isEmpty()) {
+        currentQuery = query.trim()
+        filteredWidgets = if (currentQuery.isEmpty()) {
             allWidgets.toMutableList()
         } else {
             allWidgets.filter { 
-                it.name.contains(query, ignoreCase = true) ||
-                getWidgetDescription(it).contains(query, ignoreCase = true)
+                it.name.contains(currentQuery, ignoreCase = true) ||
+                getWidgetDescription(it).contains(currentQuery, ignoreCase = true)
             }.toMutableList()
         }
         
@@ -295,15 +349,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         adapter?.notifyDataSetChanged()
 
         refreshSectionHeaders()
-    }
-    
-    private fun updateOriginalListOrder() {
-        val orderedIds = filteredWidgets.map { it.id }
-        allWidgets.sortBy { widget ->
-            val index = orderedIds.indexOf(widget.id)
-            if (index >= 0) index else Int.MAX_VALUE
-        }
-        persistWidgetConfiguration()
+        updateListChrome()
     }
 
     private fun persistWidgetConfiguration() {
@@ -329,6 +375,40 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
         widgetSectionDecoration.updateSections(sections)
         widgetsRecyclerView.invalidateItemDecorations()
+    }
+
+    private fun updateListChrome() {
+        val totalCount = allWidgets.size
+        val filteredCount = filteredWidgets.size
+
+        widgetsHeader.text = if (currentQuery.isBlank()) {
+            "$totalCount widgets available"
+        } else {
+            "$filteredCount matches"
+        }
+
+        instructionText.text = if (currentQuery.isBlank()) {
+            "Changes save automatically. Tap a widget to enable, disable, or add it. Reordering works when search is clear."
+        } else {
+            "Search is filtering the list. Clear search to reorder widgets."
+        }
+
+        val isEmpty = filteredWidgets.isEmpty()
+        emptyStateText.visibility = if (isEmpty) View.VISIBLE else View.GONE
+        widgetsRecyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
+        if (isEmpty) {
+            emptyStateText.text = if (currentQuery.isBlank()) {
+                "No widgets available yet."
+            } else {
+                "No widgets match \"$currentQuery\"."
+            }
+        }
+    }
+
+    private fun scheduleWidgetReload() {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            loadWidgets()
+        }, 350)
     }
 
     private fun getWidgetDescription(widget: WidgetConfigurationManager.WidgetInfo): String {
