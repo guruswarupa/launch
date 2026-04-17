@@ -1113,6 +1113,28 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         }
     }
 
+    private fun updateOverlayViewSize(view: View, width: Int, height: Int) {
+        when (val layoutParams = view.layoutParams) {
+            is WindowManager.LayoutParams -> {
+                layoutParams.width = width
+                layoutParams.height = height
+                if (view.isAttachedToWindow) {
+                    try {
+                        windowManager?.updateViewLayout(view, layoutParams)
+                    } catch (_: Exception) {}
+                }
+            }
+            null -> {
+                view.layoutParams = FrameLayout.LayoutParams(width, height)
+            }
+            else -> {
+                layoutParams.width = width
+                layoutParams.height = height
+                view.layoutParams = layoutParams
+            }
+        }
+    }
+
     private fun applyHandleAppearance() {
         val handleView = edgeHandleView ?: return
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
@@ -1120,15 +1142,20 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         val handleHeight = prefs.getInt(Constants.Prefs.EDGE_PANEL_HANDLE_HEIGHT_DP, 72).coerceIn(40, 112)
         val alphaPercent = prefs.getInt(Constants.Prefs.EDGE_PANEL_HANDLE_ALPHA, 80).coerceIn(20, 100)
         val lineWidth = (touchWidth / 4).coerceIn(3, 8)
+        val extraTouchPadding = 32.dpToPx()
 
-        handleView.layoutParams = handleView.layoutParams.apply {
-            val extraTouchPadding = 32.dpToPx()  // invisible inward touch zone, like Samsung
-            width = touchWidth.dpToPx() + extraTouchPadding
+        updateOverlayViewSize(
+            view = handleView,
+            width = touchWidth.dpToPx() + extraTouchPadding,
             height = handleHeight.dpToPx()
-        }
+        )
 
         val lineView = handleView.findViewById<View>(R.id.edge_handle_line)
-        val lineLayoutParams = lineView.layoutParams as FrameLayout.LayoutParams
+        val lineLayoutParams = (lineView.layoutParams as? FrameLayout.LayoutParams)
+            ?: FrameLayout.LayoutParams(
+                lineWidth.dpToPx(),
+                (handleHeight - 16).coerceAtLeast(28).dpToPx()
+            )
         lineLayoutParams.width = lineWidth.dpToPx()
         lineLayoutParams.height = (handleHeight - 16).coerceAtLeast(28).dpToPx()
         lineLayoutParams.gravity = if (isEdgeHandleOnLeft()) {
@@ -1192,15 +1219,20 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         val triggerHeight = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_HEIGHT_DP, 72).coerceIn(40, 112)
         val alphaPercent = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_ALPHA, 80).coerceIn(20, 100)
         val lineWidth = (touchWidth / 4).coerceIn(3, 8)
+        val extraTouchPadding = 32.dpToPx()
 
-        triggerView.layoutParams = triggerView.layoutParams.apply {
-            val extraTouchPadding = 32.dpToPx()
-            width = touchWidth.dpToPx() + extraTouchPadding
+        updateOverlayViewSize(
+            view = triggerView,
+            width = touchWidth.dpToPx() + extraTouchPadding,
             height = triggerHeight.dpToPx()
-        }
+        )
 
         val lineView = triggerView.findViewById<View>(R.id.control_center_trigger_line)
-        val lineLayoutParams = lineView.layoutParams as FrameLayout.LayoutParams
+        val lineLayoutParams = (lineView.layoutParams as? FrameLayout.LayoutParams)
+            ?: FrameLayout.LayoutParams(
+                lineWidth.dpToPx(),
+                (triggerHeight - 16).coerceAtLeast(28).dpToPx()
+            )
         lineLayoutParams.width = lineWidth.dpToPx()
         lineLayoutParams.height = (triggerHeight - 16).coerceAtLeast(28).dpToPx()
         lineLayoutParams.gravity = if (isControlCenterTriggerOnLeft()) {
