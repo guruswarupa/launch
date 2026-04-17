@@ -9,7 +9,6 @@ plugins {
 android {
     namespace = "com.guruswarupa.launch"
     compileSdk = 35
-
     defaultConfig {
         applicationId = "com.guruswarupa.launch"
         minSdk = 26
