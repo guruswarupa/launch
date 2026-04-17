@@ -31,6 +31,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.RejectedExecutionException
 
 class AppTimerManager(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("app_timer_prefs", Context.MODE_PRIVATE)
@@ -49,6 +50,17 @@ class AppTimerManager(private val context: Context) {
         
         const val PREF_DAILY_LIMIT_PREFIX = "daily_limit_"
         const val PREF_SESSION_TIMER_ENABLED_PREFIX = "session_timer_enabled_"
+    }
+
+    private fun runOnBackgroundThread(task: () -> Unit) {
+        if (backgroundExecutor.isShutdown || backgroundExecutor.isTerminated) {
+            return
+        }
+
+        try {
+            backgroundExecutor.execute(task)
+        } catch (_: RejectedExecutionException) {
+        }
     }
 
     fun isAppOverDailyLimit(packageName: String): Boolean {
@@ -295,14 +307,14 @@ class AppTimerManager(private val context: Context) {
         currentTimer = object : CountDownTimer(duration, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 
-                backgroundExecutor.execute {
+                runOnBackgroundThread {
                     prefs.edit { putLong("timer_remaining_$packageName", millisUntilFinished) }
                 }
             }
 
             override fun onFinish() {
                 
-                backgroundExecutor.execute {
+                runOnBackgroundThread {
                     prefs.edit { remove("timer_remaining_$packageName") }
                 }
                 
@@ -394,10 +406,10 @@ class AppTimerManager(private val context: Context) {
     
     private fun forceCloseApp(packageName: String) {
         
-        backgroundExecutor.execute {
+        runOnBackgroundThread {
             try {
                 val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                    ?: return@execute
+                    ?: return@runOnBackgroundThread
                 
                 
                 
@@ -458,7 +470,7 @@ class AppTimerManager(private val context: Context) {
         currentTimer = null
         currentPackageName?.let { packageName ->
             
-            backgroundExecutor.execute {
+            runOnBackgroundThread {
                 prefs.edit { remove("timer_remaining_$packageName") }
             }
         }
