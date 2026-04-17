@@ -6,62 +6,98 @@
     android:orientation="vertical"
     android:padding="12dp">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Forecast"
+                android:textColor="@color/widget_text"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Bengaluru, IN"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_weather_cloudy"
+            android:tint="@color/widget_text" />
+    </LinearLayout>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Forecast"
-        android:textColor="@color/widget_text"
-        android:textSize="16sp"
+        android:layout_marginTop="10dp"
+        android:text="27°C"
+        android:textColor="@color/nord8"
+        android:textSize="26sp"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="27°C Clear"
-        android:textColor="@color/nord8"
-        android:textSize="22sp"
+        android:text="Clear skies"
+        android:textColor="@color/widget_text"
+        android:textSize="13sp"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="12dp"
         android:background="@drawable/widget_item_background"
         android:padding="8dp"
         android:text="Rain ahead later today"
         android:textColor="@color/widget_text_secondary"
         android:textSize="11sp" />
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="108dp"
         android:layout_marginTop="12dp"
-        android:orientation="vertical">
+        android:background="#E8080E16"
+        android:padding="10dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="1p          29°"
-            android:textColor="@color/widget_text"
-            android:textSize="11sp" />
+            android:text="31°                                  24°"
+            android:textColor="@color/widget_text_secondary"
+            android:textSize="10sp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_gravity="center_vertical"
+            android:background="#66192530" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="4p       26°"
-            android:textColor="@color/widget_text"
-            android:textSize="11sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="7p          23°"
-            android:textColor="@color/widget_text"
-            android:textSize="11sp" />
-    </LinearLayout>
+            android:layout_gravity="bottom"
+            android:gravity="center"
+            android:text="Now     2p     5p     8p     11p"
+            android:textColor="@color/widget_text_secondary"
+            android:textSize="10sp" />
+    </FrameLayout>
 
     <TextView
         android:layout_width="match_parent"

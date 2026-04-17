@@ -354,6 +354,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
     private fun persistWidgetConfiguration() {
         widgetConfigManager.saveWidgetOrder(allWidgets)
+        notifyWidgetConfigurationChanged()
+    }
+
+    fun notifyWidgetConfigurationChanged() {
         setResult(RESULT_OK)
     }
 
