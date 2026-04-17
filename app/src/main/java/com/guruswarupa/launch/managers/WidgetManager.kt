@@ -44,6 +44,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         private const val APPWIDGET_HOST_ID = 1024
         private const val TAG = "WidgetManager"
         private const val PREFS_WIDGETS_KEY = "saved_widgets"
+        private const val PREFS_WIDGETS_CHANGED_KEY = "saved_widgets_changed"
     }
     
     data class WidgetInfo(
@@ -652,7 +653,11 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 }
                 jsonArray.put(json)
             }
-            prefs.edit { putString(PREFS_WIDGETS_KEY, jsonArray.toString()) }
+            prefs.edit {
+                putString(PREFS_WIDGETS_KEY, jsonArray.toString())
+                putBoolean(PREFS_WIDGETS_CHANGED_KEY, true)
+            }
+            (context as? WidgetConfigurationActivity)?.notifyWidgetConfigurationChanged()
         } catch (_: Exception) {
         }
     }
@@ -740,6 +745,15 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         widgetOptionsCache.clear()
 
         loadWidgets()
+    }
+
+    fun reloadWidgetsIfPending() {
+        if (!prefs.getBoolean(PREFS_WIDGETS_CHANGED_KEY, false)) {
+            return
+        }
+
+        reloadWidgets()
+        prefs.edit { putBoolean(PREFS_WIDGETS_CHANGED_KEY, false) }
     }
     
     fun onDestroy() {

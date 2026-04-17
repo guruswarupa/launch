@@ -146,6 +146,7 @@ class LifecycleManager(
         
         
         deps.widgetManager?.onStart()
+        deps.widgetManager?.reloadWidgetsIfPending()
         deps.deviceInfoWidget?.onResume()
         deps.networkStatsWidget?.onResume()
         
