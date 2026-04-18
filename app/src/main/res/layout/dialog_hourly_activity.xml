@@ -81,6 +81,37 @@
                 android:textSize="24sp"
                 android:textStyle="bold" />
         </LinearLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="@color/nord3"
+            android:layout_marginHorizontal="16dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Walking Time"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/total_walking_time_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 min"
+                android:textColor="@color/nord10"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 
     

@@ -40,6 +40,7 @@ class PhysicalActivityWidget(
     
     private lateinit var stepsText: TextView
     private lateinit var distanceText: TextView
+    private lateinit var walkingTimeText: TextView
     private lateinit var permissionButton: Button
     private lateinit var viewToggleButton: Button
     private lateinit var statsViewContainer: LinearLayout
@@ -69,6 +70,7 @@ class PhysicalActivityWidget(
         
         stepsText = widgetView.findViewById(R.id.steps_text)
         distanceText = widgetView.findViewById(R.id.distance_text)
+        walkingTimeText = widgetView.findViewById(R.id.walking_time_text)
         permissionButton = widgetView.findViewById(R.id.request_permission_button)
         viewToggleButton = widgetView.findViewById(R.id.view_toggle_button)
         statsViewContainer = widgetView.findViewById(R.id.stats_view_container)
@@ -128,6 +130,7 @@ class PhysicalActivityWidget(
         val titleText = dialogView.findViewById<TextView>(R.id.dialog_title)
         val totalStepsText = dialogView.findViewById<TextView>(R.id.total_steps_text)
         val totalDistanceText = dialogView.findViewById<TextView>(R.id.total_distance_text)
+        val totalWalkingTimeText = dialogView.findViewById<TextView>(R.id.total_walking_time_text)
         val hourlyChart = dialogView.findViewById<HourlyStepsChartView>(R.id.hourly_chart)
         val hourlyStatsContainer = dialogView.findViewById<LinearLayout>(R.id.hourly_stats_container)
         
@@ -140,6 +143,7 @@ class PhysicalActivityWidget(
         val distanceFormatted = df.format(activityData.distanceKm)
         totalStepsText.text = stepsFormatted
         totalDistanceText.text = context.getString(R.string.distance_km_format, distanceFormatted)
+        totalWalkingTimeText.text = formatWalkingTime(activityData.walkingMinutes)
         
         
         val hourlyData = activityManager.getHourlyActivityForDate(date)
@@ -151,7 +155,7 @@ class PhysicalActivityWidget(
         val secondaryTextColor = ContextCompat.getColor(context, R.color.text_secondary)
         
         hourlyData.forEach { hourly ->
-            if (hourly.steps > 0) {
+            if (hourly.steps > 0 || hourly.walkingMinutes > 0) {
                 val hourView = LayoutInflater.from(context).inflate(
                     android.R.layout.simple_list_item_2,
                     hourlyStatsContainer,
@@ -172,7 +176,12 @@ class PhysicalActivityWidget(
                 text1.textSize = 14f
                 
                 val distanceFormattedHourly = df.format(hourly.distanceKm)
-                text2.text = context.getString(R.string.steps_distance_format, hourly.steps, distanceFormattedHourly)
+                text2.text = context.getString(
+                    R.string.steps_distance_time_format,
+                    hourly.steps,
+                    distanceFormattedHourly,
+                    formatWalkingTime(hourly.walkingMinutes)
+                )
                 text2.setTextColor(secondaryTextColor)
                 text2.textSize = 12f
                 
@@ -245,6 +254,7 @@ class PhysicalActivityWidget(
         
         stepsText.text = context.getString(R.string.zero_steps)
         distanceText.text = context.getString(R.string.zero_distance)
+        walkingTimeText.text = context.getString(R.string.zero_walking_time)
         
         permissionButton.setOnClickListener {
             requestPermission()
@@ -314,6 +324,7 @@ class PhysicalActivityWidget(
         
         stepsText.text = context.getString(R.string.steps_format, stepsFormatted)
         distanceText.text = context.getString(R.string.distance_km_format, distanceFormatted)
+        walkingTimeText.text = formatWalkingTime(activityData.walkingMinutes)
         
         
         if (isCalendarView) {
@@ -334,5 +345,16 @@ class PhysicalActivityWidget(
     
     fun cleanup() {
         handler.removeCallbacks(updateRunnable)
+    }
+
+    private fun formatWalkingTime(totalMinutes: Int): String {
+        val safeMinutes = totalMinutes.coerceAtLeast(0)
+        val hours = safeMinutes / 60
+        val minutes = safeMinutes % 60
+        return if (hours > 0) {
+            context.getString(R.string.walking_time_hours_minutes_format, hours.toString(), minutes.toString())
+        } else {
+            context.getString(R.string.walking_time_minutes_format, minutes.toString())
+        }
     }
 }
