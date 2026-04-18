@@ -99,6 +99,37 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="20dp"
+            android:background="@color/nord3" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="Walking Time"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/walking_time_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 min"
+                android:textColor="@color/nord10"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
         
         <Button
             android:id="@+id/request_permission_button"

@@ -1,204 +1,133 @@
-Launch is a clean, efficient, and minimalist Android launcher designed to maximize simplicity, focus, and productivity.
+Launch — Minimal Productivity Launcher
 
-Built for those who value speed, clarity, and control.
-Simple. Clean. Powerful.
+A clean, fast, minimalist Android launcher built for focus and productivity.
 
----
+Replace your cluttered home screen with a simple interface that helps you stay organized, reduce distractions, and get things done.
 
-🧠 **Smart App Management**
+Open source • No ads • No tracking • Privacy first
 
-* Apps sorted automatically by usage frequency
-* Rarely used apps grouped alphabetically
-* App usage time displayed beside icons
-* Weekly phone usage graph (last 7 days)
-* Tap any day for detailed breakdown
-* Interactive daily pie charts
-* Total screen time per day
-* One-tap uninstall via long press
-* Switch between smooth grid and list view
-* Mark apps as favorites
-* Toggle between “Favorites Only” and “Show All”
-* Organize apps by categories (Social, Productivity, Games, etc.)
-* Filter apps by category
+🔍 Smart App Management
 
----
+Understand how you use your phone.
 
-🔍 **Smart Universal Search**
+• Apps automatically sorted by usage frequency
+• Daily & weekly usage charts
+• Per-app daily time limits — icons gray out when limits are reached
+• Quick session timers (1, 5, 10 minutes)
 
-* Search apps, contacts, and perform web searches
-* Built-in calculator in search bar
-* Scientific calculations supported
-* Quick links to Play Store, YouTube, Maps, and browser
-* Tap to call, SMS, or WhatsApp contacts directly
-* Voice command support
+🔕 Focus Mode
 
-Example voice commands:
+Stay distraction-free.
 
-* Call Swaroop
-* Message Swaroop
-* WhatsApp Swaroop
-* Open YouTube
-* Search weather tomorrow
-* Uninstall WhatsApp
-* Bangalore to Mysore (opens Maps route)
+• Hide distracting apps instantly
+• Countdown focus timer that cannot be exited early
+• Automatic Do Not Disturb during focus sessions
 
----
+🔐 Security & Privacy
 
-⚡ **Quick Actions & Widgets**
+Your data stays on your device.
 
-* Time widget → Opens Clock
-* Date widget → Opens Calendar
-* Weather widget with live data (powered by Open-Meteo)
-* Battery widget with charging status
-* Notifications widget (view & dismiss notifications)
-* Todo list widget (full task management)
-* Full calculator widget (Basic, Scientific & Converter modes)
-* Third-party Android widget support
-* Long press search bar → Google in browser
+• App Lock with PIN or fingerprint
+• Encrypted vault for sensitive files (biometric + recovery key)
+• Privacy dashboard showing apps with sensitive permissions
+• All data stored locally on device
 
----
+✅ Tasks & Finance
 
-🔕 **Focus Mode**
+Built-in tools for daily productivity.
 
-* Temporarily hide distracting apps
-* Select allowed apps (whitelist)
-* Set countdown timer
-* Cannot exit until timer ends
-* Visible timer countdown on screen
+• Task manager with priorities, due dates, and recurring tasks
+• Offline finance tracker for income and expenses
+• Notification reminders
 
----
+🎙️ Voice Commands
 
-⏱️ **App Usage Limits & Session Timers**
+Use your phone hands-free.
 
-* Set daily usage limits for any app
-* Icons gray out when limit is reached
-* Automatically returns to home when limit expires
-* Quick session timers (1, 5, 10 minutes)
-* Custom timer durations supported
-* Helps reduce screen addiction and improve discipline
+• Call contacts or send messages by voice
+• Send WhatsApp messages
+• Open apps, search the web, or get directions
 
----
+📱 Widgets & Customization
 
-🔐 **App Lock**
+Create the home screen you want.
 
-* Lock individual apps with PIN
-* Fingerprint unlock support (if device supports it)
-* 1-minute unlock timeout window
-* Protect sensitive apps like WhatsApp, Instagram, etc.
+Built-in widgets:
 
----
+• Weather
+• Calculator
+• Calendar
+• GitHub contributions
+• Sensors & system stats
+• Notifications
 
-✅ **Advanced Todo List Widget**
+Customization features:
 
-* Add tasks with due time
-* Assign priority (High / Medium / Low)
-* Recurring tasks (Daily / Weekly / Custom)
-* Visual completion tracking
-* Persistent clean task interface
+• Add third-party Android widgets
+• Control Center with quick toggles (Wi-Fi, DND, flashlight, etc.)
+• Grid or list layout
+• Custom wallpapers
+• Favorites dock
 
-🧮 **Calculator Widget**
+🤏 Smart Gestures
 
-* Basic arithmetic operations
-* Scientific mode (sin, cos, log, etc.)
-* Converter mode (unit & base conversions)
-* Calculation history
-* Radians/Degrees toggle
+Quick actions without opening apps.
 
----
+• Shake twice to toggle flashlight
+• Flip phone to enable Do Not Disturb
+• Double-tap home screen to lock device
+• Tap contacts from search to call or message
 
-💰 **Finance Tracker**
+⚠️ Accessibility Service Disclosure
 
-* Track income and expenses
-* Add notes to transactions
-* View recent transaction history
-* Monthly savings overview
-* Offline-first and lightweight
+Launch uses the Android Accessibility Service only to enable specific productivity features requiring system interaction.
 
----
+Used for:
 
-📦 **APK Sharing**
+Double-Tap to Lock
+Lock the device by double-tapping the home screen.
 
-* Share installed APKs
-* Send via Bluetooth, email, or messaging apps
-* Access from app context menu or dock
+Screenshot Shortcut
+Capture screenshots using a quick gesture.
 
----
+Control Center Quick Toggles
+Allows toggling system settings like Wi-Fi, Do Not Disturb, and flashlight from the Control Center overlay, accessible from any screen.
 
-🎨 **Dock Customization**
+The Accessibility Service is NOT used to:
 
-* Add, rename, or group favorite apps
-* Customize dock layout and icon count
-* Long press to edit or remove
+• collect personal data
+• read screen content
+• monitor user activity
+• modify settings without permission
 
----
+All features are optional and can be disabled anytime in Settings.
 
-📊 **Enhanced Usage Statistics**
+🔐 Permissions
 
-* Weekly usage graph
-* Daily detailed breakdown
-* Interactive pie charts
-* App-by-app time analysis
-* Total screen time tracking
-* Auto refresh when date changes
+Launch requests only permissions needed for features:
 
----
+Contacts — search and call/message contacts
+Phone & SMS — call or send texts from search
+Storage — wallpapers and encrypted vault
+Microphone — voice commands
+Camera — flashlight control
+Usage Stats — app usage tracking & limits
+Notifications — show and manage notifications
+Calendar — upcoming events widget
+Activity Recognition — step counter widget
+Internet — weather & GitHub widgets
+Exact Alarms — task reminders
+Display Over Apps — dimmer & night overlay
+Notification Policy — DND control
+Biometric — unlock App Lock & vault
 
-📱 **Shake to Toggle Torch**
+🔒 Privacy First
 
-* Shake device twice to toggle flashlight
-* Works in background
-* Battery efficient (active only when screen on)
-* Quick access without unlocking
+Launch does not collect, store, or share personal data.
 
----
+• No ads
+• No analytics
+• No telemetry
+• Fully open source
 
-🤏 **Gestures**
-
-* Tap widgets for quick actions
-* Long press icons for uninstall/share/rename
-* Long press dock apps to edit
-* Long press Focus icon to configure
-* Swipe notifications to dismiss
-* Tap weekly usage day for details
-* Shake device twice to toggle torch
-
----
-
-⚙️ **Settings & Customization**
-
-* Backup and restore all data
-* Import/Export launcher configuration
-* Toggle grid/list layout
-* Change wallpaper
-* Manage app locks
-* Configure app timers
-* Set weather location (used by the Open-Meteo widget)
-* Manage widgets
-* Customize workspace layout
-* Enable shake-to-toggle torch
-
----
-
-🔐 **Privacy & Permissions**
-
-Launch is 100% open source.
-No ads. No tracking.
-
-Permissions used:
-
-* Contacts → Contact search & quick actions
-* Phone → Calling support
-* SMS → Messaging support
-* Storage → Notes, wallpapers, backups
-* Usage Stats → App usage tracking & limits (optional)
-* Notification Access → Notifications widget (optional)
-* Location → Weather widget (optional)
-* Microphone → Voice search (optional)
-* Camera → Torch feature (optional)
-
-All advanced permissions are optional. Core launcher functionality works independently.
-
----
-
-Try Launch now and take control of your phone.
-Minimalism meets power. 🚀
+Your device. Your data. Your control.

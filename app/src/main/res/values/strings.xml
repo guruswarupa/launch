@@ -217,10 +217,14 @@
     
     <string name="distance_km_format">%1$s km</string>
     <string name="steps_distance_format">%1$d steps • %2$s km</string>
+    <string name="steps_distance_time_format">%1$d steps • %2$s km • %3$s</string>
     <string name="stats">Stats</string>
     <string name="calendar">Calendar</string>
     <string name="zero_steps">0 steps</string>
     <string name="zero_distance">0.00 km</string>
+    <string name="zero_walking_time">0 min</string>
+    <string name="walking_time_minutes_format">%1$s min</string>
+    <string name="walking_time_hours_minutes_format">%1$sh %2$sm</string>
     <string name="enable_in_settings">Enable in Settings</string>
     <string name="steps_format">%1$s steps</string>
 
