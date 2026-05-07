@@ -241,12 +241,17 @@ class FeatureTutorialManager(
     }
 
     private fun isTutorialPageOpen(page: TutorialPage): Boolean {
-        val currentPager = activity.screenPagerManager
-        return when (page) {
-            TutorialPage.RSS -> currentPager.isPageOpen(ScreenPagerManager.Page.RSS)
-            TutorialPage.HOME -> currentPager.isPageOpen(ScreenPagerManager.Page.CENTER)
-            TutorialPage.WIDGETS -> currentPager.isPageOpen(ScreenPagerManager.Page.WIDGETS)
-            TutorialPage.WALLPAPER -> currentPager.isPageOpen(ScreenPagerManager.Page.RIGHT)
+        return try {
+            val currentPager = activity.screenPagerManager
+            when (page) {
+                TutorialPage.RSS -> currentPager.isPageOpen(ScreenPagerManager.Page.RSS)
+                TutorialPage.HOME -> currentPager.isPageOpen(ScreenPagerManager.Page.CENTER)
+                TutorialPage.WIDGETS -> currentPager.isPageOpen(ScreenPagerManager.Page.WIDGETS)
+                TutorialPage.WALLPAPER -> currentPager.isPageOpen(ScreenPagerManager.Page.RIGHT)
+            }
+        } catch (e: UninitializedPropertyAccessException) {
+            // screenPagerManager not yet initialized
+            false
         }
     }
 
