@@ -566,11 +566,19 @@ class ScreenPagerManager(
         try {
             block()
         } finally {
-            container.post {
-                container.importantForAccessibility = previousAccessibility
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && previousContentCapture != null) {
-                    container.importantForContentCapture = previousContentCapture
+            try {
+                container.post {
+                    try {
+                        container.importantForAccessibility = previousAccessibility
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && previousContentCapture != null) {
+                            container.importantForContentCapture = previousContentCapture
+                        }
+                    } catch (e: Exception) {
+                        // Ignore accessibility restoration failures
+                    }
                 }
+            } catch (e: Exception) {
+                // Ignore post failures
             }
         }
     }
