@@ -212,7 +212,7 @@
                     android:paddingEnd="16dp"/>
             </com.guruswarupa.launch.ui.views.SafeHorizontalScrollView>
             
-            <androidx.recyclerview.widget.RecyclerView
+            <com.guruswarupa.launch.ui.views.SafeRecyclerView
                 android:id="@+id/app_list"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -731,7 +731,7 @@
 
                 </LinearLayout>
 
-                <androidx.recyclerview.widget.RecyclerView
+                <com.guruswarupa.launch.ui.views.SafeRecyclerView
                     android:id="@+id/todo_recycler_view"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

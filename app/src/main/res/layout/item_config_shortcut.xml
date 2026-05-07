@@ -35,5 +35,6 @@
         android:id="@+id/cb_shortcut_visible"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:buttonTint="@color/colorAccent"/>
+        android:buttonTint="@color/colorAccent"
+        android:saveEnabled="false"/>
 </LinearLayout>
