@@ -1787,9 +1787,17 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun updateBluetoothIcon(imageView: ImageView?) {
-        val enabled = bluetoothAdapter.isEnabled
-        imageView?.alpha = if (enabled) 1.0f else 0.4f
+        try {
+            val enabled = bluetoothAdapter.isEnabled
+            imageView?.alpha = if (enabled) 1.0f else 0.4f
+        } catch (e: SecurityException) {
+            // Bluetooth permission not granted, default to disabled state
+            imageView?.alpha = 0.4f
+        } catch (e: Exception) {
+            imageView?.alpha = 0.4f
+        }
     }
 
     private fun toggleAirplaneMode() {
