@@ -42,6 +42,12 @@ class WidgetConfigurationManager(
         )
     }
     
+    // Cache widget configuration to avoid repeated blocking IPC calls
+    @Volatile
+    private var cachedWidgetConfiguration: List<WidgetInfo>? = null
+    private var cacheTimestamp: Long = 0
+    private val CACHE_VALID_DURATION = 60 * 1000L // 1 minute cache
+    
     data class WidgetInfo(
         val id: String,
         val name: String,
@@ -56,6 +62,14 @@ class WidgetConfigurationManager(
     )
 
     fun getWidgetConfiguration(): List<WidgetInfo> {
+        // Return cached result if still valid to avoid blocking IPC calls
+        val currentTime = System.currentTimeMillis()
+        cachedWidgetConfiguration?.let { cached ->
+            if (currentTime - cacheTimestamp < CACHE_VALID_DURATION) {
+                return cached
+            }
+        }
+        
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null)
         val savedWidgetsList = mutableListOf<WidgetInfo>()
         
@@ -145,7 +159,13 @@ class WidgetConfigurationManager(
                     .thenBy { it.name }
             )
 
-        return enabledWidgets + customDisabled + systemDisabled
+        val finalResult = enabledWidgets + customDisabled + systemDisabled
+        
+        // Cache the result
+        cachedWidgetConfiguration = finalResult
+        cacheTimestamp = System.currentTimeMillis()
+        
+        return finalResult
     }
     
     private fun getAppName(packageName: String?): String? {
@@ -216,6 +236,7 @@ class WidgetConfigurationManager(
         sharedPreferences.edit {
             putString(PREF_WIDGET_ORDER, jsonArray.toString())
         }
+        invalidateCache()
     }
     
     fun isWidgetEnabled(widgetId: String): Boolean {
@@ -230,5 +251,14 @@ class WidgetConfigurationManager(
             }
         } catch (_: Exception) {}
         return false
+    }
+    
+    /**
+     * Invalidate the widget configuration cache to force reload on next access.
+     * Call this when widget configuration changes.
+     */
+    fun invalidateCache() {
+        cachedWidgetConfiguration = null
+        cacheTimestamp = 0
     }
 }
