@@ -65,14 +65,28 @@ class LaunchApplication : Application() {
         val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
         if (isDimmerEnabled && Settings.canDrawOverlays(this)) {
             val dimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
-            ScreenDimmerService.startService(this, dimLevel)
+            startServiceWithDelay(ScreenDimmerService::class.java) {
+                ScreenDimmerService.startService(this, dimLevel)
+            }
         }
         
         
         val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
         if (isNightModeEnabled && Settings.canDrawOverlays(this)) {
             val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
-            NightModeService.startService(this, intensity)
+            startServiceWithDelay(NightModeService::class.java) {
+                NightModeService.startService(this, intensity)
+            }
+        }
+    }
+
+    private fun startServiceWithDelay(serviceClass: Class<*>, startAction: () -> Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                startAction()
+            }, 500)
+        } else {
+            startAction()
         }
     }
 
