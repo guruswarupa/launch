@@ -28,6 +28,9 @@ object DocumentContentExtractor {
             }
         } catch (_: Exception) {
             null
+        } catch (_: Error) {
+            // Catch initialization errors like ExceptionInInitializerError from POI/Log4j
+            null
         }
     }
 
@@ -40,6 +43,9 @@ object DocumentContentExtractor {
             }
         } catch (_: Exception) {
             null
+        } catch (_: Error) {
+            // Catch initialization errors like ExceptionInInitializerError from POI/Log4j
+            null
         }
     }
 
@@ -51,6 +57,9 @@ object DocumentContentExtractor {
                 extractBinaryXlsContent(file)
             }
         } catch (_: Exception) {
+            null
+        } catch (_: Error) {
+            // Catch initialization errors like ExceptionInInitializerError from POI/Log4j
             null
         }
     }
