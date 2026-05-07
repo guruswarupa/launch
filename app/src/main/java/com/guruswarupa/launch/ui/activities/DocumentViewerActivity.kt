@@ -1007,6 +1007,9 @@ class DocumentViewerActivity : VaultBaseActivity() {
         documentWebView.clearHistory()
         documentWebView.clearCache(true)
         documentWebView.loadUrl("about:blank")
+        
+        // Remove WebView from parent before destroying to prevent warning
+        (documentWebView.parent as? android.view.ViewGroup)?.removeView(documentWebView)
         documentWebView.destroy()
         
         // Clean up slide container WebViews
