@@ -528,7 +528,9 @@ class MainActivity : FragmentActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         activityInitializer.handleConfigurationChange()
-        screenPagerManager.handleConfigurationChange()
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.handleConfigurationChange()
+        }
     }
 
     private fun observeViewModelState() {
@@ -544,7 +546,7 @@ class MainActivity : FragmentActivity() {
                     }
 
                     val targetPage = state.currentPage
-                    if (targetPage != null && screenPagerManager.getCurrentPage() != targetPage) {
+                    if (targetPage != null && ::screenPagerManager.isInitialized && screenPagerManager.getCurrentPage() != targetPage) {
                         when (targetPage) {
                             ScreenPagerManager.Page.RSS -> screenPagerManager.openRssPage(animated = false)
                             ScreenPagerManager.Page.WIDGETS -> screenPagerManager.openWidgetsPage(animated = false)
@@ -556,14 +558,16 @@ class MainActivity : FragmentActivity() {
             }
         }
 
-        screenPagerManager.setOnPageChanged { page ->
-            viewModel.updateCurrentPage(page)
-            if (page == ScreenPagerManager.Page.WIDGETS) {
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.setOnPageChanged { page ->
+                viewModel.updateCurrentPage(page)
+                if (page == ScreenPagerManager.Page.WIDGETS) {
+                    initializeDeferredWidgets()
+                }
+            }
+            if (screenPagerManager.getCurrentPage() == ScreenPagerManager.Page.WIDGETS) {
                 initializeDeferredWidgets()
             }
-        }
-        if (screenPagerManager.getCurrentPage() == ScreenPagerManager.Page.WIDGETS) {
-            initializeDeferredWidgets()
         }
     }
 
@@ -670,6 +674,8 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun syncOptionalPagesAfterSettingsUpdate() {
+        if (!::screenPagerManager.isInitialized) return
+        
         if (sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true) &&
             screenPagerManager.getCurrentPage() == ScreenPagerManager.Page.WIDGETS
         ) {
