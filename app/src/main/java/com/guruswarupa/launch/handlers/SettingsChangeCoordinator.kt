@@ -167,7 +167,11 @@ class SettingsChangeCoordinator(
         
         activity.refreshRightDrawerWallpaper()
 
-        activity.screenPagerManager.reloadPages()
+        try {
+            activity.screenPagerManager.reloadPages()
+        } catch (e: UninitializedPropertyAccessException) {
+            // screenPagerManager not yet initialized, skip
+        }
 
         activity.activityInitializer.setupDrawerLayout()
 
