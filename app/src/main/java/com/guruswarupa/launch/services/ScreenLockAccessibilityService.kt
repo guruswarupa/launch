@@ -1627,7 +1627,11 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     icon.contentDescription = "Location"
                     label.text = "Location"
                     shortcutContainer.setOnClickListener { 
-                        startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        try {
+                            startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        } catch (e: Exception) {
+                            Log.e("ScreenLock", "Error opening location settings: ${e.message}")
+                        }
                         hideMenu()
                     }
                 }
@@ -1801,7 +1805,11 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     }
 
     private fun toggleAirplaneMode() {
-        startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        try {
+            startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) {
+            Log.e("ScreenLock", "Error opening airplane mode settings: ${e.message}")
+        }
     }
 
     private fun updateAirplaneIcon(imageView: ImageView?) {
