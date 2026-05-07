@@ -481,7 +481,9 @@ class MainActivity : FragmentActivity() {
             (intent.hasCategory(Intent.CATEGORY_HOME) || intent.hasCategory(Intent.CATEGORY_LAUNCHER))
 
         if (isHomeOrLauncher) {
-            screenPagerManager.openDefaultHomePage(animated = true)
+            if (::screenPagerManager.isInitialized) {
+                screenPagerManager.openDefaultHomePage(animated = true)
+            }
         }
 
         handleStartTutorialIntent(intent)
@@ -623,23 +625,33 @@ class MainActivity : FragmentActivity() {
     }
 
     fun openWidgetsPage(animated: Boolean = true) {
-        screenPagerManager.openWidgetsPage(animated)
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openWidgetsPage(animated)
+        }
     }
 
     fun openRssPage(animated: Boolean = true) {
-        screenPagerManager.openRssPage(animated)
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openRssPage(animated)
+        }
     }
 
     fun openHomePage(animated: Boolean = true) {
-        screenPagerManager.openCenterPage(animated)
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openCenterPage(animated)
+        }
     }
 
     fun openWallpaperPage(animated: Boolean = true) {
-        screenPagerManager.openRightPage(animated)
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openRightPage(animated)
+        }
     }
 
     fun openDefaultHomePage(animated: Boolean = true) {
-        screenPagerManager.openDefaultHomePage(animated)
+        if (::screenPagerManager.isInitialized) {
+            screenPagerManager.openDefaultHomePage(animated)
+        }
     }
 
     fun setWidgetsPageLocked(locked: Boolean) {
