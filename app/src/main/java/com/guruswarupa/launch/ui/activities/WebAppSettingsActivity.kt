@@ -24,6 +24,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.guruswarupa.launch.managers.WebAppIconFetcher
@@ -132,6 +133,7 @@ class WebAppSettingsActivity : ComponentActivity() {
                 val intent = Intent(this, WebAppActivity::class.java).apply {
                     putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, entry.name)
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, entry.url)
+                    putExtra(WebAppActivity.EXTRA_BLOCK_REDIRECTS, entry.blockRedirects)
                     
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -232,10 +234,27 @@ class WebAppSettingsActivity : ComponentActivity() {
         val suggestionsContainer = dialogView.findViewById<LinearLayout>(R.id.web_app_suggestions_container)
         val suggestionsList = dialogView.findViewById<LinearLayout>(R.id.web_app_suggestions_list)
         val searchProgress = dialogView.findViewById<ProgressBar>(R.id.web_app_search_progress)
+        val blockRedirectsSwitch = dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.web_app_block_redirects_switch)
 
         nameInput.setText(existing?.name.orEmpty())
         urlInput.setText(existing?.url.orEmpty())
         urlInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+        
+        // Set redirect blocking toggle (default to true for new apps)
+        blockRedirectsSwitch.isChecked = existing?.blockRedirects ?: true
+        
+        // Apply switch colors
+        val enabledColor = Color.rgb(72, 191, 145)
+        val disabledColor = Color.WHITE
+        fun applySwitchColors(isChecked: Boolean) {
+            blockRedirectsSwitch.thumbTintList = android.content.res.ColorStateList.valueOf(
+                if (isChecked) enabledColor else disabledColor
+            )
+            blockRedirectsSwitch.trackTintList = android.content.res.ColorStateList.valueOf(
+                if (isChecked) enabledColor else disabledColor
+            )
+        }
+        applySwitchColors(blockRedirectsSwitch.isChecked)
         
         // Show popular suggestions only for new web apps
         if (existing == null) {
@@ -278,6 +297,8 @@ class WebAppSettingsActivity : ComponentActivity() {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val name = nameInput.text.toString().trim()
             val url = urlInput.text.toString().trim()
+            val blockRedirects = blockRedirectsSwitch.isChecked
+            
             when {
                 name.isBlank() -> {
                     nameInput.requestFocus()
@@ -311,9 +332,9 @@ class WebAppSettingsActivity : ComponentActivity() {
 
                 else -> {
                     if (existing == null) {
-                        webAppManager.addWebApp(name, url)
+                        webAppManager.addWebApp(name, url, blockRedirects)
                     } else {
-                        webAppManager.updateWebApp(existing.id, name, url)
+                        webAppManager.updateWebApp(existing.id, name, url, blockRedirects)
                     }
                     notifySettingsChanged()
                     renderWebApps()

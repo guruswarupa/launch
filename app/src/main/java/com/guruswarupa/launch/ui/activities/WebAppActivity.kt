@@ -39,6 +39,7 @@ class WebAppActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_WEB_APP_NAME = "web_app_name"
         const val EXTRA_WEB_APP_URL = "web_app_url"
+        const val EXTRA_BLOCK_REDIRECTS = "block_redirects"
     }
 
     private lateinit var webView: WebView
@@ -46,6 +47,9 @@ class WebAppActivity : AppCompatActivity() {
     private lateinit var titleView: TextView
     private lateinit var addressView: TextView
     private lateinit var fullscreenContainer: FrameLayout
+    
+    private var allowedDomain: String? = null
+    private var blockRedirects: Boolean = true
 
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
@@ -83,6 +87,12 @@ class WebAppActivity : AppCompatActivity() {
             finish()
             return
         }
+        
+        // Extract and store the allowed domain
+        allowedDomain = extractDomain(url)
+        
+        // Load redirect blocking preference from intent (per-app setting)
+        blockRedirects = intent.getBooleanExtra(EXTRA_BLOCK_REDIRECTS, true)
         
         title = appName
         
@@ -217,21 +227,61 @@ class WebAppActivity : AppCompatActivity() {
                 val targetUri = request?.url ?: return false
                 val targetUrl = targetUri.toString()
                 
+                // Block ad/tracker URLs
                 if (WebAppAdBlocker.shouldBlock(targetUri)) {
                     return true
                 }
 
                 val scheme = targetUri.scheme.orEmpty()
-                if (scheme == "http" || scheme == "https") {
-                    return false
+                
+                // Only allow http/https URLs in WebView
+                if (scheme != "http" && scheme != "https") {
+                    // For non-web URLs (mailto:, tel:, etc.), show confirmation
+                    val shouldOpen = try {
+                        android.app.AlertDialog.Builder(this@WebAppActivity, R.style.CustomDialogTheme)
+                            .setTitle("Open External App?")
+                            .setMessage("This will open an external app: $scheme")
+                            .setPositiveButton("Open") { _, _ ->
+                                try {
+                                    startActivity(Intent(Intent.ACTION_VIEW, targetUrl.toUri()))
+                                } catch (e: Exception) {
+                                    Toast.makeText(this@WebAppActivity, "No app available", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                        false // Don't auto-open, wait for user confirmation
+                    } catch (e: Exception) {
+                        false
+                    }
+                    return shouldOpen
                 }
                 
-                return try {
-                    startActivity(Intent(Intent.ACTION_VIEW, targetUrl.toUri()))
-                    true
-                } catch (_: Exception) {
-                    false
+                // Check if the URL is within the allowed domain
+                val targetDomain = extractDomain(targetUrl)
+                val isSameDomain = targetDomain != null && isDomainAllowed(targetDomain)
+                
+                // Block redirects to different domains (anti-phishing) - only if enabled in settings
+                if (blockRedirects && !isSameDomain) {
+                    Toast.makeText(
+                        this@WebAppActivity,
+                        "Navigation blocked: Redirecting to external domain is not allowed",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return true
                 }
+                
+                // If redirects are allowed, show a warning for external domains
+                if (!blockRedirects && !isSameDomain) {
+                    Toast.makeText(
+                        this@WebAppActivity,
+                        "Warning: Navigating to external domain: $targetDomain",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                
+                // Allow navigation within the same domain
+                return false
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -310,6 +360,41 @@ class WebAppActivity : AppCompatActivity() {
         customViewCallback = null
         fullscreenContainer.visibility = View.GONE
         webView.visibility = View.VISIBLE
+    }
+    
+    /**
+     * Extract domain from URL (e.g., "https://mail.google.com/inbox" -> "mail.google.com")
+     */
+    private fun extractDomain(url: String): String? {
+        return try {
+            val uri = Uri.parse(url)
+            uri.host
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    /**
+     * Check if domain is allowed (handles subdomains like www.)
+     */
+    private fun isDomainAllowed(domain: String): Boolean {
+        val allowed = allowedDomain ?: return false
+        
+        // Exact match
+        if (domain == allowed) return true
+        
+        // Remove www. prefix for comparison
+        val domainWithoutWww = domain.removePrefix("www.")
+        val allowedWithoutWww = allowed.removePrefix("www.")
+        
+        if (domainWithoutWww == allowedWithoutWww) return true
+        
+        // Check if it's a subdomain of the allowed domain
+        // e.g., if allowed is "google.com", allow "mail.google.com"
+        if (domainWithoutWww.endsWith(".$allowedWithoutWww")) return true
+        if (allowedWithoutWww.endsWith(".$domainWithoutWww")) return true
+        
+        return false
     }
 
     private fun releaseWebView() {
