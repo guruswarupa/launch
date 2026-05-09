@@ -112,18 +112,4 @@ dependencies {
     // Moshi for JSON serialization (using KSP)
     implementation("com.squareup.moshi:moshi:1.15.1")
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
-    
-    // Apache POI for Office document parsing
-    implementation("org.apache.poi:poi:5.2.5") {
-        exclude(group = "org.apache.logging.log4j", module = "log4j-api")
-        exclude(group = "org.apache.logging.log4j", module = "log4j-core")
-    }
-    implementation("org.apache.poi:poi-ooxml:5.2.5") {
-        exclude(group = "org.apache.logging.log4j", module = "log4j-api")
-        exclude(group = "org.apache.logging.log4j", module = "log4j-core")
-    }
-    implementation("org.apache.poi:poi-scratchpad:5.2.5") {
-        exclude(group = "org.apache.logging.log4j", module = "log4j-api")
-        exclude(group = "org.apache.logging.log4j", module = "log4j-core")
-    }
 }

@@ -550,21 +550,6 @@ class EncryptedVaultActivity : VaultBaseActivity() {
                         holder.thumbnail.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#BF616A"))
                         holder.thumbnail.alpha = 1.0f
                     }
-                    extension in listOf("doc", "docx") || mimeType.contains("msword") || mimeType.contains("wordprocessingml") -> {
-                        holder.thumbnail.setImageResource(R.drawable.ic_word)
-                        holder.thumbnail.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#5E81AC"))
-                        holder.thumbnail.alpha = 1.0f
-                    }
-                    extension in listOf("ppt", "pptx") || mimeType.contains("powerpoint") || mimeType.contains("presentationml") -> {
-                        holder.thumbnail.setImageResource(R.drawable.ic_presentation)
-                        holder.thumbnail.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#D08770"))
-                        holder.thumbnail.alpha = 1.0f
-                    }
-                    extension in listOf("xls", "xlsx") || mimeType.contains("excel") || mimeType.contains("spreadsheetml") -> {
-                        holder.thumbnail.setImageResource(R.drawable.ic_spreadsheet)
-                        holder.thumbnail.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#A3BE8C"))
-                        holder.thumbnail.alpha = 1.0f
-                    }
                     else -> {
                         holder.thumbnail.setImageResource(R.drawable.ic_file)
                         holder.thumbnail.imageTintList = ContextCompat.getColorStateList(holder.itemView.context, R.color.text)
