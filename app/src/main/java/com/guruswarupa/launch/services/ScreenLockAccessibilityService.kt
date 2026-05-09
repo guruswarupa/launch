@@ -38,6 +38,7 @@ import android.text.TextUtils
 import android.content.BroadcastReceiver
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.Context.RECEIVER_EXPORTED
 import androidx.core.content.ContextCompat
 import android.view.animation.DecelerateInterpolator
@@ -74,6 +75,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     
     private var isTorchOn = false
     private lateinit var focusModeManager: FocusModeManager
+    private lateinit var sharedPreferences: SharedPreferences
     private val focusModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.FOCUS_MODE_CHANGED") {
@@ -224,6 +226,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         focusModeManager = FocusModeManager(this, getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
+        sharedPreferences = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         refreshOverlayState()
     }
@@ -2112,13 +2115,21 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         
-        
+        // Check if focus mode is enabled
         if (!focusModeManager.isFocusModeEnabled()) return
+        
+        // Check if strict mode is active (only strict mode blocks settings)
+        val modeType = sharedPreferences.getString(
+            Constants.Prefs.FOCUS_MODE_TYPE,
+            Constants.Prefs.FOCUS_MODE_TYPE_STRICT
+        )
+        if (modeType != Constants.Prefs.FOCUS_MODE_TYPE_STRICT) return
         
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString()
+            val className = event.className?.toString()
             
-            
+            // Block settings packages in strict mode
             val blockedSettingsPackages = setOf(
                 "com.android.settings",
                 "com.android.settings.panel",
@@ -2131,21 +2142,26 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             )
             
             if (packageName in blockedSettingsPackages) {
-                
                 performGlobalAction(GLOBAL_ACTION_BACK)
-                Toast.makeText(this, "Settings blocked - Focus mode is active", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Settings blocked - Strict focus mode is active", Toast.LENGTH_SHORT).show()
             }
             
+            // Block Launch Settings Activity in strict mode
+            if (packageName == "com.guruswarupa.launch" && className != null) {
+                if (className.contains("SettingsActivity")) {
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    Toast.makeText(this, "Launcher settings blocked - Strict focus mode is active", Toast.LENGTH_SHORT).show()
+                }
+            }
             
-            if (packageName == "com.android.systemui") {
-                val className = event.className?.toString()
-                if (className != null && 
-                    (className.contains("Settings") || 
-                     className.contains("settings") ||
-                     className.contains("Preference"))) {
+            // Block SystemUI settings in strict mode
+            if (packageName == "com.android.systemui" && className != null) {
+                if (className.contains("Settings") || 
+                    className.contains("settings") ||
+                    className.contains("Preference")) {
                     
                     performGlobalAction(GLOBAL_ACTION_BACK)
-                    Toast.makeText(this, "Settings blocked - Focus mode is active", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Settings blocked - Strict focus mode is active", Toast.LENGTH_SHORT).show()
                 }
             }
         }
