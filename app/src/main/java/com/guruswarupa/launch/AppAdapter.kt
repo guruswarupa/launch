@@ -859,10 +859,20 @@ class AppAdapter(
             Toast.makeText(activity, R.string.web_app_load_failed, Toast.LENGTH_SHORT).show()
             return
         }
+        
+        // Get the web app entry to access its blockRedirects setting
+        val webAppManager = com.guruswarupa.launch.managers.WebAppManager(
+            activity.getSharedPreferences(com.guruswarupa.launch.models.Constants.Prefs.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        )
+        val webAppEntry = webAppManager.getWebApps().firstOrNull { 
+            it.name == name && it.url == url 
+        }
+        
         activity.startActivity(
             Intent(activity, WebAppActivity::class.java).apply {
                 putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, name)
                 putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
+                putExtra(WebAppActivity.EXTRA_BLOCK_REDIRECTS, webAppEntry?.blockRedirects ?: true)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NEW_DOCUMENT or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
             }
         )
