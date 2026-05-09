@@ -553,7 +553,7 @@ class MainActivity : FragmentActivity() {
                             ScreenPagerManager.Page.RSS -> screenPagerManager.openRssPage(animated = false)
                             ScreenPagerManager.Page.WIDGETS -> screenPagerManager.openWidgetsPage(animated = false)
                             ScreenPagerManager.Page.CENTER -> screenPagerManager.openCenterPage(animated = false)
-                            ScreenPagerManager.Page.RIGHT -> screenPagerManager.openRightPage(animated = false)
+                            ScreenPagerManager.Page.WALLPAPER -> screenPagerManager.openWallpaperPage(animated = false)
                         }
                     }
                 }
@@ -644,7 +644,7 @@ class MainActivity : FragmentActivity() {
 
     fun openWallpaperPage(animated: Boolean = true) {
         if (::screenPagerManager.isInitialized) {
-            screenPagerManager.openRightPage(animated)
+            screenPagerManager.openWallpaperPage(animated)
         }
     }
 
