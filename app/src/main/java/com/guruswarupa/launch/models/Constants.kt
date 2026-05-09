@@ -71,6 +71,7 @@ object Constants {
         const val GRAYSCALE_MODE_ENABLED = "grayscale_mode_enabled"
         const val RSS_PAGE_ENABLED = "rss_page_enabled"
         const val WIDGETS_PAGE_ENABLED = "widgets_page_enabled"
+        const val TOP_WIDGET_ENABLED = "top_widget_enabled"
         const val RSS_FEED_URLS = "rss_feed_urls"
         const val RSS_CUSTOM_FEED_URLS = "rss_custom_feed_urls"
         const val RSS_FEED_CACHE = "rss_feed_cache"

@@ -1792,6 +1792,30 @@
                                 app:trackTint="@color/nord8" />
                         </LinearLayout>
 
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Show widgets above search bar"
+                                android:textColor="@color/white"
+                                android:textSize="14sp"
+                                android:fontFamily="sans-serif-medium" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/top_widget_enabled_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:thumbTint="@color/nord8"
+                                app:trackTint="@color/nord8" />
+                        </LinearLayout>
+
                         <Button
                             android:id="@+id/configure_widgets_button"
                             android:layout_width="match_parent"

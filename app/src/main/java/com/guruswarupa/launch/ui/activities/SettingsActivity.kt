@@ -620,6 +620,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         }
         applySectionExpandedState(wContent, wArrow, widgetsSectionExpanded)
         val widgetsEnabledSwitch = findViewById<SwitchCompat>(R.id.widgets_page_enabled_switch)
+        val topWidgetEnabledSwitch = findViewById<SwitchCompat>(R.id.top_widget_enabled_switch)
         val configureWidgetsButton = findViewById<View>(R.id.configure_widgets_button)
         fun applyWidgetsSwitchColors(isEnabled: Boolean) {
             val color = if (isEnabled) ContextCompat.getColor(this, R.color.nord8) else Color.WHITE
@@ -628,14 +629,26 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             configureWidgetsButton.alpha = if (isEnabled) 1f else 0.6f
             configureWidgetsButton.isEnabled = isEnabled
         }
+        fun applyTopWidgetSwitchColors(isEnabled: Boolean) {
+            val color = if (isEnabled) ContextCompat.getColor(this, R.color.nord8) else Color.WHITE
+            topWidgetEnabledSwitch.thumbTintList = ColorStateList.valueOf(color)
+            topWidgetEnabledSwitch.trackTintList = ColorStateList.valueOf(color)
+        }
 
         widgetsEnabledSwitch.isChecked = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
+        topWidgetEnabledSwitch.isChecked = prefs.getBoolean(Constants.Prefs.TOP_WIDGET_ENABLED, true)
         applyWidgetsSwitchColors(widgetsEnabledSwitch.isChecked)
+        applyTopWidgetSwitchColors(topWidgetEnabledSwitch.isChecked)
         widgetsEnabledSwitch.setOnCheckedChangeListener { _, isChecked ->
             applyWidgetsSwitchColors(isChecked)
             prefs.edit { putBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, isChecked) }
             notifySettingsChanged()
             recreate()
+        }
+        topWidgetEnabledSwitch.setOnCheckedChangeListener { _, isChecked ->
+            applyTopWidgetSwitchColors(isChecked)
+            prefs.edit { putBoolean(Constants.Prefs.TOP_WIDGET_ENABLED, isChecked) }
+            notifySettingsChanged()
         }
 
         configureWidgetsButton.setOnClickListener {
