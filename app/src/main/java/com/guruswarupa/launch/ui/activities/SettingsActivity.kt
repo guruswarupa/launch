@@ -366,7 +366,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         val rssEnabled = prefs.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true)
         val widgetsEnabled = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
         val pageEntries = buildList {
-            add("Wallpaper (Left)" to "right")
+            add("Wallpaper (Left)" to "wallpaper")
             add("Home (Center)" to "center")
             if (widgetsEnabled) add("Widgets (Right)" to "widgets")
             if (rssEnabled) add("News Feed (Far Right)" to "rss")

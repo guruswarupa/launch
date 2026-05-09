@@ -247,7 +247,7 @@ class FeatureTutorialManager(
                 TutorialPage.RSS -> currentPager.isPageOpen(ScreenPagerManager.Page.RSS)
                 TutorialPage.HOME -> currentPager.isPageOpen(ScreenPagerManager.Page.CENTER)
                 TutorialPage.WIDGETS -> currentPager.isPageOpen(ScreenPagerManager.Page.WIDGETS)
-                TutorialPage.WALLPAPER -> currentPager.isPageOpen(ScreenPagerManager.Page.RIGHT)
+                TutorialPage.WALLPAPER -> currentPager.isPageOpen(ScreenPagerManager.Page.WALLPAPER)
             }
         } catch (e: UninitializedPropertyAccessException) {
             // screenPagerManager not yet initialized

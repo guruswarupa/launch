@@ -30,7 +30,7 @@ class ScreenPagerManager(
         RSS,
         WIDGETS,
         CENTER,
-        RIGHT
+        WALLPAPER
     }
 
     private lateinit var pagerScrollView: HorizontalScrollView
@@ -47,7 +47,7 @@ class ScreenPagerManager(
     private val minimumFlingVelocity = viewConfiguration.scaledMinimumFlingVelocity
     private val touchSlop = viewConfiguration.scaledTouchSlop
     private val pageViews = linkedMapOf<Page, View>()
-    private var activePages = listOf(Page.RIGHT, Page.CENTER, Page.WIDGETS)
+    private var activePages = listOf(Page.WALLPAPER, Page.CENTER, Page.WIDGETS)
     private var suppressNextLayoutSnap = false
 
     companion object {
@@ -66,7 +66,7 @@ class ScreenPagerManager(
         pageViews[Page.RSS] = rssView
         pageViews[Page.WIDGETS] = widgetsView
         pageViews[Page.CENTER] = centerView
-        pageViews[Page.RIGHT] = rightView
+        pageViews[Page.WALLPAPER] = rightView
 
         val pageStrip = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -111,13 +111,6 @@ class ScreenPagerManager(
                                 kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY)
 
                         if (!isHorizontalSwipe) {
-                            return false
-                        }
-
-                        if (leftPageLocked &&
-                            nearestPageFor(touchStartScrollX) == Page.CENTER &&
-                            deltaX > 0f
-                        ) {
                             return false
                         }
 
@@ -228,7 +221,7 @@ class ScreenPagerManager(
         val rssEnabled = prefs.getBoolean(Constants.Prefs.RSS_PAGE_ENABLED, true)
         val widgetsEnabled = prefs.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true)
         val pages = mutableListOf<Page>()
-        pages.add(Page.RIGHT)
+        pages.add(Page.WALLPAPER)
         pages.add(Page.CENTER)
         if (widgetsEnabled) {
             pages.add(Page.WIDGETS)
@@ -326,7 +319,7 @@ class ScreenPagerManager(
 
     fun isPageOpen(page: Page): Boolean = currentPage == page
 
-    fun openLeftPage(animated: Boolean = true) = openRightPage(animated)
+    fun openLeftPage(animated: Boolean = true) = openWallpaperPage(animated)
 
     fun openRssPage(animated: Boolean = true) = scrollToPage(Page.RSS, animated)
 
@@ -334,12 +327,12 @@ class ScreenPagerManager(
 
     fun openCenterPage(animated: Boolean = true) = scrollToPage(Page.CENTER, animated)
 
-    fun openRightPage(animated: Boolean = true) = scrollToPage(Page.RIGHT, animated)
+    fun openWallpaperPage(animated: Boolean = true) = scrollToPage(Page.WALLPAPER, animated)
 
     fun setLeftPageLocked(locked: Boolean) {
         leftPageLocked = locked
         if (locked && (currentPage == Page.RSS || currentPage == Page.WIDGETS)) {
-            openCenterPage(animated = true)
+            openWallpaperPage(animated = true)
         }
     }
 
@@ -473,7 +466,7 @@ class ScreenPagerManager(
         val index = ((scrollX + (pageWidth / 2)) / pageWidth).coerceIn(0, activePages.lastIndex)
         val candidate = activePages[index]
         return if (leftPageLocked && (candidate == Page.RSS || candidate == Page.WIDGETS)) {
-            Page.CENTER
+            Page.WALLPAPER
         } else {
             candidate
         }
@@ -493,6 +486,7 @@ class ScreenPagerManager(
 
     private fun navigablePages(): List<Page> {
         return if (leftPageLocked) {
+            // When locked (focus mode), filter out RSS and WIDGETS, keep original order
             activePages.filterNot { it == Page.RSS || it == Page.WIDGETS }
         } else {
             activePages
@@ -513,7 +507,7 @@ class ScreenPagerManager(
         val defaultPage = when (target) {
             "rss" -> Page.RSS
             "widgets" -> Page.WIDGETS
-            "right" -> Page.RIGHT
+            "wallpaper" -> Page.WALLPAPER
             "center" -> Page.CENTER
             else -> legacyDefaultPage(prefs)
         }
@@ -523,7 +517,7 @@ class ScreenPagerManager(
     private fun legacyDefaultPage(prefs: android.content.SharedPreferences): Page {
         return when (prefs.getInt(Constants.Prefs.DEFAULT_HOME_PAGE_INDEX, 1)) {
             0 -> Page.WIDGETS
-            2 -> Page.RIGHT
+            2 -> Page.WALLPAPER
             else -> Page.CENTER
         }
     }
