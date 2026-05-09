@@ -192,6 +192,15 @@ class SettingsChangeCoordinator(
         }
 
         activity.activityInitializer.setupDrawerLayout()
+        
+        // Update dock visibility based on new settings
+        appDockManagerProvider()?.let { dockManager ->
+            try {
+                dockManager.refreshDockVisibility()
+            } catch (e: Exception) {
+                // Dock visibility update failed, continue with other updates
+            }
+        }
 
     }
 }

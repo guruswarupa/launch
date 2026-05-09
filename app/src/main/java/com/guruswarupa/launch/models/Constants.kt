@@ -99,6 +99,11 @@ object Constants {
         const val FOCUS_MODE_TYPE = "focus_mode_type" // "strict" or "casual"
         const val FOCUS_MODE_TYPE_STRICT = "strict"
         const val FOCUS_MODE_TYPE_CASUAL = "casual"
+        
+        // Dock Visibility
+        const val DOCK_HIDE_WORK_PROFILE = "dock_hide_work_profile"
+        const val DOCK_HIDE_FOCUS_MODE = "dock_hide_focus_mode"
+        const val DOCK_HIDE_WORKSPACES = "dock_hide_workspaces"
 
     }
 

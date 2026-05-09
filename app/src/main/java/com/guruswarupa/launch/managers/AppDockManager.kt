@@ -1116,31 +1116,60 @@ class AppDockManager(
         }
     }
 
+    fun refreshDockVisibility() {
+        updateDockVisibility()
+    }
+    
     private fun updateDockVisibility() {
         val isWorkMode = workProfileManager.isWorkProfileEnabled()
         val isFocusActive = isFocusMode || pomodoroManager.isPomodoroActive()
+        
+        val hideWorkProfile = sharedPreferences.getBoolean(Constants.Prefs.DOCK_HIDE_WORK_PROFILE, false)
+        val hideFocusMode = sharedPreferences.getBoolean(Constants.Prefs.DOCK_HIDE_FOCUS_MODE, false)
+        val hideWorkspaces = sharedPreferences.getBoolean(Constants.Prefs.DOCK_HIDE_WORKSPACES, false)
+        
+        val allThreeHidden = hideWorkProfile && hideFocusMode && hideWorkspaces
 
         for (i in 0 until appDock.childCount) {
             val child = appDock.getChildAt(i)
             when (child.tag) {
                 "workspace_container" -> {
-                    // Hide workspace if either Work or Focus mode is active
-                    child.visibility = if (isWorkMode || isFocusActive) View.GONE else View.VISIBLE
+                    if (allThreeHidden) {
+                        child.visibility = View.GONE
+                    } else {
+                        // Hide workspace if either Work or Focus mode is active, or if hidden in settings
+                        child.visibility = if (isWorkMode || isFocusActive || hideWorkspaces) View.GONE else View.VISIBLE
+                    }
                 }
                 "focus_mode_container" -> {
-                    // Hide focus icon if Work mode is active
-                    child.visibility = if (isWorkMode) View.GONE else View.VISIBLE
+                    if (allThreeHidden) {
+                        child.visibility = View.GONE
+                    } else {
+                        // Hide focus icon if Work mode is active or if hidden in settings
+                        child.visibility = if (isWorkMode || hideFocusMode) View.GONE else View.VISIBLE
+                    }
                 }
                 "work_profile_container" -> {
-                    // Work icon is always visible (requirements say show work icon when Focus is on)
-                    child.visibility = View.VISIBLE
+                    if (allThreeHidden) {
+                        child.visibility = View.GONE
+                    } else {
+                        // Hide work profile if hidden in settings
+                        child.visibility = if (hideWorkProfile) View.GONE else View.VISIBLE
+                    }
                 }
                 else -> {
-                    // Hide other items when Focus Mode is active
-                    child.visibility = if (isFocusActive) View.GONE else View.VISIBLE
+                    if (allThreeHidden) {
+                        child.visibility = View.GONE
+                    } else {
+                        // Hide other items when Focus Mode is active
+                        child.visibility = if (isFocusActive) View.GONE else View.VISIBLE
+                    }
                 }
             }
         }
+        
+        // Hide the entire dock container if all three are disabled
+        appDock.visibility = if (allThreeHidden) View.GONE else View.VISIBLE
     }
 
     private fun startTimerDisplay() {

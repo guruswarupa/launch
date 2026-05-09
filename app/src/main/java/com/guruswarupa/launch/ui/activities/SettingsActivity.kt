@@ -150,6 +150,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         setupAppearanceSection()
         setupActionsSection()
+        setupDockSettings()
         setupNewsFeedSection()
         setupAppTimerSection()
         setupSecuritySection()
@@ -681,6 +682,49 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         }
         findViewById<View>(R.id.config_edge_panel_button).setOnClickListener {
             startActivity(Intent(this, EdgePanelConfigActivity::class.java))
+        }
+    }
+
+    private fun setupDockSettings() {
+        val header = findViewById<LinearLayout>(R.id.dock_settings_header)
+        val content = findViewById<LinearLayout>(R.id.dock_settings_content)
+        val arrow = findViewById<TextView>(R.id.dock_settings_arrow)
+        setupSectionToggle(header, content, arrow)
+
+        val hideWorkProfileSwitch = findViewById<SwitchCompat>(R.id.dock_hide_work_profile_switch)
+        val hideFocusModeSwitch = findViewById<SwitchCompat>(R.id.dock_hide_focus_mode_switch)
+        val hideWorkspacesSwitch = findViewById<SwitchCompat>(R.id.dock_hide_workspaces_switch)
+
+        fun applySwitchColors(isEnabled: Boolean, switch: SwitchCompat) {
+            val color = if (isEnabled) ContextCompat.getColor(this, R.color.nord8) else Color.WHITE
+            switch.thumbTintList = ColorStateList.valueOf(color)
+            switch.trackTintList = ColorStateList.valueOf(color)
+        }
+
+        hideWorkProfileSwitch.isChecked = prefs.getBoolean(Constants.Prefs.DOCK_HIDE_WORK_PROFILE, false)
+        hideFocusModeSwitch.isChecked = prefs.getBoolean(Constants.Prefs.DOCK_HIDE_FOCUS_MODE, false)
+        hideWorkspacesSwitch.isChecked = prefs.getBoolean(Constants.Prefs.DOCK_HIDE_WORKSPACES, false)
+
+        applySwitchColors(hideWorkProfileSwitch.isChecked, hideWorkProfileSwitch)
+        applySwitchColors(hideFocusModeSwitch.isChecked, hideFocusModeSwitch)
+        applySwitchColors(hideWorkspacesSwitch.isChecked, hideWorkspacesSwitch)
+
+        hideWorkProfileSwitch.setOnCheckedChangeListener { _, isChecked ->
+            applySwitchColors(isChecked, hideWorkProfileSwitch)
+            prefs.edit { putBoolean(Constants.Prefs.DOCK_HIDE_WORK_PROFILE, isChecked) }
+            notifySettingsChanged()
+        }
+
+        hideFocusModeSwitch.setOnCheckedChangeListener { _, isChecked ->
+            applySwitchColors(isChecked, hideFocusModeSwitch)
+            prefs.edit { putBoolean(Constants.Prefs.DOCK_HIDE_FOCUS_MODE, isChecked) }
+            notifySettingsChanged()
+        }
+
+        hideWorkspacesSwitch.setOnCheckedChangeListener { _, isChecked ->
+            applySwitchColors(isChecked, hideWorkspacesSwitch)
+            prefs.edit { putBoolean(Constants.Prefs.DOCK_HIDE_WORKSPACES, isChecked) }
+            notifySettingsChanged()
         }
     }
 
