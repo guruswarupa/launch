@@ -18,6 +18,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -31,6 +32,13 @@ import com.guruswarupa.launch.managers.WebAppManager
 import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.WebAppEntry
 import com.guruswarupa.launch.utils.WallpaperDisplayHelper
+import com.guruswarupa.launch.utils.WebAppSearchHelper
+import com.guruswarupa.launch.utils.SearchSuggestion
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WebAppSettingsActivity : ComponentActivity() {
     private val prefs by lazy { getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE) }
@@ -214,15 +222,31 @@ class WebAppSettingsActivity : ComponentActivity() {
         }
     }
 
+    private var searchJob: Job? = null
+    
     private fun showEditorDialog(existing: WebAppEntry? = null) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_web_app_editor, null)
         val nameInput = dialogView.findViewById<EditText>(R.id.web_app_name_input)
         val urlInput = dialogView.findViewById<EditText>(R.id.web_app_url_input)
+        val searchButton = dialogView.findViewById<ImageButton>(R.id.web_app_search_button)
+        val suggestionsContainer = dialogView.findViewById<LinearLayout>(R.id.web_app_suggestions_container)
+        val suggestionsList = dialogView.findViewById<LinearLayout>(R.id.web_app_suggestions_list)
+        val searchProgress = dialogView.findViewById<ProgressBar>(R.id.web_app_search_progress)
 
         nameInput.setText(existing?.name.orEmpty())
         urlInput.setText(existing?.url.orEmpty())
         urlInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
         
+        // Show popular suggestions only for new web apps
+        if (existing == null) {
+            suggestionsContainer.visibility = View.VISIBLE
+            setupPopularSuggestions(suggestionsList, nameInput, urlInput)
+        }
+        
+        // Search button click handler
+        searchButton.setOnClickListener {
+            showSearchDialog(nameInput, urlInput, searchProgress)
+        }
         
         nameInput.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
             if (!hasFocus && nameInput.text.toString().trim().isBlank()) {
@@ -304,6 +328,137 @@ class WebAppSettingsActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    
+    private fun setupPopularSuggestions(
+        suggestionsList: LinearLayout,
+        nameInput: EditText,
+        urlInput: EditText
+    ) {
+        suggestionsList.removeAllViews()
+        
+        WebAppSearchHelper.POPULAR_WEBSITES.take(10).forEach { suggestion ->
+            val chip = TextView(this).apply {
+                text = suggestion.title
+                setPadding(24, 12, 24, 12)
+                setBackgroundResource(R.drawable.dialog_input_background)
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                isSingleLine = true
+                maxLines = 1
+                setOnClickListener {
+                    nameInput.setText(suggestion.title)
+                    urlInput.setText(suggestion.url)
+                }
+            }
+            
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, 12, 8)
+            }
+            chip.layoutParams = params
+            
+            suggestionsList.addView(chip)
+        }
+    }
+    
+    private fun showSearchDialog(
+        nameInput: EditText,
+        urlInput: EditText,
+        searchProgress: ProgressBar
+    ) {
+        val searchView = LayoutInflater.from(this).inflate(R.layout.dialog_web_app_search, null)
+        val searchInput = searchView.findViewById<EditText>(R.id.search_input)
+        val searchProgressLocal = searchView.findViewById<ProgressBar>(R.id.search_progress)
+        val searchResultsList = searchView.findViewById<LinearLayout>(R.id.search_results_list)
+        val searchEmptyText = searchView.findViewById<TextView>(R.id.search_empty_text)
+        
+        val searchDialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
+            .setTitle(R.string.web_app_search_title)
+            .setView(searchView)
+            .setPositiveButton(R.string.cancel_button, null)
+            .show()
+        
+        // Handle search action
+        searchInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                performSearch(searchInput.text.toString(), searchResultsList, searchProgressLocal, searchEmptyText, nameInput, urlInput, searchDialog)
+                true
+            } else {
+                false
+            }
+        }
+    }
+    
+    private fun performSearch(
+        query: String,
+        searchResultsList: LinearLayout,
+        searchProgress: ProgressBar,
+        searchEmptyText: TextView,
+        nameInput: EditText,
+        urlInput: EditText,
+        searchDialog: AlertDialog
+    ) {
+        if (query.isBlank()) return
+        
+        searchJob?.cancel()
+        searchJob = CoroutineScope(Dispatchers.Main).launch {
+            searchProgress.visibility = View.VISIBLE
+            searchEmptyText.visibility = View.GONE
+            searchResultsList.removeAllViews()
+            
+            val results = try {
+                WebAppSearchHelper.searchGoogle(query)
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    searchProgress.visibility = View.GONE
+                    searchEmptyText.text = "Search failed. Try again."
+                    searchEmptyText.visibility = View.VISIBLE
+                }
+                return@launch
+            }
+            
+            withContext(Dispatchers.Main) {
+                searchProgress.visibility = View.GONE
+                
+                if (results.isEmpty()) {
+                    searchEmptyText.visibility = View.VISIBLE
+                } else {
+                    searchEmptyText.visibility = View.GONE
+                    results.forEach { result ->
+                        addSearchResultItem(searchResultsList, result, nameInput, urlInput, searchDialog)
+                    }
+                }
+            }
+        }
+    }
+    
+    private fun addSearchResultItem(
+        container: LinearLayout,
+        result: SearchSuggestion,
+        nameInput: EditText,
+        urlInput: EditText,
+        searchDialog: AlertDialog
+    ) {
+        val itemView = LayoutInflater.from(this).inflate(R.layout.item_web_app_search_result, container, false)
+        val titleText = itemView.findViewById<TextView>(R.id.search_result_title)
+        val urlText = itemView.findViewById<TextView>(R.id.search_result_url)
+        val descText = itemView.findViewById<TextView>(R.id.search_result_description)
+        
+        titleText.text = result.title
+        urlText.text = result.url
+        descText.text = result.description
+        
+        itemView.setOnClickListener {
+            nameInput.setText(result.title)
+            urlInput.setText(result.url)
+            searchDialog.dismiss()
+            Toast.makeText(this, "Selected: ${result.title}", Toast.LENGTH_SHORT).show()
+        }
+        
+        container.addView(itemView)
     }
 
     private fun confirmDelete(entry: WebAppEntry) {

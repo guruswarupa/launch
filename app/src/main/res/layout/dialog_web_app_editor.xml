@@ -17,16 +17,76 @@
         android:textColor="@color/white"
         android:textColorHint="#80FFFFFF" />
 
-    <EditText
-        android:id="@+id/web_app_url_input"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/web_app_url_input"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/dialog_input_background"
+            android:hint="@string/web_app_url_hint"
+            android:inputType="textUri"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="12dp"
+            android:textColor="@color/white"
+            android:textColorHint="#80FFFFFF" />
+
+        <ImageButton
+            android:id="@+id/web_app_search_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/dialog_input_background"
+            android:contentDescription="@string/web_app_search_description"
+            android:padding="12dp"
+            android:src="@drawable/ic_search"
+            android:tint="@color/white" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/web_app_suggestions_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:visibility="gone"
         android:background="@drawable/dialog_input_background"
-        android:hint="@string/web_app_url_hint"
-        android:inputType="textUri"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp"
-        android:textColor="@color/white"
-        android:textColorHint="#80FFFFFF" />
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/web_app_suggestions_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/web_app_popular_sites"
+            android:textColor="@color/white"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:alpha="0.7"
+            android:paddingBottom="8dp" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/web_app_suggestions_list"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/web_app_search_progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="12dp"
+        android:visibility="gone" />
 </LinearLayout>
