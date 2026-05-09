@@ -94,6 +94,11 @@ object Constants {
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"
         const val VAULT_TIMEOUT_DURATION = "vault_timeout_duration"  
         const val VAULT_SETUP_COMPLETE = "vault_setup_complete"
+        
+        // Focus Mode
+        const val FOCUS_MODE_TYPE = "focus_mode_type" // "strict" or "casual"
+        const val FOCUS_MODE_TYPE_STRICT = "strict"
+        const val FOCUS_MODE_TYPE_CASUAL = "casual"
 
     }
 

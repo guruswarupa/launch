@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.core.content.edit
 import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
+import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.ui.activities.FocusModeConfigActivity
 import com.guruswarupa.launch.ui.activities.WorkspaceConfigActivity
 import com.guruswarupa.launch.ui.activities.EncryptedVaultActivity
@@ -688,12 +689,33 @@ class AppDockManager(
 
     private fun toggleFocusMode() {
         if (isFocusMode) {
+            val modeType = sharedPreferences.getString(Constants.Prefs.FOCUS_MODE_TYPE, 
+                Constants.Prefs.FOCUS_MODE_TYPE_STRICT)
+            
+            // Strict mode cannot be disabled early
+            if (modeType == Constants.Prefs.FOCUS_MODE_TYPE_STRICT) {
+                val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
+                val remainingMinutes = (endTime - System.currentTimeMillis()) / (1000 * 60)
+                Toast.makeText(context, "Strict mode active - $remainingMinutes minutes remaining", Toast.LENGTH_LONG).show()
+                return
+            }
+            
+            // Casual mode can be disabled
             val endTime = sharedPreferences.getLong(focusModeEndTimeKey, 0)
             val currentTime = System.currentTimeMillis()
 
             if (currentTime < endTime) {
                 val remainingMinutes = (endTime - currentTime) / (1000 * 60)
-                Toast.makeText(context, "Focus mode active for $remainingMinutes more minutes", Toast.LENGTH_LONG).show()
+                val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
+                    .setTitle("End Focus Mode?")
+                    .setMessage("Casual mode - $remainingMinutes minutes remaining. End early?")
+                    .setPositiveButton("End") { _, _ ->
+                        disableFocusMode()
+                    }
+                    .setNegativeButton("Continue", null)
+                    .create()
+                DialogStyler.styleDialog(dialog)
+                dialog.show()
             } else if (pomodoroManager.isPomodoroActive()) {
                 val state = pomodoroManager.getCurrentState()
                 Toast.makeText(context, "Pomodoro $state session active", Toast.LENGTH_SHORT).show()
@@ -726,11 +748,29 @@ class AppDockManager(
                 when (durationValues[which]) {
                     -2 -> pomodoroManager.startPomodoro()
                     -1 -> showCustomDurationDialog()
-                    else -> promptForDnd(durationValues[which])
+                    else -> showFocusModeTypeDialog(durationValues[which])
                 }
             }
             .setNeutralButton("Pomodoro Settings") { _, _ ->
                 showPomodoroSettingsDialog()
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+            
+        DialogStyler.styleDialog(dialog)
+        dialog.show()
+    }
+
+    private fun showFocusModeTypeDialog(durationMinutes: Int) {
+        val modes = arrayOf("Strict Mode", "Casual Mode")
+
+        val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
+            .setTitle("Select Focus Mode Type")
+            .setSingleChoiceItems(modes, 0) { dialog, which ->
+                val modeType = if (which == 0) Constants.Prefs.FOCUS_MODE_TYPE_STRICT else Constants.Prefs.FOCUS_MODE_TYPE_CASUAL
+                sharedPreferences.edit { putString(Constants.Prefs.FOCUS_MODE_TYPE, modeType) }
+                dialog.dismiss()
+                promptForDnd(durationMinutes, modeType)
             }
             .setNegativeButton("Cancel", null)
             .create()
@@ -750,10 +790,10 @@ class AppDockManager(
             .setTitle("Custom Duration")
             .setMessage("Enter duration in minutes:")
             .setDialogInputView(context, input)
-            .setPositiveButton("Start") { _, _ ->
+            .setPositiveButton("Next") { _, _ ->
                 val minutes = input.text.toString().toIntOrNull()
                 if (minutes != null && minutes in 1..480) {
-                    promptForDnd(minutes)
+                    showFocusModeTypeDialog(minutes)
                 } else {
                     Toast.makeText(context, "Please enter a duration between 1-480 min", Toast.LENGTH_SHORT).show()
                 }
@@ -765,15 +805,16 @@ class AppDockManager(
         dialog.show()
     }
 
-    private fun promptForDnd(durationMinutes: Int) {
+    private fun promptForDnd(durationMinutes: Int, modeType: String) {
+        val modeLabel = if (modeType == Constants.Prefs.FOCUS_MODE_TYPE_STRICT) "Strict" else "Casual"
         val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Enable Do Not Disturb?")
-            .setMessage("Would you like to enable Do Not Disturb mode to mute notifications during this focus session?")
+            .setMessage("$modeLabel Mode - Would you like to enable Do Not Disturb mode to mute notifications during this focus session?")
             .setPositiveButton("Yes") { _, _ ->
-                enableFocusMode(durationMinutes, true)
+                enableFocusMode(durationMinutes, true, modeType)
             }
             .setNegativeButton("No") { _, _ ->
-                enableFocusMode(durationMinutes, false)
+                enableFocusMode(durationMinutes, false, modeType)
             }
             .setNeutralButton("Cancel", null)
             .create()
@@ -782,7 +823,7 @@ class AppDockManager(
         dialog.show()
     }
 
-    private fun enableFocusMode(durationMinutes: Int, enableDnd: Boolean) {
+    private fun enableFocusMode(durationMinutes: Int, enableDnd: Boolean, modeType: String) {
         if (enableDnd && !notificationManager.isNotificationPolicyAccessGranted) {
             showDndPermissionDialog()
             return
@@ -795,6 +836,7 @@ class AppDockManager(
         sharedPreferences.edit { 
             putLong(focusModeEndTimeKey, endTime)
             putBoolean(focusModeDndEnabledKey, enableDnd)
+            putString(Constants.Prefs.FOCUS_MODE_TYPE, modeType)
         }
 
         val focusModeManager = FocusModeManager(context, sharedPreferences)
