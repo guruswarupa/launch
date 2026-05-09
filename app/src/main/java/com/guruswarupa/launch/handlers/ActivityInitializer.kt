@@ -107,6 +107,21 @@ class ActivityInitializer(
             setupHeaderVisibilityOnScroll(recyclerView)
             setupTimeDateListeners(timeTextView, dateTextView)
             applyPhoneLandscapeOptimizations()
+            
+            // Apply top widget visibility preference
+            val topWidgetEnabled = sharedPreferences.getBoolean(
+                com.guruswarupa.launch.models.Constants.Prefs.TOP_WIDGET_ENABLED,
+                true
+            )
+            topWidgetContainer.visibility = if (topWidgetEnabled) View.VISIBLE else View.GONE
+            
+            // Apply additional top margin to search bar when widget is disabled
+            if (!topWidgetEnabled) {
+                val extraMargin = activity.resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden)
+                val params = searchContainer.layoutParams as MarginLayoutParams
+                params.topMargin = extraMargin
+                searchContainer.layoutParams = params
+            }
         }
     }
 
@@ -328,6 +343,11 @@ class ActivityInitializer(
         
         val stack = views.topWidgetContainer.parent as? ViewGroup ?: return
         
+        // Check if top widget is disabled by preference
+        val topWidgetEnabled = sharedPreferences.getBoolean(
+            com.guruswarupa.launch.models.Constants.Prefs.TOP_WIDGET_ENABLED,
+            true
+        )
         
         val transition = TransitionSet().apply {
             addTransition(Fade().apply {
@@ -341,12 +361,19 @@ class ActivityInitializer(
         
         TransitionManager.beginDelayedTransition(stack, transition)
 
-        views.topWidgetContainer.isVisible = visible
+        views.topWidgetContainer.isVisible = visible && topWidgetEnabled
         
         (views.appDock.parent as? View)?.isVisible = visible
         
-        
-        val targetMargin = if (visible) defaultSearchTopMargin else pinnedSearchTopMargin
+        // Apply appropriate margin based on widget preference and visibility
+        val targetMargin = when {
+            !topWidgetEnabled -> {
+                // Widget disabled by preference - use larger margin
+                activity.resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden)
+            }
+            visible -> defaultSearchTopMargin
+            else -> pinnedSearchTopMargin
+        }
         val params = views.searchContainer.layoutParams as MarginLayoutParams
         params.topMargin = targetMargin
         views.searchContainer.layoutParams = params

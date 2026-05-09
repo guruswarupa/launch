@@ -69,6 +69,24 @@ class SettingsChangeCoordinator(
         applyBackgroundTranslucency()
         TypographyManager.applyToActivity(activity)
         views.fastScroller.refreshTypography(sharedPreferences)
+        
+        // Apply top widget visibility preference
+        val topWidgetEnabled = sharedPreferences.getBoolean(Constants.Prefs.TOP_WIDGET_ENABLED, true)
+        if (views.isRecyclerViewInitialized()) {
+            views.topWidgetContainer.visibility = if (topWidgetEnabled) android.view.View.VISIBLE else android.view.View.GONE
+            
+            // Apply appropriate margin based on widget preference
+            val params = views.searchContainer.layoutParams as android.view.ViewGroup.MarginLayoutParams
+            if (!topWidgetEnabled) {
+                // Widget disabled - use larger margin
+                val extraMargin = activity.resources.getDimensionPixelSize(com.guruswarupa.launch.R.dimen.search_top_margin_when_widget_hidden)
+                params.topMargin = extraMargin
+            } else {
+                // Widget enabled - restore original margin
+                params.topMargin = activity.resources.getDimensionPixelSize(com.guruswarupa.launch.R.dimen.widget_status_bar_clearance)
+            }
+            views.searchContainer.layoutParams = params
+        }
 
         activity.timeDateManager.setUse24HourFormat(use24HourClock)
         
