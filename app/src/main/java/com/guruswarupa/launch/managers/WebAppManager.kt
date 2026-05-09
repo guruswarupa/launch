@@ -32,8 +32,9 @@ class WebAppManager @Inject constructor(private val sharedPreferences: SharedPre
                     val id = item.optString("id").ifBlank { UUID.randomUUID().toString() }
                     val name = item.optString("name").trim()
                     val url = item.optString("url").trim()
+                    val blockRedirects = item.optBoolean("blockRedirects", true)
                     if (name.isNotBlank() && url.isNotBlank()) {
-                        add(WebAppEntry(id = id, name = name, url = url))
+                        add(WebAppEntry(id = id, name = name, url = url, blockRedirects = blockRedirects))
                     }
                 }
             }
@@ -49,20 +50,33 @@ class WebAppManager @Inject constructor(private val sharedPreferences: SharedPre
 
     fun getResolveInfos(): List<ResolveInfo> = getWebApps().map(::createResolveInfo)
 
-    fun addWebApp(name: String, url: String) {
+    fun addWebApp(name: String, url: String, blockRedirects: Boolean = true) {
         val normalizedName = name.trim()
         val normalizedUrl = normalizeUrl(url)
         val updated = getWebApps().toMutableList().apply {
-            add(WebAppEntry(UUID.randomUUID().toString(), normalizedName, normalizedUrl))
+            add(WebAppEntry(UUID.randomUUID().toString(), normalizedName, normalizedUrl, blockRedirects))
         }
         saveWebApps(updated)
     }
 
-    fun updateWebApp(id: String, name: String, url: String) {
+    fun updateWebApp(id: String, name: String, url: String, blockRedirects: Boolean? = null) {
         val normalizedName = name.trim()
         val normalizedUrl = normalizeUrl(url)
         val updated = getWebApps().map { entry ->
-            if (entry.id == id) entry.copy(name = normalizedName, url = normalizedUrl) else entry
+            if (entry.id == id) {
+                if (blockRedirects != null) {
+                    entry.copy(name = normalizedName, url = normalizedUrl, blockRedirects = blockRedirects)
+                } else {
+                    entry.copy(name = normalizedName, url = normalizedUrl)
+                }
+            } else entry
+        }
+        saveWebApps(updated)
+    }
+    
+    fun updateWebAppRedirect(id: String, blockRedirects: Boolean) {
+        val updated = getWebApps().map { entry ->
+            if (entry.id == id) entry.copy(blockRedirects = blockRedirects) else entry
         }
         saveWebApps(updated)
     }
@@ -101,6 +115,7 @@ class WebAppManager @Inject constructor(private val sharedPreferences: SharedPre
                     put("id", entry.id)
                     put("name", entry.name)
                     put("url", entry.url)
+                    put("blockRedirects", entry.blockRedirects)
                 }
             )
         }
