@@ -183,6 +183,15 @@ class WidgetConfigurationManager(
         return getWidgetConfiguration().filter { !it.isProvider }
     }
     
+    /**
+     * Force refresh the widget configuration cache.
+     * Call this when widget states may have changed.
+     */
+    fun forceRefresh() {
+        invalidateCache()
+        getWidgetOrder() // This will repopulate the cache
+    }
+    
     private fun getBoundSystemWidgets(): List<WidgetInfo> {
         val widgetsJson = sharedPreferences.getString(PREFS_SYSTEM_WIDGETS_KEY, null) ?: return emptyList()
         val systemWidgets = mutableListOf<WidgetInfo>()
