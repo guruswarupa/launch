@@ -1,6 +1,7 @@
 package com.guruswarupa.launch.widgets
 
 import android.app.Activity
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -10,10 +11,16 @@ class WidgetVisibilityManager(
     private val activity: Activity,
     private val widgetConfigurationManager: WidgetConfigurationManager
 ) {
+    companion object {
+        private const val TAG = "WidgetVisibilityManager"
+    }
     fun update(
         yearProgressWidget: YearProgressWidget? = null,
         githubContributionWidget: GithubContributionWidget? = null
     ) {
+        // Force refresh cache to ensure we have latest widget states
+        widgetConfigurationManager.forceRefresh()
+        
         val widgets = widgetConfigurationManager.getWidgetOrder()
         val widgetMap = widgets.associateBy { it.id }
         
@@ -21,69 +28,78 @@ class WidgetVisibilityManager(
         val emptyState = activity.findViewById<View>(com.guruswarupa.launch.R.id.widgets_empty_state)
         emptyState?.visibility = if (hasEnabledWidgets) View.GONE else View.VISIBLE
         
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.media_controller_widget_container)?.visibility = 
-            if (widgetMap["media_controller_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-            
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.calendar_events_widget_container)?.visibility = 
-            if (widgetMap["calendar_events_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        // Track widgets that failed to update for retry
+        val failedWidgets = mutableListOf<String>()
         
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.countdown_widget_container)?.visibility = 
-            if (widgetMap["countdown_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.dns_widget_container)?.visibility = 
-            if (widgetMap["dns_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.note_widget_container)?.visibility = 
-            if (widgetMap["note_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.battery_health_widget_container)?.visibility = 
-            if (widgetMap["battery_health_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.physical_activity_widget_container)?.visibility = 
-            if (widgetMap["physical_activity_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.compass_widget_container)?.visibility = 
-            if (widgetMap["compass_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.pressure_widget_container)?.visibility = 
-            if (widgetMap["pressure_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.temperature_widget_container)?.visibility = 
-            if (widgetMap["temperature_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.weather_forecast_widget_container)?.visibility =
-            if (widgetMap["weather_forecast_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.noise_decibel_widget_container)?.visibility = 
-            if (widgetMap["noise_decibel_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        val workoutParent = activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.workout_widget_container)?.parent as? ViewGroup
-        workoutParent?.visibility = if (widgetMap["workout_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        val calculatorParent = activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.calculator_widget_container)?.parent as? ViewGroup
-        calculatorParent?.visibility = if (widgetMap["calculator_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        val todoParent = activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.todo_recycler_view)?.parent as? ViewGroup
-        todoParent?.visibility = if (widgetMap["todo_recycler_view"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.finance_widget)?.visibility = 
-            if (widgetMap["finance_widget"]?.enabled == true) View.VISIBLE else View.GONE
-            
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.network_stats_widget_container)?.visibility = 
-            if (widgetMap["network_stats_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-            
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.device_info_widget_container)?.visibility = 
-            if (widgetMap["device_info_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.weekly_usage_widget)?.visibility = 
-            if (widgetMap["weekly_usage_widget"]?.enabled == true) View.VISIBLE else View.GONE
-        
-        activity.findViewById<View>(com.guruswarupa.launch.R.id.github_contributions_widget_container)?.visibility = 
-            if (widgetMap["github_contributions_widget_container"]?.enabled == true) View.VISIBLE else View.GONE
+        failedWidgets.addAll(updateSimpleWidgetContainers(widgetMap))
         
         yearProgressWidget?.setGlobalVisibility(widgetMap["year_progress_widget_container"]?.enabled == true)
         githubContributionWidget?.setGlobalVisibility(widgetMap["github_contributions_widget_container"]?.enabled == true)
         
+        failedWidgets.addAll(reorderWidgetsInLayout(widgets, widgetMap))
+        
+        if (failedWidgets.isNotEmpty()) {
+            Log.w(TAG, "Failed to update visibility for widgets: ${failedWidgets.joinToString()}. Scheduling retry.")
+            scheduleRetry(yearProgressWidget, githubContributionWidget)
+        }
+    }
+    
+    private fun updateSimpleWidgetContainers(widgetMap: Map<String, WidgetConfigurationManager.WidgetInfo>): List<String> {
+        val failedWidgets = mutableListOf<String>()
+        val simpleWidgets = listOf(
+            "media_controller_widget_container" to com.guruswarupa.launch.R.id.media_controller_widget_container,
+            "calendar_events_widget_container" to com.guruswarupa.launch.R.id.calendar_events_widget_container,
+            "countdown_widget_container" to com.guruswarupa.launch.R.id.countdown_widget_container,
+            "dns_widget_container" to com.guruswarupa.launch.R.id.dns_widget_container,
+            "note_widget_container" to com.guruswarupa.launch.R.id.note_widget_container,
+            "battery_health_widget_container" to com.guruswarupa.launch.R.id.battery_health_widget_container,
+            "physical_activity_widget_container" to com.guruswarupa.launch.R.id.physical_activity_widget_container,
+            "compass_widget_container" to com.guruswarupa.launch.R.id.compass_widget_container,
+            "pressure_widget_container" to com.guruswarupa.launch.R.id.pressure_widget_container,
+            "temperature_widget_container" to com.guruswarupa.launch.R.id.temperature_widget_container,
+            "weather_forecast_widget_container" to com.guruswarupa.launch.R.id.weather_forecast_widget_container,
+            "noise_decibel_widget_container" to com.guruswarupa.launch.R.id.noise_decibel_widget_container,
+            "finance_widget" to com.guruswarupa.launch.R.id.finance_widget,
+            "network_stats_widget_container" to com.guruswarupa.launch.R.id.network_stats_widget_container,
+            "device_info_widget_container" to com.guruswarupa.launch.R.id.device_info_widget_container,
+            "weekly_usage_widget" to com.guruswarupa.launch.R.id.weekly_usage_widget,
+            "github_contributions_widget_container" to com.guruswarupa.launch.R.id.github_contributions_widget_container
+        )
+        
+        simpleWidgets.forEach { (widgetId, resId) ->
+            val view = activity.findViewById<View>(resId)
+            if (view != null) {
+                view.visibility = if (widgetMap[widgetId]?.enabled == true) View.VISIBLE else View.GONE
+            } else if (widgetMap.containsKey(widgetId)) {
+                Log.w(TAG, "Widget container not found: $widgetId (R.id.$resId)")
+                failedWidgets.add(widgetId)
+            }
+        }
+        
+        // Handle widgets that need parent visibility
+        listOf(
+            "workout_widget_container" to com.guruswarupa.launch.R.id.workout_widget_container,
+            "calculator_widget_container" to com.guruswarupa.launch.R.id.calculator_widget_container,
+            "todo_recycler_view" to com.guruswarupa.launch.R.id.todo_recycler_view
+        ).forEach { (widgetId, resId) ->
+            val container = activity.findViewById<View>(resId)
+            val targetView = container?.parent as? View
+            if (targetView != null) {
+                targetView.visibility = if (widgetMap[widgetId]?.enabled == true) View.VISIBLE else View.GONE
+            } else if (widgetMap.containsKey(widgetId)) {
+                Log.w(TAG, "Widget parent not found: $widgetId")
+                failedWidgets.add(widgetId)
+            }
+        }
+        
+        return failedWidgets
+    }
+        
+    private fun reorderWidgetsInLayout(
+        widgets: List<WidgetConfigurationManager.WidgetInfo>,
+        widgetMap: Map<String, WidgetConfigurationManager.WidgetInfo>
+    ): List<String> {
+        val failedWidgets = mutableListOf<String>()
         val contentLayout = activity.findViewById<LinearLayout>(com.guruswarupa.launch.R.id.drawer_content_layout)
         contentLayout?.let { layout ->
             val viewMap = mutableMapOf<String, View>()
@@ -94,32 +110,14 @@ class WidgetVisibilityManager(
                         layout.findViewWithTag<View>(widgetId)
                     } else null
                 } else {
-                    when (widget.id) {
-                        "media_controller_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.media_controller_widget_container)
-                        "calendar_events_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.calendar_events_widget_container)
-                        "countdown_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.countdown_widget_container)
-                        "dns_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.dns_widget_container)
-                        "note_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.note_widget_container)
-                        "battery_health_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.battery_health_widget_container)
-                        "physical_activity_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.physical_activity_widget_container)
-                        "compass_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.compass_widget_container)
-                        "pressure_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.pressure_widget_container)
-                        "temperature_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.temperature_widget_container)
-                        "weather_forecast_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.weather_forecast_widget_container)
-                        "noise_decibel_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.noise_decibel_widget_container)
-                        "workout_widget_container" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.workout_widget_container)?.parent as? View
-                        "calculator_widget_container" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.calculator_widget_container)?.parent as? View
-                        "todo_recycler_view" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.todo_recycler_view)?.parent as? View
-                        "finance_widget" -> activity.findViewById(com.guruswarupa.launch.R.id.finance_widget)
-                        "weekly_usage_widget" -> activity.findViewById(com.guruswarupa.launch.R.id.weekly_usage_widget)
-                        "github_contributions_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.github_contributions_widget_container)
-                        "network_stats_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.network_stats_widget_container)
-                        "device_info_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.device_info_widget_container)
-                        "year_progress_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.year_progress_widget_container)
-                        else -> null
-                    }
+                    getWidgetViewById(widget.id)
                 }
-                view?.let { viewMap[widget.id] = it }
+                if (view != null) {
+                    viewMap[widget.id] = view
+                } else if (!widget.isSystemWidget) {
+                    Log.w(TAG, "Widget view not found for reordering: ${widget.id}")
+                    failedWidgets.add(widget.id)
+                }
             }
             
             val nonWidgetViews = mutableListOf<View>()
@@ -140,6 +138,53 @@ class WidgetVisibilityManager(
                     }
                 }
             }
+        } ?: run {
+            Log.e(TAG, "drawer_content_layout not found!")
         }
+        
+        return failedWidgets
+    }
+    
+    private fun getWidgetViewById(widgetId: String): View? {
+        return when (widgetId) {
+            "media_controller_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.media_controller_widget_container)
+            "calendar_events_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.calendar_events_widget_container)
+            "countdown_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.countdown_widget_container)
+            "dns_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.dns_widget_container)
+            "note_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.note_widget_container)
+            "battery_health_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.battery_health_widget_container)
+            "physical_activity_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.physical_activity_widget_container)
+            "compass_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.compass_widget_container)
+            "pressure_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.pressure_widget_container)
+            "temperature_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.temperature_widget_container)
+            "weather_forecast_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.weather_forecast_widget_container)
+            "noise_decibel_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.noise_decibel_widget_container)
+            "workout_widget_container" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.workout_widget_container)?.parent as? View
+            "calculator_widget_container" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.calculator_widget_container)?.parent as? View
+            "todo_recycler_view" -> activity.findViewById<ViewGroup>(com.guruswarupa.launch.R.id.todo_recycler_view)?.parent as? View
+            "finance_widget" -> activity.findViewById(com.guruswarupa.launch.R.id.finance_widget)
+            "weekly_usage_widget" -> activity.findViewById(com.guruswarupa.launch.R.id.weekly_usage_widget)
+            "github_contributions_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.github_contributions_widget_container)
+            "network_stats_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.network_stats_widget_container)
+            "device_info_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.device_info_widget_container)
+            "year_progress_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.year_progress_widget_container)
+            else -> {
+                Log.w(TAG, "Unknown widget ID: $widgetId")
+                null
+            }
+        }
+    }
+    
+    private fun scheduleRetry(
+        yearProgressWidget: YearProgressWidget? = null,
+        githubContributionWidget: GithubContributionWidget? = null
+    ) {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                update(yearProgressWidget, githubContributionWidget)
+            } catch (e: Exception) {
+                Log.e(TAG, "Retry failed: ${e.message}", e)
+            }
+        }, 500)
     }
 }
