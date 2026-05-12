@@ -13,7 +13,7 @@ android {
         applicationId = "com.guruswarupa.launch"
         minSdk = 26
         targetSdk = 35
-        versionCode = 54
+        versionCode = 55
         versionName = "7.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
