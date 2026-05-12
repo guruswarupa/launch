@@ -370,16 +370,18 @@ class MainActivity : FragmentActivity() {
                 todoManager = TodoManager(this, sharedPreferences, views.todoRecyclerView, views.addTodoButton, todoAlarmManager)
                 todoManager.initialize()
                 updateLifecycleManagerWithDeferredWidgets()
+                
+                // Update widget visibility after all widgets are initialized
+                widgetVisibilityManager.update(
+                    if (widgetLifecycleCoordinator.isYearProgressWidgetInitialized()) widgetLifecycleCoordinator.yearProgressWidget else null,
+                    if (widgetLifecycleCoordinator.isGithubContributionWidgetInitialized()) widgetLifecycleCoordinator.githubContributionWidget else null
+                )
             }
         )
         
         initializer.initialize()
         viewModel.markDeferredWidgetsInitialized()
         updateRegistryDependencies()
-        
-        widgetVisibilityManager.update(
-            if (widgetLifecycleCoordinator.isYearProgressWidgetInitialized()) widgetLifecycleCoordinator.yearProgressWidget else null,
-            if (widgetLifecycleCoordinator.isGithubContributionWidgetInitialized()) widgetLifecycleCoordinator.githubContributionWidget else null)
     }
 
     private fun scheduleDeferredWidgetPrewarm() {
