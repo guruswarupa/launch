@@ -49,16 +49,6 @@ class DeferredWidgetInitializer(
         }
         
         widgetSetupManager.requestNotificationPermission()
-
-        
-        val widgetVisibilityManager = com.guruswarupa.launch.widgets.WidgetVisibilityManager(
-            widgetSetupManager.getActivity(),
-            widgetConfigurationManager
-        )
-        widgetVisibilityManager.update(
-            widgetLifecycleCoordinator.yearProgressWidget,
-            widgetLifecycleCoordinator.githubContributionWidget
-        )
         
         onComplete()
     }
