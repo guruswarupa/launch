@@ -49,7 +49,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private lateinit var widgetsRecyclerView: RecyclerView
     private lateinit var widgetSectionDecoration: WidgetSectionDecoration
     private lateinit var widgetsHeader: android.widget.TextView
-    private lateinit var instructionText: android.widget.TextView
     private lateinit var emptyStateText: android.widget.TextView
 
     private var allWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
@@ -104,7 +103,6 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
         widgetsRecyclerView = findViewById(R.id.widgets_recycler_view)
         widgetsHeader = findViewById(R.id.widgets_header)
-        instructionText = findViewById(R.id.instruction_text)
         emptyStateText = findViewById(R.id.empty_state_text)
         widgetSectionDecoration = WidgetSectionDecoration(this)
         widgetsRecyclerView.addItemDecoration(widgetSectionDecoration)
@@ -386,15 +384,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val filteredCount = filteredWidgets.size
 
         widgetsHeader.text = if (currentQuery.isBlank()) {
-            "$totalCount widgets available"
+            "$totalCount widgets"
         } else {
             "$filteredCount matches"
-        }
-
-        instructionText.text = if (currentQuery.isBlank()) {
-            "Changes save automatically. Tap a widget to enable, disable, or add it. Reordering works when search is clear."
-        } else {
-            "Search is filtering the list. Clear search to reorder widgets."
         }
 
         val isEmpty = filteredWidgets.isEmpty()
@@ -449,19 +441,20 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private class WidgetSectionDecoration(private val context: Context) : RecyclerView.ItemDecoration() {
         data class SectionInfo(val position: Int, val title: String)
 
-        private val headerHeightPx = (context.resources.displayMetrics.density * 36f).toInt().coerceAtLeast(1)
-        private val horizontalMarginPx = (context.resources.displayMetrics.density * 16f).toInt()
+        private val headerHeightPx = (context.resources.displayMetrics.density * 32f).toInt().coerceAtLeast(1)
+        private val horizontalMarginPx = (context.resources.displayMetrics.density * 4f).toInt()
         private val backgroundPaint = Paint().apply {
-            color = ContextCompat.getColor(context, R.color.widget_config_surface)
+            color = Color.TRANSPARENT
         }
         private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = ContextCompat.getColor(context, R.color.widget_config_text_secondary)
+            color = ContextCompat.getColor(context, R.color.nord8)
             textSize = TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_SP,
-                14f,
+                13f,
                 context.resources.displayMetrics
             )
             typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.05f
         }
 
         private val sections = mutableListOf<SectionInfo>()
