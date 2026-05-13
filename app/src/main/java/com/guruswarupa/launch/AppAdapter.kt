@@ -412,7 +412,7 @@ class AppAdapter(
                 }
                 activityName.contains("EncryptedVaultActivity") -> {
                     holder.appName?.text = activity.getString(R.string.vault_app_name)
-                    iconLoader.setIconResource(holder.appIcon, R.drawable.ic_vault_icon)
+                    iconLoader.setIconResource(holder.appIcon, R.drawable.ic_vault)
                 }
                 else -> {
                     // Always use cached label - should be pre-populated by AppListLoader

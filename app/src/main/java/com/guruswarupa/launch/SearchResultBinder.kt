@@ -334,7 +334,7 @@ fun createSearchResultBinderRegistry(
             packageName = "launcher_vault_shortcut",
             searchBox = searchBox,
             iconLoader = iconLoader,
-            iconResId = R.drawable.ic_vault_icon,
+            iconResId = R.drawable.ic_vault,
             labelProvider = { activity.getString(R.string.vault_app_name) },
             clickAction = {
                 val intent = Intent(activity, com.guruswarupa.launch.ui.activities.EncryptedVaultActivity::class.java).apply {
