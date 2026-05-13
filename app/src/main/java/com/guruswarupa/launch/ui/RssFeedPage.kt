@@ -47,6 +47,10 @@ class RssFeedPage(
     fun setup() {
         recyclerView.layoutManager = LinearLayoutManager(activity)
         recyclerView.adapter = adapter
+        
+        // Optimize RecyclerView for better performance
+        recyclerView.setHasFixedSize(true)
+        recyclerView.itemAnimator = null
 
         swipeRefreshLayout.isEnabled = true
         swipeRefreshLayout.setOnRefreshListener {

@@ -9,6 +9,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.doOnLayout
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.guruswarupa.launch.core.*
 import com.guruswarupa.launch.handlers.*
 import com.guruswarupa.launch.managers.*
@@ -93,7 +95,33 @@ class AppInitializer(private val activity: MainActivity) {
             )
             val isGridMode = viewPreference == Constants.Prefs.VIEW_PREFERENCE_GRID
             adapter = AppAdapter(activity, appList, views.searchBox, isGridMode, activity)
+            
+            // Set up the correct LayoutManager based on view preference
+            if (isGridMode) {
+                val columns = activity.getPreferredGridColumns()
+                val gridLayoutManager = GridLayoutManager(activity, columns)
+                gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        val viewType = adapter.getItemViewType(position)
+                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                            columns
+                        } else {
+                            1
+                        }
+                    }
+                }
+                views.recyclerView.layoutManager = gridLayoutManager
+            } else {
+                views.recyclerView.layoutManager = LinearLayoutManager(activity)
+            }
+            
             views.recyclerView.adapter = adapter
+            
+            // Optimize RecyclerView for better performance
+            views.recyclerView.setHasFixedSize(true)
+            views.recyclerView.itemAnimator = null // Disable default animations for faster scrolling
+            views.recyclerView.recycledViewPool.setMaxRecycledViews(0, 20) // Pre-allocate view holders
+            
             views.recyclerView.visibility = View.VISIBLE
             updateFastScrollerVisibility()
             
