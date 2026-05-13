@@ -326,6 +326,18 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     }
 
     fun addSystemWidgetProvider(widget: WidgetConfigurationManager.WidgetInfo) {
+        // Check if this provider is already added/bound
+        val alreadyExists = allWidgets.any { 
+            it.providerPackage == widget.providerPackage && 
+            it.providerClass == widget.providerClass &&
+            it.appWidgetId != null // Already bound
+        }
+        
+        if (alreadyExists) {
+            Toast.makeText(this, "${widget.name} is already added!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
         val pkg = widget.providerPackage ?: return
         val cls = widget.providerClass ?: return
         widgetManager.bindProvider(this, pkg, cls, ActivityResultHandler.REQUEST_BIND_WIDGET)
