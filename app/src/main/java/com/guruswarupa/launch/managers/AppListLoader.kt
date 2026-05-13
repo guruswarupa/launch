@@ -276,24 +276,22 @@ class AppListLoader(
                         } catch (_: Exception) {}
                     }
                     
+                    // REMOVED: Duplicate UI update that causes unnecessary re-renders
                     // If we already have cached metadata, show UI immediately without waiting
-                    val hasAllCachedLabels = finalAppList.all { app ->
-                        val cacheKey = "${app.activityInfo.packageName}|${app.preferredOrder}"
-                        cacheManager?.getMetadataCache()?.containsKey(cacheKey) == true
-                    }
-                    
-                    if (hasAllCachedLabels) {
-                        val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
-                        handler.post {
-                            if (activity.isFinishing || activity.isDestroyed) return@post
-                            onAppListUpdated?.invoke(initiallySorted, fullList, false)
-                            if (adapter == null) {
-                                onAdapterNeedsUpdate?.invoke(isGridMode)
-                            } else if (recyclerView.adapter != adapter) {
-                                recyclerView.adapter = adapter
-                            }
-                        }
-                    }
+                    // This was causing double updates and lag
+                    // val hasAllCachedLabels = finalAppList.all { app ->
+                    //     val cacheKey = "${app.activityInfo.packageName}|${app.preferredOrder}"
+                    //     cacheManager?.getMetadataCache()?.containsKey(cacheKey) == true
+                    // }
+                    // 
+                    // if (hasAllCachedLabels) {
+                    //     val initiallySorted = appListManager.sortAppsAlphabetically(finalAppList)
+                    //     handler.post {
+                    //         if (activity.isFinishing || activity.isDestroyed) return@post
+                    //         onAppListUpdated?.invoke(initiallySorted, fullList, false)
+                    //         ...
+                    //     }
+                    // }
                 }
             } catch (e: Exception) {
                 handler.post {
