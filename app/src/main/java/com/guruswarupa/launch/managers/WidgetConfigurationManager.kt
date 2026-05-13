@@ -109,7 +109,23 @@ class WidgetConfigurationManager(
         val boundSystemWidgets = getBoundSystemWidgets()
         val boundIds = boundSystemWidgets.map { it.id }.toSet()
         
-        val result = savedWidgetsList.filter { !it.isSystemWidget || boundIds.contains(it.id) }.toMutableList()
+        // Remove duplicates from saved widgets - keep first occurrence
+        val seenIds = mutableSetOf<String>()
+        val deduplicatedSaved = savedWidgetsList.filter { widget ->
+            if (seenIds.contains(widget.id)) {
+                false // Skip duplicate
+            } else {
+                seenIds.add(widget.id)
+                true // Keep first occurrence
+            }
+        }.toMutableList()
+        
+        // If duplicates were found, save the cleaned list
+        if (deduplicatedSaved.size != savedWidgetsList.size) {
+            saveWidgetOrder(deduplicatedSaved)
+        }
+        
+        val result = deduplicatedSaved.filter { !it.isSystemWidget || boundIds.contains(it.id) }.toMutableList()
         
         val currentIds = result.map { it.id }.toSet()
         boundSystemWidgets.forEach { systemWidget ->
@@ -153,13 +169,21 @@ class WidgetConfigurationManager(
         val enabledWidgets = result.filter { it.enabled }
         val customDisabled = result.filter { !it.enabled && !it.isSystemWidget }.sortedBy { it.name }
         
-        val systemDisabled = result.filter { !it.enabled && it.isSystemWidget }
+        // Show system widgets that are disabled but NOT providers (providers are unbound widgets)
+        val systemDisabled = result.filter { !it.enabled && it.isSystemWidget && !it.isProvider }
+            .sortedWith(
+                compareBy<WidgetInfo> { it.appName ?: "" }
+                    .thenBy { it.name }
+            )
+        
+        // Show providers (unbound system widgets) that can be added
+        val providers = result.filter { it.isProvider }
             .sortedWith(
                 compareBy<WidgetInfo> { it.appName ?: "" }
                     .thenBy { it.name }
             )
 
-        val finalResult = enabledWidgets + customDisabled + systemDisabled
+        val finalResult = enabledWidgets + customDisabled + systemDisabled + providers
         
         // Cache the result
         cachedWidgetConfiguration = finalResult
