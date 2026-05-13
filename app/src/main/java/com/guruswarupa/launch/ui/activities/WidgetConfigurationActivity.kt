@@ -289,9 +289,9 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val filteredPosition = filteredWidgets.indexOfFirst { it.id == widgetId }
         val originalPosition = allWidgets.indexOfFirst { it.id == widgetId }
         
+        // Update the widget state in both lists
         if (filteredPosition >= 0) {
             filteredWidgets[filteredPosition] = filteredWidgets[filteredPosition].copy(enabled = enabled)
-            adapter?.notifyItemChanged(filteredPosition)
         }
         
         if (originalPosition >= 0) {
@@ -300,10 +300,71 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
         persistWidgetConfiguration()
         
+        // Move widget to correct section based on enabled state
+        if (currentQuery.isEmpty()) {
+            moveWidgetToCorrectSection(widgetId)
+        } else {
+            // If searching, just refresh the filtered list
+            filterWidgets(currentQuery)
+        }
+        
         val widget = allWidgets.find { it.id == widgetId }
         if (widget != null) {
             val action = if (enabled) "enabled" else "disabled"
             Toast.makeText(this, "${widget.name} $action!", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    /**
+     * Moves a widget to the correct section (enabled/disabled) when its state changes
+     * Order: Enabled widgets -> Disabled System widgets -> Disabled Custom widgets
+     */
+    private fun moveWidgetToCorrectSection(widgetId: String) {
+        val widgetIndex = allWidgets.indexOfFirst { it.id == widgetId }
+        if (widgetIndex < 0) return
+        
+        val widget = allWidgets[widgetIndex]
+        
+        // Remove widget from current position
+        allWidgets.removeAt(widgetIndex)
+        
+        // Calculate the correct position based on the widget's state
+        val newPosition = calculateWidgetPosition(widget)
+        
+        // Insert widget at the correct position
+        allWidgets.add(newPosition, widget)
+        
+        // Update filtered list to match
+        filteredWidgets = allWidgets.toMutableList()
+        
+        // Notify adapter and refresh UI
+        adapter?.updateWidgets(filteredWidgets)
+        adapter?.notifyDataSetChanged()
+        
+        // Refresh section headers and persist
+        refreshSectionHeaders()
+        updateListChrome()
+        persistWidgetConfiguration()
+    }
+    
+    /**
+     * Calculates the correct position for a widget based on its state
+     * Maintains order: Enabled -> Disabled System -> Disabled Custom
+     */
+    private fun calculateWidgetPosition(widget: WidgetConfigurationManager.WidgetInfo): Int {
+        return when {
+            // Enabled widgets go at the top
+            widget.enabled -> {
+                val firstDisabledIndex = allWidgets.indexOfFirst { !it.enabled }
+                if (firstDisabledIndex >= 0) firstDisabledIndex else allWidgets.size
+            }
+            // Disabled system widgets: after enabled, before disabled custom
+            widget.isSystemWidget -> {
+                val firstDisabledCustomIndex = allWidgets.indexOfFirst { !it.enabled && !it.isSystemWidget }
+                if (firstDisabledCustomIndex >= 0) firstDisabledCustomIndex else allWidgets.size
+            }
+            // Disabled custom widgets go at the end
+            else -> allWidgets.size
         }
     }
 
