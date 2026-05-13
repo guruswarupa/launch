@@ -6,6 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.guruswarupa.launch.R
@@ -14,9 +16,21 @@ import com.guruswarupa.launch.ui.activities.WebAppActivity
 import java.text.DateFormat
 import java.util.Date
 
-class RssFeedAdapter(
-    private val articles: MutableList<RssArticle> = mutableListOf()
-) : RecyclerView.Adapter<RssFeedAdapter.RssArticleViewHolder>() {
+class RssFeedAdapter : RecyclerView.Adapter<RssFeedAdapter.RssArticleViewHolder>() {
+
+    private val differCallback = object : DiffUtil.ItemCallback<RssArticle>() {
+        override fun areItemsTheSame(oldItem: RssArticle, newItem: RssArticle): Boolean {
+            return oldItem.link == newItem.link
+        }
+
+        override fun areContentsTheSame(oldItem: RssArticle, newItem: RssArticle): Boolean {
+            return oldItem == newItem
+        }
+    }
+
+    private val differ = AsyncListDiffer(this, differCallback)
+
+    val articles: List<RssArticle> get() = differ.currentList
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RssArticleViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_rss_article, parent, false)
@@ -24,15 +38,13 @@ class RssFeedAdapter(
     }
 
     override fun onBindViewHolder(holder: RssArticleViewHolder, position: Int) {
-        holder.bind(articles[position])
+        holder.bind(differ.currentList[position])
     }
 
-    override fun getItemCount(): Int = articles.size
+    override fun getItemCount(): Int = differ.currentList.size
 
     fun submitArticles(items: List<RssArticle>) {
-        articles.clear()
-        articles.addAll(items)
-        notifyDataSetChanged()
+        differ.submitList(items)
     }
 
     class RssArticleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
