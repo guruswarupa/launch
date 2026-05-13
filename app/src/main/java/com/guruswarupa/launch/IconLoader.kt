@@ -66,9 +66,13 @@ class IconLoader(
         }
     }
     private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
-    private val executor = Executors.newSingleThreadExecutor()
+    // Replace single-thread executor with thread pool for parallel icon loading
+    private val iconLoadExecutor = ThreadPoolExecutor(
+        3, 6, 60L, TimeUnit.SECONDS,
+        PriorityBlockingQueue()
+    )
     private val iconPreloadExecutor = ThreadPoolExecutor(
-        2, 2, 0L, TimeUnit.MILLISECONDS,
+        2, 4, 0L, TimeUnit.MILLISECONDS,
         PriorityBlockingQueue()
     )
     private val iconLoadScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -298,7 +302,7 @@ class IconLoader(
         }
 
         setIconResource(holder.appIcon, fallbackResId)
-        executor.execute {
+        iconLoadExecutor.execute {
             for (candidatePackage in candidatePackages) {
                 try {
                     val icon = shapeIconDrawable(activity.packageManager.getApplicationIcon(candidatePackage))
@@ -339,7 +343,7 @@ class IconLoader(
         }
 
         setIconResource(holder.appIcon, fallbackResId)
-        executor.execute {
+        iconLoadExecutor.execute {
             try {
                 val photoUri = getPhotoUriForContact(contactName) ?: return@execute
                 val drawable = activity.contentResolver.openInputStream(photoUri.toUri())?.use { inputStream ->

@@ -426,8 +426,9 @@ class AppAdapter(
         }
 
         applyIconVisualState(packageName, holder.appIcon)
-        if (position < currentList.size - 1 && position % 5 == 0) {
-            iconLoader.preloadNextIcons(currentList, position + 1, minOf(position + 11, currentList.size))
+        // Remove redundant preloading - only preload at strategic intervals
+        if (position < currentList.size - 1 && position % 8 == 0) {
+            iconLoader.preloadNextIcons(currentList, position + 1, minOf(position + 8, currentList.size))
         }
 
         holder.itemView.setOnClickListener {
