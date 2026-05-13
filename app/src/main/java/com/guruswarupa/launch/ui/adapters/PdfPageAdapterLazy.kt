@@ -11,11 +11,20 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 class PdfPageAdapterLazy(
     private val pdfRenderer: PdfRenderer,
     private val totalPages: Int
 ) : RecyclerView.Adapter<PdfPageAdapterLazy.PageViewHolder>() {
+
+    // Cache for rendered bitmaps to avoid re-rendering
+    private val bitmapCache = ConcurrentHashMap<Int, Bitmap>()
+    private val renderExecutor: ExecutorService = Executors.newFixedThreadPool(2)
+    private val pendingTasks = ConcurrentHashMap<Int, Future<*>>()
 
     class PageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val imageView: ImageView = view.findViewById(R.id.pdf_page_image)
@@ -29,24 +38,55 @@ class PdfPageAdapterLazy(
     }
 
     override fun onBindViewHolder(holder: PageViewHolder, position: Int) {
-        try {
-            val page = pdfRenderer.openPage(position)
-            val scale = 2.0f
-            val width = (page.width * scale).toInt()
-            val height = (page.height * scale).toInt()
-
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            canvas.drawColor(Color.WHITE)
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            page.close()
-
-            holder.imageView.setImageBitmap(bitmap)
-            holder.pageNumber.text = "Page ${position + 1}"
-        } catch (_: Exception) {
-            holder.imageView.setImageResource(android.R.drawable.ic_dialog_alert)
-            holder.pageNumber.text = "Error loading page ${position + 1}"
+        // Set placeholder immediately
+        holder.pageNumber.text = "Page ${position + 1}"
+        
+        // Check cache first
+        val cachedBitmap = bitmapCache[position]
+        if (cachedBitmap != null && !cachedBitmap.isRecycled) {
+            holder.imageView.setImageBitmap(cachedBitmap)
+            return
         }
+        
+        // Cancel any pending render for this position
+        pendingTasks[position]?.cancel(true)
+        
+        // Render asynchronously on background thread
+        val future = renderExecutor.submit {
+            try {
+                val page = pdfRenderer.openPage(position)
+                val scale = 2.0f
+                val width = (page.width * scale).toInt()
+                val height = (page.height * scale).toInt()
+
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                val canvas = Canvas(bitmap)
+                canvas.drawColor(Color.WHITE)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                page.close()
+
+                // Cache the bitmap
+                bitmapCache[position] = bitmap
+
+                // Update UI on main thread
+                holder.imageView.post {
+                    if (holder.bindingAdapterPosition == position && !bitmap.isRecycled) {
+                        holder.imageView.setImageBitmap(bitmap)
+                    }
+                }
+            } catch (e: Exception) {
+                holder.imageView.post {
+                    if (holder.bindingAdapterPosition == position) {
+                        holder.imageView.setImageResource(android.R.drawable.ic_dialog_alert)
+                        holder.pageNumber.text = "Error loading page ${position + 1}"
+                    }
+                }
+            } finally {
+                pendingTasks.remove(position)
+            }
+        }
+        
+        pendingTasks[position] = future
     }
 
     override fun getItemCount() = totalPages
@@ -54,5 +94,21 @@ class PdfPageAdapterLazy(
     override fun onViewRecycled(holder: PageViewHolder) {
         super.onViewRecycled(holder)
         holder.imageView.setImageBitmap(null)
+    }
+    
+    fun clearCache() {
+        bitmapCache.values.forEach { bitmap ->
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+        }
+        bitmapCache.clear()
+        pendingTasks.values.forEach { it.cancel(true) }
+        pendingTasks.clear()
+    }
+    
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView)
+        clearCache()
     }
 }
