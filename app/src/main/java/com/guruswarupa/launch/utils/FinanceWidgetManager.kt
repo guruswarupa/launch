@@ -170,7 +170,7 @@ class FinanceWidgetManager(
         val sortedTransactions = getLatestTransactions()
         
         val adapter =
-            TransactionAdapter(sortedTransactions, currencySymbol) { transactionToDelete ->
+            TransactionAdapter(currencySymbol) { transactionToDelete ->
                 val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
                     .setTitle("Delete Transaction")
                     .setMessage("Are you sure you want to delete this transaction?")
@@ -194,6 +194,7 @@ class FinanceWidgetManager(
                 fixDialogTextColors(dialog)
             }
         recyclerView.adapter = adapter
+        adapter.updateData(sortedTransactions)
 
         val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
             .setView(dialogView)
