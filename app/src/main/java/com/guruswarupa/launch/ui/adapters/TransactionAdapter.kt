@@ -6,6 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.*
@@ -19,13 +21,27 @@ data class Transaction(
 )
 
 class TransactionAdapter(
-    private var transactions: MutableList<Transaction>,
     private val currencySymbol: String,
     private val onDeleteClick: (Transaction) -> Unit
 ) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
+    // Cache DateFormat objects to avoid recreation
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     private val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    
+    private val differCallback = object : DiffUtil.ItemCallback<Transaction>() {
+        override fun areItemsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
+            return oldItem.timestamp == newItem.timestamp && oldItem.type == newItem.type
+        }
+
+        override fun areContentsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
+            return oldItem == newItem
+        }
+    }
+
+    private val differ = AsyncListDiffer(this, differCallback)
+
+    val transactions: List<Transaction> get() = differ.currentList
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val typeText: TextView = itemView.findViewById(R.id.transaction_type)
@@ -42,7 +58,7 @@ class TransactionAdapter(
     }
 
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
-        val transaction = transactions[position]
+        val transaction = differ.currentList[position]
         val context = holder.itemView.context
         
         
@@ -72,11 +88,9 @@ class TransactionAdapter(
         }
     }
 
-    override fun getItemCount(): Int = transactions.size
+    override fun getItemCount(): Int = differ.currentList.size
 
-    @SuppressLint("NotifyDataSetChanged")
     fun updateData(newTransactions: List<Transaction>) {
-        this.transactions = newTransactions.toMutableList()
-        notifyDataSetChanged()
+        differ.submitList(newTransactions)
     }
 }
