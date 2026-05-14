@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,8 +22,21 @@ class PdfPageAdapterLazy(
     private val totalPages: Int
 ) : RecyclerView.Adapter<PdfPageAdapterLazy.PageViewHolder>() {
 
+    // Use LruCache with memory-size based eviction instead of unbounded ConcurrentHashMap
+    private val maxMemory = Runtime.getRuntime().maxMemory() / 1024
+    private val cacheSize = (maxMemory / 8).toInt() // Use 1/8th of available memory
+    private val bitmapCache = object : LruCache<Int, Bitmap>(cacheSize) {
+        override fun sizeOf(key: Int, bitmap: Bitmap): Int {
+            return bitmap.byteCount / 1024
+        }
 
-    private val bitmapCache = ConcurrentHashMap<Int, Bitmap>()
+        override fun entryRemoved(evicted: Boolean, key: Int, oldValue: Bitmap, newValue: Bitmap?) {
+            if (evicted && !oldValue.isRecycled) {
+                oldValue.recycle()
+            }
+        }
+    }
+    
     private val renderExecutor: ExecutorService = Executors.newFixedThreadPool(2)
     private val pendingTasks = ConcurrentHashMap<Int, Future<*>>()
 
@@ -42,7 +56,7 @@ class PdfPageAdapterLazy(
         holder.pageNumber.text = "Page ${position + 1}"
 
 
-        val cachedBitmap = bitmapCache[position]
+        val cachedBitmap = bitmapCache.get(position)
         if (cachedBitmap != null && !cachedBitmap.isRecycled) {
             holder.imageView.setImageBitmap(cachedBitmap)
             return
@@ -66,7 +80,7 @@ class PdfPageAdapterLazy(
                 page.close()
 
 
-                bitmapCache[position] = bitmap
+                bitmapCache.put(position, bitmap)
 
 
                 holder.imageView.post {
@@ -97,14 +111,10 @@ class PdfPageAdapterLazy(
     }
 
     fun clearCache() {
-        bitmapCache.values.forEach { bitmap ->
-            if (!bitmap.isRecycled) {
-                bitmap.recycle()
-            }
-        }
-        bitmapCache.clear()
+        bitmapCache.evictAll()
         pendingTasks.values.forEach { it.cancel(true) }
         pendingTasks.clear()
+        renderExecutor.shutdownNow()
     }
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
