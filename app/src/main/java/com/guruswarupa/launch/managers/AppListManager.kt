@@ -153,10 +153,19 @@ class AppListManager @Inject constructor(
             val isInternal = isInternalApp(app)
 
             if (!isInternal) {
-
+                val label = getDisplayLabel(app)
+                val firstChar = if (label.isNotEmpty()) label[0].uppercaseChar() else null
+                
+                // Only add letter separators when NOT in favorites-only mode
+                if (!showOnlyFavorites && firstChar != null && firstChar != lastLetter) {
+                    val separatorLetter = if (firstChar.isLetter()) firstChar else '#'
+                    result.add(createSeparatorInfo("letter_separator_$separatorLetter"))
+                    lastLetter = firstChar
+                }
             } else if (lastLetter != null) {
+                // Add large separator before system apps (Settings/Vault) to force new row
                 if (lastLetter != '⚙') {
-                    result.add(createSeparatorInfo("letter_separator_SYSTEM"))
+                    result.add(createSeparatorInfo("system_separator"))
                     lastLetter = '⚙'
                 }
             }
@@ -172,18 +181,24 @@ class AppListManager @Inject constructor(
             val favorites = favoriteAppManager.getFavoriteApps()
             val favoriteCount = favorites.size
 
-
             val isTopWidgetVisible = sharedPreferences.getBoolean(Constants.Prefs.TOP_WIDGET_ENABLED, true)
+            val viewPreference = sharedPreferences.getString(Constants.Prefs.VIEW_PREFERENCE, Constants.Prefs.VIEW_PREFERENCE_LIST)
+            val isGridMode = viewPreference == Constants.Prefs.VIEW_PREFERENCE_GRID
 
+            if (isGridMode) {
+                // Grid mode: add more spacers when top widget is hidden
+                val spacerCount = if (isTopWidgetVisible) 7 else 13
+                for (i in 0 until spacerCount) {
+                    result.add(createSeparatorInfo("favorites_bottom_spacer_$i"))
+                }
+            } else {
+                // List mode: dynamic spacer count
+                val baseCount = if (isTopWidgetVisible) 10 else 13
+                val spacerCount = maxOf(4, baseCount - (favoriteCount - 1).coerceAtLeast(0))
 
-
-
-
-            val baseCount = if (isTopWidgetVisible) 10 else 13
-            val spacerCount = maxOf(4, baseCount - (favoriteCount - 1).coerceAtLeast(0))
-
-            for (i in 0 until spacerCount) {
-                result.add(createSeparatorInfo("favorites_bottom_spacer_$i"))
+                for (i in 0 until spacerCount) {
+                    result.add(createSeparatorInfo("favorites_bottom_spacer_$i"))
+                }
             }
 
             if (result.isNotEmpty()) {
@@ -193,6 +208,7 @@ class AppListManager @Inject constructor(
 
 
         if (!showOnlyFavorites || focusMode || workspaceMode || isWorkProfileEnabled) {
+            result.add(createSeparatorInfo("system_separator"))
             result.add(createLauncherShortcut("launcher_settings_shortcut"))
             result.add(createLauncherShortcut("launcher_vault_shortcut"))
         }
