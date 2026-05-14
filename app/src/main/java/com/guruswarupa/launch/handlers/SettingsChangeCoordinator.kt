@@ -65,13 +65,9 @@ class SettingsChangeCoordinator(
         val adapter = adapterProvider()
         val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
 
-        android.util.Log.d("SettingsChange", "handleSettingsUpdate called")
-        
         applyThemeBasedWidgetBackgrounds()
         applyBackgroundTranslucency()
         TypographyManager.applyToActivity(activity)
-        
-        android.util.Log.d("SettingsChange", "Calling fastScroller.refreshTypography")
         views.fastScroller.refreshTypography(sharedPreferences)
 
 
@@ -150,12 +146,19 @@ class SettingsChangeCoordinator(
         }
 
 
+        // Only update icon style if it actually changed
         val iconStyle = sharedPreferences.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
-        adapter?.updateIconStyle(iconStyle)
+        val currentIconStyle = adapter?.getCurrentIconStyle()
+        if (iconStyle != currentIconStyle) {
+            adapter?.updateIconStyle(iconStyle)
+        }
 
-
+        // Only update icon size if it actually changed
         val iconSize = sharedPreferences.getInt(Constants.Prefs.ICON_SIZE, 40)
-        adapter?.updateIconSize(iconSize)
+        val currentIconSize = adapter?.getCurrentIconSize()
+        if (iconSize != currentIconSize) {
+            adapter?.updateIconSize(iconSize)
+        }
 
 
         val showAppNamesInGrid = sharedPreferences.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
