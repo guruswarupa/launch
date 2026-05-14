@@ -1,11 +1,11 @@
 package com.guruswarupa.launch.ui.views
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.managers.ActivityData
@@ -73,23 +73,27 @@ class ActivityCalendarAdapter(
         updateCalendar(calendar)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun updateCalendar(newCalendar: Calendar) {
+        val oldDays = days.toList()
         calendar = newCalendar.clone() as Calendar
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH) + 1
         monthlyData = activityManager.getMonthlyActivity(year, month)
         updateDays()
-        notifyDataSetChanged()
+        val diffCallback = DayItemDiffCallback(oldDays, days)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        diffResult.dispatchUpdatesTo(this)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun refreshData() {
+        val oldDays = days.toList()
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH) + 1
         monthlyData = activityManager.getMonthlyActivity(year, month)
         updateDays()
-        notifyDataSetChanged()
+        val diffCallback = DayItemDiffCallback(oldDays, days)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        diffResult.dispatchUpdatesTo(this)
     }
 
     private fun updateDays() {
@@ -188,4 +192,21 @@ class ActivityCalendarAdapter(
     }
 
     override fun getItemCount() = days.size
+}
+
+private class DayItemDiffCallback(
+    private val oldList: List<ActivityCalendarAdapter.DayItem>,
+    private val newList: List<ActivityCalendarAdapter.DayItem>
+) : DiffUtil.Callback() {
+    override fun getOldListSize() = oldList.size
+
+    override fun getNewListSize() = newList.size
+
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition].dateString == newList[newItemPosition].dateString
+    }
+
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition] == newList[newItemPosition]
+    }
 }

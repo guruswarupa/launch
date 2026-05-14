@@ -1,11 +1,11 @@
 package com.guruswarupa.launch.ui.views
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.models.WorkoutExercise
@@ -71,18 +71,22 @@ class CalendarAdapter(
         updateCalendar(calendar)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun updateCalendar(newCalendar: Calendar) {
+        val oldDays = days.toList()
         calendar = newCalendar.clone() as Calendar
         updateDays()
-        notifyDataSetChanged()
+        val diffCallback = CalendarDayItemDiffCallback(oldDays, days)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        diffResult.dispatchUpdatesTo(this)
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     fun updateExercises(newExercises: List<WorkoutExercise>) {
+        val oldDays = days.toList()
         exercises = newExercises
         updateDays()
-        notifyDataSetChanged()
+        val diffCallback = CalendarDayItemDiffCallback(oldDays, days)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        diffResult.dispatchUpdatesTo(this)
     }
 
     private fun updateDays() {
@@ -192,4 +196,21 @@ class CalendarAdapter(
     }
 
     override fun getItemCount() = days.size
+}
+
+private class CalendarDayItemDiffCallback(
+    private val oldList: List<CalendarAdapter.DayItem>,
+    private val newList: List<CalendarAdapter.DayItem>
+) : DiffUtil.Callback() {
+    override fun getOldListSize() = oldList.size
+
+    override fun getNewListSize() = newList.size
+
+    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition].dateString == newList[newItemPosition].dateString
+    }
+
+    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+        return oldList[oldItemPosition] == newList[newItemPosition]
+    }
 }
