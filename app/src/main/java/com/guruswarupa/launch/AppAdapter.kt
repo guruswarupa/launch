@@ -173,6 +173,10 @@ class AppAdapter(
         iconLoader.cleanup()
     }
 
+    fun getCurrentIconStyle(): String = currentIconStyle
+    
+    fun getCurrentIconSize(): Int = currentIconSize
+
     fun updateIconStyle(style: String) {
         currentIconStyle = style
         iconLoader.updateIconStyle(style)
