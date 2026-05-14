@@ -23,8 +23,25 @@ class FastScroller @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private var alphabet = listOf("★") + ('A'..'Z').map { it.toString() } + "#"
+    private var alphabet = ('A'..'Z').map { it.toString() } + "#"
     private var recyclerView: RecyclerView? = null
+    
+    // Callback for when user scrolls to top
+    var onScrollToTop: (() -> Unit)? = null
+    private var hasNotifiedScrollToTop = false
+    
+    // Callback for when user scrolls to bottom
+    var onScrollToBottom: (() -> Unit)? = null
+    private var hasNotifiedScrollToBottom = false
+    
+    // Track scroll direction to prevent glitching with small lists
+    private var lastScrollDy = 0
+    private var scrollDirectionStable = 0
+    
+    // Track if user is at bottom for small lists
+    private var isAtBottom = false
+    private var bottomTriggerScheduled = false
+    private var consecutiveBottomScrolls = 0 // Count consecutive scroll events at bottom
 
     private val density = resources.displayMetrics.density
     private val trackStroke = 1f * density
@@ -101,17 +118,16 @@ class FastScroller @JvmOverloads constructor(
     }
 
     fun setFavoritesVisible(visible: Boolean) {
-        val newAlphabet = if (visible) {
-            listOf("★") + ('A'..'Z').map { it.toString() } + "#"
-        } else {
-            ('A'..'Z').map { it.toString() } + "#"
-        }
-        
-        if (alphabet != newAlphabet) {
-            alphabet = newAlphabet
-            recalculateSpacing()
-            invalidate()
-        }
+        // No longer needed - favorites section removed from fastscroller
+    }
+    
+    fun resetTouchedState() {
+        hasNotifiedScrollToTop = false
+        hasNotifiedScrollToBottom = false
+        lastScrollDy = 0
+        scrollDirectionStable = 0
+        isAtBottom = false
+        bottomTriggerScheduled = false
     }
 
     private fun recalculateSpacing() {
@@ -130,6 +146,50 @@ class FastScroller @JvmOverloads constructor(
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (!isSliding) {
                     updateScrollIndex()
+                    
+                    val layoutManager = recyclerView.layoutManager as? LinearLayoutManager ?: return
+                    val adapter = recyclerView.adapter ?: return
+                    
+                    val firstVisiblePos = layoutManager.findFirstVisibleItemPosition()
+                    val lastVisiblePos = layoutManager.findLastVisibleItemPosition()
+                    val totalItemCount = adapter.itemCount
+                    
+                    // Track scroll direction
+                    lastScrollDy = dy
+                    
+                    // Check if scrolled to top
+                    if (firstVisiblePos == 0) {
+                        // User is at the top of the list
+                        // Only trigger if scrolling upward or stationary
+                        if (!hasNotifiedScrollToTop && dy <= 0) {
+                            hasNotifiedScrollToTop = true
+                            hasNotifiedScrollToBottom = false
+                            isAtBottom = false
+                            onScrollToTop?.invoke()
+                        }
+                    } else {
+                        // User scrolled away from top, reset the flag
+                        hasNotifiedScrollToTop = false
+                    }
+                    
+                    // Check if scrolled to bottom
+                    val isAtListBottom = lastVisiblePos >= totalItemCount - 1 && totalItemCount > 0
+                    if (isAtListBottom) {
+                        isAtBottom = true
+                        // User is at the bottom of the list
+                        // Trigger when actively scrolling downward
+                        if (dy > 0 && !hasNotifiedScrollToBottom) {
+                            hasNotifiedScrollToBottom = true
+                            hasNotifiedScrollToTop = false
+                            consecutiveBottomScrolls = 0
+                            onScrollToBottom?.invoke()
+                        }
+                    } else {
+                        // User scrolled away from bottom, reset the flag
+                        hasNotifiedScrollToBottom = false
+                        isAtBottom = false
+                        consecutiveBottomScrolls = 0
+                    }
                 }
             }
             
@@ -209,58 +269,28 @@ class FastScroller @JvmOverloads constructor(
 
         var newIndex = -1
         
-        
-        var favoritesStartSeparatorIndex = -1
-        var favoritesEndSeparatorIndex = -1
-        for (i in 0 until appListSize) {
-            val app = adapter.getItemAtPosition(i) ?: continue
-            if (app.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
-                if (app.activityInfo.name == "favorites_separator") {
-                    favoritesStartSeparatorIndex = i
-                } else if (app.activityInfo.name == "favorites_end_separator") {
-                    favoritesEndSeparatorIndex = i
+        // Find the nearest letter separator
+        for (i in firstVisiblePos downTo 0) {
+            val currentApp = adapter.getItemAtPosition(i) ?: continue
+            if (currentApp.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
+                val separatorId = currentApp.activityInfo.name ?: ""
+                if (separatorId.startsWith("letter_separator_")) {
+                    val letter = separatorId.removePrefix("letter_separator_")
+                    newIndex = alphabet.indexOf(letter)
+                    break
                 }
             }
         }
-
         
-        val isInFavoritesSection = if (favoritesStartSeparatorIndex != -1 && favoritesEndSeparatorIndex != -1) {
-            firstVisiblePos >= favoritesStartSeparatorIndex && firstVisiblePos < favoritesEndSeparatorIndex
-        } else if (favoritesStartSeparatorIndex != -1) {
-            
-            firstVisiblePos >= favoritesStartSeparatorIndex
-        } else {
-            false
-        }
-
-        if (isInFavoritesSection) {
-            
-            newIndex = alphabet.indexOf("★")
-        } else {
-            
-            
-            for (i in firstVisiblePos downTo 0) {
-                val currentApp = adapter.getItemAtPosition(i) ?: continue
-                if (currentApp.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
-                    val separatorId = currentApp.activityInfo.name ?: ""
-                    if (separatorId.startsWith("letter_separator_")) {
-                        val letter = separatorId.removePrefix("letter_separator_")
-                        newIndex = alphabet.indexOf(letter)
-                        break
-                    }
-                }
-            }
-            
-            
-            if (newIndex == -1) {
-                val label = adapter.getAppLabel(firstVisiblePos)
-                if (label.isNotEmpty()) {
-                    val firstChar = label[0].uppercaseChar()
-                    newIndex = if (firstChar.isLetter()) {
-                        alphabet.indexOf(firstChar.toString())
-                    } else {
-                        alphabet.indexOf("#")
-                    }
+        // Fallback: determine letter from app label
+        if (newIndex == -1) {
+            val label = adapter.getAppLabel(firstVisiblePos)
+            if (label.isNotEmpty()) {
+                val firstChar = label[0].uppercaseChar()
+                newIndex = if (firstChar.isLetter()) {
+                    alphabet.indexOf(firstChar.toString())
+                } else {
+                    alphabet.indexOf("#")
                 }
             }
         }
@@ -390,11 +420,7 @@ class FastScroller @JvmOverloads constructor(
             val alpha = if (isSelected || i == scrollIndex) 255 else (fadeAlpha * 0.5f).toInt()
             paintToUse.alpha = alpha
             
-            if (alphabet[i] == "★") {
-                paintToUse.textSize = (if (isSelected || i == scrollIndex) 18f else 12f) * density
-            } else {
-                paintToUse.textSize = (if (isSelected || i == scrollIndex) 14f else 9f) * density
-            }
+            paintToUse.textSize = (if (isSelected || i == scrollIndex) 14f else 9f) * density
             
             if (isSelected) {
                 
@@ -475,7 +501,6 @@ class FastScroller @JvmOverloads constructor(
                 val touchThreshold = width - 64f * density
                 if (x < touchThreshold) return false
                 
-                
                 touchX = x
                 
                 isSliding = true
@@ -523,59 +548,32 @@ class FastScroller @JvmOverloads constructor(
         val appListSize = adapter.getCurrentListSize()
         var targetPosition = -1
         
-        if (letter == "★") {
-            targetPosition = 0
-        } else {
+        // Search for the letter separator or app starting with that letter
+        for (i in 0 until appListSize) {
+            val app = adapter.getItemAtPosition(i) ?: continue
+            val packageName = app.activityInfo.packageName
             
-            
-            var searchStartIndex = 0
-            for (i in 0 until appListSize) {
-                val app = adapter.getItemAtPosition(i) ?: continue
-                if (app.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
-                    app.activityInfo.name == "favorites_end_separator") {
-                    searchStartIndex = i + 1
+            if (packageName == AppAdapter.SEPARATOR_PACKAGE) {
+                val separatorId = app.activityInfo.name ?: ""
+                if (letter == "#") {
+                    if (separatorId == "letter_separator_#") {
+                        targetPosition = i
+                        break
+                    }
+                } else if (separatorId == "letter_separator_$letter") {
+                    targetPosition = i
                     break
                 }
-            }
-            
-            
-            if (searchStartIndex == 0) {
-                for (i in 0 until appListSize) {
-                    val app = adapter.getItemAtPosition(i) ?: continue
-                    if (app.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE && 
-                        app.activityInfo.name == "favorites_separator") {
-                        searchStartIndex = i + 1
-                        break
-                    }
-                }
-            }
-            
-            for (i in searchStartIndex until appListSize) {
-                val app = adapter.getItemAtPosition(i) ?: continue
-                val packageName = app.activityInfo.packageName
-                
-                if (packageName == AppAdapter.SEPARATOR_PACKAGE) {
-                    val separatorId = app.activityInfo.name ?: ""
-                    if (letter == "#") {
-                        if (separatorId == "letter_separator_#") {
-                            targetPosition = i
-                            break
-                        }
-                    } else if (separatorId == "letter_separator_$letter") {
+            } else {
+                val label = adapter.getAppLabel(i)
+                if (letter == "#") {
+                    if (label.isNotEmpty() && !label[0].isLetter()) {
                         targetPosition = i
                         break
                     }
-                } else {
-                    val label = adapter.getAppLabel(i)
-                    if (letter == "#") {
-                        if (label.isNotEmpty() && !label[0].isLetter()) {
-                            targetPosition = i
-                            break
-                        }
-                    } else if (label.startsWith(letter, ignoreCase = true)) {
-                        targetPosition = i
-                        break
-                    }
+                } else if (label.startsWith(letter, ignoreCase = true)) {
+                    targetPosition = i
+                    break
                 }
             }
         }
