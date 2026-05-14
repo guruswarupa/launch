@@ -45,5 +45,6 @@ class MainActivityViews {
     fun isVoiceSearchButtonInitialized() = ::voiceSearchButton.isInitialized
     fun isRightDrawerWallpaperInitialized() = ::rightDrawerWallpaper.isInitialized
     fun isRecyclerViewInitialized() = ::recyclerView.isInitialized
+    fun isFastScrollerInitialized() = ::fastScroller.isInitialized
     fun areTranslucencyOverlaysInitialized() = ::backgroundTranslucencyOverlay.isInitialized && ::widgetsDrawerTranslucencyOverlay.isInitialized
 }

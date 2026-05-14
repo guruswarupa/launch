@@ -809,6 +809,11 @@ class MainActivity : FragmentActivity() {
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onResume()
         }
+        
+        // Force refresh fastscroller typography on resume to pick up any settings changes
+        if (views.isFastScrollerInitialized()) {
+            views.fastScroller.refreshTypography(sharedPreferences)
+        }
 
         if (sharedPreferences.getBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, false)) {
             sharedPreferences.edit { putBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, false) }
