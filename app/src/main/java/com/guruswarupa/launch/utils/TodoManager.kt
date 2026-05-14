@@ -19,6 +19,8 @@ import com.guruswarupa.launch.MainActivity
 import com.guruswarupa.launch.R
 import com.guruswarupa.launch.models.TodoItem
 import com.guruswarupa.launch.ui.adapters.TodoAdapter
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import java.util.Calendar
 import java.util.Locale
 
@@ -252,72 +254,105 @@ class TodoManager(
     }
 
     fun loadTodoItems() {
+        val jsonString = sharedPreferences.getString("todo_items_json", null)
+        
+        if (jsonString != null) {
+            try {
+                val moshi = Moshi.Builder().build()
+                val type = Types.newParameterizedType(List::class.java, TodoItem::class.java)
+                val jsonAdapter = moshi.adapter<List<TodoItem>>(type)
+                val loadedItems = jsonAdapter.fromJson(jsonString)
+                
+                if (loadedItems != null) {
+                    todoItems.clear()
+                    todoItems.addAll(loadedItems)
+                    todoAdapter.notifyItemRangeInserted(0, todoItems.size)
+                    checkRecurringTasks()
+                    rescheduleTodoAlarms()
+                    return
+                }
+            } catch (e: Exception) {
+                // Fallback to old format for backward compatibility
+            }
+        }
+        
+        // Try loading from old format
+        loadTodoItemsFromLegacyFormat()
+    }
+
+    private fun loadTodoItemsFromLegacyFormat() {
         val todoString = sharedPreferences.getString("todo_items", "") ?: ""
-        if (todoString.isNotEmpty()) {
-            val todoArray = todoString.split("|")
-            todoItems.clear()
-            for (itemString in todoArray) {
-                if (itemString.isNotEmpty()) {
-                    val parts = itemString.split(":")
-                    if (parts.size >= 7) {
-
-                        val text = parts[0]
-                        val isChecked = parts[1].toBoolean()
-                        val isRecurring = parts[2].toBoolean()
-                        val lastCompletedDate = parts[3].ifEmpty { null }
-                        val selectedDays = if (parts[4].isNotEmpty()) {
-                            parts[4].split(",").mapNotNull { it.toIntOrNull() }.toSet()
-                        } else {
-                            emptySet()
-                        }
-                        val priority = try {
-                            TodoItem.Priority.valueOf(parts[5])
-                        } catch (_: Exception) {
-                            TodoItem.Priority.MEDIUM
-                        }
-                        val category = parts[6]
-                        val dueTime = if (parts.size > 7 && parts[7].isNotEmpty()) parts[7] else null
-                        val recurrenceInterval = if (parts.size > 8 && parts[8].isNotEmpty()) {
-                            parts[8].toIntOrNull()
-                        } else {
-                            null
-                        }
-                        val intervalStartTime = if (parts.size > 9 && parts[9].isNotEmpty()) {
-                            parts[9]
-                        } else {
-                            null
-                        }
-
-                        todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate, selectedDays, priority, category, dueTime, recurrenceInterval, intervalStartTime))
-                    } else if (parts.size >= 3) {
-
-                        val text = parts[0]
-                        val isChecked = parts[1].toBoolean()
-                        val isRecurring = parts[2].toBoolean()
-                        val lastCompletedDate = if (parts.size > 3) parts[3] else null
-                        todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate))
-                    } else if (parts.size == 2) {
-
-                        val text = parts[0]
-                        val isChecked = parts[1].toBoolean()
-                        todoItems.add(TodoItem(text, isChecked, false))
+        if (todoString.isEmpty()) return
+        
+        val todoArray = todoString.split("|")
+        val legacyItems = mutableListOf<TodoItem>()
+        
+        for (itemString in todoArray) {
+            if (itemString.isNotEmpty()) {
+                val parts = itemString.split(":")
+                if (parts.size >= 7) {
+                    val text = parts[0]
+                    val isChecked = parts[1].toBoolean()
+                    val isRecurring = parts[2].toBoolean()
+                    val lastCompletedDate = parts[3].ifEmpty { null }
+                    val selectedDays = if (parts[4].isNotEmpty()) {
+                        parts[4].split(",").mapNotNull { it.toIntOrNull() }.toSet()
+                    } else emptySet()
+                    val priority = try {
+                        TodoItem.Priority.valueOf(parts[5])
+                    } catch (_: Exception) {
+                        TodoItem.Priority.MEDIUM
                     }
+                    val category = parts[6]
+                    val dueTime = if (parts.size > 7 && parts[7].isNotEmpty()) parts[7] else null
+                    val recurrenceInterval = if (parts.size > 8 && parts[8].isNotEmpty()) {
+                        parts[8].toIntOrNull()
+                    } else null
+                    val intervalStartTime = if (parts.size > 9 && parts[9].isNotEmpty()) {
+                        parts[9]
+                    } else null
+                    
+                    legacyItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate, selectedDays, priority, category, dueTime, recurrenceInterval, intervalStartTime))
+                } else if (parts.size >= 3) {
+                    val text = parts[0]
+                    val isChecked = parts[1].toBoolean()
+                    val isRecurring = parts[2].toBoolean()
+                    val lastCompletedDate = if (parts.size > 3) parts[3] else null
+                    legacyItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate))
+                } else if (parts.size == 2) {
+                    val text = parts[0]
+                    val isChecked = parts[1].toBoolean()
+                    legacyItems.add(TodoItem(text, isChecked, false))
                 }
             }
+        }
+        
+        if (legacyItems.isNotEmpty()) {
+            todoItems.clear()
+            todoItems.addAll(legacyItems)
+            todoAdapter.notifyItemRangeInserted(0, todoItems.size)
             checkRecurringTasks()
-            todoAdapter.notifyItemRangeChanged(0, todoItems.size)
-
-
             rescheduleTodoAlarms()
+            // Migrate to new format
+            saveTodoItems()
         }
     }
 
     fun saveTodoItems() {
-        val todoString = todoItems.joinToString("|") {
-            val selectedDaysString = it.selectedDays.joinToString(",")
-            "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}:${selectedDaysString}:${it.priority.name}:${it.category}:${it.dueTime ?: ""}:${it.recurrenceInterval ?: ""}:${it.intervalStartTime ?: ""}"
+        try {
+            val moshi = Moshi.Builder().build()
+            val type = Types.newParameterizedType(List::class.java, TodoItem::class.java)
+            val jsonAdapter = moshi.adapter<List<TodoItem>>(type)
+            val jsonString = jsonAdapter.toJson(todoItems)
+            sharedPreferences.edit { putString("todo_items_json", jsonString) }
+        } catch (e: Exception) {
+            // Fallback to old format if JSON serialization fails
+            val todoString = todoItems.joinToString("|") {
+                val selectedDaysString = it.selectedDays.joinToString(",")
+                "${it.text}:${it.isChecked}:${it.isRecurring}:${it.lastCompletedDate ?: ""}:${selectedDaysString}:${it.priority.name}:${it.category}:${it.dueTime ?: ""}:${it.recurrenceInterval ?: ""}:${it.intervalStartTime ?: ""}"
+            }
+            sharedPreferences.edit { putString("todo_items", todoString) }
         }
-        sharedPreferences.edit { putString("todo_items", todoString) }
     }
 
     private fun checkRecurringTasks() {
