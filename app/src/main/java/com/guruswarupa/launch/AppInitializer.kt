@@ -125,6 +125,16 @@ class AppInitializer(private val activity: MainActivity) {
             views.recyclerView.visibility = View.VISIBLE
             updateFastScrollerVisibility()
             
+            // Set up callback to show all apps when scrolled to bottom
+            views.fastScroller.onScrollToBottom = {
+                activity.showAllAppsFromFavorites()
+            }
+            
+            // Set up callback to show favorites when scrolled to top
+            views.fastScroller.onScrollToTop = {
+                activity.showFavoritesFromAllApps()
+            }
+            
             appListUIUpdater = AppListUIUpdater(
                 activity, views.recyclerView, activity.adapter,
                 appList, fullAppList, appListLoader, appListManager,
@@ -210,7 +220,8 @@ class AppInitializer(private val activity: MainActivity) {
                 activity, backgroundExecutor, appListManager, appDockManager,
                 views.searchContainer, activity.adapter, fullAppList, appList,
                 onUpdateAppSearchManager = { updateAppSearchManager() },
-                onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() }
+                onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() },
+                showOnlyFavoritesInitially = { activity.showOnlyFavoritesInitially }
             )
             
             serviceManager = ServiceManager(activity, sharedPreferences)
