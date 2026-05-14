@@ -18,7 +18,8 @@ class FocusModeApplier(
     private val fullAppList: MutableList<android.content.pm.ResolveInfo>,
     private val appList: MutableList<android.content.pm.ResolveInfo>,
     private val onUpdateAppSearchManager: () -> Unit,
-    private val onUpdateFastScrollerVisibility: () -> Unit
+    private val onUpdateFastScrollerVisibility: () -> Unit,
+    private val showOnlyFavoritesInitially: () -> Boolean = { false }
 ) {
     
     private fun safeExecute(task: Runnable): Boolean {
@@ -47,8 +48,8 @@ class FocusModeApplier(
             try {
                 val workspaceMode = appListManager.getWorkspaceMode()
                 val finalFilteredApps = appListManager.filterAndPrepareApps(fullAppList, isFocusMode, workspaceMode)
-                val sortedFinalList = appListManager.sortAppsAlphabetically(finalFilteredApps)
-                val listWithSeparators = appListManager.addSeparators(sortedFinalList)
+                val sortedFinalList = appListManager.sortAppsAlphabetically(finalFilteredApps, showOnlyFavoritesInitially())
+                val listWithSeparators = appListManager.addSeparators(sortedFinalList, showOnlyFavoritesInitially())
 
                 activity.runOnUiThread {
                     if (activity.isFinishing || activity.isDestroyed) return@runOnUiThread

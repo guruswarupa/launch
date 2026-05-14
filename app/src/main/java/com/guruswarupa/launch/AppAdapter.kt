@@ -797,6 +797,12 @@ class AppAdapter(
         if (activity.favoriteAppManager.isFavoriteApp(packageName)) {
             activity.favoriteAppManager.removeFavoriteApp(packageName)
             Toast.makeText(activity, activity.getString(R.string.removed_from_favorites, appName), Toast.LENGTH_SHORT).show()
+            
+            // If all favorites removed, immediately switch to all apps
+            val remainingFavorites = activity.favoriteAppManager.getFavoriteApps()
+            if (remainingFavorites.isEmpty() && activity.showOnlyFavoritesInitially) {
+                activity.showOnlyFavoritesInitially = false
+            }
         } else {
             activity.favoriteAppManager.addFavoriteApp(packageName)
             Toast.makeText(activity, activity.getString(R.string.added_to_favorites, appName), Toast.LENGTH_SHORT).show()
