@@ -131,7 +131,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         super.onCreate(savedInstanceState)
         applyOrientationPreference()
 
-        
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -145,7 +145,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         selectedThemeId = prefs.getString(Constants.Prefs.SELECTED_THEME, "stardust") ?: "stardust"
 
-        
+
         setupWallpaper(null)
 
         setupAppearanceSection()
@@ -207,11 +207,11 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
                         val wm = WallpaperManager.getInstance(this@SettingsActivity)
                         try {
-                            
+
                             val intent = wm.getCropAndSetWallpaperIntent(uri)
                             startActivity(intent)
                         } catch (_: Exception) {
-                            
+
                             val intent = Intent(Intent.ACTION_ATTACH_DATA).apply {
                                 addCategory(Intent.CATEGORY_DEFAULT)
                                 setDataAndType(uri, "image/*")
@@ -299,20 +299,20 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             notifySettingsChanged()
         }
 
-        
+
         val showAppNameInSection = findViewById<LinearLayout>(R.id.show_app_name_in_grid_section)
         val showAppNameSwitch = findViewById<SwitchCompat>(R.id.show_app_name_in_grid_switch)
         showAppNameInSection.isVisible = selectedStyle == Constants.Prefs.VIEW_PREFERENCE_GRID
-        
+
         val showAppNamesInGrid = prefs.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
         showAppNameSwitch.isChecked = showAppNamesInGrid
-        
+
         showAppNameSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, isChecked) }
             notifySettingsChanged()
         }
 
-        
+
         gridBtn.setOnClickListener {
             updateDisplayStyleButtons(gridBtn, listBtn, Constants.Prefs.VIEW_PREFERENCE_GRID)
             gridSection.isVisible = true
@@ -329,7 +329,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             notifySettingsChanged()
         }
 
-        
+
         val iconSpinner = findViewById<Spinner>(R.id.icon_style_spinner)
         val iconSeek = findViewById<SeekBar>(R.id.icon_size_seekbar)
         val iconVal = findViewById<TextView>(R.id.icon_size_value)
@@ -348,7 +348,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         }
 
         val currentSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
-        iconSeek.max = 60 
+        iconSeek.max = 60
         iconSeek.progress = currentSize - 36
         iconVal.text = "${currentSize}dp"
         iconSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -392,7 +392,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             override fun onNothingSelected(p: AdapterView<*>) {}
         }
 
-        
+
         val wallHeader = findViewById<LinearLayout>(R.id.wallpaper_header)
         val wallContent = findViewById<LinearLayout>(R.id.wallpaper_content)
         val wallArrow = findViewById<TextView>(R.id.wallpaper_arrow)
@@ -401,7 +401,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         setupThemeSelection()
 
-        
+
         val typoHeader = findViewById<LinearLayout>(R.id.typography_header)
         val typoContent = findViewById<LinearLayout>(R.id.typography_content)
         val typoArrow = findViewById<TextView>(R.id.typography_arrow)
@@ -457,7 +457,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             }
         }
 
-        
+
         val translucencySeek = findViewById<SeekBar>(R.id.background_translucency_seekbar)
         val translucencyValue = findViewById<TextView>(R.id.background_translucency_value)
         val currentTranslucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
@@ -469,7 +469,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         translucencySeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar?, p: Int, f: Boolean) {
                 translucencyValue.text = "$p%"
-                
+
                 val alpha = (p * 255 / 100).coerceIn(0, 255)
                 val color = Color.argb(alpha, 0, 0, 0)
                 findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
@@ -490,7 +490,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         container.removeAllViews()
 
         if (selectedThemeCategory == null) {
-            
+
             val categories = ThemeOption.PREDEFINED_THEMES.map { it.category }.distinct()
 
             val scrollContainer = SafeHorizontalScrollView(this).apply {
@@ -511,7 +511,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
                 name.text = category
 
-                
+
                 val isSelected = ThemeOption.PREDEFINED_THEMES.find { it.id == selectedThemeId }?.category == category
 
                 if (isSelected) {
@@ -522,7 +522,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     card.strokeWidth = 0
                 }
 
-                
+
                 val firstThemeInCategory = ThemeOption.PREDEFINED_THEMES.find { it.category == category }
                 if (firstThemeInCategory != null) {
                     WallpaperDisplayHelper.applyThemePreview(preview, firstThemeInCategory.id)
@@ -536,7 +536,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
             }
             applyBtn.isVisible = false
         } else {
-            
+
             val category = selectedThemeCategory!!
 
             val contentRow = LinearLayout(this).apply {
@@ -592,18 +592,18 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     selectedThemeId = theme.id
                     prefs.edit { putString(Constants.Prefs.SELECTED_THEME, theme.id) }
                     setupThemeSelection()
-                    setupWallpaper(theme.id) 
+                    setupWallpaper(theme.id)
                     hasUnsavedThemeChanges = true
                     notifySettingsChanged()
                 }
                 row.addView(themeView)
             }
 
-            
+
             applyBtn.isVisible = themes.any { it.id == selectedThemeId }
         }
 
-        
+
         applyBtn.setOnClickListener {
             hasUnsavedThemeChanges = false
             triggerWallpaperPicker(selectedThemeId)
@@ -769,7 +769,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         val tContent = findViewById<LinearLayout>(R.id.app_timer_content)
         val tArrow = findViewById<TextView>(R.id.app_timer_arrow)
         setupSectionToggle(tHeader, tContent, tArrow)
-        
+
         findViewById<View>(R.id.manage_app_timers_button).setOnClickListener {
             startActivity(Intent(this, AppTimerManagementActivity::class.java))
         }
@@ -1128,11 +1128,11 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
     private fun setupAccessibilityShortcut() {
         val sw = findViewById<SwitchCompat>(R.id.accessibility_shortcut_switch)
         val configButton = findViewById<View>(R.id.config_control_center_button)
-        
+
         fun applyConfigButtonState(enabled: Boolean) {
             configButton.visibility = if (enabled) View.VISIBLE else View.GONE
         }
-        
+
         sw.isChecked = prefs.getBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_ENABLED, false)
         applyConfigButtonState(sw.isChecked)
         sw.setOnCheckedChangeListener { _, isChecked ->
@@ -1150,7 +1150,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                 })
             }
         }
-        
+
         configButton.setOnClickListener {
             startActivity(Intent(this, ControlCenterConfigActivity::class.java))
         }
@@ -1564,11 +1564,11 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
 
         val scale = prefs.getInt(Constants.Prefs.TYPOGRAPHY_SCALE_PERCENT, 100).coerceIn(80, 140)
 
-        
+
         val baseStyV = mutableListOf("default", "serif", "monospace", "condensed", "rounded", "casual", "cursive")
         val baseStyL = mutableListOf("Modern Sans", "Classic Serif", "Dev Mono", "Clean Condensed", "Soft Rounded", "Casual Hand", "Creative Script")
 
-        
+
         DownloadableFontManager.getFontOptions().forEach { font ->
             if (DownloadableFontManager.isDownloaded(this, font.styleKey)) {
                 baseStyV.add(font.styleKey)
@@ -1598,7 +1598,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         if (selectedIndex >= 0) {
             styS.setSelection(selectedIndex)
         } else {
-            
+
             prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
             styS.setSelection(0)
             TypographyManager.applyToActivity(this)
@@ -1628,53 +1628,53 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
         }
 
         val colL = arrayOf(
-            "Pure White",      
-            "Electric Purple", 
-            "Neon Pink",       
-            "Solar Gold",      
-            "Emerald Mist",    
-            "Arctic Frost",    
-            "Midnight Teal",   
-            "Cyan Accent",     
-            "Nord Mint",       
-            "Lavender",        
-            "Orange Glow",     
+            "Pure White",
+            "Electric Purple",
+            "Neon Pink",
+            "Solar Gold",
+            "Emerald Mist",
+            "Arctic Frost",
+            "Midnight Teal",
+            "Cyan Accent",
+            "Nord Mint",
+            "Lavender",
+            "Orange Glow",
 
-            "Sky Blue",        
-            "Soft Coral",      
-            "Lime Glow",       
-            "Ice Blue",        
-            "Rose Pink",       
-            "Bright Amber",    
-            "Mint Green",      
-            "Violet Glow",     
-            "Aqua Light",      
-            "Peach Light"      
+            "Sky Blue",
+            "Soft Coral",
+            "Lime Glow",
+            "Ice Blue",
+            "Rose Pink",
+            "Bright Amber",
+            "Mint Green",
+            "Violet Glow",
+            "Aqua Light",
+            "Peach Light"
         )
 
         val colV = arrayOf(
-            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT, 
-            "#FF7C3AED", 
-            "#FFEC4899", 
-            "#FFF59E0B", 
-            "#FF10B981", 
-            "#FF93C5FD", 
-            "#FF0F766E", 
-            "#FF03DAC5", 
-            "#FF8FBCBB", 
-            "#FFB48EAD", 
-            "#FFD08770", 
+            Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT,
+            "#FF7C3AED",
+            "#FFEC4899",
+            "#FFF59E0B",
+            "#FF10B981",
+            "#FF93C5FD",
+            "#FF0F766E",
+            "#FF03DAC5",
+            "#FF8FBCBB",
+            "#FFB48EAD",
+            "#FFD08770",
 
-            "#FF60A5FA", 
-            "#FFF87171", 
-            "#FFA3E635", 
-            "#FFBAE6FD", 
-            "#FFF472B6", 
-            "#FFFBBF24", 
-            "#FF6EE7B7", 
-            "#FFA78BFA", 
-            "#FF67E8F9", 
-            "#FFFDA4AF"  
+            "#FF60A5FA",
+            "#FFF87171",
+            "#FFA3E635",
+            "#FFBAE6FD",
+            "#FFF472B6",
+            "#FFFBBF24",
+            "#FF6EE7B7",
+            "#FFA78BFA",
+            "#FF67E8F9",
+            "#FFFDA4AF"
         )
         colS.adapter = ThemedArrayAdapter(this, android.R.layout.simple_spinner_item, colL, colV).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
         colS.setSelection(colV.indexOf(prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_COLOR, Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT)).coerceAtLeast(0))
@@ -1717,14 +1717,14 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     if (prefs.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") == opt.styleKey) {
                         prefs.edit { putString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") }
                     }
-                    
+
                     setupTypographySettings()
                     updateDownloadableFontsList(cont)
                 } else {
                     btn.text = "Fetching…"
                     DownloadableFontManager.requestFont(this, opt.styleKey) {
                         handler.post {
-                            
+
                             setupTypographySettings()
                             updateDownloadableFontsList(cont)
                         }
@@ -1881,15 +1881,15 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                     zos.putNextEntry(ZipEntry("physical_activity.json"))
                     zos.write(physicalActivityJson.toString(2).toByteArray())
                     zos.closeEntry()
-                    
-                    // Export notes data
+
+
                     try {
                         val notesJson = prefs.getString("note_widget_items", "[]") ?: "[]"
                         zos.putNextEntry(ZipEntry("notes.json"))
                         zos.write(notesJson.toByteArray())
                         zos.closeEntry()
                     } catch (e: Exception) {
-                        // Notes export failed, but continue with other exports
+
                         e.printStackTrace()
                     }
                 }
@@ -1984,7 +1984,7 @@ class SettingsActivity : ComponentActivity(), PurchasesUpdatedListener {
                                     val notesJsonString = zis.bufferedReader().readText()
                                     prefs.edit { putString("note_widget_items", notesJsonString) }
                                 } catch (e: Exception) {
-                                    // Notes import failed, but continue with other imports
+
                                     e.printStackTrace()
                                 }
                             }
@@ -2097,7 +2097,7 @@ class ThemedArrayAdapter(
             val color = if (itemColors != null && position < itemColors.size) {
                 val colorStr = itemColors[position]
                 if (colorStr == Constants.TYPOGRAPHY_FONT_COLOR_DEFAULT) {
-                    
+
                     Color.WHITE
                 } else {
                     try { Color.parseColor(colorStr) } catch (_: Exception) { Color.WHITE }

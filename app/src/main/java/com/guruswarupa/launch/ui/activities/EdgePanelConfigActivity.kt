@@ -42,8 +42,8 @@ class EdgePanelConfigActivity : ComponentActivity() {
     private lateinit var alphaSeekbar: SeekBar
     private lateinit var heightSeekbar: SeekBar
     private lateinit var widthSeekbar: SeekBar
-    
-    // Tab views
+
+
     private lateinit var tabApps: Button
     private lateinit var tabHandle: Button
 
@@ -82,12 +82,12 @@ class EdgePanelConfigActivity : ComponentActivity() {
         loadSavedSelection()
         setupHandleControls()
         setupRecyclerView()
-        
-        // Setup tab clicks
+
+
         tabApps.setOnClickListener { switchTab(0) }
         tabHandle.setOnClickListener { switchTab(1) }
-        
-        // Default to apps tab
+
+
         switchTab(0)
 
         saveButton.setOnClickListener {
@@ -103,16 +103,16 @@ class EdgePanelConfigActivity : ComponentActivity() {
 
         cancelButton.setOnClickListener { finish() }
     }
-    
+
     private fun switchTab(index: Int) {
         if (index == 0) {
-            // Pinned Apps tab
+
             appsContainer.visibility = View.VISIBLE
             handleContainer.visibility = View.GONE
             tabApps.setTextColor(Color.WHITE)
             tabHandle.setTextColor(Color.parseColor("#80FFFFFF"))
         } else {
-            // Handle tab
+
             appsContainer.visibility = View.GONE
             handleContainer.visibility = View.VISIBLE
             tabApps.setTextColor(Color.parseColor("#80FFFFFF"))

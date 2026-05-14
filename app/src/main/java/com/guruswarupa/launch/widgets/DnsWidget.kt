@@ -27,7 +27,7 @@ data class DnsProvider(
             put("isAdBlocking", isAdBlocking)
         }
     }
-    
+
     companion object {
         fun fromJson(json: org.json.JSONObject): DnsProvider {
             return DnsProvider(
@@ -38,7 +38,7 @@ data class DnsProvider(
                 isAdBlocking = json.optBoolean("isAdBlocking", false)
             )
         }
-        
+
         val DEFAULT_PROVIDERS = listOf(
             DnsProvider("current", "Automatic", "opportunistic", "System default (Automatic)", false),
             DnsProvider("off", "Off", "off", "Disable Private DNS", false),
@@ -60,42 +60,42 @@ class DnsWidget(
     private val container: LinearLayout,
     private val sharedPreferences: SharedPreferences
 ) {
-    
+
     private lateinit var currentDnsText: TextView
     private lateinit var changeButton: View
     private lateinit var widgetContainer: LinearLayout
     private lateinit var widgetView: View
-    
+
     private var currentProvider: DnsProvider? = null
-    
+
     private var isInitialized = false
-    
+
     companion object {
         private const val PREFS_DNS_KEY = "dns_widget_current"
         private const val PREFS_CUSTOM_DNS_KEY = "dns_widget_custom_providers"
     }
-    
+
     fun initialize() {
         if (isInitialized) return
-        
+
         val inflater = LayoutInflater.from(context)
         widgetView = inflater.inflate(R.layout.widget_dns, container, false)
         container.addView(widgetView)
-        
+
         currentDnsText = widgetView.findViewById(R.id.current_dns_text)
         changeButton = widgetView.findViewById(R.id.change_dns_button)
         widgetContainer = widgetView.findViewById(R.id.dns_widget_container)
-        
+
         changeButton.setOnClickListener {
             showDnsProviderDialog()
         }
-        
+
         loadCurrentDns()
         updateDisplay()
-        
+
         isInitialized = true
     }
-    
+
     private fun loadCurrentDns() {
         try {
             val dnsJson = sharedPreferences.getString(PREFS_DNS_KEY, null)
@@ -110,7 +110,7 @@ class DnsWidget(
             currentProvider = DnsProvider.DEFAULT_PROVIDERS[0]
         }
     }
-    
+
     private fun saveCurrentDns(provider: DnsProvider) {
         try {
             sharedPreferences.edit {
@@ -120,7 +120,7 @@ class DnsWidget(
             e.printStackTrace()
         }
     }
-    
+
     private fun updateDisplay() {
         currentProvider?.let { provider ->
             currentDnsText.text = provider.name
@@ -133,15 +133,15 @@ class DnsWidget(
             )
         }
     }
-    
+
     private fun showDnsProviderDialog() {
         val providers = DnsProvider.DEFAULT_PROVIDERS + getCustomProviders()
-        val providerNames = providers.map { 
-            "${it.name}${if (it.isAdBlocking) " (Ad-Block)" else ""}" 
+        val providerNames = providers.map {
+            "${it.name}${if (it.isAdBlocking) " (Ad-Block)" else ""}"
         }.toTypedArray()
-        
+
         val currentIndex = providers.indexOfFirst { it.id == currentProvider?.id }
-        
+
         val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Select DNS Provider")
             .setSingleChoiceItems(providerNames, currentIndex) { dialog, which ->
@@ -154,10 +154,10 @@ class DnsWidget(
                 showAddCustomDnsDialog()
             }
             .show()
-        
+
         fixDialogTextColors(dialog)
     }
-    
+
     private fun applyDnsProvider(provider: DnsProvider) {
         try {
             val mode = when (provider.id) {
@@ -171,7 +171,7 @@ class DnsWidget(
                 "private_dns_mode",
                 mode
             )
-            
+
             if (mode == "hostname") {
                 android.provider.Settings.Global.putString(
                     context.contentResolver,
@@ -179,11 +179,11 @@ class DnsWidget(
                     provider.hostname
                 )
             }
-            
+
             currentProvider = provider
             saveCurrentDns(provider)
             updateDisplay()
-            
+
             Toast.makeText(
                 context,
                 "DNS changed to ${provider.name}",
@@ -194,7 +194,7 @@ class DnsWidget(
             showPermissionErrorDialog()
         }
     }
-    
+
     private fun showPermissionErrorDialog() {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Permission Required")
@@ -210,14 +210,14 @@ class DnsWidget(
             .setNegativeButton("Close", null)
             .show()
     }
-    
+
     private fun showAddCustomDnsDialog() {
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_custom_dns, null)
         val nameEditText = dialogView.findViewById<android.widget.EditText>(R.id.custom_dns_name)
         val hostnameEditText = dialogView.findViewById<android.widget.EditText>(R.id.custom_dns_hostname)
         val descriptionEditText = dialogView.findViewById<android.widget.EditText>(R.id.custom_dns_description)
         val adBlockingCheckbox = dialogView.findViewById<android.widget.CheckBox>(R.id.ad_blocking_checkbox)
-        
+
         val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Add Custom DNS")
             .setView(dialogView)
@@ -226,12 +226,12 @@ class DnsWidget(
                 val hostname = hostnameEditText.text.toString().trim()
                 val description = descriptionEditText.text.toString().trim()
                 val isAdBlocking = adBlockingCheckbox.isChecked
-                
+
                 if (name.isEmpty() || hostname.isEmpty()) {
                     Toast.makeText(context, "Name and hostname are required", Toast.LENGTH_SHORT).show()
                     return@setPositiveButton
                 }
-                
+
                 val customProvider = DnsProvider(
                     id = "custom_${System.currentTimeMillis()}",
                     name = name,
@@ -239,34 +239,34 @@ class DnsWidget(
                     description = description.ifEmpty { "Custom DNS provider" },
                     isAdBlocking = isAdBlocking
                 )
-                
+
                 saveCustomProvider(customProvider)
                 applyDnsProvider(customProvider)
             }
             .setNegativeButton("Cancel", null)
             .show()
-        
+
         fixDialogTextColors(dialog)
     }
-    
+
     private fun getCustomProviders(): List<DnsProvider> {
         try {
             val customJson = sharedPreferences.getString(PREFS_CUSTOM_DNS_KEY, null) ?: return emptyList()
             val jsonArray = org.json.JSONArray(customJson)
             val providers = mutableListOf<DnsProvider>()
-            
+
             for (i in 0 until jsonArray.length()) {
                 val json = jsonArray.getJSONObject(i)
                 providers.add(DnsProvider.fromJson(json))
             }
-            
+
             return providers
         } catch (e: Exception) {
             e.printStackTrace()
             return emptyList()
         }
     }
-    
+
     private fun saveCustomProviders(providers: List<DnsProvider>) {
         try {
             val jsonArray = org.json.JSONArray()
@@ -280,13 +280,13 @@ class DnsWidget(
             e.printStackTrace()
         }
     }
-    
+
     private fun saveCustomProvider(provider: DnsProvider) {
         val customProviders = getCustomProviders().toMutableList()
         customProviders.add(provider)
         saveCustomProviders(customProviders)
     }
-    
+
     private fun fixDialogTextColors(dialog: AlertDialog) {
         try {
             val textColor = context.getColor(R.color.text)
@@ -301,17 +301,17 @@ class DnsWidget(
             }
         } catch (_: Exception) {}
     }
-    
+
     fun onResume() {
         loadCurrentDns()
         updateDisplay()
     }
-    
+
     fun onPause() {
-        
+
     }
-    
+
     fun cleanup() {
-        
+
     }
 }

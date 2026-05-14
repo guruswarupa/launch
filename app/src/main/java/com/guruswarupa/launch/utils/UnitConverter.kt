@@ -4,8 +4,8 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 object UnitConverter {
-    
-    
+
+
     fun convertLength(value: BigDecimal, from: String, to: String): BigDecimal {
         val toMeters = when (from.lowercase()) {
             "mm" -> value.divide(BigDecimal(1000), 20, RoundingMode.HALF_UP)
@@ -18,7 +18,7 @@ object UnitConverter {
             "mi" -> value.multiply(BigDecimal("1609.344"))
             else -> value
         }
-        
+
         return when (to.lowercase()) {
             "mm" -> toMeters.multiply(BigDecimal(1000))
             "cm" -> toMeters.multiply(BigDecimal(100))
@@ -31,8 +31,8 @@ object UnitConverter {
             else -> toMeters
         }
     }
-    
-    
+
+
     fun convertArea(value: BigDecimal, from: String, to: String): BigDecimal {
         val toSqMeters = when (from.lowercase()) {
             "mm²" -> value.divide(BigDecimal(1000000), 20, RoundingMode.HALF_UP)
@@ -46,7 +46,7 @@ object UnitConverter {
             "ha" -> value.multiply(BigDecimal(10000))
             else -> value
         }
-        
+
         return when (to.lowercase()) {
             "mm²" -> toSqMeters.multiply(BigDecimal(1000000))
             "cm²" -> toSqMeters.multiply(BigDecimal(10000))
@@ -60,8 +60,8 @@ object UnitConverter {
             else -> toSqMeters
         }
     }
-    
-    
+
+
     fun convertTemperature(value: BigDecimal, from: String, to: String): BigDecimal {
         val toCelsius = when (from.uppercase()) {
             "C" -> value
@@ -69,7 +69,7 @@ object UnitConverter {
             "K" -> value - BigDecimal("273.15")
             else -> value
         }
-        
+
         return when (to.uppercase()) {
             "C" -> toCelsius
             "F" -> toCelsius * BigDecimal(9) / BigDecimal(5) + BigDecimal(32)
@@ -77,8 +77,8 @@ object UnitConverter {
             else -> toCelsius
         }
     }
-    
-    
+
+
     fun convertVolume(value: BigDecimal, from: String, to: String): BigDecimal {
         val toLiters = when (from.lowercase()) {
             "ml" -> value.divide(BigDecimal(1000), 20, RoundingMode.HALF_UP)
@@ -91,7 +91,7 @@ object UnitConverter {
             "gal" -> value.multiply(BigDecimal("3.78541"))
             else -> value
         }
-        
+
         return when (to.lowercase()) {
             "ml" -> toLiters.multiply(BigDecimal(1000))
             "l" -> toLiters
@@ -104,8 +104,8 @@ object UnitConverter {
             else -> toLiters
         }
     }
-    
-    
+
+
     fun convertMass(value: BigDecimal, from: String, to: String): BigDecimal {
         val toKg = when (from.lowercase()) {
             "mg" -> value.divide(BigDecimal(1000000), 20, RoundingMode.HALF_UP)
@@ -116,7 +116,7 @@ object UnitConverter {
             "t" -> value.multiply(BigDecimal(1000))
             else -> value
         }
-        
+
         return when (to.lowercase()) {
             "mg" -> toKg.multiply(BigDecimal(1000000))
             "g" -> toKg.multiply(BigDecimal(1000))
@@ -127,8 +127,8 @@ object UnitConverter {
             else -> toKg
         }
     }
-    
-    
+
+
     fun convertData(value: BigDecimal, from: String, to: String): BigDecimal {
         val toBytes = when (from.uppercase()) {
             "B" -> value
@@ -138,7 +138,7 @@ object UnitConverter {
             "TB" -> value.multiply(BigDecimal("1099511627776"))
             else -> value
         }
-        
+
         return when (to.uppercase()) {
             "B" -> toBytes
             "KB" -> toBytes.divide(BigDecimal(1024), 20, RoundingMode.HALF_UP)
@@ -148,8 +148,8 @@ object UnitConverter {
             else -> toBytes
         }
     }
-    
-    
+
+
     fun convertSpeed(value: BigDecimal, from: String, to: String): BigDecimal {
         val toMps = when (from.lowercase()) {
             "m/s" -> value
@@ -159,7 +159,7 @@ object UnitConverter {
             "knot" -> value.multiply(BigDecimal("0.514444"))
             else -> value
         }
-        
+
         return when (to.lowercase()) {
             "m/s" -> toMps
             "km/h" -> toMps.multiply(BigDecimal("3.6"))
@@ -169,8 +169,8 @@ object UnitConverter {
             else -> toMps
         }
     }
-    
-    
+
+
     fun convertTime(value: BigDecimal, from: String, to: String): BigDecimal {
         val toSeconds = when (from.lowercase()) {
             "ms" -> value.divide(BigDecimal(1000), 20, RoundingMode.HALF_UP)
@@ -181,7 +181,7 @@ object UnitConverter {
             "wk" -> value.multiply(BigDecimal(604800))
             else -> value
         }
-        
+
         return when (to.lowercase()) {
             "ms" -> toSeconds.multiply(BigDecimal(1000))
             "s" -> toSeconds

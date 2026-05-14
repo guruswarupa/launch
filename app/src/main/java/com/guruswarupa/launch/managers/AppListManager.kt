@@ -32,7 +32,7 @@ class AppListManager @Inject constructor(
     }
 
     private fun requireAppDockManager(): AppDockManager = requireNotNull(appDockManager) { "AppDockManager not attached" }
-    
+
     fun getFavoriteApps(): Set<String> {
         return favoriteAppManager.getFavoriteApps()
     }
@@ -44,50 +44,50 @@ class AppListManager @Inject constructor(
     ): List<ResolveInfo> {
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
         val dockManager = requireAppDockManager()
-        
+
         return apps.filter { app ->
             val packageName = app.activityInfo.packageName
             val activityName = app.activityInfo.name
-            
+
             val isLauncherApp = packageName == "com.guruswarupa.launch"
-            val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") || 
+            val isAllowedInternalActivity = isLauncherApp && (activityName.contains("SettingsActivity") ||
                                               activityName.contains("EncryptedVaultActivity"))
-            
+
             if (isLauncherApp && !isAllowedInternalActivity) return@filter false
-            
+
             if (isAllowedInternalActivity) {
                 return@filter !(focusMode && activityName.contains("SettingsActivity"))
             }
-            
+
             if (hiddenAppManager?.isAppHidden(packageName) == true) return@filter false
-            
+
             val isWorkApp = app.preferredOrder != mainUserSerial
 
-            // Focus Mode takes absolute priority over Workspace and Work Profile toggle
+
             if (focusMode) {
                 return@filter if (isWorkApp) true else !dockManager.isAppHiddenInFocusMode(packageName)
             }
-            
+
             if (isWorkProfileEnabled) {
                 if (!isWorkApp) return@filter false
             } else {
                 if (isWorkApp) return@filter false
-                
+
                 if (workspaceMode && !dockManager.isAppInActiveWorkspace(packageName)) {
                     return@filter false
                 }
             }
-            
+
             true
         }
     }
-    
+
     fun sortAppsAlphabetically(apps: List<ResolveInfo>, showOnlyFavorites: Boolean = false): List<ResolveInfo> {
         val dockManager = requireAppDockManager()
         val focusMode = dockManager.getCurrentMode()
         val workspaceMode = dockManager.isWorkspaceModeActive()
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
-        
+
         val comparator = compareBy<ResolveInfo>(
             { if (isInternalApp(it)) 1 else 0 },
             { getSortKey(getDisplayLabel(it).lowercase(Locale.ROOT)) },
@@ -95,14 +95,14 @@ class AppListManager @Inject constructor(
             { it.activityInfo.name }
         )
 
-        // When focus mode or workspace mode is active, ignore favorites filter
-        // These modes have their own filtered app lists
+
+
         if (focusMode || workspaceMode || isWorkProfileEnabled) {
             return apps.sortedWith(comparator)
         }
-        
-        // When showing only favorites, filter to favorites only
-        // When showing all apps, don't show favorites section - just show all apps
+
+
+
         if (showOnlyFavorites) {
             val favorites = favoriteAppManager.getFavoriteApps()
             val favoriteApps = apps.filter { favorites.contains(it.activityInfo.packageName) }
@@ -124,79 +124,79 @@ class AppListManager @Inject constructor(
 
     fun addSeparators(apps: List<ResolveInfo>, showOnlyFavorites: Boolean = false): List<ResolveInfo> {
         if (apps.isEmpty()) return apps
-        
+
         val result = mutableListOf<ResolveInfo>()
         val dockManager = requireAppDockManager()
         val focusMode = dockManager.getCurrentMode()
         val workspaceMode = dockManager.isWorkspaceModeActive()
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
-        
-        // Don't show favorites section when showing all apps or when focus/workspace mode is active
+
+
         val showFavoritesSection = showOnlyFavorites && !focusMode && !workspaceMode && !isWorkProfileEnabled
-        
-        // Add transparent spacer at the top of all apps list to improve scroll-to-top trigger
-        // Only add when showing all apps, not in focus/workspace mode, AND favorites exist
+
+
+
         if (!showOnlyFavorites && !focusMode && !workspaceMode && !isWorkProfileEnabled) {
             val favorites = favoriteAppManager.getFavoriteApps()
             if (favorites.isNotEmpty()) {
-                // Only add top spacers if there are favorites to scroll back to
+
                 for (i in 0 until 4) {
                     result.add(createSeparatorInfo("all_apps_top_spacer_$i"))
                 }
             }
         }
-        
+
         var lastLetter: Char? = null
-        
+
         for (app in apps) {
             val packageName = app.activityInfo.packageName
             val isInternal = isInternalApp(app)
-            
+
             if (!isInternal) {
-                // Don't add letter separators - apps flow continuously
+
             } else if (lastLetter != null) {
                 if (lastLetter != '⚙') {
                     result.add(createSeparatorInfo("letter_separator_SYSTEM"))
                     lastLetter = '⚙'
                 }
             }
-            
+
             result.add(app)
         }
-        
-        // Add transparent spacer below favorites to improve scroll-to-bottom trigger
-        // Only add when showing favorites and not in focus/workspace mode
-        // Dynamic spacer count: starts at 13 for 1 app, reduces by 1 for each additional app
-        // Adds extra spacers when top widget is visible to compensate for reduced screen space
+
+
+
+
+
         if (showOnlyFavorites && !focusMode && !workspaceMode && !isWorkProfileEnabled) {
             val favorites = favoriteAppManager.getFavoriteApps()
             val favoriteCount = favorites.size
-            
-            // Check if top widget is visible
+
+
             val isTopWidgetVisible = sharedPreferences.getBoolean(Constants.Prefs.TOP_WIDGET_ENABLED, true)
-            
-            // Calculate spacer count: 
-            // With widget: starts at 10 for 1 app, reduce by 1 for each additional app
-            // Without widget: starts at 13 for 1 app, reduce by 1 for each additional app
-            // Minimum 4 spacers to ensure some scrollable area
+
+
+
+
+
             val baseCount = if (isTopWidgetVisible) 10 else 13
             val spacerCount = maxOf(4, baseCount - (favoriteCount - 1).coerceAtLeast(0))
-            
+
             for (i in 0 until spacerCount) {
                 result.add(createSeparatorInfo("favorites_bottom_spacer_$i"))
             }
-            
+
             if (result.isNotEmpty()) {
                 result.add(createSeparatorInfo("bottom_system_separator"))
             }
         }
-        
-        // Add launcher shortcuts (always show except when showing only favorites in normal mode)
+
+
         if (!showOnlyFavorites || focusMode || workspaceMode || isWorkProfileEnabled) {
             result.add(createLauncherShortcut("launcher_settings_shortcut"))
             result.add(createLauncherShortcut("launcher_vault_shortcut"))
         }
-        
+
         return result
     }
 
@@ -207,24 +207,24 @@ class AppListManager @Inject constructor(
         ri.activityInfo.name = id
         return ri
     }
-    
+
     private fun createLauncherShortcut(shortcutType: String): ResolveInfo {
         val ri = ResolveInfo()
         ri.activityInfo = ActivityInfo()
         ri.activityInfo.packageName = shortcutType
-        
+
         ri.activityInfo.name = when (shortcutType) {
             "launcher_settings_shortcut" -> "Launch Settings"
             "launcher_vault_shortcut" -> "Launch Vault"
             else -> shortcutType
         }
-        
+
         ri.activityInfo.applicationInfo = android.content.pm.ApplicationInfo().apply {
             packageName = shortcutType
         }
         return ri
     }
-    
+
     fun getFocusMode(): Boolean = requireAppDockManager().getCurrentMode()
     fun getWorkspaceMode(): Boolean = requireAppDockManager().isWorkspaceModeActive()
     fun isWorkProfileModeEnabled(): Boolean = workProfileManager.isWorkProfileEnabled()
@@ -252,8 +252,8 @@ class AppListManager @Inject constructor(
         val activityName = app.activityInfo.name
         return when {
             activityName.isNotBlank() && packageName.startsWith("launcher_") -> activityName
-            // Never call loadLabel() - return packageName as fallback
-            // Labels should be pre-populated by AppListLoader in background
+
+
             else -> packageName
         }
     }

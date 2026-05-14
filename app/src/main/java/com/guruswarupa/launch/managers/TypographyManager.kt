@@ -68,13 +68,13 @@ object TypographyManager {
             val (scaleFactor, alphaFactor) = resolveIntensityVisuals(intensity)
             view.textScaleX = baseScaleX * scaleFactor
             view.alpha = baseAlpha * alphaFactor
-            
+
             val baseTextColor = resolveBaseTextColor(view)
             val baseHintColor = resolveBaseHintColor(view)
-            
+
             if (fontColor != null) {
                 view.setTextColor(fontColor)
-                
+
                 val alpha = Color.alpha(fontColor)
                 val hintAlpha = (alpha * 0.6f).toInt()
                 val hintColor = Color.argb(hintAlpha, Color.red(fontColor), Color.green(fontColor), Color.blue(fontColor))
@@ -98,7 +98,7 @@ object TypographyManager {
                 textView.setTag(R.id.tag_typography_base_text_color, it)
             }
     }
-    
+
     private fun resolveBaseHintColor(textView: TextView): Int {
         return (textView.getTag(R.id.tag_typography_base_hint_color) as? Int)
             ?: textView.currentHintTextColor.also {

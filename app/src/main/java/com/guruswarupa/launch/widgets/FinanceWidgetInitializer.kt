@@ -20,7 +20,7 @@ class FinanceWidgetInitializer(
 ) {
     private var onInitializedListener: ((FinanceWidgetManager) -> Unit)? = null
 
-    
+
 
 
     fun onInitialized(listener: (FinanceWidgetManager) -> Unit): FinanceWidgetInitializer {
@@ -28,7 +28,7 @@ class FinanceWidgetInitializer(
         return this
     }
 
-    
+
 
 
 

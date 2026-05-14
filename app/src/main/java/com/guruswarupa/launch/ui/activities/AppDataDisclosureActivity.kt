@@ -197,7 +197,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
             endIconRes = R.drawable.ic_settings
         )
     )
-    
+
     private val backgroundExecutor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
     private var currentFeaturePageIndex = 0
@@ -209,25 +209,25 @@ class AppDataDisclosureActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_app_data_disclosure)
-        
+
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
-        
-        
+
+
         if (prefs.getBoolean(Constants.Prefs.APP_DATA_CONSENT_GIVEN, false)) {
-            
+
             startMainActivity()
             return
         }
-        
+
         setupViews()
         setupWallpaper()
         startWelcomeAnimation()
 
-        
+
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val importRoot = findViewById<LinearLayout>(R.id.import_root)
@@ -247,18 +247,18 @@ class AppDataDisclosureActivity : AppCompatActivity() {
                         disclosureRoot.visibility = View.VISIBLE
                     }
                 }
-                
+
             }
         })
     }
-    
+
     private fun setupViews() {
         val titleText = findViewById<TextView>(R.id.disclosure_title)
         val messageText = findViewById<TextView>(R.id.disclosure_message)
         val linksText = findViewById<TextView>(R.id.disclosure_links)
         val acceptButton = findViewById<Button>(R.id.accept_button)
         val declineButton = findViewById<Button>(R.id.decline_button)
-        
+
         val importRoot = findViewById<LinearLayout>(R.id.import_root)
         val featureRoot = findViewById<LinearLayout>(R.id.feature_onboarding_root)
         val disclosureRoot = findViewById<LinearLayout>(R.id.disclosure_root)
@@ -269,19 +269,19 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         val featureSkipButton = findViewById<Button>(R.id.feature_onboarding_skip_button)
 
         titleText.text = getString(R.string.app_data_disclosure_title)
-        
-        
+
+
         messageText.text = Html.fromHtml(getString(R.string.app_data_disclosure_message), Html.FROM_HTML_MODE_COMPACT)
-        
+
         linksText.text = Html.fromHtml(getString(R.string.data_disclosure_links), Html.FROM_HTML_MODE_COMPACT)
         linksText.movementMethod = LinkMovementMethod.getInstance()
-        
+
         acceptButton.setOnClickListener {
-            
+
             val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
             prefs.edit { putBoolean(Constants.Prefs.APP_DATA_CONSENT_GIVEN, true) }
-            
-            
+
+
             disclosureRoot.animate()
                 .alpha(0f)
                 .scaleX(0.95f)
@@ -304,9 +304,9 @@ class AppDataDisclosureActivity : AppCompatActivity() {
                 }
                 .start()
         }
-        
+
         declineButton.setOnClickListener {
-            
+
             finishAffinity()
         }
 
@@ -398,14 +398,14 @@ class AppDataDisclosureActivity : AppCompatActivity() {
                                             }
                                         }
                                     }
-                                    
+
                                     putBoolean(Constants.Prefs.APP_DATA_CONSENT_GIVEN, true)
-                                    
+
                                     putBoolean(Constants.Prefs.CONTACTS_PERMISSION_DENIED, false)
                                     putBoolean(Constants.Prefs.USAGE_STATS_PERMISSION_DENIED, false)
-                                    
+
                                     putBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, false)
-                                    
+
                                     putBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, false)
                                 }
                             }
@@ -428,7 +428,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
         val welcomeSubtitle = findViewById<TextView>(R.id.welcome_subtitle)
         val disclosureRoot = findViewById<LinearLayout>(R.id.disclosure_root)
 
-        
+
         welcomeText.animate()
             .alpha(1f)
             .scaleX(1f)
@@ -439,7 +439,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
             .setStartDelay(400)
             .start()
 
-        
+
         welcomeSubtitle.translationY = 20f
         welcomeSubtitle.animate()
             .alpha(1f)
@@ -449,9 +449,9 @@ class AppDataDisclosureActivity : AppCompatActivity() {
             .setStartDelay(1000)
             .start()
 
-        
+
         handler.postDelayed({
-            
+
             welcomeContainer.animate()
                 .alpha(0f)
                 .scaleX(1.5f)
@@ -460,13 +460,13 @@ class AppDataDisclosureActivity : AppCompatActivity() {
                 .setInterpolator(AnticipateInterpolator())
                 .withEndAction {
                     welcomeContainer.visibility = View.GONE
-                    
-                    
+
+
                     disclosureRoot.visibility = View.VISIBLE
                     disclosureRoot.alpha = 0f
                     disclosureRoot.scaleX = 0.95f
                     disclosureRoot.scaleY = 0.95f
-                    
+
                     disclosureRoot.animate()
                         .alpha(1f)
                         .scaleX(1f)
@@ -583,7 +583,7 @@ class AppDataDisclosureActivity : AppCompatActivity() {
             }
             .start()
     }
-    
+
     private fun startMainActivity(requestPermissions: Boolean = false) {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

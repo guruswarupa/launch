@@ -18,19 +18,19 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
 
     private var usageData: List<Pair<String, Long>> = emptyList()
     private var appUsageData: List<Pair<String, Map<String, Long>>> = emptyList()
-    
+
     var onDaySelected: ((String, Map<String, Long>) -> Unit)? = null
-    
+
     private var touchDownX: Float = 0f
     private var touchDownY: Float = 0f
     private var touchedCardIndex: Int = -1
-    private val tapThreshold = 50f 
-    
+    private val tapThreshold = 50f
+
     private val cardPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
     }
-    
+
     private val cardStrokePaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
@@ -43,14 +43,14 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         textAlign = Paint.Align.LEFT
         typeface = Typeface.DEFAULT_BOLD
     }
-    
+
     private val timeTextPaint = Paint().apply {
         isAntiAlias = true
         textSize = 28f
         textAlign = Paint.Align.LEFT
         typeface = Typeface.DEFAULT_BOLD
     }
-    
+
     private val instructionPaint = Paint().apply {
         isAntiAlias = true
         textSize = 14f
@@ -62,7 +62,7 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         strokeWidth = 1f
     }
 
-    
+
     private val reusableRectF = RectF()
     private val shadowPaint = Paint().apply {
         isAntiAlias = true
@@ -105,30 +105,30 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         requestLayout()
         invalidate()
     }
-    
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val dataToUse = appUsageData.ifEmpty {
             usageData.map { it.first to mapOf("Total" to it.second) }
         }
-        
+
         if (dataToUse.isEmpty()) {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec)
             return
         }
-        
+
         val cardHeight = 100f
         val cardSpacing = 12f
         val topPadding = 4f
         val bottomPadding = 8f
         val instructionHeight = 20f
-        
-        val totalHeight = topPadding + 
-            (cardHeight + cardSpacing) * dataToUse.size - cardSpacing + 
+
+        val totalHeight = topPadding +
+            (cardHeight + cardSpacing) * dataToUse.size - cardSpacing +
             bottomPadding + instructionHeight
-        
+
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = totalHeight.toInt()
-        
+
         setMeasuredDimension(width, height)
     }
 
@@ -140,7 +140,7 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         }
 
         if (dataToUse.isEmpty()) {
-            
+
             instructionPaint.textSize = 32f
             canvas.drawText(
                 "No usage data available",
@@ -155,56 +155,56 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         val cardSpacing = 12f
         val cardHeight = 100f
         val topPadding = 4f
-        
-        
+
+
         val startY = topPadding
-        
-        
+
+
         dataToUse.forEachIndexed { dayIndex, (day, appUsages) ->
             val cardY = startY + (dayIndex * (cardHeight + cardSpacing))
             val cardRight = width - padding
             val cardBottom = cardY + cardHeight
-            
-            
+
+
             val totalUsage = appUsages.values.sum()
-            
-            
+
+
             reusableRectF.set(padding, cardY, cardRight, cardBottom)
-            
-            
-            val isNightMode = (resources.configuration.uiMode and 
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK) == 
+
+
+            val isNightMode = (resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
-            
+
             if (isNightMode) {
                 canvas.drawRoundRect(
                     padding + 1f, cardY + 2f, cardRight + 1f, cardBottom + 2f,
                     14f, 14f, shadowPaint
                 )
             }
-            
-            
+
+
             canvas.drawRoundRect(reusableRectF, 14f, 14f, cardPaint)
             canvas.drawRoundRect(reusableRectF, 14f, 14f, cardStrokePaint)
-            
-            
+
+
             dayTextPaint.textAlign = Paint.Align.LEFT
             dayTextPaint.textSize = 36f
             val dayY = cardY + cardHeight / 2f - 15f
             canvas.drawText(day, padding + 24f, dayY, dayTextPaint)
-            
-            
+
+
             val usageText = formatUsageTimeInHours(totalUsage)
             timeTextPaint.textAlign = Paint.Align.RIGHT
             timeTextPaint.textSize = 28f
             canvas.drawText(usageText, cardRight - 24f, dayY + 8f, timeTextPaint)
-            
-            
+
+
             val dividerY = cardY + cardHeight - 1f
             canvas.drawLine(padding + 24f, dividerY, cardRight - 24f, dividerY, dividerPaint)
         }
     }
-    
+
     override fun performClick(): Boolean {
         super.performClick()
         return true
@@ -214,9 +214,9 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
         val dataToUse = appUsageData.ifEmpty {
             usageData.map { it.first to mapOf("Total" to it.second) }
         }
-        
+
         if (dataToUse.isEmpty()) return super.onTouchEvent(event)
-        
+
         val padding = 20f
         val cardSpacing = 12f
         val cardHeight = 100f
@@ -227,13 +227,13 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
                 touchDownX = event.x
                 touchDownY = event.y
                 touchedCardIndex = -1
-                
-                
+
+
                 dataToUse.forEachIndexed { dayIndex, _ ->
                     val cardY = topPadding + (dayIndex * (cardHeight + cardSpacing))
                     val cardRight = width - padding
                     val cardBottom = cardY + cardHeight
-                    
+
                     if (touchDownX in padding..cardRight &&
                         touchDownY >= cardY && touchDownY <= cardBottom) {
                         touchedCardIndex = dayIndex
@@ -242,15 +242,15 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
                 }
                 return false
             }
-            
+
             MotionEvent.ACTION_UP -> {
-                
+
                 if (touchedCardIndex >= 0) {
                     val deltaX = abs(event.x - touchDownX)
                     val deltaY = abs(event.y - touchDownY)
                     val distance = sqrt((deltaX * deltaX + deltaY * deltaY).toDouble()).toFloat()
-                    
-                    
+
+
                     if (distance < tapThreshold) {
                         val (day, appUsages) = dataToUse[touchedCardIndex]
                         onDaySelected?.invoke(day, appUsages)
@@ -261,13 +261,13 @@ class WeeklyUsageGraphView @JvmOverloads constructor(
                 touchedCardIndex = -1
                 return false
             }
-            
+
             MotionEvent.ACTION_CANCEL -> {
                 touchedCardIndex = -1
                 return false
             }
         }
-        
+
         return super.onTouchEvent(event)
     }
 

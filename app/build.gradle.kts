@@ -70,7 +70,7 @@ android {
     }
 }
 
-// Suppress Moshi kapt deprecation warning (Hilt bug, not actual kapt usage)
+
 gradle.projectsEvaluated {
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.add("-Xlint:-processing")
@@ -109,10 +109,10 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     
-    // Moshi for JSON serialization (using KSP)
+    
     implementation("com.squareup.moshi:moshi:1.15.1")
     ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.1")
     
-    // Jsoup for HTML parsing (web app search)
+    
     implementation("org.jsoup:jsoup:1.17.2")
 }

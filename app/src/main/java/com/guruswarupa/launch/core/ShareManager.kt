@@ -37,16 +37,16 @@ data class ShareableApp(
 class ShareManager(private val context: Context) {
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
-    
+
     companion object {
         private const val TAG = "ShareManager"
         const val FILE_PICKER_REQUEST_CODE = 1001
-        
+
         private const val DIALOG_OPTION_SHARE_APK = 0
         private const val DIALOG_OPTION_SHARE_FILE = 1
     }
 
-    
+
 
 
     fun showApkSharingDialog() {
@@ -66,7 +66,7 @@ class ShareManager(private val context: Context) {
             .show()
     }
 
-    
+
 
 
     private fun showAppSharingDialog() {
@@ -90,7 +90,7 @@ class ShareManager(private val context: Context) {
             .show()
     }
 
-    
+
 
 
     @Suppress("DEPRECATION")
@@ -114,7 +114,7 @@ class ShareManager(private val context: Context) {
             showToast(context.getString(R.string.no_file_manager_available))
         }
     }
-    
+
     fun showFileSharingDialogWithLauncher(launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
             type = Constants.MIME_TYPE_ALL
@@ -131,7 +131,7 @@ class ShareManager(private val context: Context) {
         }
     }
 
-    
+
 
 
     fun handleFilePickerResult(uri: Uri?) {
@@ -142,7 +142,7 @@ class ShareManager(private val context: Context) {
         }
     }
 
-    
+
 
 
     private fun shareFile(uri: Uri) {
@@ -161,8 +161,8 @@ class ShareManager(private val context: Context) {
             showToast(context.getString(R.string.error_sharing_file, e.message ?: ""))
         }
     }
-    
-    
+
+
 
 
     private fun showToast(message: String) {
@@ -171,7 +171,7 @@ class ShareManager(private val context: Context) {
         }
     }
 
-    
+
 
 
 
@@ -182,7 +182,7 @@ class ShareManager(private val context: Context) {
             val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
             installedApps
                 .filter { app ->
-                    
+
                     (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0 ||
                             (app.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
                 }
@@ -204,14 +204,14 @@ class ShareManager(private val context: Context) {
         }
     }
 
-    
+
 
 
 
 
     fun shareApk(packageName: String, appName: String) {
         showToast(context.getString(R.string.preparing_apk_for_sharing))
-        
+
         executor.execute {
             try {
                 val apkUri = prepareApkForSharing(packageName, appName)
@@ -229,8 +229,8 @@ class ShareManager(private val context: Context) {
             }
         }
     }
-    
-    
+
+
 
 
 
@@ -244,36 +244,36 @@ class ShareManager(private val context: Context) {
             return null
         }
 
-        
+
         val cacheDir = File(context.cacheDir, Constants.SHARED_APKS_DIR)
         if (!cacheDir.exists() && !cacheDir.mkdirs()) {
             showToast(context.getString(R.string.error_creating_cache_directory))
             return null
         }
 
-        
+
         val sanitizedAppName = appName.replace(
             Constants.APP_NAME_SANITIZE_REGEX.toRegex(),
             Constants.APP_NAME_SANITIZE_REPLACEMENT
         )
         val copiedApk = File(cacheDir, "$sanitizedAppName${Constants.APK_EXTENSION}")
 
-        
+
         FileInputStream(sourceApk).use { input ->
             FileOutputStream(copiedApk).use { output ->
                 input.copyTo(output)
             }
         }
 
-        
+
         return FileProvider.getUriForFile(
             context,
             "${context.packageName}${Constants.FILE_PROVIDER_AUTHORITY_SUFFIX}",
             copiedApk
         )
     }
-    
-    
+
+
 
 
     private fun launchShareIntent(apkUri: Uri, appName: String) {
@@ -292,8 +292,8 @@ class ShareManager(private val context: Context) {
             showToast(context.getString(R.string.error_sharing_apk, e.message ?: ""))
         }
     }
-    
-    
+
+
 
 
     fun cleanup() {

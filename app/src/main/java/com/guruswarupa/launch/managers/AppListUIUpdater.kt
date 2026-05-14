@@ -34,13 +34,13 @@ class AppListUIUpdater(
         appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
             val listWithSeparators = appListManager.addSeparators(sortedList, activity.showOnlyFavoritesInitially)
             updateAppListUI(listWithSeparators, filteredList, isFinal)
-            // Update FastScroller visibility after app list is populated
+
             activity.updateFastScrollerVisibility()
         }
         appListLoader.onAdapterNeedsUpdate = { isGrid ->
             this.isGridMode = isGrid
             val columns = activity.getPreferredGridColumns()
-            
+
             val layoutManager = if (isGrid) {
                 val gridLayoutManager = GridLayoutManager(activity, columns)
                 gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
@@ -57,9 +57,9 @@ class AppListUIUpdater(
             } else {
                 LinearLayoutManager(activity)
             }
-            
+
             recyclerView.layoutManager = layoutManager
-            
+
             if (adapter != null) {
                 adapter?.updateViewMode(isGrid)
             } else {
@@ -88,9 +88,9 @@ class AppListUIUpdater(
         if (newAppList.isNotEmpty() || !appListManager.isWorkProfileModeEnabled()) {
             preservedWorkProfileListOnce = false
         }
-        
+
         val deduplicatedFullAppList = newFullAppList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
-        
+
         if (deduplicatedFullAppList !== fullAppList) {
             fullAppList.clear()
             fullAppList.addAll(deduplicatedFullAppList)
@@ -103,13 +103,13 @@ class AppListUIUpdater(
             activity.appList.clear()
             activity.appList.addAll(newAppList)
         }
-        
+
         adapter?.updateAppList(newAppList)
         val isEmpty = newAppList.isEmpty()
         recyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
         activity.views.appListEmptyState.visibility = if (isEmpty) View.VISIBLE else View.GONE
         activity.updateFastScrollerVisibility()
-        
+
         activity.updateAppSearchManager(newFullAppList, newAppList)
     }
 
@@ -142,18 +142,18 @@ class AppListUIUpdater(
             appListLoader.loadApps(forceRefresh = false, fullAppList, appList, adapter)
             return
         }
-        
+
         try {
             backgroundExecutor.execute {
                 try {
                     val focusMode = appListManager.getFocusMode()
                     val workspaceMode = appListManager.getWorkspaceMode()
-                    
+
                     val currentFullList = ArrayList(fullAppList)
                     val filteredApps = appListManager.filterAndPrepareApps(currentFullList, focusMode, workspaceMode)
                     val sortedFinalList = appListManager.sortAppsAlphabetically(filteredApps, activity.showOnlyFavoritesInitially)
                     val listWithSeparators = appListManager.addSeparators(sortedFinalList, activity.showOnlyFavoritesInitially)
-                    
+
                     activity.runOnUiThread {
                         updateAppListUI(listWithSeparators, currentFullList, isFinal = true)
                     }
@@ -171,7 +171,7 @@ class AppListUIUpdater(
     fun refreshAppsForFocusMode() {
         appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
     }
-    
+
     fun refreshAppsForWorkspace() {
         appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
     }

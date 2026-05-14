@@ -16,7 +16,7 @@ class WidgetConfigurationManager(
         private const val PREF_WIDGET_ORDER = "widget_order"
         private const val PREFS_SYSTEM_WIDGETS_KEY = "saved_widgets"
         private const val REMOVED_NOTIFICATIONS_WIDGET_ID = "notifications_widget_container"
-        
+
         val IN_APP_WIDGETS = listOf(
             WidgetInfo("media_controller_widget_container", "Media Controller", false),
             WidgetInfo("calendar_events_widget_container", "Calendar Events", false),
@@ -41,13 +41,13 @@ class WidgetConfigurationManager(
             WidgetInfo("github_contributions_widget_container", "GitHub Contributions", false)
         )
     }
-    
-    // Cache widget configuration to avoid repeated blocking IPC calls
+
+
     @Volatile
     private var cachedWidgetConfiguration: List<WidgetInfo>? = null
     private var cacheTimestamp: Long = 0
-    private val CACHE_VALID_DURATION = 60 * 1000L // 1 minute cache
-    
+    private val CACHE_VALID_DURATION = 60 * 1000L
+
     data class WidgetInfo(
         val id: String,
         val name: String,
@@ -62,17 +62,17 @@ class WidgetConfigurationManager(
     )
 
     fun getWidgetConfiguration(): List<WidgetInfo> {
-        // Return cached result if still valid to avoid blocking IPC calls
+
         val currentTime = System.currentTimeMillis()
         cachedWidgetConfiguration?.let { cached ->
             if (currentTime - cacheTimestamp < CACHE_VALID_DURATION) {
                 return cached
             }
         }
-        
+
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null)
         val savedWidgetsList = mutableListOf<WidgetInfo>()
-        
+
         if (orderJson != null) {
             try {
                 val jsonArray = JSONArray(orderJson)
@@ -85,7 +85,7 @@ class WidgetConfigurationManager(
                     val pkg = jsonObject.optString("providerPackage").takeIf { it.isNotEmpty() }
                     val cls = jsonObject.optString("providerClass").takeIf { it.isNotEmpty() }
                     val widgetId = if (jsonObject.has("appWidgetId")) jsonObject.getInt("appWidgetId") else null
-                    
+
                     if (id != REMOVED_NOTIFICATIONS_WIDGET_ID) {
                         val customHeightDp = if (jsonObject.has("customHeightDp")) jsonObject.optInt("customHeightDp") else null
                         savedWidgetsList.add(
@@ -105,46 +105,46 @@ class WidgetConfigurationManager(
                 }
             } catch (_: Exception) {}
         }
-        
+
         val boundSystemWidgets = getBoundSystemWidgets()
         val boundIds = boundSystemWidgets.map { it.id }.toSet()
-        
-        // Remove duplicates from saved widgets - keep first occurrence
+
+
         val seenIds = mutableSetOf<String>()
         val deduplicatedSaved = savedWidgetsList.filter { widget ->
             if (seenIds.contains(widget.id)) {
-                false // Skip duplicate
+                false
             } else {
                 seenIds.add(widget.id)
-                true // Keep first occurrence
+                true
             }
         }.toMutableList()
-        
-        // If duplicates were found, save the cleaned list
+
+
         if (deduplicatedSaved.size != savedWidgetsList.size) {
             saveWidgetOrder(deduplicatedSaved)
         }
-        
+
         val result = deduplicatedSaved.filter { !it.isSystemWidget || boundIds.contains(it.id) }.toMutableList()
-        
+
         val currentIds = result.map { it.id }.toSet()
         boundSystemWidgets.forEach { systemWidget ->
             if (!currentIds.contains(systemWidget.id)) {
                 result.add(systemWidget)
             }
         }
-        
+
         IN_APP_WIDGETS.forEach { defaultWidget ->
             if (!currentIds.contains(defaultWidget.id)) {
                 result.add(defaultWidget)
             }
         }
-        
+
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val installedProviders = try { appWidgetManager.installedProviders } catch (_: Exception) { emptyList() }
-        
+
         val boundProviders = boundSystemWidgets.map { "${it.providerPackage}/${it.providerClass}" }.toSet()
-        
+
         installedProviders.forEach { provider ->
             val providerKey = "${provider.provider.packageName}/${provider.provider.className}"
             if (!boundProviders.contains(providerKey)) {
@@ -165,18 +165,18 @@ class WidgetConfigurationManager(
                 }
             }
         }
-        
+
         val enabledWidgets = result.filter { it.enabled }
         val customDisabled = result.filter { !it.enabled && !it.isSystemWidget }.sortedBy { it.name }
-        
-        // Show system widgets that are disabled but NOT providers (providers are unbound widgets)
+
+
         val systemDisabled = result.filter { !it.enabled && it.isSystemWidget && !it.isProvider }
             .sortedWith(
                 compareBy<WidgetInfo> { it.appName ?: "" }
                     .thenBy { it.name }
             )
-        
-        // Show providers (unbound system widgets) that can be added
+
+
         val providers = result.filter { it.isProvider }
             .sortedWith(
                 compareBy<WidgetInfo> { it.appName ?: "" }
@@ -184,14 +184,14 @@ class WidgetConfigurationManager(
             )
 
         val finalResult = enabledWidgets + customDisabled + systemDisabled + providers
-        
-        // Cache the result
+
+
         cachedWidgetConfiguration = finalResult
         cacheTimestamp = System.currentTimeMillis()
-        
+
         return finalResult
     }
-    
+
     private fun getAppName(packageName: String?): String? {
         if (packageName == null) return null
         return try {
@@ -206,21 +206,18 @@ class WidgetConfigurationManager(
     fun getWidgetOrder(): List<WidgetInfo> {
         return getWidgetConfiguration().filter { !it.isProvider }
     }
-    
-    /**
-     * Force refresh the widget configuration cache.
-     * Call this when widget states may have changed.
-     */
+
+
     fun forceRefresh() {
         invalidateCache()
-        getWidgetOrder() // This will repopulate the cache
+        getWidgetOrder()
     }
-    
+
     private fun getBoundSystemWidgets(): List<WidgetInfo> {
         val widgetsJson = sharedPreferences.getString(PREFS_SYSTEM_WIDGETS_KEY, null) ?: return emptyList()
         val systemWidgets = mutableListOf<WidgetInfo>()
         val appWidgetManager = AppWidgetManager.getInstance(context)
-        
+
         try {
             val jsonArray = JSONArray(widgetsJson)
             for (i in 0 until jsonArray.length()) {
@@ -249,7 +246,7 @@ class WidgetConfigurationManager(
         } catch (_: Exception) {}
         return systemWidgets
     }
-    
+
     fun saveWidgetOrder(widgets: List<WidgetInfo>) {
         val jsonArray = JSONArray()
         widgets.forEach { widget ->
@@ -271,7 +268,7 @@ class WidgetConfigurationManager(
         }
         invalidateCache()
     }
-    
+
     fun isWidgetEnabled(widgetId: String): Boolean {
         val orderJson = sharedPreferences.getString(PREF_WIDGET_ORDER, null) ?: return false
         try {
@@ -285,11 +282,8 @@ class WidgetConfigurationManager(
         } catch (_: Exception) {}
         return false
     }
-    
-    /**
-     * Invalidate the widget configuration cache to force reload on next access.
-     * Call this when widget configuration changes.
-     */
+
+
     fun invalidateCache() {
         cachedWidgetConfiguration = null
         cacheTimestamp = 0

@@ -250,7 +250,7 @@ class FeatureTutorialManager(
                 TutorialPage.WALLPAPER -> currentPager.isPageOpen(ScreenPagerManager.Page.WALLPAPER)
             }
         } catch (e: UninitializedPropertyAccessException) {
-            // screenPagerManager not yet initialized
+
             false
         }
     }
@@ -269,7 +269,7 @@ class FeatureTutorialManager(
 
         val pageRoot = activity.findViewById<ViewGroup>(step.page.rootViewId)
         if (pageRoot != null && scrollRecyclerToTutorialTarget(step, pageRoot)) {
-            // Use doOnLayout instead of postDelayed for retry
+
             pageRoot.doOnLayout {
                 renderStep(step, token, attempt + 1)
             }
@@ -281,7 +281,7 @@ class FeatureTutorialManager(
                 nextStep()
                 return
             }
-            // Use doOnLayout instead of postDelayed for retry
+
             (pageRoot ?: activity.findViewById(android.R.id.content))?.doOnLayout {
                 renderStep(step, token, attempt + 1)
             }
@@ -292,7 +292,7 @@ class FeatureTutorialManager(
             scrollToView(targetView)
         }
 
-        // Use doOnPreDraw instead of postDelayed for rendering overlay
+
         pageRoot.doOnPreDraw {
             if (isTutorialActive && token == renderToken) {
                 showTutorialOverlay(step, pageRoot, targetView)
@@ -323,7 +323,7 @@ class FeatureTutorialManager(
             TutorialPage.WALLPAPER -> activity.openWallpaperPage(animated)
         }
 
-        // Use doOnLayout instead of postDelayed for page settle
+
         val rootView = activity.findViewById<View>(page.rootViewId)
         if (animated) {
             rootView?.doOnLayout { onReady() } ?: onReady()

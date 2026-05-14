@@ -44,17 +44,17 @@ class PermissionManager(
         const val NOTIFICATION_POLICY_REQUEST = 1100
         const val DEFAULT_LAUNCHER_REQUEST = 1200
     }
-    
-    
+
+
     private var isRequestingPermissions = false
-    
-    
+
+
 
 
     fun requestContactsPermission(onGranted: () -> Unit = {}) {
-        
+
         if (isRequestingPermissions) return
-        
+
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.READ_CONTACTS)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -71,8 +71,8 @@ class PermissionManager(
             onGranted()
         }
     }
-    
-    
+
+
 
 
     fun requestSmsPermission() {
@@ -89,8 +89,8 @@ class PermissionManager(
             }
         }
     }
-    
-    
+
+
 
 
     @Suppress("unused")
@@ -105,14 +105,14 @@ class PermissionManager(
             )
         }
     }
-    
-    
+
+
 
 
     fun requestUsageStatsPermission(usageStatsManager: AppUsageStatsManager, onComplete: () -> Unit = {}) {
-        
+
         if (isRequestingPermissions) return
-        
+
         if (!usageStatsManager.hasUsageStatsPermission()) {
             if (!sharedPreferences.getBoolean(Constants.Prefs.USAGE_STATS_PERMISSION_DENIED, false)) {
                 isRequestingPermissions = true
@@ -120,7 +120,7 @@ class PermissionManager(
                     .setTitle(R.string.usage_stats_permission_title)
                     .setMessage(R.string.usage_stats_permission_message)
                     .setPositiveButton(R.string.usage_stats_permission_grant) { _, _ ->
-                        
+
                         sharedPreferences.edit { putBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, true) }
                         isRequestingPermissions = false
                         val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
@@ -131,12 +131,12 @@ class PermissionManager(
                         isRequestingPermissions = false
                         onComplete()
                     }
-                    .setOnCancelListener { 
+                    .setOnCancelListener {
                         isRequestingPermissions = false
-                        onComplete() 
+                        onComplete()
                     }
                     .show()
-                
+
                 fixDialogTextColors(dialog)
             } else {
                 onComplete()
@@ -146,7 +146,7 @@ class PermissionManager(
         }
     }
 
-    
+
 
 
     fun isDefaultLauncher(): Boolean {
@@ -161,7 +161,7 @@ class PermissionManager(
         return resolveInfo?.activityInfo?.packageName == activity.packageName
     }
 
-    
+
 
 
     fun requestDefaultLauncher(onComplete: () -> Unit = {}) {
@@ -177,8 +177,8 @@ class PermissionManager(
                 val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)
                 @Suppress("DEPRECATION")
                 activity.startActivityForResult(intent, DEFAULT_LAUNCHER_REQUEST)
-                
-                
+
+
                 onComplete()
             } else {
                 onComplete()
@@ -191,8 +191,8 @@ class PermissionManager(
             onComplete()
         }
     }
-    
-    
+
+
 
 
     fun isDeviceAdminActive(): Boolean {
@@ -201,7 +201,7 @@ class PermissionManager(
         return devicePolicyManager.isAdminActive(componentName)
     }
 
-    
+
 
 
     fun requestDeviceAdminPermission() {
@@ -214,24 +214,24 @@ class PermissionManager(
                     putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, componentName)
                     putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, activity.getString(R.string.device_admin_description))
                 }
-                
+
                 @Suppress("DEPRECATION")
                 activity.startActivityForResult(intent, DEVICE_ADMIN_REQUEST)
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)
             .show()
-        
+
         fixDialogTextColors(dialog)
     }
 
-    
+
 
 
     fun isAccessibilityServiceEnabled(): Boolean {
         val expectedComponentName = ComponentName(activity, ScreenLockAccessibilityService::class.java)
         val enabledServices = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             ?: return false
-        
+
         val colonSplitter = TextUtils.SimpleStringSplitter(':')
         colonSplitter.setString(enabledServices)
         while (colonSplitter.hasNext()) {
@@ -244,7 +244,7 @@ class PermissionManager(
         return false
     }
 
-    
+
 
 
     fun requestAccessibilityPermission() {
@@ -257,11 +257,11 @@ class PermissionManager(
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)
             .show()
-        
+
         fixDialogTextColors(dialog)
     }
 
-    
+
 
 
     fun isNotificationPolicyAccessGranted(): Boolean {
@@ -272,7 +272,7 @@ class PermissionManager(
         return false
     }
 
-    
+
 
 
     fun requestNotificationPolicyPermission() {
@@ -285,17 +285,17 @@ class PermissionManager(
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)
             .show()
-        
+
         fixDialogTextColors(dialog)
     }
 
-    
+
 
 
     fun isNotificationListenerServiceEnabled(): Boolean {
         val enabledServices = Settings.Secure.getString(activity.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
             ?: return false
-        
+
         val componentName = ComponentName(activity, LaunchNotificationListenerService::class.java)
         val colonSplitter = TextUtils.SimpleStringSplitter(':')
         colonSplitter.setString(enabledServices)
@@ -309,7 +309,7 @@ class PermissionManager(
         return false
     }
 
-    
+
 
 
     fun requestNotificationListenerPermission() {
@@ -322,7 +322,7 @@ class PermissionManager(
             }
             .setNegativeButton(activity.getString(R.string.cancel_button), null)
             .show()
-        
+
         fixDialogTextColors(dialog)
     }
 
@@ -333,8 +333,8 @@ class PermissionManager(
             dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(textColor)
         } catch (_: Exception) {}
     }
-    
-    
+
+
 
 
     fun requestNotificationPermission() {
@@ -349,8 +349,8 @@ class PermissionManager(
             }
         }
     }
-    
-    
+
+
 
 
     fun requestStoragePermission(onGranted: () -> Unit = {}) {
@@ -359,7 +359,7 @@ class PermissionManager(
         } else {
             Manifest.permission.READ_EXTERNAL_STORAGE
         }
-        
+
         if (ContextCompat.checkSelfPermission(activity, permission)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -375,8 +375,8 @@ class PermissionManager(
             onGranted()
         }
     }
-    
-    
+
+
 
 
     fun requestActivityRecognitionPermission(onGranted: () -> Unit = {}) {
@@ -394,19 +394,19 @@ class PermissionManager(
                 }
             }
         } else {
-            
+
             onGranted()
             return
         }
-        
+
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.ACTIVITY_RECOGNITION)
             == PackageManager.PERMISSION_GRANTED
         ) {
             onGranted()
         }
     }
-    
-    
+
+
 
 
     @Suppress("unused")
@@ -416,12 +416,12 @@ class PermissionManager(
             ActivityCompat.requestPermissions(
                 activity,
                 arrayOf(Manifest.permission.RECORD_AUDIO),
-                VOICE_SEARCH_REQUEST 
+                VOICE_SEARCH_REQUEST
             )
         }
     }
-    
-    
+
+
 
 
     fun handlePermissionResult(
@@ -434,9 +434,9 @@ class PermissionManager(
         onStorageGranted: () -> Unit = {},
         onActivityRecognitionGranted: () -> Unit = {}
     ) {
-        
+
         isRequestingPermissions = false
-        
+
         when (requestCode) {
             CONTACTS_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -467,8 +467,8 @@ class PermissionManager(
                     sharedPreferences.edit { putBoolean("storage_permission_denied", false) }
                     onStorageGranted()
                 } else {
-                    if (!ActivityCompat.shouldShowRequestPermissionRationale(activity, 
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES 
+                    if (!ActivityCompat.shouldShowRequestPermissionRationale(activity,
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Manifest.permission.READ_MEDIA_IMAGES
                             else Manifest.permission.READ_EXTERNAL_STORAGE)) {
                         sharedPreferences.edit { putBoolean("storage_permission_denied", true) }
                     }
@@ -485,7 +485,7 @@ class PermissionManager(
                 }
             }
             VOICE_SEARCH_REQUEST -> {
-                
+
             }
             NOTIFICATION_PERMISSION_REQUEST -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

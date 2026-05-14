@@ -20,47 +20,47 @@ class WidgetPreviewDialog(
     private val previewManager: WidgetPreviewManager,
     private val onEnableClicked: () -> Unit
 ) : Dialog(context) {
-    
+
     private lateinit var previewImage: ImageView
     private lateinit var loadingProgress: ProgressBar
     private lateinit var widgetName: TextView
     private lateinit var widgetDescription: TextView
     private lateinit var closeButton: Button
     private lateinit var enableButton: Button
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.dialog_widget_preview)
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        
-        
+
+
         previewImage = findViewById(R.id.dialog_preview_image)
         loadingProgress = findViewById(R.id.dialog_loading_progress)
         widgetName = findViewById(R.id.dialog_widget_name)
         widgetDescription = findViewById(R.id.dialog_widget_description)
         closeButton = findViewById(R.id.btn_close)
         enableButton = findViewById(R.id.btn_enable)
-        
-        
+
+
         widgetName.text = widgetInfo.name
         widgetDescription.text = getWidgetDescription(widgetInfo.id)
-        
-        
+
+
         val isEnabled = widgetInfo.enabled
         enableButton.text = if (isEnabled) "Disable" else "Enable"
         enableButton.setBackgroundResource(
             if (isEnabled) R.drawable.dialog_preview_danger_button
             else R.drawable.dialog_preview_primary_button
         )
-        
-        
+
+
         loadPreview()
-        
-        
+
+
         closeButton.setOnClickListener {
             dismiss()
         }
-        
+
         enableButton.setOnClickListener {
             onEnableClicked()
             dismiss()
@@ -72,11 +72,11 @@ class WidgetPreviewDialog(
         val dialogWidth = (context.resources.displayMetrics.widthPixels * 0.8f).toInt()
         window?.setLayout(dialogWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
     }
-    
+
     private fun loadPreview() {
         loadingProgress.visibility = android.view.View.VISIBLE
         previewImage.setImageDrawable(null)
-        
+
         previewManager.generatePreview(widgetInfo.id, widgetInfo.name) { bitmap ->
             loadingProgress.visibility = android.view.View.GONE
             if (bitmap != null && !bitmap.isRecycled) {
@@ -86,7 +86,7 @@ class WidgetPreviewDialog(
             }
         }
     }
-    
+
     private fun getWidgetDescription(widgetId: String): String {
         return when (widgetId) {
             "calculator_widget_container" -> "Perform calculations and unit conversions"
@@ -107,16 +107,16 @@ class WidgetPreviewDialog(
             else -> "Additional widget functionality"
         }
     }
-    
+
     companion object {
         fun show(
             context: Context,
             widgetInfo: WidgetConfigurationManager.WidgetInfo,
             previewManager: WidgetPreviewManager,
-            onActionClicked: (Boolean) -> Unit  
+            onActionClicked: (Boolean) -> Unit
         ) {
             val dialog = WidgetPreviewDialog(context, widgetInfo, previewManager) {
-                onActionClicked(!widgetInfo.enabled) 
+                onActionClicked(!widgetInfo.enabled)
             }
             dialog.show()
         }

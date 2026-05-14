@@ -12,17 +12,17 @@ import com.guruswarupa.launch.R
 
 
 class TorchManager(private val context: Context) {
-    
-    private val cameraManager: CameraManager? = 
+
+    private val cameraManager: CameraManager? =
         context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
-    
+
     private var isTorchOn = false
     private var cameraId: String? = null
-    
+
     init {
         cameraManager?.let { manager ->
             try {
-                
+
                 for (id in manager.cameraIdList) {
                     val characteristics = manager.getCameraCharacteristics(id)
                     val flashAvailable = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) ?: false
@@ -32,12 +32,12 @@ class TorchManager(private val context: Context) {
                     }
                 }
             } catch (_: Exception) {
-                
+
             }
         }
     }
-    
-    
+
+
 
 
 
@@ -46,23 +46,23 @@ class TorchManager(private val context: Context) {
             Toast.makeText(context, R.string.torch_not_available, Toast.LENGTH_SHORT).show()
             return false
         }
-        
+
         return try {
             isTorchOn = !isTorchOn
             cameraManager.setTorchMode(cameraId!!, isTorchOn)
             true
         } catch (_: CameraAccessException) {
             Toast.makeText(context, R.string.torch_camera_unavailable, Toast.LENGTH_SHORT).show()
-            isTorchOn = !isTorchOn 
+            isTorchOn = !isTorchOn
             false
         } catch (e: Exception) {
             Toast.makeText(context, context.getString(R.string.torch_toggle_error, e.message), Toast.LENGTH_SHORT).show()
-            isTorchOn = !isTorchOn 
+            isTorchOn = !isTorchOn
             false
         }
     }
-    
-    
+
+
 
 
     fun turnOffTorch() {
@@ -71,7 +71,7 @@ class TorchManager(private val context: Context) {
                 cameraManager.setTorchMode(cameraId!!, false)
                 isTorchOn = false
             } catch (_: Exception) {
-                
+
             }
         }
     }

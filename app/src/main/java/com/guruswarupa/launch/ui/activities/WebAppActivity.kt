@@ -47,13 +47,13 @@ class WebAppActivity : AppCompatActivity() {
     private lateinit var titleView: TextView
     private lateinit var addressView: TextView
     private lateinit var fullscreenContainer: FrameLayout
-    
+
     private var allowedDomain: String? = null
     private var blockRedirects: Boolean = true
 
     private var customView: View? = null
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
-    
+
     private val mediaPickerLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isNotEmpty()) {
             uris.forEach { uri ->
@@ -68,14 +68,14 @@ class WebAppActivity : AppCompatActivity() {
         }
         fileUploadCallback = null
     }
-    
+
     private var fileUploadCallback: ValueCallback<Array<Uri>>? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         val appName = intent.getStringExtra(EXTRA_WEB_APP_NAME).orEmpty()
         val url = intent.getStringExtra(EXTRA_WEB_APP_URL).orEmpty()
-        
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -87,15 +87,15 @@ class WebAppActivity : AppCompatActivity() {
             finish()
             return
         }
-        
-        // Extract and store the allowed domain
+
+
         allowedDomain = extractDomain(url)
-        
-        // Load redirect blocking preference from intent (per-app setting)
+
+
         blockRedirects = intent.getBooleanExtra(EXTRA_BLOCK_REDIRECTS, true)
-        
+
         title = appName
-        
+
         WebAppIconFetcher.loadIcon(this, url) { drawable ->
             if (drawable != null) {
                 try {
@@ -106,7 +106,7 @@ class WebAppActivity : AppCompatActivity() {
                         drawable.setBounds(0, 0, width, height)
                         drawable.draw(this)
                     }
-                    
+
                     @Suppress("DEPRECATION")
                     val taskDescription = ActivityManager.TaskDescription(
                         appName,
@@ -118,7 +118,7 @@ class WebAppActivity : AppCompatActivity() {
                 }
             }
         }
-        
+
         titleView = findViewById<TextView>(R.id.web_app_title).apply { text = appName }
         addressView = findViewById<TextView>(R.id.web_app_address).apply { text = url }
         progressBar = findViewById(R.id.web_app_progress)
@@ -147,7 +147,7 @@ class WebAppActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
             javaScriptCanOpenWindowsAutomatically = false
         }
-        
+
         webView.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 progressBar.progress = newProgress
@@ -172,7 +172,7 @@ class WebAppActivity : AppCompatActivity() {
             override fun onHideCustomView() {
                 exitFullscreen()
             }
-            
+
             override fun onShowFileChooser(
                 webView: WebView?,
                 filePathCallback: ValueCallback<Array<Uri>>?,
@@ -198,14 +198,14 @@ class WebAppActivity : AppCompatActivity() {
                 }
             }
         }
-        
+
         val root = findViewById<View>(R.id.web_app_root)
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(0, systemInsets.top, 0, systemInsets.bottom)
             insets
         }
-        
+
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 if (WebAppAdBlocker.shouldBlock(request?.url)) {
@@ -226,17 +226,17 @@ class WebAppActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val targetUri = request?.url ?: return false
                 val targetUrl = targetUri.toString()
-                
-                // Block ad/tracker URLs
+
+
                 if (WebAppAdBlocker.shouldBlock(targetUri)) {
                     return true
                 }
 
                 val scheme = targetUri.scheme.orEmpty()
-                
-                // Only allow http/https URLs in WebView
+
+
                 if (scheme != "http" && scheme != "https") {
-                    // For non-web URLs (mailto:, tel:, etc.), show confirmation
+
                     val shouldOpen = try {
                         android.app.AlertDialog.Builder(this@WebAppActivity, R.style.CustomDialogTheme)
                             .setTitle("Open External App?")
@@ -250,18 +250,18 @@ class WebAppActivity : AppCompatActivity() {
                             }
                             .setNegativeButton("Cancel", null)
                             .show()
-                        false // Don't auto-open, wait for user confirmation
+                        false
                     } catch (e: Exception) {
                         false
                     }
                     return shouldOpen
                 }
-                
-                // Check if the URL is within the allowed domain
+
+
                 val targetDomain = extractDomain(targetUrl)
                 val isSameDomain = targetDomain != null && isDomainAllowed(targetDomain)
-                
-                // Block redirects to different domains (anti-phishing) - only if enabled in settings
+
+
                 if (blockRedirects && !isSameDomain) {
                     Toast.makeText(
                         this@WebAppActivity,
@@ -270,8 +270,8 @@ class WebAppActivity : AppCompatActivity() {
                     ).show()
                     return true
                 }
-                
-                // If redirects are allowed, show a warning for external domains
+
+
                 if (!blockRedirects && !isSameDomain) {
                     Toast.makeText(
                         this@WebAppActivity,
@@ -279,8 +279,8 @@ class WebAppActivity : AppCompatActivity() {
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-                
-                // Allow navigation within the same domain
+
+
                 return false
             }
 
@@ -361,10 +361,8 @@ class WebAppActivity : AppCompatActivity() {
         fullscreenContainer.visibility = View.GONE
         webView.visibility = View.VISIBLE
     }
-    
-    /**
-     * Extract domain from URL (e.g., "https://mail.google.com/inbox" -> "mail.google.com")
-     */
+
+
     private fun extractDomain(url: String): String? {
         return try {
             val uri = Uri.parse(url)
@@ -373,27 +371,25 @@ class WebAppActivity : AppCompatActivity() {
             null
         }
     }
-    
-    /**
-     * Check if domain is allowed (handles subdomains like www.)
-     */
+
+
     private fun isDomainAllowed(domain: String): Boolean {
         val allowed = allowedDomain ?: return false
-        
-        // Exact match
+
+
         if (domain == allowed) return true
-        
-        // Remove www. prefix for comparison
+
+
         val domainWithoutWww = domain.removePrefix("www.")
         val allowedWithoutWww = allowed.removePrefix("www.")
-        
+
         if (domainWithoutWww == allowedWithoutWww) return true
-        
-        // Check if it's a subdomain of the allowed domain
-        // e.g., if allowed is "google.com", allow "mail.google.com"
+
+
+
         if (domainWithoutWww.endsWith(".$allowedWithoutWww")) return true
         if (allowedWithoutWww.endsWith(".$domainWithoutWww")) return true
-        
+
         return false
     }
 

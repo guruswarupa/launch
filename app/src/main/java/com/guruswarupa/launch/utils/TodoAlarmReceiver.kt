@@ -24,10 +24,10 @@ class TodoAlarmReceiver : BroadcastReceiver() {
         val intervalMinutes = intent.getIntExtra("interval_minutes", 0)
         val intervalStartTime = intent.getStringExtra("interval_start_time")
 
-        
+
         createNotificationChannel(context)
 
-        
+
         val mainIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -38,7 +38,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        
+
         val notificationPriority = when (priorityName) {
             "HIGH" -> NotificationCompat.PRIORITY_HIGH
             "MEDIUM" -> NotificationCompat.PRIORITY_DEFAULT
@@ -46,7 +46,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             else -> NotificationCompat.PRIORITY_DEFAULT
         }
 
-        
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("Todo Reminder")
@@ -65,23 +65,23 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             )
             .build()
 
-        
+
         try {
             with(NotificationManagerCompat.from(context)) {
                 notify(requestCode, notification)
             }
-            
-            
+
+
             if (isIntervalBased && intervalMinutes > 0 && intervalStartTime != null) {
                 rescheduleIntervalAlarm(context, todoText, todoCategory, priorityName, requestCode, intervalMinutes, intervalStartTime)
             }
         } catch (_: SecurityException) {
-            
-            
+
+
         }
     }
-    
-    
+
+
 
 
     private fun rescheduleIntervalAlarm(
@@ -94,19 +94,19 @@ class TodoAlarmReceiver : BroadcastReceiver() {
         intervalStartTime: String
     ) {
         val (startHour, startMinute) = parseTime(intervalStartTime) ?: return
-        
+
         val calendar = Calendar.getInstance()
         val currentTimeInMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
-        
-        
+
+
         var nextAlarmTimeInMinutes = currentTimeInMinutes + intervalMinutes
-        
-        
+
+
         if (nextAlarmTimeInMinutes >= 24 * 60) {
             calendar.add(Calendar.DAY_OF_YEAR, 1)
             nextAlarmTimeInMinutes -= 24 * 60
         }
-        
+
         calendar.set(Calendar.HOUR_OF_DAY, nextAlarmTimeInMinutes / 60)
         calendar.set(Calendar.MINUTE, nextAlarmTimeInMinutes % 60)
         calendar.set(Calendar.SECOND, 0)
@@ -121,7 +121,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             putExtra("interval_minutes", intervalMinutes)
             putExtra("interval_start_time", intervalStartTime)
         }
-        
+
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             requestCode,
@@ -136,7 +136,7 @@ class TodoAlarmReceiver : BroadcastReceiver() {
             pendingIntent
         )
     }
-    
+
     private fun parseTime(timeString: String): Pair<Int, Int>? {
         val parts = timeString.split(":")
         if (parts.size != 2) return null

@@ -67,7 +67,7 @@ object WebAppAdBlocker {
 
         val segments = host.split('.')
         if (segments.any { it in blockedHostSegments }) return true
-        
+
         val path = uri?.path?.lowercase(Locale.ROOT).orEmpty()
         if (path.contains("/ads/") || path.contains("/adserver/") || path.contains("/adstream/")) return true
 

@@ -26,7 +26,7 @@ class CacheManager @Inject constructor(
     @BackgroundExecutor private val backgroundExecutor: ExecutorService
 ) {
     companion object {
-        private const val CACHE_DURATION = 300000L 
+        private const val CACHE_DURATION = 300000L
         private val moshi = Moshi.Builder().build()
         private val mapType = Types.newParameterizedType(Map::class.java, String::class.java, AppMetadata::class.java)
     }
@@ -46,7 +46,7 @@ class CacheManager @Inject constructor(
     fun getAppListVersion(): String {
         return try {
             val packages = packageManager.getInstalledPackages(0)
-            
+
             var maxUpdateTime = 0L
             for (pkg in packages) {
                 if (pkg.lastUpdateTime > maxUpdateTime) {
@@ -91,12 +91,12 @@ class CacheManager @Inject constructor(
             val cacheData = appListCacheFile.readText().lines().filter { it.isNotBlank() }
             if (cacheData.isEmpty()) return emptyList()
 
-            // To support multiple profiles, we MUST query from LauncherApps
+
             val launcherApps = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
             val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
-            
+
             val allAppsMap = mutableMapOf<String, ResolveInfo>()
-            
+
             for (user in launcherApps.profiles) {
                 val serial = userManager.getSerialNumberForUser(user).toInt()
                 val apps = launcherApps.getActivityList(null, user)
@@ -108,7 +108,7 @@ class CacheManager @Inject constructor(
                         applicationInfo = app.applicationInfo
                     }
                     resolveInfo.preferredOrder = serial
-                    
+
                     val key = "${resolveInfo.activityInfo.packageName}|${resolveInfo.activityInfo.name}|$serial"
                     allAppsMap[key] = resolveInfo
                 }
@@ -116,25 +116,25 @@ class CacheManager @Inject constructor(
 
             val apps = mutableListOf<ResolveInfo>()
             for (line in cacheData) {
-                // Compatibility: handle old cache format without serial
+
                 val key = if (line.count { it == '|' } == 1) {
-                    // Try to find in any profile, preferring main user if ambiguous
+
                     var found: ResolveInfo? = null
                     val mainUserSerial = userManager.getSerialNumberForUser(android.os.Process.myUserHandle()).toInt()
-                    
-                    // First check main user
+
+
                     found = allAppsMap["$line|$mainUserSerial"]
-                    
-                    // If not found, search all profiles
+
+
                     if (found == null) {
                         found = allAppsMap.values.find { "${it.activityInfo.packageName}|${it.activityInfo.name}" == line }
                     }
-                    
+
                     if (found != null) {
                         "${found.activityInfo.packageName}|${found.activityInfo.name}|${found.preferredOrder}"
                     } else line
                 } else line
-                
+
                 allAppsMap[key]?.let { apps.add(it) }
             }
 
@@ -172,7 +172,7 @@ class CacheManager @Inject constructor(
             val inputStream = FileInputStream(appMetadataCacheFile)
             val json = inputStream.bufferedReader().use { it.readText() }
             inputStream.close()
-            
+
             val adapter = moshi.adapter<Map<String, AppMetadata>>(mapType)
             val metadata = adapter.fromJson(json) ?: emptyMap()
 
@@ -205,7 +205,7 @@ class CacheManager @Inject constructor(
             try {
                 val adapter = moshi.adapter<Map<String, AppMetadata>>(mapType)
                 val json = adapter.toJson(metadata)
-                
+
                 val outputStream = FileOutputStream(appMetadataCacheFile)
                 outputStream.bufferedWriter().use { it.write(json) }
                 outputStream.close()
@@ -239,14 +239,14 @@ class CacheManager @Inject constructor(
                     } catch (_: Exception) {
                     }
                 }
-                
+
                 appMetadataCache.putAll(metadata)
                 saveAppMetadataToCache(appMetadataCache)
             } catch (_: Exception) {
             }
         }
     }
-    
+
     fun clearCache() {
         try {
             if (appListCacheFile.exists()) appListCacheFile.delete()
@@ -258,13 +258,13 @@ class CacheManager @Inject constructor(
         } catch (_: Exception) {
         }
     }
-    
+
     fun getMetadataCache(): Map<String, AppMetadata> = appMetadataCache
-    
+
     fun updateMetadataCache(cacheKey: String, metadata: AppMetadata) {
         appMetadataCache[cacheKey] = metadata
     }
-    
+
     fun removeMetadata(packageName: String) {
         appMetadataCache.remove(packageName)
     }

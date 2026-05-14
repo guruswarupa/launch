@@ -9,18 +9,18 @@ import com.guruswarupa.launch.managers.PhysicalActivityManager
 import com.guruswarupa.launch.managers.ServiceNotificationManager
 
 class PhysicalActivityTrackingService : Service() {
-    
+
     private var activityManager: PhysicalActivityManager? = null
-    
+
     companion object {
         private const val TAG = "PhysicalActivityService"
         private const val SERVICE_NAME = "Activity Tracking"
     }
-    
+
     override fun onCreate() {
         super.onCreate()
-        
-        
+
+
         try {
             val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -31,14 +31,14 @@ class PhysicalActivityTrackingService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to call startForeground", e)
         }
-        
-        
+
+
         activityManager = PhysicalActivityManager(this)
         activityManager?.initializeAsync(autoStartTracking = true)
     }
-    
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        
+
         try {
             val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -50,7 +50,7 @@ class PhysicalActivityTrackingService : Service() {
             Log.e(TAG, "Failed to re-assert startForeground", e)
         }
 
-        
+
         activityManager?.let { manager ->
             if (manager.hasActivityRecognitionPermission()) {
                 manager.startTracking()
@@ -59,15 +59,15 @@ class PhysicalActivityTrackingService : Service() {
                 stopSelf()
             }
         }
-        
-        return START_STICKY 
+
+        return START_STICKY
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         activityManager?.stopTracking()
         ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
-    
+
     override fun onBind(intent: Intent?): IBinder? = null
 }

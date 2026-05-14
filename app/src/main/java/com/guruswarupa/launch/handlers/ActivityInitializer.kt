@@ -72,12 +72,12 @@ class ActivityInitializer(
             appListEmptyState = activity.findViewById(R.id.app_list_empty_state)
             fastScroller = activity.findViewById(R.id.fast_scroller)
             fastScroller.setRecyclerView(recyclerView)
-            
-            // Improve accessibility and prevent crashes during view updates
+
+
             recyclerView.setHasFixedSize(true)
             applyFastScrollerLayout()
 
-            
+
             recyclerView.itemAnimator = null
             voiceSearchButton = activity.findViewById(R.id.voice_search_button)
             appDock = activity.findViewById(R.id.app_dock)
@@ -87,12 +87,12 @@ class ActivityInitializer(
             timeTextView = activity.findViewById(R.id.time_widget)
             dateTextView = activity.findViewById(R.id.date_widget)
             topWidgetContainer = activity.findViewById(R.id.top_widget_container)
-            
-            
+
+
             todoRecyclerView = activity.findViewById(R.id.todo_recycler_view)
             addTodoButton = activity.findViewById(R.id.add_todo_button)
-            
-            
+
+
             rightDrawerWallpaper = activity.findViewById(R.id.right_drawer_wallpaper)
             rightDrawerTime = activity.findViewById(R.id.right_drawer_time)
             rightDrawerDate = activity.findViewById(R.id.right_drawer_date)
@@ -107,15 +107,15 @@ class ActivityInitializer(
             setupHeaderVisibilityOnScroll(recyclerView)
             setupTimeDateListeners(timeTextView, dateTextView)
             applyPhoneLandscapeOptimizations()
-            
-            // Apply top widget visibility preference
+
+
             val topWidgetEnabled = sharedPreferences.getBoolean(
                 com.guruswarupa.launch.models.Constants.Prefs.TOP_WIDGET_ENABLED,
                 true
             )
             topWidgetContainer.visibility = if (topWidgetEnabled) View.VISIBLE else View.GONE
-            
-            // Apply additional top margin to search bar when widget is disabled
+
+
             if (!topWidgetEnabled) {
                 val extraMargin = activity.resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden)
                 val params = searchContainer.layoutParams as MarginLayoutParams
@@ -247,7 +247,7 @@ class ActivityInitializer(
     }
 
     private fun setupHeaderVisibilityOnScroll(recyclerView: RecyclerView) {
-        val hideThreshold = (activity.resources.displayMetrics.density * 40).toInt() 
+        val hideThreshold = (activity.resources.displayMetrics.density * 40).toInt()
         val showThreshold = (activity.resources.displayMetrics.density * 10).toInt()
         var currentScrollState = RecyclerView.SCROLL_STATE_IDLE
 
@@ -275,17 +275,17 @@ class ActivityInitializer(
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val searchBox = activity.findViewById<android.widget.AutoCompleteTextView>(R.id.search_box)
                 val isSearching = !searchBox?.text.toString().trim().isNullOrEmpty()
-                
+
                 if (!isSearching) {
                     val offset = rv.computeVerticalScrollOffset()
                     val scrollRange = rv.computeVerticalScrollRange()
                     val viewportHeight = rv.height
-                    
-                    // Only hide header when showing all apps, not when showing favorites
+
+
                     val isShowingFavorites = (activity as? com.guruswarupa.launch.MainActivity)?.showOnlyFavoritesInitially ?: false
-                    
+
                     if (dy > 0 && !headerHidden && offset > hideThreshold && !isShowingFavorites) {
-                        
+
                         if (scrollRange > viewportHeight * 1.5) {
                             setHeaderVisibility(false)
                         }
@@ -301,7 +301,7 @@ class ActivityInitializer(
             }
         })
 
-        
+
         recyclerView.setOnTouchListener(object : View.OnTouchListener {
             private var startY = 0f
             override fun onTouch(v: View, event: MotionEvent): Boolean {
@@ -309,7 +309,7 @@ class ActivityInitializer(
                     MotionEvent.ACTION_DOWN -> startY = event.y
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         val deltaY = event.y - startY
-                        
+
                         if (deltaY > 50 && headerHidden) {
                             if (!recyclerView.canScrollVertically(-1)) {
                                 setHeaderVisibility(true)
@@ -317,11 +317,11 @@ class ActivityInitializer(
                         }
                     }
                 }
-                return false 
+                return false
             }
         })
 
-        
+
         recyclerView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             if (headerHidden) {
                 val scrollRange = recyclerView.computeVerticalScrollRange()
@@ -335,7 +335,7 @@ class ActivityInitializer(
         }
     }
 
-    
+
 
 
 
@@ -343,15 +343,15 @@ class ActivityInitializer(
         if (visible && !headerHidden) return
         if (!visible && headerHidden) return
         headerHidden = !visible
-        
+
         val stack = views.topWidgetContainer.parent as? ViewGroup ?: return
-        
-        // Check if top widget is disabled by preference
+
+
         val topWidgetEnabled = sharedPreferences.getBoolean(
             com.guruswarupa.launch.models.Constants.Prefs.TOP_WIDGET_ENABLED,
             true
         )
-        
+
         val transition = TransitionSet().apply {
             addTransition(Fade().apply {
                 addTarget(views.topWidgetContainer)
@@ -361,17 +361,17 @@ class ActivityInitializer(
             duration = 250
             interpolator = android.view.animation.AccelerateDecelerateInterpolator()
         }
-        
+
         TransitionManager.beginDelayedTransition(stack, transition)
 
         views.topWidgetContainer.isVisible = visible && topWidgetEnabled
-        
+
         (views.appDock.parent as? View)?.isVisible = visible
-        
-        // Apply appropriate margin based on widget preference and visibility
+
+
         val targetMargin = when {
             !topWidgetEnabled -> {
-                // Widget disabled by preference - use larger margin
+
                 activity.resources.getDimensionPixelSize(R.dimen.search_top_margin_when_widget_hidden)
             }
             visible -> defaultSearchTopMargin
@@ -464,7 +464,7 @@ class ActivityInitializer(
 
     fun setupDrawerLayout() {
         val drawerLayout = views.drawerLayout
-        
+
         drawerLayout.post {
             val displayMetrics = activity.resources.displayMetrics
             val drawerWidth = displayMetrics.widthPixels
@@ -506,7 +506,7 @@ class ActivityInitializer(
                 }
             }
 
-            
+
             val leftDrawerView = activity.findViewById<FrameLayout>(R.id.widgets_drawer)
             leftDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
@@ -543,7 +543,7 @@ class ActivityInitializer(
                 }
             }
 
-            
+
             val rightDrawerView = activity.findViewById<FrameLayout>(R.id.wallpaper_drawer)
             rightDrawerView?.let {
                 val params = it.layoutParams as ViewGroup.LayoutParams
@@ -552,7 +552,7 @@ class ActivityInitializer(
             }
         }
 
-        
+
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.START)
         drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED, androidx.core.view.GravityCompat.END)
     }

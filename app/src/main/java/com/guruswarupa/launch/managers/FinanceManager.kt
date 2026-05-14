@@ -9,7 +9,7 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
     private val currentMonth = dateFormat.format(Date())
-    
+
     companion object {
         private const val BALANCE_KEY = "finance_balance"
         private const val CURRENCY_KEY = "finance_currency"
@@ -37,16 +37,16 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
             "NZD" to "NZ$"
         )
     }
-    
+
     fun getCurrency(): String {
         val currencyCode = sharedPreferences.getString(CURRENCY_KEY, "USD") ?: "USD"
         return SUPPORTED_CURRENCIES[currencyCode] ?: "$"
     }
-    
+
     fun getCurrencyCode(): String {
         return sharedPreferences.getString(CURRENCY_KEY, "USD") ?: "USD"
     }
-    
+
     fun setCurrency(currencyCode: String) {
         if (SUPPORTED_CURRENCIES.containsKey(currencyCode)) {
             sharedPreferences.edit { putString(CURRENCY_KEY, currencyCode) }
@@ -79,10 +79,10 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
         return try {
             sharedPreferences.getFloat(BALANCE_KEY, 0.0f).toDouble()
         } catch (_: ClassCastException) {
-            
+
             val intBalance = sharedPreferences.getInt(BALANCE_KEY, 0)
             val floatBalance = intBalance.toFloat()
-            
+
             sharedPreferences.edit { putFloat(BALANCE_KEY, floatBalance) }
             floatBalance.toDouble()
         }
@@ -116,25 +116,25 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
         val transactionData = "$type:$amount:$timestamp:$description"
         sharedPreferences.edit { putString(transactionKey, transactionData) }
 
-        
+
         cleanupOldTransactions()
     }
 
     fun deleteTransaction(timestamp: Long) {
         val key = "transaction_$timestamp"
         val transactionData = sharedPreferences.getString(key, "") ?: ""
-        
+
         if (transactionData.isNotEmpty()) {
             val parts = transactionData.split(":")
             if (parts.size >= 2) {
                 val type = parts[0]
                 val amount = parts[1].toDoubleOrNull() ?: 0.0
-                
-                
+
+
                 val currentBalance = getBalance()
                 sharedPreferences.edit { putFloat(BALANCE_KEY, (currentBalance - amount).toFloat()) }
-                
-                
+
+
                 val date = Date(timestamp)
                 val monthStr = dateFormat.format(date)
                 if (type == "income") {
@@ -142,10 +142,10 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
                     sharedPreferences.edit { putFloat("finance_income_$monthStr", (monthlyIncome - amount).toFloat()) }
                 } else {
                     val monthlyExpenses = sharedPreferences.getFloat("finance_expenses_$monthStr", 0.0f).toDouble()
-                    
+
                     sharedPreferences.edit { putFloat("finance_expenses_$monthStr", (monthlyExpenses - kotlin.math.abs(amount)).toFloat()) }
                 }
-                
+
                 sharedPreferences.edit { remove(key) }
             }
         }
@@ -175,17 +175,17 @@ class FinanceManager(private val sharedPreferences: SharedPreferences) {
     }
 
     private fun cleanupOldTransactions() {
-        
+
         val allPrefs = sharedPreferences.all
         val transactionKeys = allPrefs.keys.filter { it.startsWith("transaction_") }
 
         if (transactionKeys.size > 100) {
-            
+
             val sortedKeys = transactionKeys.sortedByDescending { key ->
                 key.substringAfter("transaction_").toLongOrNull() ?: 0L
             }
 
-            
+
             sharedPreferences.edit {
                 sortedKeys.drop(100).forEach { key ->
                     remove(key)

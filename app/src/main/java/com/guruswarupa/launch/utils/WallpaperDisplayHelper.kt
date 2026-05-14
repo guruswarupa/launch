@@ -15,13 +15,13 @@ import com.guruswarupa.launch.models.Constants
 import com.guruswarupa.launch.models.ThemeOption
 
 object WallpaperDisplayHelper {
-    
+
 
 
 
     fun applySystemWallpaper(target: ImageView, fallbackRes: Int = R.drawable.wallpaper_background) {
         val context = target.context
-        
+
         val wallpaperDrawable = try {
             WallpaperManager.getInstance(context).drawable
         } catch (_: Exception) {
@@ -34,15 +34,15 @@ object WallpaperDisplayHelper {
             target.setImageResource(fallbackRes)
         }
     }
-    
-    
+
+
 
 
 
     fun applyThemeWallpaper(target: ImageView, themeId: String, fallbackRes: Int = R.drawable.wallpaper_background) {
         val context = target.context
         val theme = ThemeOption.PREDEFINED_THEMES.find { it.id == themeId }
-        
+
         if (theme != null) {
             val options = RequestOptions()
                 .format(DecodeFormat.PREFER_ARGB_8888)
@@ -62,7 +62,7 @@ object WallpaperDisplayHelper {
             applySystemWallpaper(target, fallbackRes)
         }
     }
-    
+
     fun applyThemePreview(target: ImageView, themeId: String) {
         val context = target.context
         if (themeId == "system_default") {

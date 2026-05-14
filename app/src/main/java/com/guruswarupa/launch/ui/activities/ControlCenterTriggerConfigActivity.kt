@@ -45,7 +45,7 @@ class ControlCenterTriggerConfigActivity : ComponentActivity() {
         val heightSeekbar = findViewById<View>(R.id.control_center_trigger_height_seekbar) as SeekBar
         val widthSeekbar = findViewById<View>(R.id.control_center_trigger_width_seekbar) as SeekBar
 
-        // Setup position spinner
+
         val positions = arrayOf(getString(R.string.control_center_trigger_position_left), getString(R.string.control_center_trigger_position_right))
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, positions)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -62,13 +62,13 @@ class ControlCenterTriggerConfigActivity : ComponentActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // Setup lock switch
+
         lockSwitch.isChecked = prefs.getBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_LOCKED, false)
         lockSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_LOCKED, isChecked).apply()
         }
 
-        // Setup alpha seekbar (20-100%, stored as 20-100, UI shows 0-80)
+
         val savedAlpha = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_ALPHA, 80)
         alphaSeekbar.progress = savedAlpha - 20
         alphaSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -80,7 +80,7 @@ class ControlCenterTriggerConfigActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Setup height seekbar (40-112dp, stored as dp, UI shows 0-72)
+
         val savedHeight = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_HEIGHT_DP, 72)
         heightSeekbar.progress = savedHeight - 40
         heightSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -92,7 +92,7 @@ class ControlCenterTriggerConfigActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Setup width seekbar (12-36dp, stored as dp, UI shows 0-24)
+
         val savedWidth = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_WIDTH_DP, 18)
         widthSeekbar.progress = savedWidth - 12
         widthSeekbar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -104,14 +104,14 @@ class ControlCenterTriggerConfigActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Setup cancel button
+
         findViewById<Button>(R.id.cancel_control_center_trigger_config).setOnClickListener {
             finish()
         }
 
-        // Setup save button
+
         findViewById<Button>(R.id.save_control_center_trigger_config).setOnClickListener {
-            // Send broadcast to refresh the trigger appearance
+
             sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED"))
             finish()
         }

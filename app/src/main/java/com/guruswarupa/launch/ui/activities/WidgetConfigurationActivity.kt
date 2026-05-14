@@ -54,12 +54,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     private var allWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
     private var filteredWidgets = mutableListOf<WidgetConfigurationManager.WidgetInfo>()
     private var currentQuery: String = ""
-    
+
     private val prefs by lazy { getSharedPreferences(prefsName, MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         val systemBarManager = SystemBarManager(this)
         window.decorView.post {
             systemBarManager.makeSystemBarsTransparent()
@@ -71,10 +71,10 @@ class WidgetConfigurationActivity : AppCompatActivity() {
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         }
-        
+
         supportRequestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
         supportActionBar?.hide()
-        
+
         setContentView(R.layout.activity_widget_configuration)
         applyBackgroundTranslucency()
 
@@ -93,8 +93,8 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         val sharedPreferences = getSharedPreferences(prefsName, MODE_PRIVATE)
         widgetConfigManager = WidgetConfigurationManager(this, sharedPreferences)
         previewManager = WidgetPreviewManager(this)
-        
-        
+
+
         widgetManager = WidgetManager(this, android.widget.LinearLayout(this))
 
         val wallpaperBackground = findViewById<ImageView>(R.id.wallpaper_background)
@@ -106,7 +106,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         emptyStateText = findViewById(R.id.empty_state_text)
         widgetSectionDecoration = WidgetSectionDecoration(this)
         widgetsRecyclerView.addItemDecoration(widgetSectionDecoration)
-        
+
         val searchInput = findViewById<EditText>(R.id.search_widget_input)
 
         val configuredFontColor = TypographyManager.getConfiguredFontColor(this)
@@ -116,12 +116,12 @@ class WidgetConfigurationActivity : AppCompatActivity() {
         }
         TypographyManager.applyToView(searchInput)
 
-        
+
         loadWidgets()
 
         widgetsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
-        
-        
+
+
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN,
             0
@@ -164,7 +164,7 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                
+
             }
 
             override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
@@ -187,21 +187,21 @@ class WidgetConfigurationActivity : AppCompatActivity() {
 
         searchInput?.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            
+
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 filterWidgets(s?.toString().orEmpty())
             }
-            
+
             override fun afterTextChanged(s: Editable?) {}
         })
     }
-    
+
     @SuppressLint("NotifyDataSetChanged")
     fun loadWidgets() {
         previewManager.clearCache()
         allWidgets = widgetConfigManager.getWidgetConfiguration().toMutableList()
         filteredWidgets = allWidgets.toMutableList()
-        
+
         if (adapter == null) {
             adapter = WidgetConfigAdapter(
                 widgets = filteredWidgets,
@@ -273,97 +273,91 @@ class WidgetConfigurationActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun Int.toPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
     }
-    
+
     private fun applyBackgroundTranslucency() {
         val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)
         val color = Color.argb(alpha, 0, 0, 0)
         findViewById<View>(R.id.settings_overlay)?.setBackgroundColor(color)
     }
-    
+
     fun updateWidgetState(widgetId: String, enabled: Boolean) {
         val filteredPosition = filteredWidgets.indexOfFirst { it.id == widgetId }
         val originalPosition = allWidgets.indexOfFirst { it.id == widgetId }
-        
-        // Update the widget state in both lists
+
+
         if (filteredPosition >= 0) {
             filteredWidgets[filteredPosition] = filteredWidgets[filteredPosition].copy(enabled = enabled)
         }
-        
+
         if (originalPosition >= 0) {
             allWidgets[originalPosition] = allWidgets[originalPosition].copy(enabled = enabled)
         }
 
         persistWidgetConfiguration()
-        
-        // Move widget to correct section based on enabled state
+
+
         if (currentQuery.isEmpty()) {
             moveWidgetToCorrectSection(widgetId)
         } else {
-            // If searching, just refresh the filtered list
+
             filterWidgets(currentQuery)
         }
-        
+
         val widget = allWidgets.find { it.id == widgetId }
         if (widget != null) {
             val action = if (enabled) "enabled" else "disabled"
             Toast.makeText(this, "${widget.name} $action!", Toast.LENGTH_SHORT).show()
         }
     }
-    
-    /**
-     * Moves a widget to the correct section (enabled/disabled) when its state changes
-     * Order: Enabled widgets -> Disabled System widgets -> Disabled Custom widgets
-     */
+
+
     private fun moveWidgetToCorrectSection(widgetId: String) {
         val widgetIndex = allWidgets.indexOfFirst { it.id == widgetId }
         if (widgetIndex < 0) return
-        
+
         val widget = allWidgets[widgetIndex]
-        
-        // Remove widget from current position
+
+
         allWidgets.removeAt(widgetIndex)
-        
-        // Calculate the correct position based on the widget's state
+
+
         val newPosition = calculateWidgetPosition(widget)
-        
-        // Insert widget at the correct position
+
+
         allWidgets.add(newPosition, widget)
-        
-        // Update filtered list to match
+
+
         filteredWidgets = allWidgets.toMutableList()
-        
-        // Notify adapter and refresh UI
+
+
         adapter?.updateWidgets(filteredWidgets)
         adapter?.notifyDataSetChanged()
-        
-        // Refresh section headers and persist
+
+
         refreshSectionHeaders()
         updateListChrome()
         persistWidgetConfiguration()
     }
-    
-    /**
-     * Calculates the correct position for a widget based on its state
-     * Maintains order: Enabled -> Disabled System -> Disabled Custom
-     */
+
+
     private fun calculateWidgetPosition(widget: WidgetConfigurationManager.WidgetInfo): Int {
         return when {
-            // Enabled widgets go at the top
+
             widget.enabled -> {
                 val firstDisabledIndex = allWidgets.indexOfFirst { !it.enabled }
                 if (firstDisabledIndex >= 0) firstDisabledIndex else allWidgets.size
             }
-            // Disabled system widgets: after enabled, before disabled custom
+
             widget.isSystemWidget -> {
                 val firstDisabledCustomIndex = allWidgets.indexOfFirst { !it.enabled && !it.isSystemWidget }
                 if (firstDisabledCustomIndex >= 0) firstDisabledCustomIndex else allWidgets.size
             }
-            // Disabled custom widgets go at the end
+
             else -> allWidgets.size
         }
     }
@@ -387,35 +381,35 @@ class WidgetConfigurationActivity : AppCompatActivity() {
     }
 
     fun addSystemWidgetProvider(widget: WidgetConfigurationManager.WidgetInfo) {
-        // Check if this provider is already added/bound
-        val alreadyExists = allWidgets.any { 
-            it.providerPackage == widget.providerPackage && 
+
+        val alreadyExists = allWidgets.any {
+            it.providerPackage == widget.providerPackage &&
             it.providerClass == widget.providerClass &&
-            it.appWidgetId != null // Already bound
+            it.appWidgetId != null
         }
-        
+
         if (alreadyExists) {
             Toast.makeText(this, "${widget.name} is already added!", Toast.LENGTH_SHORT).show()
             return
         }
-        
+
         val pkg = widget.providerPackage ?: return
         val cls = widget.providerClass ?: return
         widgetManager.bindProvider(this, pkg, cls, ActivityResultHandler.REQUEST_BIND_WIDGET)
     }
-    
+
     @SuppressLint("NotifyDataSetChanged")
     private fun filterWidgets(query: String) {
         currentQuery = query.trim()
         filteredWidgets = if (currentQuery.isEmpty()) {
             allWidgets.toMutableList()
         } else {
-            allWidgets.filter { 
+            allWidgets.filter {
                 it.name.contains(currentQuery, ignoreCase = true) ||
                 getWidgetDescription(it).contains(currentQuery, ignoreCase = true)
             }.toMutableList()
         }
-        
+
         adapter?.updateWidgets(filteredWidgets)
         adapter?.notifyDataSetChanged()
 

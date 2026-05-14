@@ -39,20 +39,20 @@ class PermissionsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        
+
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
-        
+
         setContentView(R.layout.activity_permissions)
         applyContentInsets()
         applyBackgroundTranslucency()
 
         permissionsList = findViewById(R.id.permissions_list)
         WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.wallpaper_background))
-        
+
         findViewById<Button>(R.id.done_button).setOnClickListener { finish() }
         setupPermissionsList()
     }
@@ -82,21 +82,21 @@ class PermissionsActivity : ComponentActivity() {
         val list = mutableListOf<PermItem>()
         list.add(PermItem("Launcher", "Set as default home", isDefaultLauncher(), type = "DEFAULT"))
         list.add(PermItem("Contacts", "Search & call contacts", check(Manifest.permission.READ_CONTACTS), Manifest.permission.READ_CONTACTS))
-        
+
         val storage = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
         list.add(PermItem("Files & Media", "Search files and media", check(storage), storage))
-        
+
         if (Build.VERSION.SDK_INT >= 33) list.add(PermItem("Notifications", "Show widget alerts", check(Manifest.permission.POST_NOTIFICATIONS), Manifest.permission.POST_NOTIFICATIONS))
         list.add(PermItem("Microphone", "Voice search access", check(Manifest.permission.RECORD_AUDIO), Manifest.permission.RECORD_AUDIO))
         list.add(PermItem("Usage Stats", "App time tracking", hasUsageStats(), type = "USAGE"))
         list.add(PermItem("Overlay", "Screen dimming tools", Settings.canDrawOverlays(this), type = "OVERLAY"))
         list.add(PermItem("Accessibility", "Double tap lock", hasAccessibility(), type = "ACCESSIBILITY"))
-        
-        
+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             list.add(PermItem("Physical Activity", "Track steps and distance", check(Manifest.permission.ACTIVITY_RECOGNITION), Manifest.permission.ACTIVITY_RECOGNITION))
         }
-        
+
         return list
     }
 
@@ -117,7 +117,7 @@ class PermissionsActivity : ComponentActivity() {
             "OVERLAY" -> startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, "package:$packageName".toUri()))
             "ACCESSIBILITY" -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             "NORMAL" -> {
-                
+
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.fromParts("package", packageName, null)
                 }
@@ -153,7 +153,7 @@ class PermissionsActivity : ComponentActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
+
         setupPermissionsList()
     }
 

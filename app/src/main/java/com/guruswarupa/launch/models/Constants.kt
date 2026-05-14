@@ -6,7 +6,7 @@ import android.annotation.SuppressLint
 
 
 object Constants {
-    
+
     @SuppressLint("unused")
     object Prefs {
         const val PREFS_NAME = "com.guruswarupa.launch.PREFS"
@@ -89,18 +89,18 @@ object Constants {
         const val CONTACTS_PERMISSION_DENIED = "contacts_permission_denied"
         const val USAGE_STATS_PERMISSION_DENIED = "usage_stats_permission_denied"
         const val POWER_SAVER_MODE = "power_saver_mode"
-        
-        
+
+
         const val VAULT_TIMEOUT_ENABLED = "vault_timeout_enabled"
-        const val VAULT_TIMEOUT_DURATION = "vault_timeout_duration"  
+        const val VAULT_TIMEOUT_DURATION = "vault_timeout_duration"
         const val VAULT_SETUP_COMPLETE = "vault_setup_complete"
-        
-        // Focus Mode
-        const val FOCUS_MODE_TYPE = "focus_mode_type" // "strict" or "casual"
+
+
+        const val FOCUS_MODE_TYPE = "focus_mode_type"
         const val FOCUS_MODE_TYPE_STRICT = "strict"
         const val FOCUS_MODE_TYPE_CASUAL = "casual"
-        
-        // Dock Visibility
+
+
         const val DOCK_HIDE_WORK_PROFILE = "dock_hide_work_profile"
         const val DOCK_HIDE_FOCUS_MODE = "dock_hide_focus_mode"
         const val DOCK_HIDE_WORKSPACES = "dock_hide_workspaces"
@@ -113,19 +113,19 @@ object Constants {
 
     const val TYPOGRAPHY_FONT_COLOR_DEFAULT = "#FFFFFF"
 
-    
+
     const val FILE_PROVIDER_AUTHORITY_SUFFIX = ".fileprovider"
-    
-    
+
+
     const val SHARED_APKS_DIR = "shared_apks"
-    
-    
+
+
     const val APK_EXTENSION = ".apk"
-    
-    
+
+
     const val MIME_TYPE_APK = "application/vnd.android.package-archive"
     const val MIME_TYPE_ALL = "*/*"
-    
+
     const val APP_NAME_SANITIZE_REGEX = "[^a-zA-Z0-9.-]"
     const val APP_NAME_SANITIZE_REPLACEMENT = "_"
 }

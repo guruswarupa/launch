@@ -23,7 +23,7 @@ import com.guruswarupa.launch.models.Constants
 
 
 class ShakeDetectionService : Service() {
-    
+
     private var shakeDetector: ShakeDetector? = null
     private var torchManager: TorchManager? = null
     private var isRunning = false
@@ -32,23 +32,23 @@ class ShakeDetectionService : Service() {
     private val powerManager: PowerManager by lazy {
         getSystemService(POWER_SERVICE) as PowerManager
     }
-    
+
     companion object {
         private const val TAG = "ShakeDetectionService"
         private const val SERVICE_NAME = "Shake Detection"
-        
+
         const val ACTION_START = "com.guruswarupa.launch.START_SHAKE_DETECTION"
         const val ACTION_STOP = "com.guruswarupa.launch.STOP_SHAKE_DETECTION"
     }
-    
+
     override fun onCreate() {
         super.onCreate()
-        
-        
-        
+
+
+
         startForegroundServiceStatus()
-        
-        
+
+
         torchManager = TorchManager(this)
         shakeDetector = ShakeDetector(this) {
             if (GestureCoordinator.requestTrigger()) {
@@ -63,14 +63,14 @@ class ShakeDetectionService : Service() {
 
     private fun startForegroundServiceStatus() {
         try {
-            
+
             val notification = ServiceNotificationManager.createNotification(this)
-            
-            
+
+
             ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                
+
                 ServiceCompat.startForeground(
                     this,
                     ServiceNotificationManager.NOTIFICATION_ID,
@@ -78,8 +78,8 @@ class ShakeDetectionService : Service() {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
                 )
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                
-                
+
+
                 startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
             } else {
                 startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
@@ -87,20 +87,20 @@ class ShakeDetectionService : Service() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start foreground service", e)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                
+
                 stopSelf()
             }
         }
     }
-    
+
     private fun applySensitivity() {
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE)
         val sensitivity = prefs.getInt(Constants.Prefs.SHAKE_SENSITIVITY, 5)
         shakeDetector?.updateSensitivity(sensitivity)
     }
-    
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        
+
         startForegroundServiceStatus()
 
         try {
@@ -125,12 +125,12 @@ class ShakeDetectionService : Service() {
         }
         return START_STICKY
     }
-    
+
     private fun updateShakeDetectionState() {
         val isScreenOn = powerManager.isInteractive
         if (isScreenOn) shakeDetector?.start() else shakeDetector?.stop()
     }
-    
+
     private fun registerScreenReceiver() {
         if (screenOnReceiver != null) return
         screenOnReceiver = object : BroadcastReceiver() {
@@ -147,7 +147,7 @@ class ShakeDetectionService : Service() {
         }
         ContextCompat.registerReceiver(this, screenOnReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
-    
+
     private fun registerSettingsReceiver() {
         if (settingsReceiver != null) return
         settingsReceiver = object : BroadcastReceiver() {
@@ -158,7 +158,7 @@ class ShakeDetectionService : Service() {
         val filter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         ContextCompat.registerReceiver(this, settingsReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
@@ -168,6 +168,6 @@ class ShakeDetectionService : Service() {
         torchManager?.turnOffTorch()
         ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, false)
     }
-    
+
     override fun onBind(intent: Intent?): IBinder? = null
 }

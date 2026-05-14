@@ -30,23 +30,23 @@ object DialogStyler {
         val context = dialog.context
         val prefs = context.getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
         val themeColor = TypographyManager.getConfiguredFontColor(context) ?: Color.WHITE
-        
-        
+
+
         applyDialogTranslucency(dialog, prefs)
 
         dialog.setOnShowListener {
-            
+
             val titleView = dialog.findViewById<TextView>(context.resources.getIdentifier("alertTitle", "id", "android"))
                 ?: dialog.findViewById<TextView>(android.R.id.title)
-            
+
             titleView?.setTextColor(themeColor)
 
-            
+
             dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(themeColor)
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(Color.parseColor("#B0B0B0"))
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(Color.parseColor("#B0B0B0"))
-            
-            
+
+
             dialog.listView?.let { listView ->
                 for (i in 0 until listView.childCount) {
                     val itemView = listView.getChildAt(i)
@@ -57,16 +57,16 @@ object DialogStyler {
             }
         }
     }
-    
+
     private fun applyDialogTranslucency(dialog: AlertDialog, prefs: android.content.SharedPreferences) {
         val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)
         val color = Color.argb(alpha, 0, 0, 0)
-        
+
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(color))
     }
 
-    
+
 
 
     fun createThemedTextAdapter(context: Context, items: Array<String>): ArrayAdapter<String> {

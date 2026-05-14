@@ -34,24 +34,24 @@ class WorkspaceConfigActivity : ComponentActivity() {
     private lateinit var titleText: TextView
     private lateinit var subtitleText: TextView
     private lateinit var workspacesContainer: LinearLayout
-    
+
     private val backgroundExecutor = Executors.newSingleThreadExecutor()
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        
+
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
-        
+
         setContentView(R.layout.activity_workspace_config)
-        
+
         workspaceManager = WorkspaceManager(prefs)
         webAppManager = WebAppManager(prefs)
-        
+
         workspaceList = findViewById(R.id.workspace_list)
         createWorkspaceButton = findViewById(R.id.create_workspace_button)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
@@ -60,60 +60,60 @@ class WorkspaceConfigActivity : ComponentActivity() {
         titleText = findViewById(R.id.title_text)
         subtitleText = findViewById(R.id.subtitle_text)
         workspacesContainer = findViewById(R.id.workspaces_container)
-        
-        
+
+
         applyThemeAndWallpaper()
-        
+
         createWorkspaceButton.setOnClickListener {
             showCreateWorkspaceDialog()
         }
-        
+
         loadWorkspaces()
     }
-    
+
     private fun applyBackgroundTranslucency() {
         val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)
         val color = Color.argb(alpha, 0, 0, 0)
         themeOverlay.setBackgroundColor(color)
     }
-    
+
     private fun applyThemeAndWallpaper() {
-        
+
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
-        
+
         applyBackgroundTranslucency()
-        
+
         workspacesContainer.setBackgroundResource(R.drawable.widget_background)
-        
+
         val textColor = ContextCompat.getColor(this, R.color.white)
         val subTextColor = Color.parseColor("#B0B0B0")
-        
+
         titleText.setTextColor(textColor)
         subtitleText.setTextColor(subTextColor)
         createWorkspaceButton.setTextColor(textColor)
-        
+
         createWorkspaceButton.setBackgroundResource(R.drawable.settings_card_background)
     }
-    
+
     override fun onResume() {
         super.onResume()
         loadWorkspaces()
         applyThemeAndWallpaper()
     }
-    
+
     private fun loadWorkspaces() {
         val workspaces = workspaceManager.getAllWorkspaces()
-        
-        // Only show user-created workspaces (work profile is now separate)
+
+
         val allWorkspaces = workspaces
-        
-        val workspaceNames = allWorkspaces.map { 
+
+        val workspaceNames = allWorkspaces.map {
             val appCount = it.appPackageNames.size
             "${it.name} ($appCount apps)"
         }.toTypedArray()
-        
-        
+
+
         val adapter = object : ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, workspaceNames) {
             override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
                 val view = super.getView(position, convertView, parent)
@@ -123,24 +123,24 @@ class WorkspaceConfigActivity : ComponentActivity() {
             }
         }
         workspaceList.adapter = adapter
-        
+
         workspaceList.setOnItemClickListener { _, _, position, _ ->
             val workspace = workspaces[position]
             showWorkspaceEditor(workspace)
         }
-        
+
         workspaceList.setOnItemLongClickListener { _, _, position, _ ->
             val workspace = workspaces[position]
             showDeleteWorkspaceDialog(workspace)
             true
         }
     }
-    
+
     private fun showCreateWorkspaceDialog() {
         val input = EditText(this)
         input.hint = "Workspace name"
         DialogStyler.styleInput(this, input)
-        
+
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Create Workspace")
             .setDialogInputView(this, input)
@@ -155,7 +155,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     private fun showAppPickerForWorkspace(workspaceName: String, existingWorkspaceId: String?) {
         val mainIntent = Intent(Intent.ACTION_MAIN, null)
         mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
@@ -181,7 +181,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
             }
             return
         }
-        
+
         val selectedApps = mutableSetOf<String>()
         if (existingWorkspaceId != null) {
             val existingWorkspace = workspaceManager.getWorkspace(existingWorkspaceId)
@@ -231,10 +231,10 @@ class WorkspaceConfigActivity : ComponentActivity() {
 
         dialog.show()
     }
-    
+
     private fun showWorkspaceEditor(workspace: Workspace) {
         val options = arrayOf("Edit Apps", "Rename", "Activate")
-        
+
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle(workspace.name)
             .setItems(options) { _, which ->
@@ -251,13 +251,13 @@ class WorkspaceConfigActivity : ComponentActivity() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     private fun showRenameWorkspaceDialog(workspace: Workspace) {
         val input = EditText(this)
         input.setText(workspace.name)
         input.hint = "Workspace name"
         DialogStyler.styleInput(this, input)
-        
+
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Rename Workspace")
             .setDialogInputView(this, input)
@@ -274,7 +274,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     private fun showDeleteWorkspaceDialog(workspace: Workspace) {
         AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Delete Workspace")
@@ -287,7 +287,7 @@ class WorkspaceConfigActivity : ComponentActivity() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         backgroundExecutor.shutdown()

@@ -25,17 +25,17 @@ class ScreenRecordingService : Service() {
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var mediaRecorder: MediaRecorder? = null
-    
+
     private var screenWidth = 720
     private var screenHeight = 1280
     private var screenDensity = 240
-    
+
     private var isRecording = false
 
     companion object {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "screen_recording_channel"
-        
+
         const val ACTION_START = "START_RECORDING"
         const val ACTION_STOP = "STOP_RECORDING"
         const val EXTRA_RESULT_CODE = "RESULT_CODE"
@@ -60,7 +60,7 @@ class ScreenRecordingService : Service() {
             }
             context.startService(intent)
         }
-        
+
         var isRunning = false
             private set
     }
@@ -77,7 +77,7 @@ class ScreenRecordingService : Service() {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra(EXTRA_DATA)
                 }
-                
+
                 if (resultCode != 0 && data != null) {
                     startRecording(resultCode, data)
                 } else {
@@ -94,10 +94,10 @@ class ScreenRecordingService : Service() {
 
     private fun startRecording(resultCode: Int, data: Intent) {
         if (isRecording) return
-        
+
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, createNotification())
-        
+
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val metrics = DisplayMetrics()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -113,30 +113,30 @@ class ScreenRecordingService : Service() {
             screenDensity = metrics.densityDpi
         }
 
-        
+
         if (screenWidth % 2 != 0) screenWidth--
         if (screenHeight % 2 != 0) screenHeight--
 
         val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-        
+
         if (mediaProjection == null) {
             stopSelf()
             return
         }
 
         initRecorder()
-        
+
         try {
             mediaRecorder?.start()
-            
+
             virtualDisplay = mediaProjection?.createVirtualDisplay(
                 "ScreenRecording",
                 screenWidth, screenHeight, screenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mediaRecorder?.surface, null, null
             )
-            
+
             isRecording = true
             isRunning = true
             Toast.makeText(this, "Recording started", Toast.LENGTH_SHORT).show()
@@ -161,7 +161,7 @@ class ScreenRecordingService : Service() {
         val fileName = "ScreenRecord_$timeStamp.mp4"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            
+
             val contentValues = android.content.ContentValues().apply {
                 put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, fileName)
                 put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
@@ -191,7 +191,7 @@ class ScreenRecordingService : Service() {
                 prepare()
             }
         } else {
-            
+
             val videoDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), "LaunchRecordings")
             if (!videoDir.exists()) videoDir.mkdirs()
             val videoFile = File(videoDir, fileName)
@@ -213,7 +213,7 @@ class ScreenRecordingService : Service() {
 
     private fun stopRecording() {
         if (!isRecording) return
-        
+
         try {
             mediaRecorder?.stop()
             mediaRecorder?.reset()
@@ -226,11 +226,11 @@ class ScreenRecordingService : Service() {
 
         virtualDisplay?.release()
         virtualDisplay = null
-        
+
         mediaProjection?.stop()
         mediaProjection = null
 
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             recordingUri?.let { uri ->
                 try {
@@ -242,7 +242,7 @@ class ScreenRecordingService : Service() {
             }
             recordingUri = null
         }
-        
+
         isRecording = false
         isRunning = false
         Toast.makeText(this, "Recording saved to Movies/LaunchRecordings", Toast.LENGTH_LONG).show()

@@ -23,7 +23,7 @@ data class AppPrivacyInfo(
     val appName: String,
     val icon: Drawable? = null,
     val grantedPermissions: List<String>,
-    val severity: Int, 
+    val severity: Int,
     val isSideloaded: Boolean = false,
     var isExpanded: Boolean = false
 )
@@ -37,11 +37,11 @@ class PrivacyDashboardAdapter(
 
     private val previousApps = mutableMapOf<String, AppPrivacyInfo>()
     private val iconExecutor = Executors.newFixedThreadPool(2)
-    
+
     init {
         setHasStableIds(true)
     }
-    
+
     override fun getItemId(position: Int): Long {
         return apps[position].packageName.hashCode().toLong()
     }
@@ -101,12 +101,12 @@ class PrivacyDashboardAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val app = apps[position]
         val context = holder.itemView.context
-        
+
         holder.itemView.tag = app.packageName
         bindIcon(holder, app)
         holder.appName.text = app.appName
         holder.packageName.text = app.packageName
-        
+
         holder.sideloadedBadge.visibility = if (app.isSideloaded) View.VISIBLE else View.GONE
 
         if (app.grantedPermissions.isEmpty()) {
@@ -114,26 +114,26 @@ class PrivacyDashboardAdapter(
             holder.permissionsSummary.alpha = 0.5f
             holder.permissionCount.visibility = View.GONE
         } else {
-            val names = app.grantedPermissions.map { 
+            val names = app.grantedPermissions.map {
                 val resId = permissionLabels[it]
                 if (resId != null) context.getString(resId) else it.split(".").last()
             }
             holder.permissionsSummary.text = context.getString(R.string.access_to_format, names.joinToString(", "))
             holder.permissionsSummary.alpha = 1.0f
-            
+
             holder.permissionCount.visibility = View.VISIBLE
             holder.permissionCount.text = app.grantedPermissions.size.toString()
-            
+
             val color = when (app.severity) {
-                2 -> 0xFFFF4444.toInt() 
-                1 -> 0xFFFFBB33.toInt() 
-                else -> 0xFF99CC00.toInt() 
+                2 -> 0xFFFF4444.toInt()
+                1 -> 0xFFFFBB33.toInt()
+                else -> 0xFF99CC00.toInt()
             }
             holder.permissionCount.setTextColor(color)
         }
 
         holder.detailsContainer.visibility = if (app.isExpanded) View.VISIBLE else View.GONE
-        
+
         if (app.isExpanded) {
             val details = StringBuilder()
             if (app.grantedPermissions.isEmpty()) {
@@ -143,19 +143,19 @@ class PrivacyDashboardAdapter(
                 app.grantedPermissions.forEach { perm ->
                     val labelRes = permissionLabels[perm]
                     val label = if (labelRes != null) context.getString(labelRes) else perm.split(".").last()
-                    
+
                     val descRes = permissionDescriptions[perm]
                     val desc = if (descRes != null) {
                         context.getString(descRes)
                     } else {
                         context.getString(R.string.default_permission_description, label)
                     }
-                    
+
                     details.append(context.getString(R.string.permission_detail_item, label, desc))
                 }
             }
             holder.appDetails.text = details.toString().trim()
-            
+
             holder.managePermissionsButton.setOnClickListener {
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = Uri.fromParts("package", app.packageName, null)
@@ -175,22 +175,22 @@ class PrivacyDashboardAdapter(
 
     @SuppressLint("NotifyDataSetChanged")
     fun updateData(newApps: List<AppPrivacyInfo>) {
-        // Preserve expanded state from previous data
+
         val newAppsWithState = newApps.map { newApp ->
             previousApps[newApp.packageName]?.let { oldApp ->
                 newApp.copy(isExpanded = oldApp.isExpanded)
             } ?: newApp
         }
-        
+
         val diffResult = DiffUtil.calculateDiff(AppPrivacyDiffCallback(apps, newAppsWithState))
-        
+
         apps = newAppsWithState
-        
-        // Update cache
+
+
         previousApps.clear()
         newAppsWithState.forEach { previousApps[it.packageName] = it }
-        
-        // Dispatch diff results - this is safer for accessibility than notifyDataSetChanged
+
+
         diffResult.dispatchUpdatesTo(this)
     }
 

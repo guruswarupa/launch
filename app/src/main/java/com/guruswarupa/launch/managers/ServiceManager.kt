@@ -108,7 +108,7 @@ class ServiceManager(
     fun updateScreenLockAccessibilityService() {
         val isEdgeEnabled = sharedPreferences.getBoolean(Constants.Prefs.EDGE_PANEL_ENABLED, false)
         val isTriggerEnabled = sharedPreferences.getBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_ENABLED, false)
-        
+
         val intent = Intent(context, ScreenLockAccessibilityService::class.java).apply {
             action = "REFRESH_STATE"
         }

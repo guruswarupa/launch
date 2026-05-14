@@ -49,24 +49,24 @@ class IconLoader(
     private val maxCacheSize = 100
     private val iconCache = object : LruCache<String, Drawable>(maxCacheSize) {
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: Drawable, newValue: Drawable?) {
-            // Don't recycle bitmaps on cache eviction - they may still be in use by views
-            // Bitmap recycling is handled automatically by garbage collector when drawable is no longer referenced
+
+
         }
     }
-    
+
     private val specialAppIconCache = object : LruCache<String, Drawable>(maxCacheSize / 2) {
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: Drawable, newValue: Drawable?) {
-            // Don't recycle bitmaps on cache eviction - they may still be in use by views
+
         }
     }
-    
+
     private val contactPhotoCache = object : LruCache<String, Drawable>(maxCacheSize / 2) {
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: Drawable, newValue: Drawable?) {
-            // Don't recycle bitmaps on cache eviction - they may still be in use by views
+
         }
     }
     private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
-    // Replace single-thread executor with thread pool for parallel icon loading
+
     private val iconLoadExecutor = ThreadPoolExecutor(
         3, 6, 60L, TimeUnit.SECONDS,
         LinkedBlockingQueue()
@@ -293,7 +293,7 @@ class IconLoader(
     ) {
         val cachedIcon = specialAppIconCache.get(cacheId)
         if (cachedIcon != null) {
-            // Safety check: ensure bitmap is not recycled
+
             if (!(cachedIcon is BitmapDrawable && cachedIcon.bitmap.isRecycled)) {
                 holder.appIcon?.setImageDrawable(cachedIcon)
                 onLoaded?.invoke()
@@ -309,7 +309,7 @@ class IconLoader(
                     specialAppIconCache.put(cacheId, icon)
                     (context as? Activity)?.runOnUiThread {
                         if (holder.bindingAdapterPosition == position && holder.itemView.tag == cacheKey) {
-                            // Safety check before setting
+
                             if (!(icon is BitmapDrawable && icon.bitmap.isRecycled)) {
                                 holder.appIcon?.setImageDrawable(icon)
                                 onLoaded?.invoke()
@@ -334,7 +334,7 @@ class IconLoader(
     ) {
         val cachedPhoto = contactPhotoCache.get(contactName)
         if (cachedPhoto != null) {
-            // Safety check: ensure bitmap is not recycled
+
             if (!(cachedPhoto is BitmapDrawable && cachedPhoto.bitmap.isRecycled)) {
                 setIconDrawable(holder.appIcon, cachedPhoto)
                 onLoaded?.invoke()
@@ -352,7 +352,7 @@ class IconLoader(
                 contactPhotoCache.put(contactName, drawable)
                 (context as? Activity)?.runOnUiThread {
                     if (holder.bindingAdapterPosition == position && holder.itemView.tag == cacheKey) {
-                        // Safety check before setting
+
                         if (!(drawable is BitmapDrawable && drawable.bitmap.isRecycled)) {
                             setIconDrawable(holder.appIcon, drawable)
                             onLoaded?.invoke()
@@ -375,7 +375,7 @@ class IconLoader(
             val currentPosition = holder.bindingAdapterPosition
             val currentTag = holder.itemView.tag
             if (currentPosition != RecyclerView.NO_POSITION && currentPosition == position && currentTag == cacheKey) {
-                // Safety check: ensure drawable's bitmap is not recycled before setting
+
                 if (drawable is BitmapDrawable && drawable.bitmap.isRecycled) {
                     return@runOnUiThread
                 }

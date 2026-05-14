@@ -60,7 +60,7 @@ class AppTimerManagementActivity : ComponentActivity() {
     private var allItems: List<AppTimerItem> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -139,7 +139,7 @@ class AppTimerManagementActivity : ComponentActivity() {
                         )
                     }.sortedBy { it.name.lowercase() }
             }
-            
+
             loadingProgressBar.visibility = View.GONE
             recyclerView.alpha = 1.0f
             allItems = apps

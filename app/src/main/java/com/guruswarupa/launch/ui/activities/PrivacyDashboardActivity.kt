@@ -31,8 +31,8 @@ class PrivacyDashboardActivity : ComponentActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: PrivacyDashboardAdapter
     private lateinit var searchBox: EditText
-    
-    
+
+
     private lateinit var statTotalValue: TextView
     private lateinit var statCriticalValue: TextView
     private lateinit var statSideloadedValue: TextView
@@ -61,23 +61,23 @@ class PrivacyDashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
-                
+
         setContentView(R.layout.activity_privacy_dashboard)
         applyBackgroundTranslucency()
-        
+
         setupTheme()
 
         recyclerView = findViewById(R.id.privacy_apps_list)
         recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = PrivacyDashboardAdapter(emptyList())
         recyclerView.adapter = adapter
-        
-        // Improve accessibility and prevent crashes during view updates
+
+
         recyclerView.setHasFixedSize(true)
         recyclerView.itemAnimator?.apply {
             addDuration = 0
@@ -97,7 +97,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
         statCriticalValue = findViewById(R.id.stat_critical_value)
         statSideloadedValue = findViewById(R.id.stat_sideloaded_value)
         chipGroup = findViewById(R.id.filter_chip_group)
-        
+
         chipGroup.setOnCheckedStateChangeListener { _, _ ->
             applyFilters()
         }
@@ -106,13 +106,13 @@ class PrivacyDashboardActivity : ComponentActivity() {
 
         loadApps()
     }
-    
+
     private fun setupTheme() {
-        
+
         applyBackgroundTranslucency()
         setupWallpaper()
     }
-    
+
     private fun setupWallpaper() {
         val wallpaperImageView = findViewById<ImageView>(R.id.wallpaper_background)
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperImageView)
@@ -129,7 +129,7 @@ class PrivacyDashboardActivity : ComponentActivity() {
         executor.execute {
             val pm = packageManager
             val packages = pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
-            
+
             val appPrivacyList = packages.mapNotNull { packageInfo ->
                 val granted = mutableListOf<String>()
                 packageInfo.requestedPermissions?.forEachIndexed { index, permission ->
@@ -140,23 +140,23 @@ class PrivacyDashboardActivity : ComponentActivity() {
                         }
                     }
                 }
-                
+
                 val appInfo = packageInfo.applicationInfo ?: return@mapNotNull null
-                
+
                 if (granted.isNotEmpty() || (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0) {
                     val appName = try {
                         pm.getApplicationLabel(appInfo).toString()
                     } catch (_: Exception) {
                         packageInfo.packageName
                     }
-                    
+
                     val severity = when {
                         granted.any { it in listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_SMS, Manifest.permission.ACCESS_FINE_LOCATION) } -> 2
                         granted.isNotEmpty() -> 1
                         else -> 0
                     }
 
-                    
+
                     @Suppress("DEPRECATION")
                     val installer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         try {
@@ -165,9 +165,9 @@ class PrivacyDashboardActivity : ComponentActivity() {
                     } else {
                         pm.getInstallerPackageName(packageInfo.packageName)
                     }
-                    
-                    val isSideloaded = installer == null || 
-                        installer.isEmpty() || 
+
+                    val isSideloaded = installer == null ||
+                        installer.isEmpty() ||
                         installer in listOf("com.android.packageinstaller", "com.google.android.packageinstaller")
 
                     AppPrivacyInfo(
@@ -201,21 +201,21 @@ class PrivacyDashboardActivity : ComponentActivity() {
     private fun applyFilters() {
         val query = searchBox.text.toString().trim()
         val checkedChipId = chipGroup.checkedChipId
-        
+
         val filtered = allApps.filter { app ->
-            val matchesQuery = query.isEmpty() || 
-                app.appName.contains(query, ignoreCase = true) || 
+            val matchesQuery = query.isEmpty() ||
+                app.appName.contains(query, ignoreCase = true) ||
                 app.packageName.contains(query, ignoreCase = true)
-            
+
             val matchesChip = when (checkedChipId) {
                 R.id.chip_camera -> app.grantedPermissions.contains(Manifest.permission.CAMERA)
                 R.id.chip_microphone -> app.grantedPermissions.contains(Manifest.permission.RECORD_AUDIO)
-                R.id.chip_location -> app.grantedPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION) || 
+                R.id.chip_location -> app.grantedPermissions.contains(Manifest.permission.ACCESS_FINE_LOCATION) ||
                                      app.grantedPermissions.contains(Manifest.permission.ACCESS_COARSE_LOCATION)
                 R.id.chip_sideloaded -> app.isSideloaded
-                else -> true 
+                else -> true
             }
-            
+
             matchesQuery && matchesChip
         }
         adapter.updateData(filtered)

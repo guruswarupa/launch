@@ -28,7 +28,7 @@ class CalculatorHistoryAdapter(
         val item = historyItems[position]
         holder.expressionText.text = item.expression
         holder.resultText.text = holder.itemView.context.getString(R.string.calculator_result_format, item.result)
-        
+
         holder.itemView.setOnClickListener {
             onItemClick(item)
         }
@@ -37,9 +37,9 @@ class CalculatorHistoryAdapter(
     override fun getItemCount(): Int = historyItems.size
 
     fun addItem(item: CalculatorHistoryItem) {
-        historyItems.add(0, item) 
+        historyItems.add(0, item)
         notifyItemInserted(0)
-        
+
         if (historyItems.size > 50) {
             val lastIndex = historyItems.size - 1
             historyItems.removeAt(lastIndex)

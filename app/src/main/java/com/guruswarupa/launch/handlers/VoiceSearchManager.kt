@@ -47,7 +47,7 @@ class VoiceSearchManager(
             Toast.makeText(activity, "Voice recognition not available", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     fun startVoiceSearchWithLauncher(launcher: ActivityResultLauncher<Intent>) {
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.RECORD_AUDIO)
             != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -76,7 +76,7 @@ class VoiceSearchManager(
         }
     }
 
-    
+
 
 
 
@@ -84,7 +84,7 @@ class VoiceSearchManager(
         val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-        
+
         if (intent.resolveActivity(packageManager) != null) {
             try {
                 activity.startActivity(intent)
@@ -92,7 +92,7 @@ class VoiceSearchManager(
                 Toast.makeText(activity, "Could not launch system assistant", Toast.LENGTH_SHORT).show()
             }
         } else {
-            
+
             val searchIntent = Intent(Intent.ACTION_WEB_SEARCH).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }

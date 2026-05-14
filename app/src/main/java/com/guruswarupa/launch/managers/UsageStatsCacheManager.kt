@@ -12,8 +12,8 @@ class UsageStatsCacheManager(
     private val backgroundExecutor: Executor
 ) {
     private val usageStatsCache = mutableMapOf<String, Int>()
-    
-    
+
+
 
 
     fun loadCache(onComplete: ((Map<String, Int>) -> Unit)? = null) {

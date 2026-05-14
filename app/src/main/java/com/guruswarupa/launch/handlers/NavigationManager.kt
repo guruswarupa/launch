@@ -15,19 +15,19 @@ class NavigationManager(
     private val handler: Handler = Handler(Looper.getMainLooper())
 ) {
     private var isBlockingBackGesture = false
-    private val backGestureBlockDuration = 800L 
+    private val backGestureBlockDuration = 800L
 
-    
+
 
 
     fun handleBackPressed(superOnBackPressed: () -> Unit) {
-        
+
         if (isBlockingBackGesture) {
             return
         }
 
         val defaultPage = screenPagerManager.getDefaultPage()
-        
+
         if (!screenPagerManager.isPageOpen(defaultPage)) {
             screenPagerManager.openDefaultHomePage(animated = true)
         } else {
@@ -35,24 +35,24 @@ class NavigationManager(
         }
     }
 
-    
+
 
 
 
     fun blockBackGesturesTemporarily() {
         isBlockingBackGesture = true
-        
+
         gestureHandler.updateGestureExclusionForWidgetOpening()
 
-        
+
         handler.postDelayed({
             isBlockingBackGesture = false
-            
+
             gestureHandler.updateGestureExclusion()
         }, backGestureBlockDuration)
     }
 
-    
+
 
 
     @Suppress("unused")

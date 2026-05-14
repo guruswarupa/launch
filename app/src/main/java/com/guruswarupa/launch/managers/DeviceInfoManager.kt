@@ -24,8 +24,8 @@ class DeviceInfoManager(private val context: Context) {
                 line = reader.readLine()
             }
             reader.close()
-            
-            
+
+
             if (model == "Unknown") {
                 return Build.BOARD
             }
@@ -53,7 +53,7 @@ class DeviceInfoManager(private val context: Context) {
                     reader.close()
                     if (line != null) {
                         var temp = line.toFloatOrNull() ?: continue
-                        
+
                         if (temp > 1000) {
                             temp /= 1000f
                         }
@@ -64,18 +64,18 @@ class DeviceInfoManager(private val context: Context) {
                 continue
             }
         }
-        return -1f 
+        return -1f
     }
 
     fun getRamUsage(): Pair<Long, Long> {
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val memoryInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memoryInfo)
-        
+
         val totalRam = memoryInfo.totalMem
         val availableRam = memoryInfo.availMem
         val usedRam = totalRam - availableRam
-        
+
         return usedRam to totalRam
     }
 
@@ -86,17 +86,17 @@ class DeviceInfoManager(private val context: Context) {
             val blockSize = stat.blockSizeLong
             val totalBlocks = stat.blockCountLong
             val availableBlocks = stat.availableBlocksLong
-            
+
             val totalStorage = totalBlocks * blockSize
             val availableStorage = availableBlocks * blockSize
             val usedStorage = totalStorage - availableStorage
-            
+
             usedStorage to totalStorage
         } catch (_: Exception) {
             0L to 0L
         }
     }
-    
+
     fun formatBytes(bytes: Long): String {
         val gb = bytes / (1024.0 * 1024.0 * 1024.0)
         return String.format(Locale.getDefault(), "%.1f", gb)
@@ -129,7 +129,7 @@ class DeviceInfoManager(private val context: Context) {
         val minutes = (uptimeMillis / (1000 * 60)) % 60
         val hours = (uptimeMillis / (1000 * 60 * 60)) % 24
         val days = (uptimeMillis / (1000 * 60 * 60 * 24))
-        
+
         return if (days > 0) {
             String.format(Locale.getDefault(), "%dd %dh %dm", days, hours, minutes)
         } else if (hours > 0) {

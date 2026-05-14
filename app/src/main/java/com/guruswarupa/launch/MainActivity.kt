@@ -106,7 +106,6 @@ class MainActivity : FragmentActivity() {
     lateinit var adapter: AppAdapter
 
     lateinit var searchTypeMenuManager: SearchTypeMenuManager
-    
     lateinit var widgetThemeManager: WidgetThemeManager
 
     lateinit var gestureHandler: GestureHandler
@@ -118,6 +117,7 @@ class MainActivity : FragmentActivity() {
     lateinit var appListLoader: AppListLoader
 
     lateinit var contactManager: ContactManager
+
     lateinit var usageStatsCacheManager: UsageStatsCacheManager
     
     lateinit var lifecycleManager: LifecycleManager
@@ -129,12 +129,13 @@ class MainActivity : FragmentActivity() {
     lateinit var todoManager: TodoManager
 
     lateinit var todoAlarmManager: TodoAlarmManager
-    
+
     lateinit var financeWidgetManager: FinanceWidgetManager
 
     lateinit var usageStatsDisplayManager: UsageStatsDisplayManager
-    lateinit var rssFeedManager: RssFeedManager
     
+    lateinit var rssFeedManager: RssFeedManager
+
     lateinit var widgetSetupManager: WidgetSetupManager
 
     lateinit var widgetManager: WidgetManager
@@ -146,11 +147,11 @@ class MainActivity : FragmentActivity() {
     lateinit var activityResultHandler: ActivityResultHandler
 
     lateinit var navigationManager: NavigationManager
-    
+
     lateinit var focusModeApplier: FocusModeApplier
 
     lateinit var widgetConfigurationManager: WidgetConfigurationManager
-    
+
     lateinit var widgetVisibilityManager: WidgetVisibilityManager
 
     lateinit var serviceManager: ServiceManager
@@ -158,28 +159,28 @@ class MainActivity : FragmentActivity() {
     lateinit var appListUIUpdater: AppListUIUpdater
 
     lateinit var drawerManager: DrawerManager
-    
+
     lateinit var screenPagerManager: ScreenPagerManager
 
     lateinit var contactActionHandler: ContactActionHandler
-    
+
     lateinit var settingsChangeCoordinator: SettingsChangeCoordinator
 
     lateinit var donationPromptManager: DonationPromptManager
 
     lateinit var reviewPromptManager: ReviewPromptManager
-    
+
     var voiceCommandHandler: VoiceCommandHandler? = null
     var widgetPrewarmScheduled = false
     var appList: MutableList<ResolveInfo> = mutableListOf()
     var fullAppList: MutableList<ResolveInfo> = mutableListOf()
-    
-    // State for showing only favorites initially
+
+
     var showOnlyFavoritesInitially = true
-    
-    // Prevent rapid toggling between favorites and all apps
+
+
     private var lastToggleTime = 0L
-    private val TOGGLE_DEBOUNCE_MS = 500L // 500ms debounce
+    private val TOGGLE_DEBOUNCE_MS = 500L
 
     val views: MainActivityViews get() = activityInitializer.views
     private val viewModel: MainActivityViewModel by viewModels()
@@ -194,44 +195,44 @@ class MainActivity : FragmentActivity() {
     fun applyThemeBasedWidgetBackgrounds() {
         settingsChangeCoordinator.applyThemeBasedWidgetBackgrounds()
     }
-    
+
     fun showAllAppsFromFavorites() {
         if (!showOnlyFavoritesInitially) return
-        
-        // Prevent rapid toggling
+
+
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastToggleTime < TOGGLE_DEBOUNCE_MS) return
-        
+
         lastToggleTime = currentTime
         showOnlyFavoritesInitially = false
-        
-        // Reload the app list with all apps
+
+
         appListLoader.loadApps(forceRefresh = false)
-        
-        // Scroll past the transparent spacers to show the first actual app (A)
+
+
         handler.postDelayed({
-            views.recyclerView.scrollToPosition(4) // Skip 4 spacer items
+            views.recyclerView.scrollToPosition(4)
         }, 100)
     }
-    
+
     fun showFavoritesFromAllApps() {
         if (showOnlyFavoritesInitially) return
-        
-        // Check if there are any favorites
+
+
         val favorites = favoriteAppManager.getFavoriteApps()
         if (favorites.isEmpty()) {
-            // No favorites, stay on all apps
+
             return
         }
-        
-        // Prevent rapid toggling
+
+
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastToggleTime < TOGGLE_DEBOUNCE_MS) return
-        
+
         lastToggleTime = currentTime
         showOnlyFavoritesInitially = true
-        
-        // Reload the app list with only favorites
+
+
         appListLoader.loadApps(forceRefresh = false)
     }
 
@@ -252,12 +253,12 @@ class MainActivity : FragmentActivity() {
             sharedPreferences,
             onSettingsUpdated = { handleSettingsUpdate() },
             onPackageChanged = { packageName, isRemoved -> handlePackageChange(packageName, isRemoved) },
-            onWallpaperChanged = { 
+            onWallpaperChanged = {
                 wallpaperManagerHelper.clearCache()
                 wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
                 refreshRightDrawerWallpaper()
             },
-            onBatteryChanged = { 
+            onBatteryChanged = {
                 usageStatsRefreshManager.updateBatteryInBackground()
             },
             onActivityRecognitionPermissionGranted = {
@@ -268,9 +269,9 @@ class MainActivity : FragmentActivity() {
             onDndStateChanged = {
                 if (appDockManager.getCurrentMode()) {
                     val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                    if (notificationManager.isNotificationPolicyAccessGranted && 
+                    if (notificationManager.isNotificationPolicyAccessGranted &&
                         notificationManager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) {
-                        
+
                         notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
                         Toast.makeText(this, "DND re-enabled (Focus Mode active)", Toast.LENGTH_SHORT).show()
                     }
@@ -279,7 +280,7 @@ class MainActivity : FragmentActivity() {
         )
         broadcastReceiverManager.registerReceivers()
     }
-    
+
     @SuppressLint("MissingPermission")
     internal fun refreshRightDrawerWallpaper() {
         if (!views.isRightDrawerWallpaperInitialized()) return
@@ -289,7 +290,7 @@ class MainActivity : FragmentActivity() {
     internal fun initializeViews() {
         activityInitializer.initializeViews()
         views.fastScroller.refreshTypography(sharedPreferences)
-        
+
         searchTypeMenuManager = SearchTypeMenuManager(
             context = this,
             searchTypeButton = views.searchTypeButton,
@@ -306,7 +307,7 @@ class MainActivity : FragmentActivity() {
             activityResultHandler.handleActivityResult(requestCode, resultCode, data)
         }
     }
-    
+
 
 
     private fun ensureContactsLoadedForSearch() {
@@ -317,7 +318,7 @@ class MainActivity : FragmentActivity() {
             updateAppSearchManager()
         }
     }
-    
+
     internal fun updateSearchQueryAndUI(query: String) {
         viewModel.updateSearchQuery(query)
         if (query.isNotEmpty()) {
@@ -334,18 +335,18 @@ class MainActivity : FragmentActivity() {
 
     internal fun updateFastScrollerVisibility() {
         if (!views.isSearchBoxInitialized()) return
-        
+
         val focusMode = appDockManager.getCurrentMode()
         val workspaceMode = appDockManager.isWorkspaceModeActive()
         val showFastScroller = sharedPreferences.getBoolean(Constants.Prefs.SHOW_FAST_SCROLLER, true)
         val hasVisibleItems = (::adapter.isInitialized && adapter.getCurrentListSize() > 0) || appList.isNotEmpty()
-        
-        // Hide fast scroller when showing only favorites initially (and not in focus/workspace mode)
+
+
         if (showOnlyFavoritesInitially && !focusMode && !workspaceMode) {
             views.fastScroller.visibility = View.GONE
             return
         }
-        
+
         views.fastScroller.setFavoritesVisible(!focusMode && !workspaceMode)
 
         if (showFastScroller && hasVisibleItems) {
@@ -354,7 +355,7 @@ class MainActivity : FragmentActivity() {
             views.fastScroller.visibility = View.GONE
         }
     }
-    
+
     internal fun getPreferredGridColumns(): Int {
         val minColumns = resources.getInteger(R.integer.grid_columns_min)
         val maxColumns = resources.getInteger(R.integer.grid_columns_max)
@@ -365,13 +366,13 @@ class MainActivity : FragmentActivity() {
             resources.getInteger(R.integer.app_grid_columns)
         }
     }
-    
+
     internal fun requestInitialPermissions(onComplete: () -> Unit = {}) {
-        permissionManager.requestContactsPermission { 
+        permissionManager.requestContactsPermission {
             contactManager.loadContacts { loadedContacts ->
                 updateAppSearchManager()
             }
-            
+
             permissionManager.requestUsageStatsPermission(usageStatsManager) {
                 permissionManager.requestDefaultLauncher {
                     viewModel.markDefaultLauncherAsked()
@@ -380,7 +381,7 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
-    
+
     fun startFeatureTutorialAndRequestPermissions() {
         val tutorialManager = FeatureTutorialManager(this, sharedPreferences)
         if (tutorialManager.shouldShowTutorial()) {
@@ -402,11 +403,11 @@ class MainActivity : FragmentActivity() {
             use24HourClock
         )
         timeDateManager.startUpdates()
-        
+
         widgetSetupManager = WidgetSetupManager(this, usageStatsManager, weatherManager, permissionManager)
         widgetSetupManager.setupWeather(views.weatherIcon, views.weatherText)
     }
-    
+
     internal fun initializeDeferredWidgets() {
         if (!sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true) || deferredWidgetsInitialized) {
             return
@@ -424,15 +425,15 @@ class MainActivity : FragmentActivity() {
                 todoManager = TodoManager(this, sharedPreferences, views.todoRecyclerView, views.addTodoButton, todoAlarmManager)
                 todoManager.initialize()
                 updateLifecycleManagerWithDeferredWidgets()
-                
-                // Update widget visibility after all widgets are initialized
+
+
                 widgetVisibilityManager.update(
                     if (widgetLifecycleCoordinator.isYearProgressWidgetInitialized()) widgetLifecycleCoordinator.yearProgressWidget else null,
                     if (widgetLifecycleCoordinator.isGithubContributionWidgetInitialized()) widgetLifecycleCoordinator.githubContributionWidget else null
                 )
             }
         )
-        
+
         initializer.initialize()
         viewModel.markDeferredWidgetsInitialized()
         updateRegistryDependencies()
@@ -467,26 +468,26 @@ class MainActivity : FragmentActivity() {
             }
             .initialize(handler)
     }
-    
+
     internal fun updateAppSearchManager(
         newFullList: List<ResolveInfo>? = null,
         newHomeList: List<ResolveInfo>? = null
     ) {
         if (isFinishing || isDestroyed) return
-        
+
         val targetFullList = newFullList ?: fullAppList
         val targetHomeList = newHomeList ?: appList
-        
-        // Check if appSearchManager needs initial configuration
+
+
         if (!appSearchManager.isConfigured()) {
-            // Only configure if adapter is initialized
+
             if (!::adapter.isInitialized) return
-            
-            // Set up search query callback before configuring
+
+
             appSearchManager.onSearchQueryChanged = { query ->
                 updateSearchQueryAndUI(query)
             }
-            
+
             appSearchManager.configure(
                 fullAppList = targetFullList.toMutableList(),
                 homeAppList = targetHomeList,
@@ -503,16 +504,16 @@ class MainActivity : FragmentActivity() {
             appSearchManager.updateData(targetFullList, targetHomeList, contactManager.getContactsList())
         }
     }
-    
+
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         applyOrientationPreference()
         AppInitializer(this).initialize()
-        
+
         if (isFinishing || isDestroyed) return
-        
+
         handleSettingsUpdate()
         observeViewModelState()
         if (!isFinishing) {
@@ -532,8 +533,8 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        
-        val isHomeOrLauncher = intent.action == Intent.ACTION_MAIN && 
+
+        val isHomeOrLauncher = intent.action == Intent.ACTION_MAIN &&
             (intent.hasCategory(Intent.CATEGORY_HOME) || intent.hasCategory(Intent.CATEGORY_LAUNCHER))
 
         if (isHomeOrLauncher) {
@@ -666,7 +667,7 @@ class MainActivity : FragmentActivity() {
         lifecycleManager.onFocusModeApply = { isFocusMode -> applyFocusMode(isFocusMode) }
         lifecycleManager.onLoadApps = { forceRefresh -> appListLoader.loadApps(forceRefresh) }
     }
-    
+
     private fun updateLifecycleManagerWithDeferredWidgets() {
         val coordinator = widgetLifecycleCoordinator
         lifecycleManager.updateDependencies {
@@ -713,15 +714,15 @@ class MainActivity : FragmentActivity() {
     fun setWidgetsPageLocked(locked: Boolean) {
         screenPagerManager.setLeftPageLocked(locked)
     }
-    
+
     fun refreshAppsForWorkspace() {
         appListUIUpdater.refreshAppsForWorkspace()
     }
-    
+
     fun clearAppCacheAndReload() {
         appListLoader.loadApps(forceRefresh = true)
     }
-    
+
     fun filterAppsWithoutReload() {
         appListUIUpdater.filterAppsWithoutReload()
     }
@@ -743,7 +744,7 @@ class MainActivity : FragmentActivity() {
 
     private fun syncOptionalPagesAfterSettingsUpdate() {
         if (!::screenPagerManager.isInitialized) return
-        
+
         if (sharedPreferences.getBoolean(Constants.Prefs.WIDGETS_PAGE_ENABLED, true) &&
             screenPagerManager.getCurrentPage() == ScreenPagerManager.Page.WIDGETS
         ) {
@@ -764,24 +765,24 @@ class MainActivity : FragmentActivity() {
             }
         }
     }
-    
+
     private fun handlePackageChange(packageName: String?, isRemoved: Boolean) {
         if (packageName == null) return
         cacheManager.removeMetadata(packageName)
-        
+
         if (isRemoved) {
             cacheManager.clearCache()
         }
-        
+
         runOnUiThread {
             appList.removeAll { it.activityInfo.packageName == packageName }
             fullAppList.removeAll { it.activityInfo.packageName == packageName }
-            
+
             appListLoader.clearCache()
             adapter.updateAppList(appList)
             updateFastScrollerVisibility()
         }
-        
+
         if (!isRemoved) {
             appListLoader.clearCache()
             appListLoader.loadApps(forceRefresh = true, fullAppList, appList, adapter)
@@ -808,7 +809,7 @@ class MainActivity : FragmentActivity() {
         if (::lifecycleManager.isInitialized) {
             lifecycleManager.onResume()
         }
-        
+
         if (sharedPreferences.getBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, false)) {
             sharedPreferences.edit { putBoolean(Constants.Prefs.WAITING_FOR_USAGE_STATS_RETURN, false) }
             permissionManager.requestDefaultLauncher {
@@ -817,7 +818,7 @@ class MainActivity : FragmentActivity() {
                     sharedPreferences.edit { putBoolean(Constants.Prefs.INITIAL_PERMISSIONS_ASKED, true) }
                 }
             }
-            return 
+            return
         }
         if (reviewPromptManager.promptIfEligible()) {
             return
@@ -862,12 +863,12 @@ class MainActivity : FragmentActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
+
         permissionManager.handlePermissionResult(
             requestCode,
             permissions,
             grantResults,
-            onContactsGranted = { 
+            onContactsGranted = {
                 contactManager.loadContacts { loadedContacts ->
                     updateAppSearchManager()
                 }
@@ -877,7 +878,7 @@ class MainActivity : FragmentActivity() {
                 todoManager.rescheduleTodoAlarms()
             },
             onStorageGranted = {
-                
+
             },
             onActivityRecognitionGranted = {
                 if (widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {
@@ -898,15 +899,15 @@ class MainActivity : FragmentActivity() {
                 }, 300)
             }
         }
-        
-        if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST && 
+
+        if (requestCode == PermissionManager.VOICE_SEARCH_REQUEST &&
             grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             voiceSearchManager.startVoiceSearch()
             if (widgetLifecycleCoordinator.isNoiseDecibelWidgetInitialized()) {
                 widgetLifecycleCoordinator.noiseDecibelWidget.onPermissionGranted()
             }
         }
-        
+
         if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             when (requestCode) {
                 Constants.RequestCodes.ACTIVITY_RECOGNITION_PERMISSION -> if (widgetLifecycleCoordinator.isPhysicalActivityWidgetInitialized()) {

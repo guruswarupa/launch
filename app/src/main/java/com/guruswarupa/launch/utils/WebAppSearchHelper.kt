@@ -16,8 +16,8 @@ data class SearchSuggestion(
 
 object WebAppSearchHelper {
     private const val TAG = "WebAppSearchHelper"
-    
-    // Popular websites for quick suggestions
+
+
     val POPULAR_WEBSITES = listOf(
         SearchSuggestion("Google", "https://www.google.com", "Search engine"),
         SearchSuggestion("YouTube", "https://www.youtube.com", "Video platform"),
@@ -42,30 +42,28 @@ object WebAppSearchHelper {
         return withContext(Dispatchers.IO) {
             try {
                 val encodedQuery = URLEncoder.encode(query, "UTF-8")
-                
-                // Try DuckDuckGo first (more scraper-friendly)
+
+
                 var results = searchDuckDuckGo(encodedQuery)
-                
+
                 if (results.isEmpty()) {
                     results = searchWithMobileUserAgent(encodedQuery)
                 }
-                
+
                 if (results.isEmpty()) {
                     results = searchWithAutocomplete(encodedQuery)
                 }
-                
+
                 results
             } catch (e: Exception) {
                 Log.e(TAG, "Search failed", e)
-                // Fallback to autocomplete
+
                 searchWithAutocomplete(URLEncoder.encode(query, "UTF-8"))
             }
         }
     }
-    
-    /**
-     * Search using DuckDuckGo (more scraper-friendly)
-     */
+
+
     private suspend fun searchDuckDuckGo(encodedQuery: String): List<SearchSuggestion> {
         return try {
             val searchUrl = "https://html.duckduckgo.com/html/?q=$encodedQuery"
@@ -75,29 +73,29 @@ object WebAppSearchHelper {
                 .header("Accept", "text/html,application/xhtml+xml")
                 .timeout(8000)
                 .get()
-            
+
             val results = mutableListOf<SearchSuggestion>()
-            
-            // DuckDuckGo HTML results
+
+
             val elements = doc.select("div.results_links_deep")
-            
+
             for (element in elements.take(10)) {
                 try {
                     val titleElement = element.selectFirst("a.result__a")
                     val descElement = element.selectFirst("a.result__snippet")
-                    
+
                     if (titleElement != null) {
                         val title = titleElement.text()
                         var url = titleElement.attr("href")
-                        
-                        // DuckDuckGo uses redirect URLs
+
+
                         if (url.contains("uddg=")) {
                             url = url.substringAfter("uddg=").substringBefore("&")
                             url = java.net.URLDecoder.decode(url, "UTF-8")
                         }
-                        
+
                         val description = descElement?.text() ?: ""
-                        
+
                         if (url.startsWith("http") && !url.contains("duckduckgo.com")) {
                             if (results.none { it.url == url }) {
                                 results.add(SearchSuggestion(title, url, description))
@@ -108,17 +106,15 @@ object WebAppSearchHelper {
                     Log.w(TAG, "Error parsing DuckDuckGo result", e)
                 }
             }
-            
+
             results
         } catch (e: Exception) {
             Log.w(TAG, "DuckDuckGo search failed", e)
             emptyList()
         }
     }
-    
-    /**
-     * Search using mobile user agent (less likely to be blocked)
-     */
+
+
     private suspend fun searchWithMobileUserAgent(encodedQuery: String): List<SearchSuggestion> {
         return try {
             val searchUrl = "https://www.google.com/search?q=$encodedQuery&num=10&hl=en"
@@ -205,14 +201,14 @@ object WebAppSearchHelper {
                 .ignoreContentType(true)
                 .timeout(5000)
                 .execute()
-            
+
             val body = response.body()
             val jsonArray = org.json.JSONArray(body)
-            
+
             if (jsonArray.length() > 1) {
                 val suggestions = jsonArray.getJSONArray(1)
                 val results = mutableListOf<SearchSuggestion>()
-                
+
                 for (i in 0 until suggestions.length()) {
                     val suggestion = suggestions.getString(i)
                     val searchUrl = "https://www.google.com/search?q=${URLEncoder.encode(suggestion, "UTF-8")}"
@@ -222,7 +218,7 @@ object WebAppSearchHelper {
                         description = "Search for: $suggestion"
                     ))
                 }
-                
+
                 results
             } else {
                 emptyList()
@@ -232,10 +228,8 @@ object WebAppSearchHelper {
             emptyList()
         }
     }
-    
-    /**
-     * Fetch page title from URL
-     */
+
+
     suspend fun fetchPageTitle(url: String): String? {
         return withContext(Dispatchers.IO) {
             try {
@@ -243,7 +237,7 @@ object WebAppSearchHelper {
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                     .timeout(3000)
                     .get()
-                
+
                 doc.title()?.takeIf { it.isNotBlank() }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch title for $url", e)
@@ -251,10 +245,8 @@ object WebAppSearchHelper {
             }
         }
     }
-    
-    /**
-     * Filter suggestions to only include HTTPS URLs
-     */
+
+
     fun filterHttpsOnly(suggestions: List<SearchSuggestion>): List<SearchSuggestion> {
         return suggestions.filter { it.url.startsWith("https://", ignoreCase = true) }
     }

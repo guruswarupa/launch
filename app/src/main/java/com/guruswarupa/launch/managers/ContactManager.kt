@@ -22,13 +22,13 @@ class ContactManager(
     private var contactsLoaded = false
     @Volatile
     private var contactsLoading = false
-    
-    
+
+
 
 
 
     fun loadContacts(onComplete: ((List<String>) -> Unit)? = null) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) 
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS)
             != PackageManager.PERMISSION_GRANTED) {
             onComplete?.invoke(emptyList())
             return
@@ -45,7 +45,7 @@ class ContactManager(
         }
 
         contactsLoading = true
-        
+
         backgroundExecutor.execute {
             try {
                 val tempContactsList = mutableListOf<String>()
@@ -65,15 +65,15 @@ class ContactManager(
                         }
                     }
                 }
-                
-                
+
+
                 tempContactsList.sort()
-                
+
                 contactsList.clear()
                 contactsList.addAll(tempContactsList)
                 contactsLoaded = true
                 contactsLoading = false
-                
+
                 onComplete?.invoke(ArrayList(contactsList))
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -82,18 +82,18 @@ class ContactManager(
             }
         }
     }
-    
-    
+
+
 
 
 
     fun loadContactsEagerly() {
         loadContacts { loadedList ->
-            
-            
+
+
         }
     }
-    
+
     fun getContactsList(): List<String> = contactsList.toList()
 
     fun hasLoadedContacts(): Boolean = contactsLoaded

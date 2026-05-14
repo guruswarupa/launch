@@ -21,7 +21,7 @@ class ContactActionHandler(
 ) {
     private var voiceCommandHandler: VoiceCommandHandler? = null
 
-    
+
 
 
     private fun getHandler(): VoiceCommandHandler {
@@ -37,14 +37,14 @@ class ContactActionHandler(
         }
     }
 
-    
+
 
 
     fun openWhatsAppChat(contactName: String) {
         getHandler().openWhatsAppChat(contactName)
     }
 
-    
+
 
 
     fun openSMSChat(contactName: String) {

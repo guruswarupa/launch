@@ -54,9 +54,9 @@ class AppInitializer(private val activity: MainActivity) {
             initializeTimeDateAndWeather()
 
             appDockManager = AppDockManager(activity, sharedPreferences, views.appDock)
-            
+
             widgetThemeManager = WidgetThemeManager(activity) { resources.configuration.uiMode }
-            
+
             settingsChangeCoordinator = SettingsChangeCoordinator(
                 activity = activity,
                 adapterProvider = { activity.adapter },
@@ -64,39 +64,39 @@ class AppInitializer(private val activity: MainActivity) {
                 widgetSetupManagerProvider = { activity.widgetSetupManager },
                 widgetThemeManagerProvider = { activity.widgetThemeManager }
             )
-            
+
             applyThemeBasedWidgetBackgrounds()
-            
+
             settingsChangeCoordinator.applyBackgroundTranslucency()
-            
+
             appList = mutableListOf()
             fullAppList = mutableListOf()
-            
+
             contactActionHandler = ContactActionHandler(
                 activity, packageManager, contentResolver, views.searchBox, appList
             ) { handler ->
                 voiceCommandHandler = handler
                 activity.activityResultHandler.setVoiceCommandHandler(handler)
-                
+
                 this@AppInitializer.updateRegistryDependencies()
             }
-            
+
             appListManager.attach(appDockManager)
-            
+
             appListLoader = AppListLoader(
                 activity, packageManager, appListManager, appDockManager,
                 cacheManager, webAppManager, backgroundExecutor, handler, views.recyclerView, views.searchBox, views.voiceSearchButton, sharedPreferences
             )
-            
-            // Initialize adapter first before using it
+
+
             val viewPreference = sharedPreferences.getString(
                 Constants.Prefs.VIEW_PREFERENCE,
                 Constants.Prefs.VIEW_PREFERENCE_LIST
             )
             val isGridMode = viewPreference == Constants.Prefs.VIEW_PREFERENCE_GRID
             adapter = AppAdapter(activity, appList, views.searchBox, isGridMode, activity)
-            
-            // Set up the correct LayoutManager based on view preference
+
+
             if (isGridMode) {
                 val columns = activity.getPreferredGridColumns()
                 val gridLayoutManager = GridLayoutManager(activity, columns)
@@ -114,27 +114,27 @@ class AppInitializer(private val activity: MainActivity) {
             } else {
                 views.recyclerView.layoutManager = LinearLayoutManager(activity)
             }
-            
+
             views.recyclerView.adapter = adapter
-            
-            // Optimize RecyclerView for better performance
+
+
             views.recyclerView.setHasFixedSize(true)
-            views.recyclerView.itemAnimator = null // Disable default animations for faster scrolling
-            views.recyclerView.recycledViewPool.setMaxRecycledViews(0, 20) // Pre-allocate view holders
-            
+            views.recyclerView.itemAnimator = null
+            views.recyclerView.recycledViewPool.setMaxRecycledViews(0, 20)
+
             views.recyclerView.visibility = View.VISIBLE
             updateFastScrollerVisibility()
-            
-            // Set up callback to show all apps when scrolled to bottom
+
+
             views.fastScroller.onScrollToBottom = {
                 activity.showAllAppsFromFavorites()
             }
-            
-            // Set up callback to show favorites when scrolled to top
+
+
             views.fastScroller.onScrollToTop = {
                 activity.showFavoritesFromAllApps()
             }
-            
+
             appListUIUpdater = AppListUIUpdater(
                 activity, views.recyclerView, activity.adapter,
                 appList, fullAppList, appListLoader, appListManager,
@@ -144,19 +144,19 @@ class AppInitializer(private val activity: MainActivity) {
             appListUIUpdater.setAdapter(adapter)
 
             usageStatsDisplayManager = UsageStatsDisplayManager(activity, usageStatsManager, views.weeklyUsageGraph, adapter, views.recyclerView, handler)
-            
+
             if (!appDockManager.getCurrentMode()) {
                 refreshAppsForFocusMode()
             }
 
             appListLoader.loadApps(forceRefresh = false, fullAppList, appList, activity.adapter)
-            
-            // Use doOnLayout for layout-dependent initialization instead of postDelayed
+
+
             views.recyclerView.doOnLayout {
                 if (!activity.isFinishing && !activity.isDestroyed) {
                     updateAppSearchManager()
                 }
-            } 
+            }
 
             val drawerContentLayout = findViewById<LinearLayout>(R.id.drawer_content_layout)
             widgetManager = WidgetManager(activity, drawerContentLayout)
@@ -175,7 +175,7 @@ class AppInitializer(private val activity: MainActivity) {
             )
             drawerManager.setup()
             navigationManager = drawerManager.navigationManager
-            
+
             findViewById<ImageButton?>(R.id.widget_config_button)?.setOnClickListener {
                 showWidgetConfigurationDialog()
             }
@@ -192,11 +192,11 @@ class AppInitializer(private val activity: MainActivity) {
             val rssWallpaper = findViewById<ImageView>(R.id.rss_wallpaper_background)
             wallpaperManagerHelper = WallpaperManagerHelper(activity, views.wallpaperBackground, drawerWallpaper, backgroundExecutor, rssWallpaper)
             wallpaperManagerHelper.setWallpaperBackground()
-            
+
             activity.refreshRightDrawerWallpaper()
 
             voiceSearchManager = VoiceSearchManager(activity, packageManager)
-            
+
             views.voiceSearchButton.setOnClickListener {
                 voiceSearchManager.startVoiceSearchWithLauncher(resultRegistry.voiceSearchLauncher)
             }
@@ -205,17 +205,17 @@ class AppInitializer(private val activity: MainActivity) {
                 voiceSearchManager.triggerSystemAssistant()
                 true
             }
-            
+
             usageStatsRefreshManager = UsageStatsRefreshManager(
                 activity, backgroundExecutor, usageStatsManager
             )
-            
+
             activityResultHandler = ActivityResultHandler(
                 activity, views.searchBox, voiceCommandHandler, shareManager,
                 widgetManager, wallpaperManagerHelper,
                 onBlockBackGestures = { navigationManager.blockBackGesturesTemporarily() }
             )
-            
+
             focusModeApplier = FocusModeApplier(
                 activity, backgroundExecutor, appListManager, appDockManager,
                 views.searchContainer, activity.adapter, fullAppList, appList,
@@ -223,17 +223,17 @@ class AppInitializer(private val activity: MainActivity) {
                 onUpdateFastScrollerVisibility = { updateFastScrollerVisibility() },
                 showOnlyFavoritesInitially = { activity.showOnlyFavoritesInitially }
             )
-            
+
             serviceManager = ServiceManager(activity, sharedPreferences)
 
             AppUsageMonitor.syncMonitoring(activity)
-            
+
             serviceManager.updateShakeDetectionService()
             serviceManager.updateWalkDetectionService()
             serviceManager.updateScreenDimmerService()
             serviceManager.updateFlipToDndService()
             serviceManager.updateBackTapService()
-            
+
             initializeLifecycleManager()
             initializeBroadcastReceivers()
             lifecycleManager.updateDependencies {

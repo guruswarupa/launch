@@ -60,8 +60,7 @@ class LaunchApplication : Application() {
 
     private fun initServices() {
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
-        
-        
+
         val isDimmerEnabled = prefs.getBoolean(Constants.Prefs.SCREEN_DIMMER_ENABLED, false)
         if (isDimmerEnabled && Settings.canDrawOverlays(this)) {
             val dimLevel = prefs.getInt(Constants.Prefs.SCREEN_DIMMER_LEVEL, 50)
@@ -69,8 +68,7 @@ class LaunchApplication : Application() {
                 ScreenDimmerService.startService(this, dimLevel)
             }
         }
-        
-        
+
         val isNightModeEnabled = prefs.getBoolean(Constants.Prefs.NIGHT_MODE_ENABLED, false)
         if (isNightModeEnabled && Settings.canDrawOverlays(this)) {
             val intensity = prefs.getInt(Constants.Prefs.NIGHT_MODE_INTENSITY, 10)
@@ -99,7 +97,6 @@ class LaunchApplication : Application() {
             } catch (e: Exception) {
                 Log.e("LaunchApplication", "Failed to send crash report", e)
             } finally {
-                
                 defaultHandler?.uncaughtException(thread, throwable)
             }
         }
@@ -126,8 +123,6 @@ class LaunchApplication : Application() {
             putExtra(Intent.EXTRA_TEXT, emailBody)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-
-        
         if (intent.resolveActivity(packageManager) != null) {
             startActivity(intent)
         }

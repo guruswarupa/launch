@@ -31,7 +31,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class WidgetManager(private val context: Context, private val widgetContainer: LinearLayout) {
-    
+
     private val appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context)
     private val appWidgetHost: AppWidgetHost = AppWidgetHost(context, APPWIDGET_HOST_ID)
     private val prefs: SharedPreferences = context.getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
@@ -39,14 +39,14 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
     private val widgetOptionsCache = mutableMapOf<Int, String>()
     private var pendingConfigureWidgetId: Int? = null
     private var pendingBindRequest: PendingBindRequest? = null
-    
+
     companion object {
         private const val APPWIDGET_HOST_ID = 1024
         private const val TAG = "WidgetManager"
         private const val PREFS_WIDGETS_KEY = "saved_widgets"
         private const val PREFS_WIDGETS_CHANGED_KEY = "saved_widgets_changed"
     }
-    
+
     data class WidgetInfo(
         val appWidgetId: Int,
         val providerPackage: String,
@@ -61,13 +61,13 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         val providerPackage: String,
         val providerClass: String
     )
-    
+
     init {
-        
+
         appWidgetHost.startListening()
         loadWidgets()
     }
-    
+
     fun requestPickWidget(activity: Activity, requestCode: Int) {
         try {
             val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK)
@@ -78,7 +78,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             Toast.makeText(context, "Error opening widget picker: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     fun requestPickWidgetWithLauncher(launcher: ActivityResultLauncher<Intent>) {
         try {
             val pickIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_PICK)
@@ -90,22 +90,22 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         }
     }
 
-    
+
 
 
     fun bindProvider(activity: Activity, providerPackage: String, providerClass: String, requestCode: Int) {
         val appWidgetId = appWidgetHost.allocateAppWidgetId()
         val providers = appWidgetManager.installedProviders
-        val providerInfo = providers.find { 
-            it.provider.packageName == providerPackage && it.provider.className == providerClass 
+        val providerInfo = providers.find {
+            it.provider.packageName == providerPackage && it.provider.className == providerClass
         } ?: return
-        
+
         val success = try {
             appWidgetManager.bindAppWidgetIdIfAllowed(appWidgetId, providerInfo.provider)
         } catch (_: Exception) {
             false
         }
-        
+
         if (success) {
             launchConfigureOrBind(activity, appWidgetId, providerInfo)
         } else {
@@ -116,23 +116,23 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             activity.startActivityForResult(intent, requestCode)
         }
     }
-    
+
     fun handleWidgetPicked(activity: Activity, data: Intent?) {
         val appWidgetId = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
-        
+
         if (appWidgetId == -1) {
             Toast.makeText(context, "Invalid widget selected", Toast.LENGTH_SHORT).show()
             return
         }
-        
+
         val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
         if (appWidgetInfo == null) {
             Toast.makeText(context, "Widget info not found", Toast.LENGTH_SHORT).show()
             appWidgetHost.deleteAppWidgetId(appWidgetId)
             return
         }
-        
-        
+
+
         if (appWidgetInfo.configure != null) {
             val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
             configIntent.component = appWidgetInfo.configure
@@ -148,7 +148,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             bindWidget(appWidgetId, appWidgetInfo)
         }
     }
-    
+
     fun handleWidgetConfigured(appWidgetId: Int? = null) {
         val resolvedWidgetId = appWidgetId ?: pendingConfigureWidgetId
         pendingConfigureWidgetId = null
@@ -222,15 +222,15 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             (activity as? WidgetConfigurationActivity)?.loadWidgets()
         }
     }
-    
+
     private fun bindWidget(appWidgetId: Int, appWidgetInfo: AppWidgetProviderInfo) {
         try {
-            
+
             val widgetView = try {
                 appWidgetHost.createView(context, appWidgetId, appWidgetInfo)
             } catch (_: Exception) {
-                
-                
+
+
                 val bound = try {
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                         appWidgetManager.bindAppWidgetIdIfAllowed(
@@ -246,9 +246,9 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 } catch (_: Exception) {
                     false
                 }
-                
+
                 if (!bound) {
-                    
+
                     Toast.makeText(
                         context,
                         "Cannot add this widget. Some widgets require special launcher permissions.",
@@ -257,8 +257,8 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                     appWidgetHost.deleteAppWidgetId(appWidgetId)
                     return
                 }
-                
-                
+
+
                 try {
                     appWidgetHost.createView(context, appWidgetId, appWidgetInfo)
                 } catch (e2: Exception) {
@@ -267,17 +267,17 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                     return
                 }
             }
-            
+
             if (widgetView == null) {
                 Toast.makeText(context, "Failed to create widget view", Toast.LENGTH_SHORT).show()
                 appWidgetHost.deleteAppWidgetId(appWidgetId)
                 return
             }
-            
-            
+
+
             widgetView.setAppWidget(appWidgetId, appWidgetInfo)
-            
-            
+
+
             val existingCustomHeightDp = widgets.firstOrNull { it.appWidgetId == appWidgetId }?.customHeightDp
             val widgetInfo = WidgetInfo(
                 appWidgetId = appWidgetId,
@@ -287,26 +287,26 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                 minHeight = appWidgetInfo.minHeight,
                 customHeightDp = existingCustomHeightDp
             )
-            
+
             widgets.removeAll { it.appWidgetId == appWidgetId }
             widgets.add(widgetInfo)
-            
-            
+
+
             val widgetContainerView = createWidgetContainer(widgetView, widgetInfo, appWidgetInfo)
-            
-            
+
+
             widgetContainer.addView(widgetContainerView)
-            
+
             saveWidgets()
             (context as? WidgetConfigurationActivity)?.loadWidgets()
-            
+
             Toast.makeText(context, "Widget added successfully", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(context, "Error adding widget: ${e.message}", Toast.LENGTH_SHORT).show()
             appWidgetHost.deleteAppWidgetId(appWidgetId)
         }
     }
-    
+
     private fun createWidgetContainer(
         widgetView: AppWidgetHostView,
         widgetInfo: WidgetInfo,
@@ -363,7 +363,7 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             resizeHandle.postDelayed(hideResizeHandleRunnable, 4000L)
         }
 
-        
+
         containerLayout.setOnLongClickListener {
             showResizeHandle()
             true
@@ -511,13 +511,13 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         widgets[index] = widgets[index].copy(customHeightDp = customHeightDp)
         saveWidgets()
     }
-    
+
     private fun showWidgetOptionsMenu(appWidgetId: Int, appWidgetInfo: AppWidgetProviderInfo) {
         val currentIndex = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
         val widgetName = appWidgetInfo.loadLabel(context.packageManager)
-        
+
         val options = mutableListOf<String>()
-        
+
         if (currentIndex > 0) {
             options.add("Move Up")
         }
@@ -525,9 +525,9 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             options.add("Move Down")
         }
         options.add("Delete")
-        
+
         if (options.isEmpty()) return
-        
+
         val dialog = AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle(widgetName)
             .setItems(options.toTypedArray()) { _, which ->
@@ -540,10 +540,10 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             }
             .setNegativeButton("Cancel", null)
             .show()
-        
+
         fixDialogTextColors(dialog)
     }
-    
+
     private fun fixDialogTextColors(dialog: AlertDialog) {
         try {
             val textColor = ContextCompat.getColor(context, R.color.text)
@@ -558,49 +558,49 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             }
         } catch (_: Exception) {}
     }
-    
+
     fun moveWidgetUp(appWidgetId: Int) {
         val currentIndex = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
         if (currentIndex > 0 && currentIndex < widgetContainer.childCount) {
-            
+
             val widget = widgets.removeAt(currentIndex)
             widgets.add(currentIndex - 1, widget)
-            
-            
+
+
             val viewToMove = widgetContainer.getChildAt(currentIndex)
             val viewToSwapWith = widgetContainer.getChildAt(currentIndex - 1)
-            
+
             widgetContainer.removeView(viewToMove)
             widgetContainer.removeView(viewToSwapWith)
-            
+
             widgetContainer.addView(viewToSwapWith, currentIndex - 1)
             widgetContainer.addView(viewToMove, currentIndex - 1)
-            
+
             saveWidgets()
         }
     }
-    
+
     fun moveWidgetDown(appWidgetId: Int) {
         val currentIndex = widgets.indexOfFirst { it.appWidgetId == appWidgetId }
         if (currentIndex < widgets.size - 1 && currentIndex < widgetContainer.childCount - 1) {
-            
+
             val widget = widgets.removeAt(currentIndex)
             widgets.add(currentIndex + 1, widget)
-            
-            
+
+
             val viewToMove = widgetContainer.getChildAt(currentIndex)
             val viewToSwapWith = widgetContainer.getChildAt(currentIndex + 1)
-            
+
             widgetContainer.removeView(viewToSwapWith)
             widgetContainer.removeView(viewToMove)
-            
+
             widgetContainer.addView(viewToSwapWith, currentIndex)
             widgetContainer.addView(viewToMove, currentIndex + 1)
-            
+
             saveWidgets()
         }
     }
-    
+
     private fun showRemoveWidgetDialog(appWidgetId: Int, widgetName: String) {
         AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Remove Widget")
@@ -611,10 +611,10 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     fun removeWidget(appWidgetId: Int) {
         try {
-            
+
             for (i in 0 until widgetContainer.childCount) {
                 val view = widgetContainer.getChildAt(i)
                 if (view.tag == appWidgetId) {
@@ -622,23 +622,23 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                     break
                 }
             }
-            
-            
+
+
             widgets.removeAll { it.appWidgetId == appWidgetId }
             widgetOptionsCache.remove(appWidgetId)
-            
-            
+
+
             appWidgetHost.deleteAppWidgetId(appWidgetId)
-            
-            
+
+
             saveWidgets()
-            
+
             Toast.makeText(context, "Widget removed", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(context, "Error removing widget: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     private fun saveWidgets() {
         try {
             val jsonArray = JSONArray()
@@ -661,17 +661,17 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         } catch (_: Exception) {
         }
     }
-    
+
     private fun loadWidgets() {
         try {
             val widgetsJson = prefs.getString(PREFS_WIDGETS_KEY, null) ?: return
             val jsonArray = JSONArray(widgetsJson)
-            
+
             for (i in 0 until jsonArray.length()) {
                 val json = jsonArray.getJSONObject(i)
                 val appWidgetId = json.getInt("appWidgetId")
-                
-                
+
+
                 val appWidgetInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
                 if (appWidgetInfo != null) {
                     val widgetInfo = WidgetInfo(
@@ -683,44 +683,44 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
                         customHeightDp = if (json.has("customHeightDp")) json.optInt("customHeightDp") else null
                     )
                     widgets.add(widgetInfo)
-                    
-                    
+
+
                     recreateWidgetView(widgetInfo, appWidgetInfo)
                 } else {
-                    
+
                     appWidgetHost.deleteAppWidgetId(appWidgetId)
                 }
             }
-            
-            
+
+
             if (widgets.size != jsonArray.length()) {
                 saveWidgets()
             }
         } catch (_: Exception) {
         }
     }
-    
+
     private fun recreateWidgetView(widgetInfo: WidgetInfo, appWidgetInfo: AppWidgetProviderInfo) {
         try {
             val widgetView = appWidgetHost.createView(context, widgetInfo.appWidgetId, appWidgetInfo)
             val widgetContainerView = createWidgetContainer(widgetView, widgetInfo, appWidgetInfo)
             widgetContainer.addView(widgetContainerView)
         } catch (_: Exception) {
-            
+
             widgets.remove(widgetInfo)
             appWidgetHost.deleteAppWidgetId(widgetInfo.appWidgetId)
         }
     }
-    
+
     fun onStop() {
         try {
             appWidgetHost.stopListening()
         } catch (e: Exception) {
-            
+
             Log.w(TAG, "Error stopping widget host listening", e)
         }
     }
-    
+
     fun onStart() {
         try {
             appWidgetHost.startListening()
@@ -728,8 +728,8 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
             Log.w(TAG, "Error starting widget host listening", e)
         }
     }
-    
-    
+
+
 
 
     fun reloadWidgets() {
@@ -755,12 +755,12 @@ class WidgetManager(private val context: Context, private val widgetContainer: L
         reloadWidgets()
         prefs.edit { putBoolean(PREFS_WIDGETS_CHANGED_KEY, false) }
     }
-    
+
     fun onDestroy() {
         try {
             appWidgetHost.stopListening()
         } catch (e: Exception) {
-            
+
             Log.w(TAG, "Error stopping widget host listening in destroy", e)
         }
     }

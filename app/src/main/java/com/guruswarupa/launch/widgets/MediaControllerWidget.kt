@@ -46,7 +46,7 @@ class MediaControllerWidget(private val context: Context, private val rootView: 
             activeController?.unregisterCallback(callback)
             activeController = newController
             newController?.registerCallback(callback)
-            
+
             updateMetadata(newController?.metadata)
             updatePlaybackState(newController?.playbackState)
         }
@@ -95,19 +95,19 @@ class MediaControllerWidget(private val context: Context, private val rootView: 
         try {
             permissionButton.visibility = View.GONE
             controlsLayout.visibility = View.VISIBLE
-            
+
             if (!sessionListenerRegistered) {
                 registerSessionListener()
             }
-            
+
             val controllers = mediaSessionManager.getActiveSessions(componentName)
             val newController = controllers?.firstOrNull()
-            
+
             if (newController != activeController) {
                 activeController?.unregisterCallback(callback)
                 activeController = newController
                 activeController?.registerCallback(callback)
-                
+
                 updateMetadata(activeController?.metadata)
                 updatePlaybackState(activeController?.playbackState)
             }

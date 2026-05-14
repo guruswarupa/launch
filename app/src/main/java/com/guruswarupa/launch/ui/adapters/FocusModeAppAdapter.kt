@@ -73,7 +73,7 @@ class FocusModeAppAdapter(
         holder.itemView.setOnClickListener {
             val newState = !holder.appCheckbox.isChecked
             holder.appCheckbox.isChecked = newState
-            
+
         }
     }
 

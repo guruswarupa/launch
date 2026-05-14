@@ -24,16 +24,16 @@ class NetworkStatsWidget(
     private lateinit var statusText: TextView
     private lateinit var runButton: Button
     private lateinit var wifiIpText: TextView
-    
+
     private val networkStatsManager = NetworkStatsManager()
     private val handler = Handler(Looper.getMainLooper())
 
-    
+
     private val updateRunnable = object : Runnable {
         override fun run() {
             if (isInitialized) {
                 updateDataUsage()
-                handler.postDelayed(this, 10000) 
+                handler.postDelayed(this, 10000)
             }
         }
     }
@@ -47,7 +47,7 @@ class NetworkStatsWidget(
         val inflater = LayoutInflater.from(context)
         widgetView = inflater.inflate(R.layout.widget_network_stats, container, false)
         container.addView(widgetView)
-        
+
         downloadText = widgetView.findViewById(R.id.download_speed_text)
         uploadText = widgetView.findViewById(R.id.upload_speed_text)
         pingText = widgetView.findViewById(R.id.ping_text)
@@ -64,24 +64,24 @@ class NetworkStatsWidget(
 
         updateDataUsage()
         isInitialized = true
-        
-        
+
+
         handler.post(updateRunnable)
     }
-    
+
     private fun updateDataUsage() {
         val (mobile, wifi) = networkStatsManager.getNetworkUsage()
         mobileUsageText.text = networkStatsManager.formatDataUsage(mobile)
         wifiUsageText.text = networkStatsManager.formatDataUsage(wifi)
         wifiIpText.text = networkStatsManager.getWifiIpAddress()
     }
-    
+
     private fun startSpeedTest() {
         runButton.isEnabled = false
         runButton.setText(R.string.status_running)
         statusText.setText(R.string.status_initializing)
-        updateDataUsage() 
-        
+        updateDataUsage()
+
         networkStatsManager.runSpeedTest(
             callback = { result ->
                 handler.post {
@@ -89,7 +89,7 @@ class NetworkStatsWidget(
                     uploadText.text = context.getString(R.string.mbps_format, result.uploadSpeedMbps)
                     pingText.text = context.getString(R.string.ms_format, result.pingMs)
                     jitterText.text = context.getString(R.string.ms_format, result.jitterMs)
-                    
+
                     statusText.setText(R.string.status_completed)
                     runButton.isEnabled = true
                     runButton.setText(R.string.button_run_speedtest)
@@ -109,19 +109,19 @@ class NetworkStatsWidget(
             }
         )
     }
-    
+
     fun onResume() {
         if (isInitialized) {
             handler.post(updateRunnable)
         }
     }
-    
+
     fun onPause() {
         if (isInitialized) {
             handler.removeCallbacks(updateRunnable)
         }
     }
-    
+
     fun cleanup() {
         handler.removeCallbacks(updateRunnable)
     }

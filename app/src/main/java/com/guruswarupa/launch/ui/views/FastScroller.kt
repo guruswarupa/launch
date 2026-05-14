@@ -25,23 +25,23 @@ class FastScroller @JvmOverloads constructor(
 
     private var alphabet = ('A'..'Z').map { it.toString() } + "#"
     private var recyclerView: RecyclerView? = null
-    
-    // Callback for when user scrolls to top
+
+
     var onScrollToTop: (() -> Unit)? = null
     private var hasNotifiedScrollToTop = false
-    
-    // Callback for when user scrolls to bottom
+
+
     var onScrollToBottom: (() -> Unit)? = null
     private var hasNotifiedScrollToBottom = false
-    
-    // Track scroll direction to prevent glitching with small lists
+
+
     private var lastScrollDy = 0
     private var scrollDirectionStable = 0
-    
-    // Track if user is at bottom for small lists
+
+
     private var isAtBottom = false
     private var bottomTriggerScheduled = false
-    private var consecutiveBottomScrolls = 0 // Count consecutive scroll events at bottom
+    private var consecutiveBottomScrolls = 0
 
     private val density = resources.displayMetrics.density
     private val trackStroke = 1f * density
@@ -51,11 +51,11 @@ class FastScroller @JvmOverloads constructor(
     private val extraVerticalPadding = 48f * density
     private var currentColor = Color.WHITE
 
-    private var currentAlpha = 1f 
+    private var currentAlpha = 1f
     private var waveProgress = 0f
     private var waveAnimator: ValueAnimator? = null
-    
-    
+
+
     private var touchX = 0f
 
     private var trackTop = 0f
@@ -118,9 +118,9 @@ class FastScroller @JvmOverloads constructor(
     }
 
     fun setFavoritesVisible(visible: Boolean) {
-        // No longer needed - favorites section removed from fastscroller
+
     }
-    
+
     fun resetTouchedState() {
         hasNotifiedScrollToTop = false
         hasNotifiedScrollToBottom = false
@@ -142,25 +142,25 @@ class FastScroller @JvmOverloads constructor(
         recyclerView = rv
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             private var previousState = RecyclerView.SCROLL_STATE_IDLE
-            
+
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (!isSliding) {
                     updateScrollIndex()
-                    
+
                     val layoutManager = recyclerView.layoutManager as? LinearLayoutManager ?: return
                     val adapter = recyclerView.adapter ?: return
-                    
+
                     val firstVisiblePos = layoutManager.findFirstVisibleItemPosition()
                     val lastVisiblePos = layoutManager.findLastVisibleItemPosition()
                     val totalItemCount = adapter.itemCount
-                    
-                    // Track scroll direction
+
+
                     lastScrollDy = dy
-                    
-                    // Check if scrolled to top
+
+
                     if (firstVisiblePos == 0) {
-                        // User is at the top of the list
-                        // Only trigger if scrolling upward or stationary
+
+
                         if (!hasNotifiedScrollToTop && dy <= 0) {
                             hasNotifiedScrollToTop = true
                             hasNotifiedScrollToBottom = false
@@ -168,16 +168,16 @@ class FastScroller @JvmOverloads constructor(
                             onScrollToTop?.invoke()
                         }
                     } else {
-                        // User scrolled away from top, reset the flag
+
                         hasNotifiedScrollToTop = false
                     }
-                    
-                    // Check if scrolled to bottom
+
+
                     val isAtListBottom = lastVisiblePos >= totalItemCount - 1 && totalItemCount > 0
                     if (isAtListBottom) {
                         isAtBottom = true
-                        // User is at the bottom of the list
-                        // Trigger when actively scrolling downward
+
+
                         if (dy > 0 && !hasNotifiedScrollToBottom) {
                             hasNotifiedScrollToBottom = true
                             hasNotifiedScrollToTop = false
@@ -185,32 +185,32 @@ class FastScroller @JvmOverloads constructor(
                             onScrollToBottom?.invoke()
                         }
                     } else {
-                        // User scrolled away from bottom, reset the flag
+
                         hasNotifiedScrollToBottom = false
                         isAtBottom = false
                         consecutiveBottomScrolls = 0
                     }
                 }
             }
-            
+
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
-                
+
                 val adapter = recyclerView.adapter as? AppAdapter
                 when (newState) {
                     RecyclerView.SCROLL_STATE_DRAGGING -> {
-                        
+
                         adapter?.setFastScrollingState(true)
                     }
                     RecyclerView.SCROLL_STATE_SETTLING -> {
-                        
+
                         adapter?.setFastScrollingState(true)
                     }
                     RecyclerView.SCROLL_STATE_IDLE -> {
-                        
+
                         if (previousState != RecyclerView.SCROLL_STATE_IDLE) {
                             adapter?.setFastScrollingState(false)
-                            
+
                             if (!isSliding) {
                                 forceRefreshVisibleIcons()
                             }
@@ -220,34 +220,34 @@ class FastScroller @JvmOverloads constructor(
                 previousState = newState
             }
         })
-        
-        
+
+
         rv.post { updateScrollIndex() }
     }
-    
-    
+
+
 
 
 
     private fun forceRefreshVisibleIcons() {
         val rv = recyclerView ?: return
         val layoutManager = rv.layoutManager as? LinearLayoutManager ?: return
-        
+
         val firstVisiblePos = layoutManager.findFirstVisibleItemPosition()
         val lastVisiblePos = layoutManager.findLastVisibleItemPosition()
-        
+
         if (firstVisiblePos == RecyclerView.NO_POSITION || lastVisiblePos == RecyclerView.NO_POSITION) return
-        
+
         val adapter = rv.adapter as? AppAdapter ?: return
-        
-        
-        
+
+
+
         rv.postDelayed({
             for (pos in firstVisiblePos..lastVisiblePos) {
                 if (pos < adapter.itemCount) {
                     rv.findViewHolderForAdapterPosition(pos)?.let { viewHolder ->
-                        
-                        
+
+
                         if (viewHolder is AppAdapter.ViewHolder) {
                             adapter.forceRebindViewHolder(viewHolder, pos)
                         }
@@ -268,8 +268,8 @@ class FastScroller @JvmOverloads constructor(
         if (firstVisiblePos >= appListSize) return
 
         var newIndex = -1
-        
-        // Find the nearest letter separator
+
+
         for (i in firstVisiblePos downTo 0) {
             val currentApp = adapter.getItemAtPosition(i) ?: continue
             if (currentApp.activityInfo.packageName == AppAdapter.SEPARATOR_PACKAGE) {
@@ -281,8 +281,8 @@ class FastScroller @JvmOverloads constructor(
                 }
             }
         }
-        
-        // Fallback: determine letter from app label
+
+
         if (newIndex == -1) {
             val label = adapter.getAppLabel(firstVisiblePos)
             if (label.isNotEmpty()) {
@@ -359,12 +359,12 @@ class FastScroller @JvmOverloads constructor(
             interpolator = OvershootInterpolator(1.8f)
             addUpdateListener { animator ->
                 waveProgress = animator.animatedValue as Float
-                
+
                 currentAlpha = if (to > 0f) {
-                    
+
                     (waveProgress * 1.2f).coerceIn(0f, 1f)
                 } else {
-                    
+
                     ((1f - waveProgress) * 1.2f).coerceIn(0f, 1f)
                 }
                 invalidate()
@@ -376,7 +376,7 @@ class FastScroller @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         trackX = width - paddingEnd - 2f * density
-        
+
         touchX = trackX
         trackTop = paddingTop + extraVerticalPadding
         trackBottom = height - paddingBottom - extraVerticalPadding
@@ -385,9 +385,9 @@ class FastScroller @JvmOverloads constructor(
     }
 
     private fun updateWaveShader() {
-        
+
         val startX = (touchX - maxWaveDepth).coerceAtLeast(0f)
-        
+
         val startColor = ColorUtils.setAlphaComponent(currentColor, 120)
         val endColor = ColorUtils.setAlphaComponent(currentColor, 0)
         val shader = LinearGradient(
@@ -402,8 +402,8 @@ class FastScroller @JvmOverloads constructor(
         if (trackBottom <= trackTop || alphabet.isEmpty()) return
 
         val fadeAlpha = (currentAlpha * 255).toInt().coerceIn(0, 255)
-        
-        
+
+
         canvas.drawLine(trackX, trackTop, trackX, trackBottom, trackPaint)
 
         val baseOffset = (letterPaint.descent() + letterPaint.ascent()) / 2
@@ -415,23 +415,23 @@ class FastScroller @JvmOverloads constructor(
             val isCurrentScroll = !isSliding && i == scrollIndex
 
             val paintToUse = if (isSelected || i == scrollIndex) selectedLetterPaint else letterPaint
-            
-            
+
+
             val alpha = if (isSelected || i == scrollIndex) 255 else (fadeAlpha * 0.5f).toInt()
             paintToUse.alpha = alpha
-            
+
             paintToUse.textSize = (if (isSelected || i == scrollIndex) 14f else 9f) * density
-            
+
             if (isSelected) {
-                
+
                 haloPaint.alpha = (fadeAlpha * 0.4f).toInt()
                 canvas.drawCircle(textX, y, 18f * density * waveProgress, haloPaint)
-                
-                
+
+
                 glowPaint.alpha = (fadeAlpha * 0.3f).toInt()
                 canvas.drawCircle(textX, y, 22f * density * waveProgress, glowPaint)
             }
-            
+
             val letterY = y - baseOffset
             canvas.drawText(alphabet[i], textX, letterY, paintToUse)
         }
@@ -462,26 +462,26 @@ class FastScroller @JvmOverloads constructor(
         if (selectedIndex < 0 || waveProgress <= 0f) return
         val centerY = (trackTop + letterSpacing * selectedIndex).coerceIn(trackTop, trackBottom)
         val radius = previewRadius * waveProgress
-        
+
         val bubbleX = trackX - 140f * density - (120f * density * (1f - waveProgress))
-        
-        
+
+
         val shadowPaint = Paint(previewPaint).apply {
             maskFilter = BlurMaskFilter(20f * density, BlurMaskFilter.Blur.NORMAL)
             alpha = (fadeAlpha * 0.3f).toInt()
         }
         canvas.drawCircle(bubbleX, centerY, radius + 6f * density, shadowPaint)
-        
-        
+
+
         val haloPaintLocal = Paint(previewPaint).apply {
             maskFilter = BlurMaskFilter(8f * density, BlurMaskFilter.Blur.NORMAL)
             alpha = (fadeAlpha * 0.4f).toInt()
         }
         canvas.drawCircle(bubbleX, centerY, radius + 2f * density, haloPaintLocal)
-        
+
         previewPaint.alpha = 255
         canvas.drawCircle(bubbleX, centerY, radius, previewPaint)
-        
+
         previewTextPaint.alpha = 255
         val textOffset = (previewTextPaint.descent() + previewTextPaint.ascent()) / 2
         canvas.drawText(alphabet[selectedIndex], bubbleX, centerY - textOffset, previewTextPaint)
@@ -495,14 +495,14 @@ class FastScroller @JvmOverloads constructor(
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val x = event.x
         val y = event.y
-        
+
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 val touchThreshold = width - 64f * density
                 if (x < touchThreshold) return false
-                
+
                 touchX = x
-                
+
                 isSliding = true
                 animateWaveProgress(1f)
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -521,10 +521,10 @@ class FastScroller @JvmOverloads constructor(
             MotionEvent.ACTION_CANCEL -> {
                 isSliding = false
                 selectedIndex = -1
-                
+
                 touchX = trackX
                 animateWaveProgress(0f)
-                updateScrollIndex() 
+                updateScrollIndex()
                 parent?.requestDisallowInterceptTouchEvent(false)
                 return true
             }
@@ -547,12 +547,12 @@ class FastScroller @JvmOverloads constructor(
         val adapter = recyclerView?.adapter as? AppAdapter ?: return
         val appListSize = adapter.getCurrentListSize()
         var targetPosition = -1
-        
-        // Search for the letter separator or app starting with that letter
+
+
         for (i in 0 until appListSize) {
             val app = adapter.getItemAtPosition(i) ?: continue
             val packageName = app.activityInfo.packageName
-            
+
             if (packageName == AppAdapter.SEPARATOR_PACKAGE) {
                 val separatorId = app.activityInfo.name ?: ""
                 if (letter == "#") {

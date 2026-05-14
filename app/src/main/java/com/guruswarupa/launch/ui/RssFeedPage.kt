@@ -47,8 +47,8 @@ class RssFeedPage(
     fun setup() {
         recyclerView.layoutManager = LinearLayoutManager(activity)
         recyclerView.adapter = adapter
-        
-        // Optimize RecyclerView for better performance
+
+
         recyclerView.setHasFixedSize(true)
         recyclerView.itemAnimator = null
 
@@ -285,7 +285,7 @@ class RssFeedPage(
             dialog.setOnShowListener {
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
                     val input = EditText(context).apply {
-                        hint = "https://example.com/feed.xml"
+                        hint = "https:
                         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
                         setSingleLine()
                     }
@@ -296,7 +296,7 @@ class RssFeedPage(
                             val success = rssFeedManager?.addFeedUrl(input.text.toString())
                                 ?: run {
                                     val newUrl = input.text.toString().trim()
-                                    if (newUrl.isBlank() || !(newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+                                    if (newUrl.isBlank() || !(newUrl.startsWith("http:
                                         false
                                     } else {
                                         val updatedUrls = RssFeedManager.getStoredFeedUrls(sharedPreferences).toMutableList()

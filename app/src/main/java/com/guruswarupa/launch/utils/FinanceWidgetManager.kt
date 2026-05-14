@@ -26,7 +26,7 @@ class FinanceWidgetManager(
     private val amountInput: EditText,
     private val descriptionInput: EditText
 ) {
-    
+
     fun setup() {
         activity.findViewById<Button>(R.id.add_income_btn).setOnClickListener {
             addTransaction(true)
@@ -36,12 +36,12 @@ class FinanceWidgetManager(
             addTransaction(false)
         }
 
-        
+
         balanceText.setOnClickListener {
             showTransactionHistory()
         }
-        
-        
+
+
         activity.findViewById<LinearLayout>(R.id.balance_card)?.setOnClickListener {
             showTransactionHistory()
         }
@@ -51,17 +51,17 @@ class FinanceWidgetManager(
 
     private fun setupCurrencySpinner() {
         val spinner = activity.findViewById<Spinner>(R.id.finance_currency_spinner) ?: return
-        
+
         val currencies = FinanceManager.SUPPORTED_CURRENCIES.map { (code, symbol) ->
             "$code ($symbol)"
         }.toTypedArray()
-        
+
         val adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_item, currencies)
-        
+
         adapter.setDropDownViewResource(R.layout.custom_spinner_dropdown_item)
         spinner.adapter = adapter
 
-        
+
         val currentCurrency = financeManager.getCurrencyCode()
         val index = FinanceManager.SUPPORTED_CURRENCIES.keys.indexOf(currentCurrency)
         if (index >= 0) {
@@ -82,18 +82,18 @@ class FinanceWidgetManager(
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
     }
-    
+
     fun updateDisplay() {
         val currencySymbol = financeManager.getCurrency()
         val balance = financeManager.getBalance()
         val monthlyExpenses = financeManager.getMonthlyExpenses()
         val monthlyIncome = financeManager.getMonthlyIncome()
         val netSavings = monthlyIncome - monthlyExpenses
-        
-        
+
+
         balanceText.text = String.format(Locale.getDefault(), "%s%.2f", currencySymbol, balance)
-        
-        
+
+
         val netText = if (netSavings >= 0) {
             "This Month: +$currencySymbol${String.format(Locale.getDefault(), "%.2f", netSavings)}"
         } else {
@@ -102,7 +102,7 @@ class FinanceWidgetManager(
         monthlySpentText.text = netText
         monthlySpentText.setTextColor(ContextCompat.getColor(activity, R.color.text_secondary))
     }
-    
+
     private fun addTransaction(isIncome: Boolean) {
         val amountText = amountInput.text.toString()
         val description = descriptionInput.text.toString().trim()
@@ -110,14 +110,14 @@ class FinanceWidgetManager(
         if (amountText.isNotEmpty()) {
             val amount = amountText.toDoubleOrNull()
             if (amount != null && amount > 0) {
-                
+
                 if (isIncome) {
                     financeManager.addIncome(amount, description)
                 } else {
                     financeManager.addExpense(amount, description)
                 }
 
-                
+
                 amountInput.text.clear()
                 descriptionInput.text.clear()
 
@@ -138,18 +138,18 @@ class FinanceWidgetManager(
             Toast.makeText(activity, "Please enter an amount", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     private fun showTransactionHistory() {
         val currencySymbol = financeManager.getCurrency()
-        
-        
+
+
         val dialogView = activity.layoutInflater.inflate(R.layout.dialog_transaction_history, null)
         val recyclerView = dialogView.findViewById<RecyclerView>(R.id.transaction_recycler_view)
         val closeButton = dialogView.findViewById<Button>(R.id.close_button)
         val clearAllButton = dialogView.findViewById<ImageButton>(R.id.clear_all_transactions_button)
-        
+
         recyclerView.layoutManager = LinearLayoutManager(activity)
-        
+
         fun getLatestTransactions(): MutableList<Transaction> {
             val allPrefs = sharedPreferences.all
             val list = mutableListOf<Transaction>()
@@ -168,7 +168,7 @@ class FinanceWidgetManager(
         }
 
         val sortedTransactions = getLatestTransactions()
-        
+
         val adapter =
             TransactionAdapter(currencySymbol) { transactionToDelete ->
                 val dialog = AlertDialog.Builder(activity, R.style.CustomDialogTheme)
@@ -177,7 +177,7 @@ class FinanceWidgetManager(
                     .setPositiveButton("Delete") { _, _ ->
                         financeManager.deleteTransaction(transactionToDelete.timestamp)
                         updateDisplay()
-                        
+
                         val newList = getLatestTransactions()
                         (recyclerView.adapter as TransactionAdapter).updateData(newList)
                         if (newList.isEmpty()) {
@@ -217,7 +217,7 @@ class FinanceWidgetManager(
                 }
                 .setNegativeButton("Cancel", null)
                 .show()
-            
+
             fixDialogTextColors(d)
         }
 
@@ -228,7 +228,7 @@ class FinanceWidgetManager(
         dialog.show()
         fixDialogTextColors(dialog)
     }
-    
+
     private fun fixDialogTextColors(dialog: AlertDialog) {
         try {
             val textColor = ContextCompat.getColor(activity, R.color.text)

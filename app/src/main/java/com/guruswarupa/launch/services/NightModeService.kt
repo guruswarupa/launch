@@ -53,20 +53,20 @@ class NightModeService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        
+
         val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
         startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val intensity = intent?.getIntExtra(EXTRA_INTENSITY, 10) ?: 10
-        
+
         if (intent?.action == ACTION_UPDATE_NIGHT_MODE) {
             updateOverlay(intensity)
         } else {
             showOverlay(intensity)
         }
-        
+
         return START_STICKY
     }
 
@@ -88,10 +88,10 @@ class NightModeService : Service() {
         }
 
         overlayView = View(this)
-        
-        
+
+
         overlayView?.setBackgroundColor(Color.rgb(255, 165, 0))
-        
+
         overlayView?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -116,7 +116,7 @@ class NightModeService : Service() {
             gravity = Gravity.TOP or Gravity.START
             x = 0
             y = 0
-            
+
             alpha = (intensity / 100f).coerceIn(0f, 0.8f)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

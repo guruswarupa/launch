@@ -47,7 +47,7 @@ object WebAppIconFetcher {
         onResult: (Drawable?) -> Unit
     ) {
         memoryCache[siteUrl]?.let {
-            // Safety check: ensure bitmap is not recycled
+
             if (!(it is android.graphics.drawable.BitmapDrawable && it.bitmap.isRecycled)) {
                 onResult(it)
             } else {

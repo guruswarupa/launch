@@ -153,13 +153,13 @@ class PomodoroManager(
     fun stopPomodoro() {
         currentTimer?.cancel()
         currentTimer = null
-        
+
         sharedPreferences.edit {
             putString(PREF_POMODORO_STATE, STATE_INACTIVE)
             remove(PREF_POMODORO_END_TIME)
             remove(PREF_POMODORO_CYCLE_COUNT)
         }
-        
+
         focusModeManager.setFocusModeEnabled(false)
         onSessionEnded?.invoke()
     }

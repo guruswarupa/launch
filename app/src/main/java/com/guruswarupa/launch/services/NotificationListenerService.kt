@@ -5,7 +5,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 
 class LaunchNotificationListenerService : NotificationListenerService() {
-    
+
     companion object {
         private const val TAG = "LaunchNotificationListener"
         var instance: LaunchNotificationListenerService? = null
@@ -21,7 +21,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
 
     override fun onDestroy() {
         try {
-            
+
             instance = null
             isListenerConnected = false
         } catch (_: Exception) {
@@ -34,17 +34,17 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         super.onListenerConnected()
         isListenerConnected = true
     }
-    
+
     override fun onListenerDisconnected() {
         isListenerConnected = false
         try {
             super.onListenerDisconnected()
         } catch (e: Exception) {
-            
+
             Log.w(TAG, "Error during listener disconnection", e)
         }
     }
-    
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         try {
             if (isListenerConnected) {
@@ -53,7 +53,7 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         } catch (_: Exception) {
         }
     }
-    
+
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         try {
             if (isListenerConnected) {
@@ -77,13 +77,13 @@ class LaunchNotificationListenerService : NotificationListenerService() {
             emptyArray()
         }
     }
-    
-    
+
+
     @Suppress("unused", "DEPRECATION")
     fun dismissNotification(pkg: String, tag: String?, id: Int) {
         try {
             if (isListenerConnected) {
-                
+
                 cancelNotification(pkg, tag, id)
             }
         } catch (e: SecurityException) {
@@ -91,8 +91,8 @@ class LaunchNotificationListenerService : NotificationListenerService() {
         } catch (_: Exception) {
         }
     }
-    
-    
+
+
     fun dismissNotificationByKey(key: String) {
         try {
             if (isListenerConnected) {

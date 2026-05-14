@@ -83,7 +83,7 @@ class RssFeedAdapter : RecyclerView.Adapter<RssFeedAdapter.RssArticleViewHolder>
                     )
                     putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, article.title.ifBlank { article.source })
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, article.link)
-                    // RSS links should always block redirects for security
+
                     putExtra(WebAppActivity.EXTRA_BLOCK_REDIRECTS, true)
                 }
                 itemView.context.startActivity(intent)

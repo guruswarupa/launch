@@ -18,7 +18,7 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 class EncryptedFolderManager(private val context: Context) {
-    
+
     companion object {
         private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
         private const val SALT_SIZE = 16
@@ -29,8 +29,8 @@ class EncryptedFolderManager(private val context: Context) {
         private const val THUMBS_DIR = "vault_thumbs"
         private const val TEMP_DIR = "vault_temp"
         private const val CONFIG_FILE = ".vault_config"
-        
-        
+
+
         private var masterKey: SecretKey? = null
     }
 
@@ -52,8 +52,8 @@ class EncryptedFolderManager(private val context: Context) {
         try {
             val salt = ByteArray(SALT_SIZE).apply { SecureRandom().nextBytes(this) }
             val key = deriveKey(password, salt)
-            
-            
+
+
             val verificationData = "VAULT_OPEN".toByteArray()
             val iv = ByteArray(IV_SIZE).apply { SecureRandom().nextBytes(this) }
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -65,7 +65,7 @@ class EncryptedFolderManager(private val context: Context) {
                 fos.write(iv)
                 fos.write(encryptedVerification)
             }
-            
+
             masterKey = key
             return true
         } catch (e: Exception) {
@@ -76,7 +76,7 @@ class EncryptedFolderManager(private val context: Context) {
 
     fun unlock(password: String): Boolean {
         if (!configFile.exists()) return false
-        
+
         try {
             FileInputStream(configFile).use { fis ->
                 val salt = ByteArray(SALT_SIZE)
@@ -88,7 +88,7 @@ class EncryptedFolderManager(private val context: Context) {
                 val key = deriveKey(password, salt)
                 val cipher = Cipher.getInstance("AES/GCM/NoPadding")
                 cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
-                
+
                 val decrypted = cipher.doFinal(encryptedVerification)
                 if (String(decrypted) == "VAULT_OPEN") {
                     masterKey = key
@@ -118,7 +118,7 @@ class EncryptedFolderManager(private val context: Context) {
         val key = masterKey ?: throw IllegalStateException("Vault is locked")
         val destinationFile = File(encryptedFolder, fileName)
 
-        
+
         generateThumbnail(sourceUri, fileName)
 
         try {
@@ -128,7 +128,7 @@ class EncryptedFolderManager(private val context: Context) {
                 cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
 
                 FileOutputStream(destinationFile).use { fos ->
-                    fos.write(iv) 
+                    fos.write(iv)
                     val cipherOutputStream = javax.crypto.CipherOutputStream(fos, cipher)
                     inputStream.copyTo(cipherOutputStream)
                     cipherOutputStream.close()
@@ -143,7 +143,7 @@ class EncryptedFolderManager(private val context: Context) {
     fun getDecryptedInputStream(fileName: String): InputStream {
         val key = masterKey ?: throw IllegalStateException("Vault is locked")
         val sourceFile = File(encryptedFolder, fileName)
-        
+
         val fis = FileInputStream(sourceFile)
         val iv = ByteArray(IV_SIZE)
         if (fis.read(iv) != IV_SIZE) {
@@ -153,7 +153,7 @@ class EncryptedFolderManager(private val context: Context) {
 
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
-        
+
         return javax.crypto.CipherInputStream(fis, cipher)
     }
 
@@ -230,8 +230,8 @@ class EncryptedFolderManager(private val context: Context) {
     }
 
     fun getEncryptedFiles(): List<File> {
-        return encryptedFolder.listFiles()?.filter { 
-            !it.name.startsWith(".") && it.name != CONFIG_FILE 
+        return encryptedFolder.listFiles()?.filter {
+            !it.name.startsWith(".") && it.name != CONFIG_FILE
         } ?: emptyList()
     }
 
@@ -239,7 +239,7 @@ class EncryptedFolderManager(private val context: Context) {
         val sourceFile = File(encryptedFolder, fileName)
         val cacheDir = File(context.cacheDir, TEMP_DIR)
         if (!cacheDir.exists()) cacheDir.mkdirs()
-        
+
         val tempFile = File(cacheDir, fileName)
         if (tempFile.exists() && tempFile.length() > 0L && tempFile.lastModified() >= sourceFile.lastModified()) {
             return tempFile
@@ -269,16 +269,16 @@ class EncryptedFolderManager(private val context: Context) {
         }
     }
 
-    
+
     private fun generateThumbnail(uri: Uri, fileName: String) {
         val key = masterKey ?: return
         var mimeType = context.contentResolver.getType(uri)
-        
+
         if (mimeType == null) {
             val extension = MimeTypeMap.getFileExtensionFromUrl(uri.toString())
             mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
         }
-        
+
         var bitmap: Bitmap? = null
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -302,7 +302,7 @@ class EncryptedFolderManager(private val context: Context) {
                     }
                 }
             }
-            
+
             if (bitmap == null) bitmap = getDefaultThumbnailForFileType(mimeType)
 
             bitmap?.let {
@@ -326,7 +326,7 @@ class EncryptedFolderManager(private val context: Context) {
         val size = if (width > height) height else width
         val x = (width - size) / 2
         val y = (height - size) / 2
-        
+
         val cropped = Bitmap.createBitmap(bitmap, x, y, size, size)
         cropped.compress(Bitmap.CompressFormat.JPEG, 70, stream)
         val byteArray = stream.toByteArray()
@@ -349,10 +349,10 @@ class EncryptedFolderManager(private val context: Context) {
             val fis = FileInputStream(thumbFile)
             val iv = ByteArray(IV_SIZE)
             fis.read(iv)
-            
+
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
-            
+
             val cis = javax.crypto.CipherInputStream(fis, cipher)
             BitmapFactory.decodeStream(cis)
         } catch (e: Exception) {
@@ -399,27 +399,27 @@ class EncryptedFolderManager(private val context: Context) {
         return inSampleSize
     }
 
-    
+
     fun exportVault(outputStream: OutputStream): Boolean {
         return try {
             val zipOut = java.util.zip.ZipOutputStream(outputStream)
-            
-            
+
+
             encryptedFolder.listFiles()?.forEach { file ->
                 val entry = java.util.zip.ZipEntry("data/${file.name}")
                 zipOut.putNextEntry(entry)
                 file.inputStream().use { it.copyTo(zipOut) }
                 zipOut.closeEntry()
             }
-            
-            
+
+
             thumbnailFolder.listFiles()?.forEach { file ->
                 val entry = java.util.zip.ZipEntry("thumbs/${file.name}")
                 zipOut.putNextEntry(entry)
                 file.inputStream().use { it.copyTo(zipOut) }
                 zipOut.closeEntry()
             }
-            
+
             zipOut.close()
             true
         } catch (e: Exception) {
@@ -440,7 +440,7 @@ class EncryptedFolderManager(private val context: Context) {
                 } else {
                     null
                 }
-                
+
                 destFile?.let {
                     it.parentFile?.mkdirs()
                     FileOutputStream(it).use { fos ->

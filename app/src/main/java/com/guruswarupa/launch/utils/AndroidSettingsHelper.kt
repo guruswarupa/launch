@@ -9,22 +9,22 @@ import android.os.Build
 
 
 object AndroidSettingsHelper {
-    
+
     data class SettingInfo(
         val title: String,
         val description: String,
         val action: String,
         val searchKeywords: List<String> = emptyList()
     )
-    
-    
+
+
 
 
     @SuppressLint("InlinedApi")
     fun getAllSystemSettings(): List<SettingInfo> {
         val settingsList = mutableListOf<SettingInfo>()
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Wi-Fi",
@@ -33,8 +33,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("wifi", "wi-fi", "wireless", "network", "internet", "connection")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Bluetooth",
@@ -43,8 +43,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("bluetooth", "pair", "connect", "device", "headphones", "speaker")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Data Usage",
@@ -53,8 +53,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("data", "usage", "mobile data", "cellular", "traffic", "bandwidth")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Mobile Network",
@@ -63,8 +63,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("mobile", "network", "cellular", "roaming", "carrier", "signal")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Airplane Mode",
@@ -73,8 +73,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("airplane", "flight", "mode", "offline", "disconnect")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Sound",
@@ -83,8 +83,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("sound", "volume", "ringtone", "notification", "audio", "mute")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Display",
@@ -93,8 +93,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("display", "brightness", "wallpaper", "screen", "resolution", "theme")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Notifications",
@@ -103,8 +103,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("notifications", "alerts", "messages", "popups", "permissions")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Location",
@@ -113,8 +113,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("location", "gps", "map", "position", "coordinates", "services")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Security",
@@ -123,8 +123,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("security", "lock", "password", "pin", "pattern", "fingerprint", "biometric")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Privacy",
@@ -133,8 +133,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("privacy", "permission", "data", "personal", "tracking", "consent")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Accessibility",
@@ -143,8 +143,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("accessibility", "vision", "hearing", "motor", "features", "help")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Storage",
@@ -153,8 +153,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("storage", "memory", "space", "disk", "internal", "files")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Battery",
@@ -163,8 +163,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("battery", "power", "saver", "optimization", "charge", "life")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Applications",
@@ -173,8 +173,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("applications", "apps", "installed", "manage", "storage", "permissions")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Developer Options",
@@ -183,8 +183,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("developer", "debug", "advanced", "adb", "usb", "options")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Date & Time",
@@ -193,8 +193,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("date", "time", "timezone", "clock", "format", "sync")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Language & Input",
@@ -203,8 +203,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("language", "input", "keyboard", "text", "typing", "ime")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Accounts",
@@ -213,8 +213,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("accounts", "sync", "google", "email", "cloud", "backup")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "About Phone",
@@ -223,8 +223,8 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("about", "phone", "info", "software", "version", "model", "imei")
             )
         )
-        
-        
+
+
         settingsList.add(
             SettingInfo(
                 title = "Data Saver",
@@ -233,7 +233,7 @@ object AndroidSettingsHelper {
                 searchKeywords = listOf("data saver", "data saving", "restrict", "background", "bandwidth")
             )
         )
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settingsList.add(
                 SettingInfo(
@@ -244,8 +244,8 @@ object AndroidSettingsHelper {
                 )
             )
         }
-        
-        
+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             settingsList.add(
                 SettingInfo(
@@ -256,25 +256,25 @@ object AndroidSettingsHelper {
                 )
             )
         }
-        
+
         return settingsList
     }
-    
-    
+
+
 
 
     fun searchSettings(query: String): List<SettingInfo> {
         val lowerQuery = query.lowercase().trim()
         if (lowerQuery.isEmpty()) return emptyList()
-        
+
         return getAllSystemSettings().filter { setting ->
             setting.title.lowercase().contains(lowerQuery) ||
             setting.description.lowercase().contains(lowerQuery) ||
             setting.searchKeywords.any { it.contains(lowerQuery) }
         }
     }
-    
-    
+
+
 
 
     fun createSettingsIntent(settingAction: String): Intent {
@@ -283,7 +283,7 @@ object AndroidSettingsHelper {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
         } catch (_: Exception) {
-            
+
             Intent(Settings.ACTION_SETTINGS).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }

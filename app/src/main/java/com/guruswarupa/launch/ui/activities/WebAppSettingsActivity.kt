@@ -49,26 +49,26 @@ class WebAppSettingsActivity : ComponentActivity() {
     private lateinit var emptyView: TextView
     private lateinit var scrollView: View
     private lateinit var overlayView: View
-    
+
     private var isAnimating = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
         setContentView(R.layout.activity_web_app_settings)
 
-        
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             findViewById<View>(R.id.web_apps_scroll_view).setPadding(0, bars.top, 0, bars.bottom)
             insets
         }
 
-        
+
         WallpaperDisplayHelper.applySystemWallpaper(findViewById(R.id.web_apps_wallpaper))
 
         listContainer = findViewById(R.id.web_apps_list)
@@ -76,18 +76,18 @@ class WebAppSettingsActivity : ComponentActivity() {
         scrollView = findViewById(R.id.web_apps_scroll_view)
         overlayView = findViewById(R.id.web_apps_overlay)
 
-        
+
         applyBackgroundTranslucency()
 
-        
-        findViewById<ImageButton>(R.id.web_apps_back_button).setOnClickListener { 
+
+        findViewById<ImageButton>(R.id.web_apps_back_button).setOnClickListener {
             animateFinish()
         }
-        
-        
-        findViewById<Button>(R.id.add_web_app_button).setOnClickListener { 
+
+
+        findViewById<Button>(R.id.add_web_app_button).setOnClickListener {
             animateButtonClick(it)
-            showEditorDialog() 
+            showEditorDialog()
         }
 
         renderWebApps()
@@ -96,8 +96,8 @@ class WebAppSettingsActivity : ComponentActivity() {
     private fun renderWebApps() {
         val webApps = webAppManager.getWebApps()
         listContainer.removeAllViews()
-        
-        
+
+
         if (webApps.isEmpty()) {
             emptyView.visibility = View.VISIBLE
             emptyView.alpha = 0f
@@ -115,26 +115,26 @@ class WebAppSettingsActivity : ComponentActivity() {
             val iconView = itemView.findViewById<android.widget.ImageView>(R.id.web_app_item_icon)
             itemView.findViewById<TextView>(R.id.web_app_item_name).text = entry.name
             itemView.findViewById<TextView>(R.id.web_app_item_url).text = entry.url
-            
-            
+
+
             WebAppIconFetcher.loadIcon(this, entry.url) { drawable ->
                 if (drawable != null) {
                     iconView.setImageDrawable(drawable)
                     iconView.alpha = 0f
                     ObjectAnimator.ofFloat(iconView, "alpha", 0f, 1f).apply {
                         duration = 300
-                        startDelay = index * 50L 
+                        startDelay = index * 50L
                         start()
                     }
                 }
             }
-            
+
             itemView.findViewById<ImageButton>(R.id.web_app_item_open).setOnClickListener {
                 val intent = Intent(this, WebAppActivity::class.java).apply {
                     putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, entry.name)
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, entry.url)
                     putExtra(WebAppActivity.EXTRA_BLOCK_REDIRECTS, entry.blockRedirects)
-                    
+
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
                                 Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
@@ -144,18 +144,18 @@ class WebAppSettingsActivity : ComponentActivity() {
                 val options = ActivityOptions.makeCustomAnimation(this, R.anim.slide_in_right, R.anim.slide_out_left)
                 startActivity(intent, options.toBundle())
             }
-            
+
             itemView.findViewById<ImageButton>(R.id.web_app_item_edit).setOnClickListener {
                 showEditorDialog(entry)
             }
-            
+
             itemView.findViewById<ImageButton>(R.id.web_app_item_delete).setOnClickListener {
                 confirmDelete(entry)
             }
-            
+
             listContainer.addView(itemView)
-            
-            
+
+
             if (!isAnimating) {
                 itemView.alpha = 0f
                 itemView.translationY = 50f
@@ -174,14 +174,14 @@ class WebAppSettingsActivity : ComponentActivity() {
             }
         }
     }
-    
+
     private fun applyBackgroundTranslucency() {
         val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)
         val color = Color.argb(alpha, 0, 0, 0)
         overlayView.setBackgroundColor(color)
     }
-    
+
     private fun animateButtonClick(view: View) {
         ObjectAnimator.ofFloat(view, "scaleX", 1f, 0.95f, 1f).apply {
             duration = 200
@@ -194,11 +194,11 @@ class WebAppSettingsActivity : ComponentActivity() {
             start()
         }
     }
-    
+
     private fun animateFinish() {
         if (isAnimating) return
         isAnimating = true
-        
+
         val root = findViewById<View>(R.id.web_apps_root)
         ObjectAnimator.ofFloat(root, "alpha", 1f, 0f).apply {
             duration = 200
@@ -225,7 +225,7 @@ class WebAppSettingsActivity : ComponentActivity() {
     }
 
     private var searchJob: Job? = null
-    
+
     private fun showEditorDialog(existing: WebAppEntry? = null) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_web_app_editor, null)
         val nameInput = dialogView.findViewById<EditText>(R.id.web_app_name_input)
@@ -239,11 +239,11 @@ class WebAppSettingsActivity : ComponentActivity() {
         nameInput.setText(existing?.name.orEmpty())
         urlInput.setText(existing?.url.orEmpty())
         urlInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-        
-        // Set redirect blocking toggle (default to true for new apps)
+
+
         blockRedirectsSwitch.isChecked = existing?.blockRedirects ?: true
-        
-        // Apply switch colors
+
+
         val enabledColor = Color.rgb(72, 191, 145)
         val disabledColor = Color.WHITE
         fun applySwitchColors(isChecked: Boolean) {
@@ -255,24 +255,24 @@ class WebAppSettingsActivity : ComponentActivity() {
             )
         }
         applySwitchColors(blockRedirectsSwitch.isChecked)
-        
-        // Show popular suggestions only for new web apps
+
+
         if (existing == null) {
             suggestionsContainer.visibility = View.VISIBLE
             setupPopularSuggestions(suggestionsList, nameInput, urlInput)
         }
-        
-        // Search button click handler
+
+
         searchButton.setOnClickListener {
             showSearchDialog(nameInput, urlInput, searchProgress)
         }
-        
+
         nameInput.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
             if (!hasFocus && nameInput.text.toString().trim().isBlank()) {
                 nameInput.error = getString(R.string.web_app_name_required)
             }
         }
-        
+
         urlInput.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
             if (!hasFocus) {
                 val url = urlInput.text.toString().trim()
@@ -298,7 +298,7 @@ class WebAppSettingsActivity : ComponentActivity() {
             val name = nameInput.text.toString().trim()
             val url = urlInput.text.toString().trim()
             val blockRedirects = blockRedirectsSwitch.isChecked
-            
+
             when {
                 name.isBlank() -> {
                     nameInput.requestFocus()
@@ -339,8 +339,8 @@ class WebAppSettingsActivity : ComponentActivity() {
                     notifySettingsChanged()
                     renderWebApps()
                     dialog.dismiss()
-                    
-                    
+
+
                     Toast.makeText(
                         this,
                         if (existing == null) R.string.web_app_added else R.string.web_app_updated,
@@ -350,14 +350,14 @@ class WebAppSettingsActivity : ComponentActivity() {
             }
         }
     }
-    
+
     private fun setupPopularSuggestions(
         suggestionsList: LinearLayout,
         nameInput: EditText,
         urlInput: EditText
     ) {
         suggestionsList.removeAllViews()
-        
+
         WebAppSearchHelper.POPULAR_WEBSITES.take(10).forEach { suggestion ->
             val chip = TextView(this).apply {
                 text = suggestion.title
@@ -372,7 +372,7 @@ class WebAppSettingsActivity : ComponentActivity() {
                     urlInput.setText(suggestion.url)
                 }
             }
-            
+
             val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -380,11 +380,11 @@ class WebAppSettingsActivity : ComponentActivity() {
                 setMargins(0, 0, 12, 8)
             }
             chip.layoutParams = params
-            
+
             suggestionsList.addView(chip)
         }
     }
-    
+
     private fun showSearchDialog(
         nameInput: EditText,
         urlInput: EditText,
@@ -395,14 +395,14 @@ class WebAppSettingsActivity : ComponentActivity() {
         val searchProgressLocal = searchView.findViewById<ProgressBar>(R.id.search_progress)
         val searchResultsList = searchView.findViewById<LinearLayout>(R.id.search_results_list)
         val searchEmptyText = searchView.findViewById<TextView>(R.id.search_empty_text)
-        
+
         val searchDialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle(R.string.web_app_search_title)
             .setView(searchView)
             .setPositiveButton(R.string.cancel_button, null)
             .show()
-        
-        // Handle search action
+
+
         searchInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
                 performSearch(searchInput.text.toString(), searchResultsList, searchProgressLocal, searchEmptyText, nameInput, urlInput, searchDialog)
@@ -412,7 +412,7 @@ class WebAppSettingsActivity : ComponentActivity() {
             }
         }
     }
-    
+
     private fun performSearch(
         query: String,
         searchResultsList: LinearLayout,
@@ -423,13 +423,13 @@ class WebAppSettingsActivity : ComponentActivity() {
         searchDialog: AlertDialog
     ) {
         if (query.isBlank()) return
-        
+
         searchJob?.cancel()
         searchJob = CoroutineScope(Dispatchers.Main).launch {
             searchProgress.visibility = View.VISIBLE
             searchEmptyText.visibility = View.GONE
             searchResultsList.removeAllViews()
-            
+
             val results = try {
                 WebAppSearchHelper.searchGoogle(query)
             } catch (e: Exception) {
@@ -440,10 +440,10 @@ class WebAppSettingsActivity : ComponentActivity() {
                 }
                 return@launch
             }
-            
+
             withContext(Dispatchers.Main) {
                 searchProgress.visibility = View.GONE
-                
+
                 if (results.isEmpty()) {
                     searchEmptyText.visibility = View.VISIBLE
                 } else {
@@ -455,7 +455,7 @@ class WebAppSettingsActivity : ComponentActivity() {
             }
         }
     }
-    
+
     private fun addSearchResultItem(
         container: LinearLayout,
         result: SearchSuggestion,
@@ -467,18 +467,18 @@ class WebAppSettingsActivity : ComponentActivity() {
         val titleText = itemView.findViewById<TextView>(R.id.search_result_title)
         val urlText = itemView.findViewById<TextView>(R.id.search_result_url)
         val descText = itemView.findViewById<TextView>(R.id.search_result_description)
-        
+
         titleText.text = result.title
         urlText.text = result.url
         descText.text = result.description
-        
+
         itemView.setOnClickListener {
             nameInput.setText(result.title)
             urlInput.setText(result.url)
             searchDialog.dismiss()
             Toast.makeText(this, "Selected: ${result.title}", Toast.LENGTH_SHORT).show()
         }
-        
+
         container.addView(itemView)
     }
 
@@ -490,8 +490,8 @@ class WebAppSettingsActivity : ComponentActivity() {
                 webAppManager.removeWebApp(entry.id)
                 notifySettingsChanged()
                 renderWebApps()
-                
-                
+
+
                 Toast.makeText(
                     this,
                     getString(R.string.web_app_removed, entry.name),
@@ -517,7 +517,7 @@ class WebAppSettingsActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        
+
         WebAppIconFetcher.clearCache()
     }
 }

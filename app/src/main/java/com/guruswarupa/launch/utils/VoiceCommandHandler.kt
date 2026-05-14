@@ -22,8 +22,8 @@ class VoiceCommandHandler(
     private val searchBox: AutoCompleteTextView,
     private val appList: List<ResolveInfo>
 ) {
-    
-    
+
+
 
 
 
@@ -44,7 +44,7 @@ class VoiceCommandHandler(
                     val message = parts[0].substringAfter("send ").trim()
                     val contactName = parts[1].trim()
                     val phoneNumber = getPhoneNumberForContact(contactName)
-                    
+
                     phoneNumber?.let {
                         sendWhatsAppMessage(it, message)
                         searchBox.text.clear()
@@ -68,7 +68,7 @@ class VoiceCommandHandler(
                 val contactName = command.substringAfter("call ", "").trim()
                 val phoneNumber = getPhoneNumberForContact(contactName)
                 phoneNumber?.let {
-                    
+
                     val callIntent = Intent(Intent.ACTION_DIAL)
                     callIntent.data = "tel:$it".toUri()
                     activity.startActivity(callIntent)
@@ -123,7 +123,7 @@ class VoiceCommandHandler(
                     val matchingApp = appList.find { resolveInfo ->
                         resolveInfo.safeLabel(packageManager)?.contains(normalizedAppName) == true
                     }
-                    
+
                     matchingApp?.let { app ->
                         val packageName = app.safePackageName() ?: return@let false
                         val intent = Intent(Intent.ACTION_DELETE).apply {
@@ -140,7 +140,7 @@ class VoiceCommandHandler(
                 if (locations.size == 2) {
                     val origin = locations[0].trim()
                     val destination = locations[1].trim()
-                    
+
                     if (origin.isNotEmpty() || destination.isNotEmpty()) {
                         val uriString = "https://www.google.com/maps/dir/?api=1&origin=${Uri.encode(origin)}&destination=${Uri.encode(destination)}&travelmode=driving"
                         val mapIntent = Intent(Intent.ACTION_VIEW, uriString.toUri())
@@ -159,7 +159,7 @@ class VoiceCommandHandler(
             else -> false
         }
     }
-    
+
     private fun getPhoneNumberForContact(contactName: String): String? {
         val cursor = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -169,27 +169,27 @@ class VoiceCommandHandler(
             ),
             null, null, null
         )
-        
+
         fun normalize(name: String): List<String> {
             return name.lowercase()
                 .replace(Regex("[^a-z0-9 ]"), "")
                 .split(" ")
                 .filter { it.isNotBlank() }
         }
-        
+
         val inputParts = normalize(contactName)
         val seenNames = mutableSetOf<String>()
         val matches = mutableListOf<Pair<String, String>>()
-        
+
         cursor?.use { cursorObj ->
             while (cursorObj.moveToNext()) {
                 val name = cursorObj.getString(0)?.trim() ?: continue
                 val number = cursorObj.getString(1)?.trim() ?: continue
-                
+
                 if (number.isEmpty() || !number.any { char -> char.isDigit() }) continue
-                
+
                 val nameParts = normalize(name)
-                
+
                 if (inputParts.any { input -> nameParts.any { part -> part.contains(input) } }) {
                     if (!seenNames.contains(name.lowercase())) {
                         matches.add(name to number)
@@ -198,7 +198,7 @@ class VoiceCommandHandler(
                 }
             }
         }
-        
+
         return matches.minByOrNull { (name, _) ->
             val norm = normalize(name).joinToString(" ")
             when {
@@ -208,7 +208,7 @@ class VoiceCommandHandler(
             }
         }?.second
     }
-    
+
     private fun sendWhatsAppMessage(phoneNumber: String, message: String) {
         try {
             val formattedPhoneNumber = phoneNumber.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
@@ -222,7 +222,7 @@ class VoiceCommandHandler(
             Toast.makeText(activity, "WhatsApp not installed or failed to open message.", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     fun openWhatsAppChat(contactName: String) {
         val cursor = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -231,7 +231,7 @@ class VoiceCommandHandler(
             arrayOf(contactName),
             null
         )
-        
+
         cursor?.use {
             if (it.moveToFirst()) {
                 val phoneNumber = it.getString(0)
@@ -239,9 +239,9 @@ class VoiceCommandHandler(
                     .replace("-", "")
                     .replace("(", "")
                     .replace(")", "")
-                
+
                 try {
-                    val uriString = "https://wa.me/${Uri.encode(phoneNumber)}"
+                    val uriString = "https:
                     val intent = Intent(Intent.ACTION_VIEW).apply {
                         data = uriString.toUri()
                         setPackage("com.whatsapp")
@@ -255,15 +255,15 @@ class VoiceCommandHandler(
             }
         }
     }
-    
+
     fun openSMSChat(contactName: String) {
         val phoneNumber = getPhoneNumberForContact(contactName)
-        
+
         val intent = Intent(Intent.ACTION_SENDTO).apply {
             data = "smsto:$phoneNumber".toUri()
             putExtra("sms_body", "")
         }
-        
+
         try {
             if (intent.resolveActivity(packageManager) != null) {
                 activity.startActivity(intent)

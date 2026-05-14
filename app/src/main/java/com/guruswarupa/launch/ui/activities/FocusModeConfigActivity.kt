@@ -40,19 +40,19 @@ class FocusModeConfigActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        
+
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
-        
+
         setContentView(R.layout.activity_focus_mode_config)
 
         focusModeManager = FocusModeManager(this, getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE))
         webAppManager = WebAppManager(prefs)
 
-        
+
         recyclerView = findViewById(R.id.focus_mode_app_list)
         wallpaperBackground = findViewById(R.id.wallpaper_background)
         themeOverlay = findViewById(R.id.theme_overlay)
@@ -66,7 +66,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.itemAnimator = null
 
-        
+
         applyThemeAndWallpaper()
 
         loadApps()
@@ -75,16 +75,16 @@ class FocusModeConfigActivity : ComponentActivity() {
         recyclerView.adapter = adapter
 
         saveButton.setOnClickListener {
-            
+
             focusModeManager.updateAllowedApps(adapter.getSelectedApps())
-            
+
             Toast.makeText(this, "Focus mode configuration saved", Toast.LENGTH_SHORT).show()
-            
-            
+
+
             val intent = Intent("com.guruswarupa.launch.SETTINGS_UPDATED")
             intent.setPackage(packageName)
             sendBroadcast(intent)
-            
+
             finish()
         }
 
@@ -94,21 +94,21 @@ class FocusModeConfigActivity : ComponentActivity() {
     }
 
     private fun applyThemeAndWallpaper() {
-        
+
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground, fallbackRes = R.drawable.wallpaper_overlay)
-        
+
         applyBackgroundTranslucency()
-        
+
         appsContainer.setBackgroundResource(R.drawable.widget_background)
-        
+
         val textColor = Color.WHITE
         val subTextColor = Color.parseColor("#B0B0B0")
-        
+
         titleText.setTextColor(textColor)
         subtitleText.setTextColor(subTextColor)
         saveButton.setTextColor(textColor)
         cancelButton.setTextColor(textColor)
-        
+
         saveButton.setBackgroundResource(R.drawable.settings_card_background)
         cancelButton.setBackgroundResource(R.drawable.settings_card_background)
     }
@@ -130,7 +130,7 @@ class FocusModeConfigActivity : ComponentActivity() {
         super.onDestroy()
         backgroundExecutor.shutdown()
     }
-    
+
     private fun applyBackgroundTranslucency() {
         val translucency = prefs.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)

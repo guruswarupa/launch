@@ -27,7 +27,7 @@ class NoteEditorActivity : VaultBaseActivity() {
     private lateinit var headerTitle: TextView
     private var isEditing = false
     private var fileName: String? = null
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note_editor)
@@ -35,11 +35,11 @@ class NoteEditorActivity : VaultBaseActivity() {
         wallpaperOverlay = findViewById(R.id.note_editor_overlay)
         headerTitle = findViewById(R.id.title_text)
         setupWallpaper()
-        
+
         vaultManager = EncryptedFolderManager(this)
-        
-        
-        
+
+
+
         if (!vaultManager.isUnlocked()) {
             Toast.makeText(this, "Vault is locked", Toast.LENGTH_SHORT).show()
             finish()
@@ -48,15 +48,15 @@ class NoteEditorActivity : VaultBaseActivity() {
 
         noteTitle = findViewById(R.id.note_title)
         noteContent = findViewById(R.id.note_content)
-        
+
         findViewById<ImageView>(R.id.back_button).setOnClickListener {
             finish()
         }
-        
+
         findViewById<ImageView>(R.id.save_button).setOnClickListener {
             saveNote()
         }
-        
+
         fileName = intent.getStringExtra("FILE_NAME")
         isEditing = !fileName.isNullOrEmpty()
         updateHeaderTitle()
@@ -71,7 +71,7 @@ class NoteEditorActivity : VaultBaseActivity() {
 
     private fun setupWallpaper() {
         WallpaperDisplayHelper.applySystemWallpaper(wallpaperBackground)
-        
+
         val overlayColorRes = R.color.note_editor_overlay
         wallpaperOverlay.setBackgroundColor(ContextCompat.getColor(this, overlayColorRes))
     }
@@ -124,7 +124,7 @@ class NoteEditorActivity : VaultBaseActivity() {
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
-    
+
     private fun loadExistingNote() {
         val fileNameToLoad = fileName
         if (fileNameToLoad.isNullOrBlank()) {
@@ -137,7 +137,7 @@ class NoteEditorActivity : VaultBaseActivity() {
         try {
             tempFile = vaultManager.decryptToCache(fileNameToLoad)
             val contentStr = tempFile.readText(Charsets.UTF_8)
-            
+
             val parts = contentStr.split("\n\n", limit = 2)
             if (parts.size >= 2) {
                 noteTitle.setText(parts[0])
@@ -152,16 +152,16 @@ class NoteEditorActivity : VaultBaseActivity() {
             tempFile?.delete()
         }
     }
-    
+
     private fun saveNote() {
         val title = noteTitle.text.toString().trim()
         val content = noteContent.text.toString()
-        
+
         if (content.isEmpty()) {
             Toast.makeText(this, "Cannot save empty note", Toast.LENGTH_SHORT).show()
             return
         }
-        
+
         try {
             val noteData = if (title.isNotEmpty()) "$title\n\n$content" else "Untitled Note\n\n$content"
             val fileNameToUse = if (isEditing) {
@@ -174,7 +174,7 @@ class NoteEditorActivity : VaultBaseActivity() {
             } else {
                 "note_${System.currentTimeMillis()}.txt"
             }
-            
+
             val tempFile = File.createTempFile("note_", ".txt", cacheDir)
             try {
                 tempFile.writeText(noteData, Charsets.UTF_8)
@@ -182,7 +182,7 @@ class NoteEditorActivity : VaultBaseActivity() {
             } finally {
                 tempFile.delete()
             }
-            
+
             Toast.makeText(this, "Note saved", Toast.LENGTH_SHORT).show()
             setResult(RESULT_OK)
             finish()

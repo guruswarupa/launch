@@ -12,10 +12,10 @@ class DeferredWidgetInitializer(
     private val widgetLifecycleCoordinator: WidgetLifecycleCoordinator,
     private val onComplete: () -> Unit
 ) {
-    
+
     fun initialize() {
         widgetSetupManager.setupBatteryAndUsage()
-        
+
         with(widgetLifecycleCoordinator) {
             mediaControllerWidget = widgetSetupManager.setupMediaControllerWidget()
             calculatorWidget = widgetSetupManager.setupCalculatorWidget()
@@ -31,25 +31,25 @@ class DeferredWidgetInitializer(
             dnsWidget = widgetSetupManager.setupDnsWidget(sharedPreferences)
             noteWidget = widgetSetupManager.setupNoteWidget(sharedPreferences)
             batteryHealthWidget = widgetSetupManager.setupBatteryHealthWidget()
-            
+
             networkStatsWidget = widgetSetupManager.setupNetworkStatsWidget()
             deviceInfoWidget = widgetSetupManager.setupDeviceInfoWidget()
             yearProgressWidget = widgetSetupManager.setupYearProgressWidget(sharedPreferences)
             githubContributionWidget = widgetSetupManager.setupGithubContributionWidget(sharedPreferences)
-            
+
             lifecycleManager.updateDependencies {
                 copy(
                     networkStatsWidget = networkStatsWidget,
                     deviceInfoWidget = deviceInfoWidget
                 )
             }
-            
-            
+
+
             setupDefaultLifecycle()
         }
-        
+
         widgetSetupManager.requestNotificationPermission()
-        
+
         onComplete()
     }
 }

@@ -10,9 +10,9 @@ import android.util.Log
 object GestureCoordinator {
     private const val TAG = "GestureCoordinator"
     private var lastTriggerTime = 0L
-    private const val MUTUAL_EXCLUSION_WINDOW = 1200L 
+    private const val MUTUAL_EXCLUSION_WINDOW = 1200L
 
-    
+
 
 
 
@@ -26,7 +26,7 @@ object GestureCoordinator {
         return true
     }
 
-    
+
 
 
 

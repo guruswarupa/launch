@@ -7,13 +7,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.recyclerview.widget.RecyclerView
 
-/**
- * A RecyclerView that safely handles accessibility-related crashes.
- * 
- * This addresses a known Android framework bug where accessibility prefetching
- * can throw IllegalArgumentException when the view hierarchy changes during
- * accessibility traversal.
- */
+
 class SafeRecyclerView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -24,7 +18,7 @@ class SafeRecyclerView @JvmOverloads constructor(
         try {
             super.addChildrenForAccessibility(outChildren)
         } catch (_: IllegalArgumentException) {
-            // Ignore framework bug during accessibility prefetching
+
         }
     }
 

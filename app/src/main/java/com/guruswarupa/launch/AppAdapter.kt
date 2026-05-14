@@ -61,8 +61,8 @@ class AppAdapter(
         const val VIEW_TYPE_GRID = 1
         const val VIEW_TYPE_SEPARATOR = 2
         const val SEPARATOR_PACKAGE = "com.guruswarupa.launch.SEPARATOR"
-        
-        // Payloads for partial view updates
+
+
         const val PAYLOAD_ICON_STYLE = 1
         const val PAYLOAD_ICON_SIZE = 2
         const val PAYLOAD_VIEW_MODE = 3
@@ -99,7 +99,7 @@ class AppAdapter(
     private var currentIconStyle = prefs.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
     private var currentIconSize = prefs.getInt(Constants.Prefs.ICON_SIZE, 40)
     private var currentShowAppNamesInGrid = prefs.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
-    // Cache the animation object to avoid repeated loadAnimation() calls
+
     private val itemFadeInAnimation = AnimationUtils.loadAnimation(context, R.anim.item_fade_in)
     private val iconLoader = IconLoader(
         activity = activity,
@@ -196,13 +196,13 @@ class AppAdapter(
         }
     }
 
-    // Helper method to get item at position for FastScroller
+
     fun getItemAtPosition(position: Int): ResolveInfo? {
         if (position < 0 || position >= currentList.size) return null
         return getItem(position)
     }
 
-    // Helper method to get current list size for FastScroller
+
     fun getCurrentListSize(): Int = currentList.size
 
     private fun applyIconVisualState(packageName: String, imageView: ImageView?) {
@@ -247,7 +247,7 @@ class AppAdapter(
                 val packageName = app.activityInfo.packageName
                 if (packageName == SEPARATOR_PACKAGE) continue
                 val cacheKey = "${packageName}|${app.preferredOrder}"
-                // Pre-populate label cache from metadata cache
+
                 val cachedMetadata = metadataCache[cacheKey]
                 if (cachedMetadata != null && !labelCache.containsKey(cacheKey)) {
                     labelCache[cacheKey] = cachedMetadata.label
@@ -256,9 +256,9 @@ class AppAdapter(
         } catch (_: Exception) {
         }
 
-        // AsyncListDiffer computes diff on background thread automatically
+
         submitList(newItems) {
-            // This callback runs on the main thread after diff is applied
+
             if (isFirstLoad && newItems.isNotEmpty()) {
                 itemsRendered = newItems.size
                 executor.execute {
@@ -318,43 +318,43 @@ class AppAdapter(
 
         if (packageName == SEPARATOR_PACKAGE) return
 
-        // Handle partial updates with payloads for better performance
+
         if (payloads.isNotEmpty()) {
             var needsFullBind = false
-            
+
             for (payload in payloads) {
                 when (payload) {
                     PAYLOAD_ICON_STYLE -> {
-                        // Only update icon appearance
+
                         iconLoader.applyShapeAppearance(holder.appIcon)
                         holder.appIcon?.setImageDrawable(null)
                         bindCachedOrAsyncIcon(holder, appInfo, position, cacheKey)
                     }
                     PAYLOAD_ICON_SIZE -> {
-                        // Only update icon size
+
                         iconLoader.updateIconSize(holder.appIcon)
                         holder.appIcon?.setImageDrawable(null)
                         bindCachedOrAsyncIcon(holder, appInfo, position, cacheKey)
                     }
                     PAYLOAD_VIEW_MODE -> {
-                        // View mode changed - need full rebind
+
                         needsFullBind = true
                     }
                     PAYLOAD_ICON_VISUAL_STATE -> {
-                        // Only update icon visual state (grayscale for daily limit)
+
                         applyIconVisualState(packageName, holder.appIcon)
                     }
                 }
             }
-            
+
             if (!needsFullBind && payloads.none { it == PAYLOAD_VIEW_MODE }) {
                 return
             }
         }
 
-        // Full bind for new views or view mode changes
+
         if (position > lastAnimatedPosition) {
-            // Reset animation state before starting
+
             holder.itemView.clearAnimation()
             holder.itemView.startAnimation(itemFadeInAnimation)
             lastAnimatedPosition = position
@@ -415,7 +415,7 @@ class AppAdapter(
                     iconLoader.setIconResource(holder.appIcon, R.drawable.ic_vault)
                 }
                 else -> {
-                    // Always use cached label - should be pre-populated by AppListLoader
+
                     holder.appName?.text = labelCache[cacheKey] ?: packageName
                     bindCachedOrAsyncIcon(holder, appInfo, position, cacheKey)
                 }
@@ -426,7 +426,7 @@ class AppAdapter(
         }
 
         applyIconVisualState(packageName, holder.appIcon)
-        // Remove redundant preloading - only preload at strategic intervals
+
         if (position < currentList.size - 1 && position % 8 == 0) {
             iconLoader.preloadNextIcons(currentList, position + 1, minOf(position + 8, currentList.size))
         }
@@ -453,7 +453,7 @@ class AppAdapter(
             return
         }
 
-        // Never call loadLabel() synchronously - always load asynchronously
+
         holder.appName?.text = packageName
         loadLabelAsync(holder, position, appInfo, packageName, cacheKey)
     }
@@ -467,12 +467,12 @@ class AppAdapter(
         val packageName = appInfo.activityInfo.packageName
         val cachedIcon = iconLoader.getCachedIcon(cacheKey)
         if (cachedIcon != null) {
-            // Safety check: ensure bitmap is not recycled before setting
+
             if (!(cachedIcon is android.graphics.drawable.BitmapDrawable && cachedIcon.bitmap.isRecycled)) {
                 holder.appIcon?.setImageDrawable(cachedIcon)
                 applyIconVisualState(packageName, holder.appIcon)
             } else {
-                // Icon was recycled, reload it
+
                 iconLoader.setIconResource(holder.appIcon, R.drawable.ic_default_app_icon)
                 val priority = if (isFastScrolling) IconLoader.PRIORITY_HIGH else IconLoader.PRIORITY_MEDIUM
                 iconLoader.submitIconLoadTask(appInfo, priority, holder, position) { readyPackageName, readyHolder ->
@@ -797,8 +797,8 @@ class AppAdapter(
         if (activity.favoriteAppManager.isFavoriteApp(packageName)) {
             activity.favoriteAppManager.removeFavoriteApp(packageName)
             Toast.makeText(activity, activity.getString(R.string.removed_from_favorites, appName), Toast.LENGTH_SHORT).show()
-            
-            // If all favorites removed, immediately switch to all apps
+
+
             val remainingFavorites = activity.favoriteAppManager.getFavoriteApps()
             if (remainingFavorites.isEmpty() && activity.showOnlyFavoritesInitially) {
                 activity.showOnlyFavoritesInitially = false
@@ -866,15 +866,15 @@ class AppAdapter(
             Toast.makeText(activity, R.string.web_app_load_failed, Toast.LENGTH_SHORT).show()
             return
         }
-        
-        // Get the web app entry to access its blockRedirects setting
+
+
         val webAppManager = com.guruswarupa.launch.managers.WebAppManager(
             activity.getSharedPreferences(com.guruswarupa.launch.models.Constants.Prefs.PREFS_NAME, android.content.Context.MODE_PRIVATE)
         )
-        val webAppEntry = webAppManager.getWebApps().firstOrNull { 
-            it.name == name && it.url == url 
+        val webAppEntry = webAppManager.getWebApps().firstOrNull {
+            it.name == name && it.url == url
         }
-        
+
         activity.startActivity(
             Intent(activity, WebAppActivity::class.java).apply {
                 putExtra(WebAppActivity.EXTRA_WEB_APP_NAME, name)

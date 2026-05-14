@@ -8,7 +8,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 
 class SystemBarManager(private val activity: androidx.fragment.app.FragmentActivity) {
     fun makeSystemBarsTransparent() {
-        
+
         activity.enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)

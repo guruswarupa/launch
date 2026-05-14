@@ -38,14 +38,14 @@ class ControlCenterConfigActivity : ComponentActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: ShortcutConfigAdapter
     private val prefs by lazy { getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE) }
-    
-    // Tab views
+
+
     private lateinit var tabCustomize: Button
     private lateinit var tabHandle: Button
     private lateinit var shortcutsCard: View
     private lateinit var triggerCard: View
-    
-    // Trigger settings views
+
+
     private lateinit var triggerPositionSpinner: Spinner
     private lateinit var triggerLockSwitch: SwitchCompat
     private lateinit var triggerAlphaSeekbar: SeekBar
@@ -78,20 +78,20 @@ class ControlCenterConfigActivity : ComponentActivity() {
         tabHandle = findViewById(R.id.tab_handle)
         shortcutsCard = findViewById(R.id.shortcuts_card)
         triggerCard = findViewById(R.id.trigger_card)
-        
+
         applyThemeAndWallpaper()
-        
-        // Initialize tab clicks
+
+
         tabCustomize.setOnClickListener { switchTab(0) }
         tabHandle.setOnClickListener { switchTab(1) }
-        
-        // Initialize shortcut list
+
+
         setupShortcutList()
-        
-        // Initialize trigger settings
+
+
         setupTriggerSettings()
-        
-        // Default to shortcuts tab
+
+
         switchTab(0)
 
         saveButton.setOnClickListener {
@@ -125,7 +125,7 @@ class ControlCenterConfigActivity : ComponentActivity() {
         "hotspot" -> R.drawable.ic_wifi_stat; "screen_timeout" -> R.drawable.ic_settings_icon
         else -> android.R.drawable.ic_menu_help
     }
-    
+
     private fun setupShortcutList() {
         recyclerView = findViewById(R.id.rv_shortcuts)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -133,7 +133,7 @@ class ControlCenterConfigActivity : ComponentActivity() {
         val saved = prefs.getString(Constants.Prefs.CONTROL_CENTER_SHORTCUTS, ScreenLockAccessibilityService.DEFAULT_SHORTCUTS)
             ?.split(",")?.filter { it.isNotEmpty() } ?: emptyList()
         val allShortcuts = ScreenLockAccessibilityService.DEFAULT_SHORTCUTS.split(",")
-        
+
         val items = mutableListOf<ShortcutItem>()
         for (id in saved) if (allShortcuts.contains(id)) items.add(ShortcutItem(id, getLabel(id), getIcon(id), true))
         for (id in allShortcuts) if (!saved.contains(id)) items.add(ShortcutItem(id, getLabel(id), getIcon(id), false))
@@ -150,31 +150,31 @@ class ControlCenterConfigActivity : ComponentActivity() {
             override fun onSwiped(v: RecyclerView.ViewHolder, d: Int) {}
         }).attachToRecyclerView(recyclerView)
     }
-    
+
     private fun switchTab(index: Int) {
         if (index == 0) {
-            // Customize tab - show shortcuts
+
             shortcutsCard.visibility = View.VISIBLE
             triggerCard.visibility = View.GONE
             tabCustomize.setTextColor(Color.WHITE)
             tabHandle.setTextColor(Color.parseColor("#80FFFFFF"))
         } else {
-            // Handle tab - show trigger settings
+
             shortcutsCard.visibility = View.GONE
             triggerCard.visibility = View.VISIBLE
             tabCustomize.setTextColor(Color.parseColor("#80FFFFFF"))
             tabHandle.setTextColor(Color.WHITE)
         }
     }
-    
+
     private fun setupTriggerSettings() {
         triggerPositionSpinner = findViewById(R.id.trigger_position_spinner)
         triggerLockSwitch = findViewById(R.id.trigger_lock_switch)
         triggerAlphaSeekbar = findViewById(R.id.trigger_alpha_seekbar)
         triggerHeightSeekbar = findViewById(R.id.trigger_height_seekbar)
         triggerWidthSeekbar = findViewById(R.id.trigger_width_seekbar)
-        
-        // Setup position spinner
+
+
         val positions = arrayOf(
             getString(R.string.control_center_trigger_position_left),
             getString(R.string.control_center_trigger_position_right)
@@ -193,14 +193,14 @@ class ControlCenterConfigActivity : ComponentActivity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
-        // Setup lock switch
+
         triggerLockSwitch.isChecked = prefs.getBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_LOCKED, false)
         triggerLockSwitch.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit { putBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_LOCKED, isChecked) }
             notifySettingsChanged()
         }
 
-        // Setup alpha seekbar (20-100%, stored as 20-100, UI shows 0-80)
+
         val currentAlpha = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_ALPHA, 80).coerceIn(20, 100)
         triggerAlphaSeekbar.progress = currentAlpha - 20
         triggerAlphaSeekbar.setOnSeekBarChangeListener(simpleSeekBarListener { progress ->
@@ -208,7 +208,7 @@ class ControlCenterConfigActivity : ComponentActivity() {
             notifySettingsChanged()
         })
 
-        // Setup height seekbar (40-112dp, stored as dp, UI shows 0-72)
+
         val currentHeight = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_HEIGHT_DP, 72).coerceIn(40, 112)
         triggerHeightSeekbar.progress = currentHeight - 40
         triggerHeightSeekbar.setOnSeekBarChangeListener(simpleSeekBarListener { progress ->
@@ -216,7 +216,7 @@ class ControlCenterConfigActivity : ComponentActivity() {
             notifySettingsChanged()
         })
 
-        // Setup width seekbar (12-36dp, stored as dp, UI shows 0-24)
+
         val currentWidth = prefs.getInt(Constants.Prefs.CONTROL_CENTER_TRIGGER_WIDTH_DP, 18).coerceIn(12, 36)
         triggerWidthSeekbar.progress = currentWidth - 12
         triggerWidthSeekbar.setOnSeekBarChangeListener(simpleSeekBarListener { progress ->
@@ -224,7 +224,7 @@ class ControlCenterConfigActivity : ComponentActivity() {
             notifySettingsChanged()
         })
     }
-    
+
     private fun simpleSeekBarListener(onChanged: (Int) -> Unit): SeekBar.OnSeekBarChangeListener {
         return object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -236,13 +236,13 @@ class ControlCenterConfigActivity : ComponentActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
         }
     }
-    
+
     private fun notifySettingsChanged() {
         sendBroadcast(Intent("com.guruswarupa.launch.SETTINGS_UPDATED").apply {
             setPackage(packageName)
         })
     }
-    
+
     private fun saveShortcutSettings() {
         val items = (adapter as ShortcutConfigAdapter).items
         val res = items.filter { it.isEnabled }.joinToString(",") { it.id }

@@ -21,17 +21,17 @@ class FlipToDndService : Service(), SensorEventListener {
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
     private var proximitySensor: Sensor? = null
-    
+
     private var isFaceDown = false
     private var isProximityNear = false
-    
+
     private lateinit var notificationManager: NotificationManager
     private lateinit var sharedPreferences: SharedPreferences
 
     companion object {
         private const val TAG = "FlipToDndService"
         private const val SERVICE_NAME = "Flip to DND"
-        
+
         fun startService(context: Context) {
             val intent = Intent(context, FlipToDndService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -54,7 +54,7 @@ class FlipToDndService : Service(), SensorEventListener {
             proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
             notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             sharedPreferences = getSharedPreferences("com.guruswarupa.launch.PREFS", Context.MODE_PRIVATE)
-            
+
             registerSensors()
         } catch (e: Exception) {
             Log.e(TAG, "Error in onCreate", e)
@@ -63,7 +63,7 @@ class FlipToDndService : Service(), SensorEventListener {
 
     private fun startForegroundServiceStatus() {
         val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceCompat.startForeground(
                 this,
@@ -86,8 +86,8 @@ class FlipToDndService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        
-        
+
+
         try {
             startForegroundServiceStatus()
         } catch (e: Exception) {
@@ -106,12 +106,12 @@ class FlipToDndService : Service(), SensorEventListener {
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
                 val z = event.values[2]
-                
+
                 isFaceDown = z < -8.0
                 updateDndState()
             }
             Sensor.TYPE_PROXIMITY -> {
-                
+
                 isProximityNear = event.values[0] < (proximitySensor?.maximumRange ?: 5f)
                 updateDndState()
             }
@@ -121,7 +121,7 @@ class FlipToDndService : Service(), SensorEventListener {
     private fun updateDndState() {
         if (!notificationManager.isNotificationPolicyAccessGranted) return
 
-        
+
         val isFocusModeActive = sharedPreferences.getBoolean("focus_mode_enabled", false)
         if (isFocusModeActive) return
 
@@ -142,8 +142,8 @@ class FlipToDndService : Service(), SensorEventListener {
         super.onDestroy()
         try {
             sensorManager.unregisterListener(this)
-            
-            
+
+
             val isFocusModeActive = sharedPreferences.getBoolean("focus_mode_enabled", false)
             if (!isFocusModeActive && notificationManager.isNotificationPolicyAccessGranted) {
                 notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)

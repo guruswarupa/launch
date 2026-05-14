@@ -98,9 +98,9 @@ object DownloadableFontManager {
             query,
             R.array.com_google_android_gms_fonts_certs
         )
-        
+
         val mainExecutor = ContextCompat.getMainExecutor(context)
-        
+
         val fontRequestCallback = object : FontsContractCompat.FontRequestCallback() {
             override fun onTypefaceRetrieved(typeface: Typeface) {
                 typefaceCache[styleKey] = typeface
@@ -109,7 +109,7 @@ object DownloadableFontManager {
             }
 
             override fun onTypefaceRequestFailed(reason: Int) {
-                
+
                 Toast.makeText(
                     context,
                     context.getString(R.string.font_download_failed_with_name, option.displayName),
@@ -119,14 +119,14 @@ object DownloadableFontManager {
             }
         }
 
-        
-        
+
+
         FontsContractCompat.requestFont(
             context,
             request,
             Typeface.NORMAL,
-            mainExecutor, 
-            mainExecutor, 
+            mainExecutor,
+            mainExecutor,
             fontRequestCallback
         )
     }

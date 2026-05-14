@@ -16,7 +16,7 @@ class BroadcastReceiverManager(
     private val activity: FragmentActivity,
     @Suppress("UNUSED_PARAMETER") private val sharedPreferences: android.content.SharedPreferences,
     private val onSettingsUpdated: () -> Unit,
-    private val onPackageChanged: (String?, Boolean) -> Unit, 
+    private val onPackageChanged: (String?, Boolean) -> Unit,
     private val onWallpaperChanged: () -> Unit,
     private val onBatteryChanged: () -> Unit,
     private val onActivityRecognitionPermissionGranted: () -> Unit = {},
@@ -31,7 +31,7 @@ class BroadcastReceiverManager(
             }
         }
     }
-    
+
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -54,7 +54,7 @@ class BroadcastReceiverManager(
             }
         }
     }
-    
+
     private val wallpaperChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             @Suppress("DEPRECATION")
@@ -65,7 +65,7 @@ class BroadcastReceiverManager(
             }
         }
     }
-    
+
     private val batteryChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             activity.runOnUiThread {
@@ -73,7 +73,7 @@ class BroadcastReceiverManager(
             }
         }
     }
-    
+
     private val activityRecognitionPermissionReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED") {
@@ -93,15 +93,15 @@ class BroadcastReceiverManager(
             }
         }
     }
-    
-    
+
+
 
 
     fun registerReceivers() {
-        
+
         val settingsFilter = IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED")
         registerReceiverCompat(settingsUpdateReceiver, settingsFilter, exported = false)
-        
+
         val packageFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -109,20 +109,20 @@ class BroadcastReceiverManager(
             addDataScheme("package")
         }
         registerReceiverCompat(packageReceiver, packageFilter, exported = true)
-        
-        
+
+
         @Suppress("DEPRECATION")
         val wallpaperFilter = IntentFilter(Intent.ACTION_WALLPAPER_CHANGED)
         registerReceiverCompat(wallpaperChangeReceiver, wallpaperFilter, exported = true)
-        
-        
+
+
         registerReceiverCompat(batteryChangeReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED), exported = true)
-        
-        
+
+
         val activityRecognitionFilter = IntentFilter("com.guruswarupa.launch.ACTIVITY_RECOGNITION_PERMISSION_GRANTED")
         registerReceiverCompat(activityRecognitionPermissionReceiver, activityRecognitionFilter, exported = false)
 
-        
+
         registerReceiverCompat(dndReceiver, IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED), exported = true)
     }
 
@@ -139,8 +139,8 @@ class BroadcastReceiverManager(
             )
         }
     }
-    
-    
+
+
 
 
     fun unregisterReceivers() {
@@ -157,7 +157,7 @@ class BroadcastReceiverManager(
             try {
                 activity.unregisterReceiver(receiver)
             } catch (_: IllegalArgumentException) {
-                
+
             }
         }
     }

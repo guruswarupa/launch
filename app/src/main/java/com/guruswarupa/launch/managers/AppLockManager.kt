@@ -34,7 +34,7 @@ class AppLockManager(private val context: Context) {
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
         } catch (_: Exception) {
-            
+
             context.getSharedPreferences("app_lock_prefs", Context.MODE_PRIVATE)
         }
     }
@@ -46,7 +46,7 @@ class AppLockManager(private val context: Context) {
         private const val PREF_IS_APP_LOCK_ENABLED = "is_app_lock_enabled"
         private const val PREF_LAST_AUTH_TIME = "last_auth_time"
         private const val PREF_FINGERPRINT_ENABLED = "fingerprint_enabled"
-        private const val AUTH_TIMEOUT = 1 * 60 * 1000L 
+        private const val AUTH_TIMEOUT = 1 * 60 * 1000L
         private const val SALT_LENGTH_BYTES = 16
     }
 
@@ -82,7 +82,7 @@ class AppLockManager(private val context: Context) {
         }
     }
 
-    
+
     fun setupPin(callback: (Boolean) -> Unit) {
         val pinInput = EditText(context).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
@@ -131,21 +131,21 @@ class AppLockManager(private val context: Context) {
             .show()
     }
 
-    
+
     fun verifyPin(callback: (Boolean) -> Unit) {
         if (!isPinSet()) {
             callback(true)
             return
         }
 
-        
+
         val lastAuthTime = sharedPreferences.getLong(PREF_LAST_AUTH_TIME, 0)
         if (System.currentTimeMillis() - lastAuthTime < AUTH_TIMEOUT) {
             callback(true)
             return
         }
 
-        
+
         if (isFingerprintEnabled()) {
             showBiometricPrompt(callback)
         } else {
@@ -154,7 +154,7 @@ class AppLockManager(private val context: Context) {
     }
 
     private fun showBiometricPrompt(callback: (Boolean) -> Unit) {
-        
+
         val activity = context as? FragmentActivity
         if (activity == null) {
             Toast.makeText(context, R.string.app_lock_biometric_unavailable_context, Toast.LENGTH_SHORT).show()
@@ -183,14 +183,14 @@ class AppLockManager(private val context: Context) {
                 override fun onAuthenticationFailed() {
                     super.onAuthenticationFailed()
                     Toast.makeText(context, R.string.app_lock_biometric_failed, Toast.LENGTH_SHORT).show()
-                    
+
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
                     if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
                         errorCode == BiometricPrompt.ERROR_USER_CANCELED) {
-                        
+
                         showPinPrompt(callback)
                     } else {
                         Toast.makeText(
@@ -223,7 +223,7 @@ class AppLockManager(private val context: Context) {
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
 
                 if (hashPin(enteredPin) == storedPinHash) {
-                    
+
                     sharedPreferences.edit {
                         putLong(PREF_LAST_AUTH_TIME, System.currentTimeMillis())
                     }
@@ -238,12 +238,12 @@ class AppLockManager(private val context: Context) {
             .show()
     }
 
-    
+
     fun isPinSet(): Boolean {
         return sharedPreferences.getString(PREF_PIN_HASH, null)?.isNotEmpty() == true
     }
 
-    
+
     fun isFingerprintAvailable(): Boolean {
         val biometricManager = BiometricManager.from(context)
         return when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
@@ -252,51 +252,51 @@ class AppLockManager(private val context: Context) {
         }
     }
 
-    
+
     fun isFingerprintEnabled(): Boolean {
         return sharedPreferences.getBoolean(PREF_FINGERPRINT_ENABLED, false) && isFingerprintAvailable()
     }
 
-    
+
     fun setFingerprintEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_FINGERPRINT_ENABLED, enabled) }
     }
 
-    
+
     fun isAppLockEnabled(): Boolean {
         return sharedPreferences.getBoolean(PREF_IS_APP_LOCK_ENABLED, false) && isPinSet()
     }
 
-    
+
     fun setAppLockEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(PREF_IS_APP_LOCK_ENABLED, enabled) }
     }
 
-    
+
     fun lockApp(packageName: String) {
         val lockedApps = getLockedApps().toMutableSet()
         lockedApps.add(packageName)
         sharedPreferences.edit { putStringSet(PREF_LOCKED_APPS, lockedApps) }
     }
 
-    
+
     fun unlockApp(packageName: String) {
         val lockedApps = getLockedApps().toMutableSet()
         lockedApps.remove(packageName)
         sharedPreferences.edit { putStringSet(PREF_LOCKED_APPS, lockedApps) }
     }
 
-    
+
     fun getLockedApps(): Set<String> {
         return sharedPreferences.getStringSet(PREF_LOCKED_APPS, emptySet()) ?: emptySet()
     }
 
-    
+
     fun isAppLocked(packageName: String): Boolean {
         return isAppLockEnabled() && getLockedApps().contains(packageName)
     }
 
-    
+
     fun changePin(callback: (Boolean) -> Unit) {
         if (!isPinSet()) {
             setupPin(callback)
@@ -328,12 +328,12 @@ class AppLockManager(private val context: Context) {
             .show()
     }
 
-    
+
     fun resetAppLock(callback: (Boolean) -> Unit) {
         if (!isPinSet()) {
-            
+
             resetAppLockData()
-            callback(true) 
+            callback(true)
             return
         }
 
@@ -352,13 +352,13 @@ class AppLockManager(private val context: Context) {
                 val storedPinHash = sharedPreferences.getString(PREF_PIN_HASH, "")
 
                 if (hashPin(oldPin) == storedPinHash) {
-                    
+
                     resetAppLockData()
                     Toast.makeText(context, R.string.app_lock_reset_success, Toast.LENGTH_SHORT).show()
-                    callback(true) 
+                    callback(true)
                 } else {
                     Toast.makeText(context, R.string.app_lock_incorrect_current_pin, Toast.LENGTH_SHORT).show()
-                    callback(false) 
+                    callback(false)
                 }
             }
             .setNegativeButton(R.string.cancel_button) { _, _ -> callback(false) }
@@ -375,8 +375,8 @@ class AppLockManager(private val context: Context) {
             remove(PREF_FINGERPRINT_ENABLED)
         }
     }
-    
-    
+
+
     fun clearAuthTimeout() {
         sharedPreferences.edit { remove(PREF_LAST_AUTH_TIME) }
     }

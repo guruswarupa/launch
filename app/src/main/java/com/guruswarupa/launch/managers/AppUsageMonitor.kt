@@ -46,9 +46,9 @@ class AppUsageMonitor : Service() {
         super.onCreate()
         appTimerManager = AppTimerManager(this)
         usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        
+
         val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 ServiceNotificationManager.NOTIFICATION_ID,
@@ -67,11 +67,11 @@ class AppUsageMonitor : Service() {
 
     private fun startMonitoring() {
         if (monitoringRunnable != null) return
-        
+
         monitoringRunnable = object : Runnable {
             override fun run() {
                 checkForegroundAppUsage()
-                
+
                 handler.postDelayed(this, POLLING_INTERVAL_MS)
             }
         }
@@ -80,11 +80,11 @@ class AppUsageMonitor : Service() {
 
     private fun checkForegroundAppUsage() {
         val currentApp = getForegroundApp()
-        
-        
-        if (currentApp != null && currentApp != packageName && 
+
+
+        if (currentApp != null && currentApp != packageName &&
             !currentApp.startsWith("com.android.systemui")) {
-            
+
             if (appTimerManager.isAppOverDailyLimit(currentApp)) {
                 handler.post {
                     Toast.makeText(this@AppUsageMonitor, R.string.daily_usage_limit_reached, Toast.LENGTH_LONG).show()
@@ -96,9 +96,9 @@ class AppUsageMonitor : Service() {
 
     private fun getForegroundApp(): String? {
         val time = System.currentTimeMillis()
-        
+
         val stats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 60 * 1000, time)
-        
+
         if (stats != null) {
             var lastApp: String? = null
             var lastTime = 0L

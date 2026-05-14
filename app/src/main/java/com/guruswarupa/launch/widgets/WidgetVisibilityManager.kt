@@ -18,32 +18,32 @@ class WidgetVisibilityManager(
         yearProgressWidget: YearProgressWidget? = null,
         githubContributionWidget: GithubContributionWidget? = null
     ) {
-        // Force refresh cache to ensure we have latest widget states
+
         widgetConfigurationManager.forceRefresh()
-        
+
         val widgets = widgetConfigurationManager.getWidgetOrder()
         val widgetMap = widgets.associateBy { it.id }
-        
+
         val hasEnabledWidgets = widgets.any { it.enabled }
         val emptyState = activity.findViewById<View>(com.guruswarupa.launch.R.id.widgets_empty_state)
         emptyState?.visibility = if (hasEnabledWidgets) View.GONE else View.VISIBLE
-        
-        // Track widgets that failed to update for retry
+
+
         val failedWidgets = mutableListOf<String>()
-        
+
         failedWidgets.addAll(updateSimpleWidgetContainers(widgetMap))
-        
+
         yearProgressWidget?.setGlobalVisibility(widgetMap["year_progress_widget_container"]?.enabled == true)
         githubContributionWidget?.setGlobalVisibility(widgetMap["github_contributions_widget_container"]?.enabled == true)
-        
+
         failedWidgets.addAll(reorderWidgetsInLayout(widgets, widgetMap))
-        
+
         if (failedWidgets.isNotEmpty()) {
             Log.w(TAG, "Failed to update visibility for widgets: ${failedWidgets.joinToString()}. Scheduling retry.")
             scheduleRetry(yearProgressWidget, githubContributionWidget)
         }
     }
-    
+
     private fun updateSimpleWidgetContainers(widgetMap: Map<String, WidgetConfigurationManager.WidgetInfo>): List<String> {
         val failedWidgets = mutableListOf<String>()
         val simpleWidgets = listOf(
@@ -65,7 +65,7 @@ class WidgetVisibilityManager(
             "weekly_usage_widget" to com.guruswarupa.launch.R.id.weekly_usage_widget,
             "github_contributions_widget_container" to com.guruswarupa.launch.R.id.github_contributions_widget_container
         )
-        
+
         simpleWidgets.forEach { (widgetId, resId) ->
             val view = activity.findViewById<View>(resId)
             if (view != null) {
@@ -75,8 +75,8 @@ class WidgetVisibilityManager(
                 failedWidgets.add(widgetId)
             }
         }
-        
-        // Handle widgets that need parent visibility
+
+
         listOf(
             "workout_widget_container" to com.guruswarupa.launch.R.id.workout_widget_container,
             "calculator_widget_container" to com.guruswarupa.launch.R.id.calculator_widget_container,
@@ -91,10 +91,10 @@ class WidgetVisibilityManager(
                 failedWidgets.add(widgetId)
             }
         }
-        
+
         return failedWidgets
     }
-        
+
     private fun reorderWidgetsInLayout(
         widgets: List<WidgetConfigurationManager.WidgetInfo>,
         widgetMap: Map<String, WidgetConfigurationManager.WidgetInfo>
@@ -119,7 +119,7 @@ class WidgetVisibilityManager(
                     failedWidgets.add(widget.id)
                 }
             }
-            
+
             val nonWidgetViews = mutableListOf<View>()
             for (i in 0 until layout.childCount) {
                 val child = layout.getChildAt(i)
@@ -141,10 +141,10 @@ class WidgetVisibilityManager(
         } ?: run {
             Log.e(TAG, "drawer_content_layout not found!")
         }
-        
+
         return failedWidgets
     }
-    
+
     private fun getWidgetViewById(widgetId: String): View? {
         return when (widgetId) {
             "media_controller_widget_container" -> activity.findViewById(com.guruswarupa.launch.R.id.media_controller_widget_container)
@@ -174,7 +174,7 @@ class WidgetVisibilityManager(
             }
         }
     }
-    
+
     private fun scheduleRetry(
         yearProgressWidget: YearProgressWidget? = null,
         githubContributionWidget: GithubContributionWidget? = null

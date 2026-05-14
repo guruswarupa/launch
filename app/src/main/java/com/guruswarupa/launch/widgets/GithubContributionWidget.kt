@@ -26,7 +26,7 @@ class GithubContributionWidget(
     private val executor = Executors.newSingleThreadExecutor()
     private var isInitialized = false
 
-    
+
     private lateinit var githubContainer: LinearLayout
     private lateinit var githubIcon: ImageView
     private lateinit var githubUsername: TextView
@@ -53,12 +53,12 @@ class GithubContributionWidget(
     fun initialize() {
         if (isInitialized) return
 
-        
+
         val inflater = LayoutInflater.from(context)
         widgetView = inflater.inflate(R.layout.widget_github_contributions, container, false)
         container.addView(widgetView)
 
-        
+
         githubContainer = widgetView.findViewById(R.id.github_container)
         githubIcon = widgetView.findViewById(R.id.github_icon)
         githubUsername = widgetView.findViewById(R.id.github_username)
@@ -72,16 +72,16 @@ class GithubContributionWidget(
         githubContributionGraphView = widgetView.findViewById(R.id.github_contribution_graph_view)
         githubStatusText = widgetView.findViewById(R.id.github_status_text)
 
-        
+
         githubContainer.visibility = View.GONE
 
-        
+
         githubApiService = GithubApiService(context)
 
-        
+
         setupYearSpinner()
-        
-        
+
+
         githubRefreshButton.setOnClickListener {
             val savedUsername = sharedPreferences.getString(PREF_GITHUB_USERNAME, "")
             val savedToken = sharedPreferences.getString(PREF_GITHUB_TOKEN, "")
@@ -96,7 +96,7 @@ class GithubContributionWidget(
             showGithubTokenDialog()
         }
 
-        
+
         val savedUsername = sharedPreferences.getString(PREF_GITHUB_USERNAME, "")
         val savedToken = sharedPreferences.getString(PREF_GITHUB_TOKEN, "")
 
@@ -105,7 +105,7 @@ class GithubContributionWidget(
             loadAvailableYears(savedUsername, savedToken)
         } else {
             githubStatusText.text = "Tap to configure GitHub token"
-            
+
             availableYears = listOf(currentYear)
             setupYearSpinner()
         }
@@ -115,8 +115,8 @@ class GithubContributionWidget(
 
     private fun loadAvailableYears(username: String, token: String) {
         if (executor.isShutdown) return
-        
-        
+
+
         val lastFetch = sharedPreferences.getLong(PREF_GITHUB_LAST_FETCH, 0L)
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastFetch < REFRESH_INTERVAL_MINUTES * 60 * 1000 && availableYears.isNotEmpty()) {
@@ -125,7 +125,7 @@ class GithubContributionWidget(
         }
 
         githubStatusText.text = "Loading available years..."
-        
+
         try {
             executor.execute {
                 try {
@@ -133,14 +133,14 @@ class GithubContributionWidget(
                     handler.post {
                         availableYears = years
                         if (availableYears.isNotEmpty() && currentYear !in availableYears) {
-                            currentYear = availableYears.first() 
+                            currentYear = availableYears.first()
                         }
                         setupYearSpinner()
                         loadGithubData(force = true)
                     }
                 } catch (e: Exception) {
                     handler.post {
-                        
+
                         if (availableYears.isEmpty()) {
                             availableYears = listOf(currentYear)
                             setupYearSpinner()
@@ -150,22 +150,22 @@ class GithubContributionWidget(
                 }
             }
         } catch (e: java.util.concurrent.RejectedExecutionException) {
-            
+
         }
     }
 
     private fun setupYearSpinner() {
         val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, availableYears)
-        
+
         adapter.setDropDownViewResource(R.layout.custom_spinner_dropdown_item)
         githubYearSpinner.adapter = adapter
-        
-        
+
+
         val currentYearIndex = availableYears.indexOf(currentYear)
         if (currentYearIndex >= 0) {
             githubYearSpinner.setSelection(currentYearIndex)
         }
-        
+
         githubYearSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val selectedYear = availableYears[position]
@@ -174,16 +174,16 @@ class GithubContributionWidget(
                     loadGithubData(force = true)
                 }
             }
-            
+
             override fun onNothingSelected(parent: AdapterView<*>?) {
-                
+
             }
         }
     }
 
     private fun loadGithubData(force: Boolean = false) {
         if (executor.isShutdown) return
-        
+
         val token = sharedPreferences.getString(PREF_GITHUB_TOKEN, "")
         val username = sharedPreferences.getString(PREF_GITHUB_USERNAME, "")
 
@@ -192,12 +192,12 @@ class GithubContributionWidget(
             return
         }
 
-        
+
         if (!force) {
             val lastFetch = sharedPreferences.getLong(PREF_GITHUB_LAST_FETCH, 0L)
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastFetch < REFRESH_INTERVAL_MINUTES * 60 * 1000) {
-                return 
+                return
             }
         }
 
@@ -209,7 +209,7 @@ class GithubContributionWidget(
             executor.execute {
                 try {
                     val contributionData = githubApiService.fetchContributionData(username, token, currentYear)
-                    
+
                     handler.post {
                         sharedPreferences.edit {
                             putLong(PREF_GITHUB_LAST_FETCH, System.currentTimeMillis())
@@ -227,12 +227,12 @@ class GithubContributionWidget(
                 }
             }
         } catch (e: java.util.concurrent.RejectedExecutionException) {
-            
+
         }
     }
 
     private fun updateContributionGraph(contributions: Map<String, Int>) {
-        
+
         githubContributionGraphView.setContributions(contributions)
     }
 
@@ -247,13 +247,13 @@ class GithubContributionWidget(
     private fun showGithubTokenDialog() {
         val inflater = LayoutInflater.from(context)
         val dialogView = inflater.inflate(R.layout.dialog_github_token, null)
-        
+
         val tokenInput = dialogView.findViewById<EditText>(R.id.github_token_input)
         val usernameInput = dialogView.findViewById<EditText>(R.id.github_username_input)
-        
+
         val savedToken = sharedPreferences.getString(PREF_GITHUB_TOKEN, "")
         val savedUsername = sharedPreferences.getString(PREF_GITHUB_USERNAME, "")
-        
+
         tokenInput.setText(savedToken)
         usernameInput.setText(savedUsername)
 
@@ -263,14 +263,14 @@ class GithubContributionWidget(
             .setPositiveButton("Save") { _, _ ->
                 val token = tokenInput.text.toString().trim()
                 val username = usernameInput.text.toString().trim()
-                
+
                 if (token.isNotEmpty() && username.isNotEmpty()) {
                     sharedPreferences.edit {
                         putString(PREF_GITHUB_TOKEN, token)
                         putString(PREF_GITHUB_USERNAME, username)
-                        putLong(PREF_GITHUB_LAST_FETCH, 0L) 
+                        putLong(PREF_GITHUB_LAST_FETCH, 0L)
                     }
-                    
+
                     githubUsername.text = "GitHub: $username"
                     loadGithubData(force = true)
                 } else {
@@ -285,7 +285,7 @@ class GithubContributionWidget(
         if (isInitialized) {
             val savedToken = sharedPreferences.getString(PREF_GITHUB_TOKEN, "")
             val savedUsername = sharedPreferences.getString(PREF_GITHUB_USERNAME, "")
-            
+
             if (!savedToken.isNullOrEmpty() && !savedUsername.isNullOrEmpty()) {
                 loadGithubData(force = false)
             }
@@ -293,13 +293,13 @@ class GithubContributionWidget(
     }
 
     fun onPause() {
-        
+
     }
 
     fun cleanup() {
         executor.shutdown()
     }
-    
+
     fun setGlobalVisibility(visible: Boolean) {
         if (isInitialized) {
             githubContainer.visibility = if (visible) View.VISIBLE else View.GONE

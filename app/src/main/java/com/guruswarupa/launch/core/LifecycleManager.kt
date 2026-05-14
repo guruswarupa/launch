@@ -81,30 +81,30 @@ class LifecycleManager(
     private var isBlockingBackGesture = false
     private var lastAppListRefreshAt = 0L
     private var lastUsageRefreshAt = 0L
-    
+
     fun onResume() {
         val deps = dependencies
         val now = SystemClock.elapsedRealtime()
-        
+
         deps.systemBarManager?.makeSystemBarsTransparent()
-        
-        
+
+
         deps.appLockManager?.clearAuthTimeout()
-        
+
         deps.wallpaperManagerHelper?.setWallpaperBackground()
-        
-        
+
+
         if (!isBlockingBackGesture) {
             deps.gestureHandler?.updateGestureExclusion()
         }
-        
-        
+
+
         deps.appDockManager?.let {
             onFocusModeApply?.invoke(it.getCurrentMode())
             it.refreshWorkspaceToggle()
         }
 
-        
+
         deps.widgetThemeManager?.let { themeManager ->
             themeManager.checkAndUpdateThemeIfNeeded(
                 todoManager = deps.todoManager,
@@ -116,17 +116,17 @@ class LifecycleManager(
             )
         }
 
-        
+
         deps.views?.let {
             if (it.isSearchBoxInitialized()) {
                 it.searchBox.clearFocus()
             }
         }
 
-        
+
         deps.widgetLifecycleCoordinator?.onResume()
-        
-        
+
+
         val shouldForceWorkProfileRefresh = deps.appDockManager?.isWorkProfileModeEnabled() == true
         val shouldRefreshAppList =
             shouldForceWorkProfileRefresh ||
@@ -143,26 +143,26 @@ class LifecycleManager(
                 }
             }, 250)
         }
-        
-        
+
+
         deps.widgetManager?.onStart()
         deps.widgetManager?.reloadWidgetsIfPending()
         deps.deviceInfoWidget?.onResume()
         deps.networkStatsWidget?.onResume()
-        
-        
+
+
         deps.usageStatsDisplayManager?.refreshPermissionButton()
-        
-        
+
+
         val isPowerSaverMode = sharedPreferences.getBoolean(Constants.Prefs.POWER_SAVER_MODE, false)
         deps.timeDateManager?.startUpdates(isPowerSaverMode)
-        
-        
+
+
         val shouldRefreshUsage = now - lastUsageRefreshAt >= USAGE_REFRESH_INTERVAL_MS
         if (shouldRefreshUsage) {
             deps.usageStatsManager?.invalidateCache()
 
-            // Use activity's lifecycleScope for lifecycle-aware delayed updates
+
             activity.lifecycleScope.launch {
                 delay(50)
                 onBatteryUpdate?.invoke()
@@ -183,26 +183,26 @@ class LifecycleManager(
         }
 
         deps.todoManager?.rescheduleTodoAlarms()
-        
+
         onResumeCallbacks.forEach { it.invoke() }
     }
-    
+
     fun onPause() {
         val deps = dependencies
 
         deps.timeDateManager?.stopUpdates()
-        
-        
+
+
         deps.todoManager?.saveTodoItems()
-        
-        
+
+
         deps.widgetManager?.onStop()
         deps.deviceInfoWidget?.onPause()
         deps.networkStatsWidget?.onPause()
 
-        
+
         deps.widgetLifecycleCoordinator?.onPause()
-        
+
         onPauseCallbacks.forEach { it.invoke() }
     }
 
@@ -217,11 +217,11 @@ class LifecycleManager(
         deps.serviceManager?.stopAllServices()
         deps.appTimerManager?.cleanup()
         deps.usageStatsManager?.cleanup()
-        
+
         cleanup()
     }
-    
-    
+
+
 
 
     fun cleanup() {

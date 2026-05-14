@@ -23,8 +23,8 @@ class FocusModeManager(private val context: Context, private val sharedPreferenc
 
     fun setFocusModeEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(FOCUS_MODE_ENABLED, enabled) }
-        
-        
+
+
         val intent = Intent("com.guruswarupa.launch.FOCUS_MODE_CHANGED").apply {
             `package` = context.packageName
             putExtra("focus_mode_enabled", enabled)
@@ -67,8 +67,8 @@ class FocusModeManager(private val context: Context, private val sharedPreferenc
             } else {
                 emptySet()
             }
-            
-            sharedPreferences.edit { 
+
+            sharedPreferences.edit {
                 remove(FOCUS_MODE_ALLOWED_APPS)
                 putStringSet(FOCUS_MODE_ALLOWED_APPS, recoveredSet)
             }

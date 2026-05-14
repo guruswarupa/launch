@@ -21,7 +21,7 @@ class FocusModeApplier(
     private val onUpdateFastScrollerVisibility: () -> Unit,
     private val showOnlyFavoritesInitially: () -> Boolean = { false }
 ) {
-    
+
     private fun safeExecute(task: Runnable): Boolean {
         if (activity.isFinishing || activity.isDestroyed) {
             return false

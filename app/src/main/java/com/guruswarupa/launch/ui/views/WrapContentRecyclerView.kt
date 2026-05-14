@@ -20,20 +20,20 @@ class WrapContentRecyclerView @JvmOverloads constructor(
 ) : RecyclerView(context, attrs, defStyleAttr) {
 
     init {
-        
+
         isNestedScrollingEnabled = false
     }
 
     override fun onMeasure(widthSpec: Int, heightSpec: Int) {
         super.onMeasure(widthSpec, heightSpec)
-        
+
         val layoutManager = layoutManager
         val adapter = adapter
         if (layoutManager is LinearLayoutManager && adapter != null && adapter.itemCount > 0) {
             val itemCount = adapter.itemCount
             var totalHeight = paddingTop + paddingBottom
-            
-            
+
+
             var measuredItems = 0
             for (i in 0 until itemCount) {
                 val view = layoutManager.findViewByPosition(i)
@@ -45,29 +45,29 @@ class WrapContentRecyclerView @JvmOverloads constructor(
                     measuredItems++
                 }
             }
-            
-            
+
+
             if (measuredItems in 1 until itemCount) {
                 val averageItemHeight = (totalHeight - paddingTop - paddingBottom) / measuredItems
                 totalHeight = paddingTop + paddingBottom + (averageItemHeight * itemCount)
             } else if (measuredItems == 0 && itemCount > 0) {
-                
-                
-                val estimatedItemHeight = 80 
+
+
+                val estimatedItemHeight = 80
                 totalHeight = paddingTop + paddingBottom + (estimatedItemHeight * itemCount)
             }
-            
-            
+
+
             if (totalHeight > 0) {
                 val heightMode = MeasureSpec.getMode(heightSpec)
                 val heightSize = MeasureSpec.getSize(heightSpec)
-                
+
                 val finalHeight = when (heightMode) {
                     MeasureSpec.EXACTLY -> heightSize
                     MeasureSpec.AT_MOST -> minOf(totalHeight, heightSize)
                     else -> totalHeight
                 }
-                
+
                 setMeasuredDimension(
                     MeasureSpec.getSize(widthSpec),
                     finalHeight
@@ -75,39 +75,39 @@ class WrapContentRecyclerView @JvmOverloads constructor(
             }
         }
     }
-    
+
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         super.onLayout(changed, l, t, r, b)
-        
-        
+
+
         post {
             recalculateHeight()
         }
     }
-    
+
     private var isRecalculating = false
-    
+
     private fun recalculateHeight() {
-        
+
         if (isRecalculating) return
-        
+
         val layoutManager = layoutManager
         val adapter = adapter
         if (layoutManager is LinearLayoutManager && adapter != null && adapter.itemCount > 0) {
             val itemCount = adapter.itemCount
             val currentHeight = layoutParams.height
-            
-            
-            val measuredCount = (0 until itemCount).count { 
-                layoutManager.findViewByPosition(it) != null 
+
+
+            val measuredCount = (0 until itemCount).count {
+                layoutManager.findViewByPosition(it) != null
             }
-            
-            
+
+
             if (measuredCount >= itemCount * 0.8) {
                 isRecalculating = true
                 var totalHeight = paddingTop + paddingBottom
-                
-                
+
+
                 for (i in 0 until itemCount) {
                     val view = layoutManager.findViewByPosition(i)
                     if (view != null && view.height > 0) {
@@ -117,34 +117,34 @@ class WrapContentRecyclerView @JvmOverloads constructor(
                         totalHeight += view.height + topMargin + bottomMargin
                     }
                 }
-                
-                
+
+
                 val extraPaddingDp = 32f
                 val extraPadding = (extraPaddingDp * resources.displayMetrics.density).toInt()
                 totalHeight += extraPadding
-                
-                
+
+
                 if (totalHeight > 0 && abs(totalHeight - currentHeight) > 10) {
                     layoutParams.height = totalHeight
                     requestLayout()
                 }
-                
+
                 isRecalculating = false
                 return
             }
-            
-            
-            if (currentHeight < 10000) { 
+
+
+            if (currentHeight < 10000) {
                 isRecalculating = true
-                layoutParams.height = 10000 
+                layoutParams.height = 10000
                 requestLayout()
-                
+
                 post {
-                    
+
                     var totalHeight = paddingTop + paddingBottom
                     var totalMeasuredHeight = 0
                     var finalMeasuredCount = 0
-                    
+
                     for (i in 0 until itemCount) {
                         val view = layoutManager.findViewByPosition(i)
                         if (view != null && view.height > 0) {
@@ -155,46 +155,46 @@ class WrapContentRecyclerView @JvmOverloads constructor(
                             finalMeasuredCount++
                         }
                     }
-                    
+
                     totalHeight += totalMeasuredHeight
-                    
-                    
+
+
                     if (finalMeasuredCount in 1 until itemCount) {
                         val averageHeight = totalMeasuredHeight / finalMeasuredCount
                         totalHeight += averageHeight * (itemCount - finalMeasuredCount)
                     }
-                    
-                    
+
+
                     val extraPaddingDp = 32f
                     val extraPadding = (extraPaddingDp * resources.displayMetrics.density).toInt()
                     totalHeight += extraPadding
-                    
-                    
+
+
                     if (totalHeight > 0) {
                         layoutParams.height = totalHeight
                         requestLayout()
                     }
-                    
+
                     isRecalculating = false
                 }
             }
         }
     }
-    
+
     override fun setAdapter(adapter: Adapter<*>?) {
         super.setAdapter(adapter)
-        
+
         post {
             recalculateHeight()
         }
     }
 
-    // Accessibility safety methods to prevent framework crashes
+
     override fun addChildrenForAccessibility(outChildren: ArrayList<View>) {
         try {
             super.addChildrenForAccessibility(outChildren)
         } catch (_: IllegalArgumentException) {
-            // Ignore framework bug during accessibility prefetching
+
         }
     }
 

@@ -37,7 +37,7 @@ class AppLockSettingsActivity : ComponentActivity() {
     private var isPinVerifiedForThisSession = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
@@ -45,7 +45,7 @@ class AppLockSettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_app_lock_settings)
         applyContentInsets()
-        
+
         appLockManager = AppLockManager(this)
         setupViews()
         setupExpandableSections()
@@ -103,8 +103,8 @@ class AppLockSettingsActivity : ComponentActivity() {
 
         changePinButton.setOnClickListener {
             if (appLockManager.isPinSet()) {
-                appLockManager.changePin { success: Boolean -> 
-                    if (success) updatePinButtonText() 
+                appLockManager.changePin { success: Boolean ->
+                    if (success) updatePinButtonText()
                 }
             } else {
                 appLockManager.setupPin { success: Boolean ->
@@ -151,7 +151,7 @@ class AppLockSettingsActivity : ComponentActivity() {
             getInstalledApps(), appLockManager,
             requestPinAuth = { onSuccess ->
                 if (isPinVerifiedForThisSession) onSuccess()
-                else appLockManager.verifyPin { success: Boolean -> 
+                else appLockManager.verifyPin { success: Boolean ->
                     if (success) { isPinVerifiedForThisSession = true; onSuccess() }
                     else recreateAppsList()
                 }
@@ -164,7 +164,7 @@ class AppLockSettingsActivity : ComponentActivity() {
         val pm = packageManager
         val apps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
                    else pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        
+
         return apps.filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
             .map { AppInfo(it.packageName, it.loadLabel(pm).toString(), it.loadIcon(pm)) }
             .sortedBy { it.appName }

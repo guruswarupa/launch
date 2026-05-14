@@ -55,7 +55,7 @@ class TodoAdapter(
 
         holder.todoCheckBox.isChecked = todoItem.isChecked
 
-        
+
         val priorityDrawable = when (todoItem.priority) {
             TodoItem.Priority.HIGH -> ContextCompat.getDrawable(context, R.drawable.priority_high)
             TodoItem.Priority.MEDIUM -> ContextCompat.getDrawable(context, R.drawable.priority_medium)
@@ -63,7 +63,7 @@ class TodoAdapter(
         }
         holder.priorityIndicator.background = priorityDrawable
 
-        
+
         holder.todoText.text = todoItem.text
         if (todoItem.isChecked) {
             holder.todoText.paintFlags = holder.todoText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
@@ -71,7 +71,7 @@ class TodoAdapter(
             holder.todoText.paintFlags = holder.todoText.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
         }
 
-        
+
         if (todoItem.category.isNotEmpty() && todoItem.category != "General") {
             holder.categoryText.text = todoItem.category
             holder.categoryText.visibility = View.VISIBLE
@@ -79,7 +79,7 @@ class TodoAdapter(
             holder.categoryText.visibility = View.GONE
         }
 
-        
+
         if (todoItem.dueTime != null) {
             holder.dueTimeText.text = context.getString(R.string.todo_due_format, todoItem.dueTime)
             holder.dueTimeText.visibility = View.VISIBLE
@@ -87,7 +87,7 @@ class TodoAdapter(
             holder.dueTimeText.visibility = View.GONE
         }
 
-        
+
         if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
             val intervalLabel = when (todoItem.recurrenceInterval) {
                 30 -> context.getString(R.string.todo_every_30_min)
@@ -111,23 +111,23 @@ class TodoAdapter(
             holder.intervalText.visibility = View.GONE
         }
 
-        
+
         if (todoItem.isRecurring && todoItem.selectedDays.isNotEmpty()) {
             holder.daysContainer.visibility = View.VISIBLE
 
             holder.dayViews.forEachIndexed { index, dayView ->
-                val dayOfWeek = index + 1 
+                val dayOfWeek = index + 1
                 if (todoItem.selectedDays.contains(dayOfWeek)) {
-                    
-                    val selectedBgColor = ContextCompat.getColor(context, R.color.nord8) 
+
+                    val selectedBgColor = ContextCompat.getColor(context, R.color.nord8)
                     dayView.setBackgroundColor(selectedBgColor)
                     dayView.setTextColor(ContextCompat.getColor(context, R.color.white))
                 } else {
-                    
+
                     val unselectedBgColor = if (isNightMode(context)) {
-                        ContextCompat.getColor(context, R.color.nord3) 
+                        ContextCompat.getColor(context, R.color.nord3)
                     } else {
-                        ContextCompat.getColor(context, R.color.nord2) 
+                        ContextCompat.getColor(context, R.color.nord2)
                     }
                     val unselectedTextColor = ContextCompat.getColor(context, R.color.text_secondary)
                     dayView.setBackgroundColor(unselectedBgColor)
@@ -138,24 +138,24 @@ class TodoAdapter(
             holder.daysContainer.visibility = View.GONE
         }
 
-        
+
         holder.todoCheckBox.setOnCheckedChangeListener { _, isChecked ->
             todoItem.isChecked = isChecked
 
             if (isChecked && todoItem.isRecurring) {
                 if (todoItem.isIntervalBased()) {
-                    
+
                     todoItem.lastCompletedDate = System.currentTimeMillis().toString()
                 } else {
-                    
+
                     todoItem.lastCompletedDate = getCurrentDateString()
                 }
             } else if (!isChecked && todoItem.isRecurring && todoItem.isIntervalBased()) {
-                
+
                 todoItem.lastCompletedDate = null
             }
 
-            
+
             if (isChecked) {
                 holder.todoText.paintFlags = holder.todoText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
             } else {
@@ -165,7 +165,7 @@ class TodoAdapter(
             onTaskStateChanged()
         }
 
-        
+
         holder.deleteButton.setOnClickListener {
             onDeleteClick(todoItem)
         }
@@ -175,7 +175,7 @@ class TodoAdapter(
         val calendar = Calendar.getInstance()
         return "${calendar.get(Calendar.DAY_OF_YEAR)}-${calendar.get(Calendar.YEAR)}"
     }
-    
+
     private fun isNightMode(context: Context): Boolean {
         return (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     }

@@ -22,14 +22,14 @@ class SettingsChangeCoordinator(
     private val widgetSetupManagerProvider: () -> WidgetSetupManager?,
     private val widgetThemeManagerProvider: () -> WidgetThemeManager?
 ) {
-    
+
 
 
     fun applyThemeBasedWidgetBackgrounds() {
         val widgetThemeManager = widgetThemeManagerProvider() ?: return
         val views = activity.views
         val appDockManager = appDockManagerProvider()
-        
+
         widgetThemeManager.apply(
             searchBox = if (views.isSearchBoxInitialized()) views.searchBox else null,
             searchContainer = if (views.isSearchContainerInitialized()) views.searchContainer else null,
@@ -39,7 +39,7 @@ class SettingsChangeCoordinator(
         )
     }
 
-    
+
 
 
     fun applyBackgroundTranslucency() {
@@ -48,7 +48,7 @@ class SettingsChangeCoordinator(
         val translucency = sharedPreferences.getInt(Constants.Prefs.BACKGROUND_TRANSLUCENCY, 40)
         val alpha = (translucency * 255 / 100).coerceIn(0, 255)
         val color = Color.argb(alpha, 0, 0, 0)
-        
+
         if (views.areTranslucencyOverlaysInitialized()) {
             views.backgroundTranslucencyOverlay.setBackgroundColor(color)
             views.widgetsDrawerTranslucencyOverlay.setBackgroundColor(color)
@@ -56,7 +56,7 @@ class SettingsChangeCoordinator(
         activity.findViewById<android.view.View>(com.guruswarupa.launch.R.id.rss_drawer_translucency_overlay)?.setBackgroundColor(color)
     }
 
-    
+
 
 
     fun handleSettingsUpdate() {
@@ -69,28 +69,28 @@ class SettingsChangeCoordinator(
         applyBackgroundTranslucency()
         TypographyManager.applyToActivity(activity)
         views.fastScroller.refreshTypography(sharedPreferences)
-        
-        // Apply top widget visibility preference
+
+
         val topWidgetEnabled = sharedPreferences.getBoolean(Constants.Prefs.TOP_WIDGET_ENABLED, true)
         if (views.isRecyclerViewInitialized()) {
             views.topWidgetContainer.visibility = if (topWidgetEnabled) android.view.View.VISIBLE else android.view.View.GONE
-            
-            // Apply appropriate margin based on widget preference
+
+
             val params = views.searchContainer.layoutParams as android.view.ViewGroup.MarginLayoutParams
             if (!topWidgetEnabled) {
-                // Widget disabled - use larger margin
+
                 val extraMargin = activity.resources.getDimensionPixelSize(com.guruswarupa.launch.R.dimen.search_top_margin_when_widget_hidden)
                 params.topMargin = extraMargin
             } else {
-                // Widget enabled - restore original margin
+
                 params.topMargin = activity.resources.getDimensionPixelSize(com.guruswarupa.launch.R.dimen.widget_status_bar_clearance)
             }
             views.searchContainer.layoutParams = params
         }
 
         activity.timeDateManager.setUse24HourFormat(use24HourClock)
-        
-        
+
+
         val viewPreference = sharedPreferences.getString(
             Constants.Prefs.VIEW_PREFERENCE,
             Constants.Prefs.VIEW_PREFERENCE_LIST
@@ -100,7 +100,7 @@ class SettingsChangeCoordinator(
         val currentIsGridMode = if (views.isRecyclerViewInitialized()) views.recyclerView.layoutManager is GridLayoutManager else false
 
         if (newIsGridMode != currentIsGridMode && adapter != null) {
-            
+
             views.recyclerView.layoutManager = if (newIsGridMode) {
                 val gridLayoutManager = GridLayoutManager(activity, desiredColumns)
                 gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
@@ -117,18 +117,18 @@ class SettingsChangeCoordinator(
             } else {
                 LinearLayoutManager(activity)
             }
-            
-            
+
+
             adapter.updateViewMode(newIsGridMode)
-            
-            
-            
+
+
+
             activity.updateAppSearchManager()
         } else if (newIsGridMode && currentIsGridMode) {
             val layoutManager = views.recyclerView.layoutManager as? GridLayoutManager
             if (layoutManager != null && layoutManager.spanCount != desiredColumns) {
                 layoutManager.spanCount = desiredColumns
-                
+
                 layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
                     override fun getSpanSize(position: Int): Int {
                         val viewType = adapter?.getItemViewType(position)
@@ -140,65 +140,65 @@ class SettingsChangeCoordinator(
                     }
                 }
                 layoutManager.requestLayout()
-                
+
                 activity.appListLoader.loadApps(forceRefresh = false)
             }
         }
-        
-        
+
+
         val iconStyle = sharedPreferences.getString(Constants.Prefs.ICON_STYLE, "squircle") ?: "round"
         adapter?.updateIconStyle(iconStyle)
-        
-        
+
+
         val iconSize = sharedPreferences.getInt(Constants.Prefs.ICON_SIZE, 40)
         adapter?.updateIconSize(iconSize)
-        
-        // Update cached show app names in grid setting
+
+
         val showAppNamesInGrid = sharedPreferences.getBoolean(Constants.Prefs.SHOW_APP_NAME_IN_GRID, true)
         adapter?.updateShowAppNamesInGrid(showAppNamesInGrid)
 
         activity.updateFastScrollerVisibility()
 
-        
+
         activity.serviceManager.updateShakeDetectionService()
         activity.serviceManager.updateWalkDetectionService()
         activity.serviceManager.updateScreenDimmerService()
         activity.serviceManager.updateNightModeService()
         activity.serviceManager.updateFlipToDndService()
         activity.serviceManager.updateBackTapService()
-        
-        
+
+
         activity.hiddenAppManager.forceRefresh()
-        
-        
+
+
         activity.appListLoader.loadApps(forceRefresh = false)
-        
+
         try {
             activity.financeWidgetManager.updateDisplay()
         } catch (_: Exception) {
         }
-        
-        
+
+
         activity.wallpaperManagerHelper.applyBlurToViews()
         activity.wallpaperManagerHelper.clearCache()
         activity.wallpaperManagerHelper.setWallpaperBackground(forceReload = true)
-        
+
         activity.refreshRightDrawerWallpaper()
 
         try {
             activity.screenPagerManager.reloadPages()
         } catch (e: UninitializedPropertyAccessException) {
-            // screenPagerManager not yet initialized, skip
+
         }
 
         activity.activityInitializer.setupDrawerLayout()
-        
-        // Update dock visibility based on new settings
+
+
         appDockManagerProvider()?.let { dockManager ->
             try {
                 dockManager.refreshDockVisibility()
             } catch (e: Exception) {
-                // Dock visibility update failed, continue with other updates
+
             }
         }
 

@@ -21,7 +21,7 @@ class PdfPageAdapterLazy(
     private val totalPages: Int
 ) : RecyclerView.Adapter<PdfPageAdapterLazy.PageViewHolder>() {
 
-    // Cache for rendered bitmaps to avoid re-rendering
+
     private val bitmapCache = ConcurrentHashMap<Int, Bitmap>()
     private val renderExecutor: ExecutorService = Executors.newFixedThreadPool(2)
     private val pendingTasks = ConcurrentHashMap<Int, Future<*>>()
@@ -38,20 +38,20 @@ class PdfPageAdapterLazy(
     }
 
     override fun onBindViewHolder(holder: PageViewHolder, position: Int) {
-        // Set placeholder immediately
+
         holder.pageNumber.text = "Page ${position + 1}"
-        
-        // Check cache first
+
+
         val cachedBitmap = bitmapCache[position]
         if (cachedBitmap != null && !cachedBitmap.isRecycled) {
             holder.imageView.setImageBitmap(cachedBitmap)
             return
         }
-        
-        // Cancel any pending render for this position
+
+
         pendingTasks[position]?.cancel(true)
-        
-        // Render asynchronously on background thread
+
+
         val future = renderExecutor.submit {
             try {
                 val page = pdfRenderer.openPage(position)
@@ -65,10 +65,10 @@ class PdfPageAdapterLazy(
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 page.close()
 
-                // Cache the bitmap
+
                 bitmapCache[position] = bitmap
 
-                // Update UI on main thread
+
                 holder.imageView.post {
                     if (holder.bindingAdapterPosition == position && !bitmap.isRecycled) {
                         holder.imageView.setImageBitmap(bitmap)
@@ -85,7 +85,7 @@ class PdfPageAdapterLazy(
                 pendingTasks.remove(position)
             }
         }
-        
+
         pendingTasks[position] = future
     }
 
@@ -95,7 +95,7 @@ class PdfPageAdapterLazy(
         super.onViewRecycled(holder)
         holder.imageView.setImageBitmap(null)
     }
-    
+
     fun clearCache() {
         bitmapCache.values.forEach { bitmap ->
             if (!bitmap.isRecycled) {
@@ -106,7 +106,7 @@ class PdfPageAdapterLazy(
         pendingTasks.values.forEach { it.cancel(true) }
         pendingTasks.clear()
     }
-    
+
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         super.onDetachedFromRecyclerView(recyclerView)
         clearCache()

@@ -53,20 +53,20 @@ class ScreenDimmerService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        
+
         val notification = ServiceNotificationManager.updateServiceStatus(this, SERVICE_NAME, true)
         startForeground(ServiceNotificationManager.NOTIFICATION_ID, notification)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val dimLevel = intent?.getIntExtra(EXTRA_DIM_LEVEL, 50) ?: 50
-        
+
         if (intent?.action == ACTION_UPDATE_DIMMER) {
             updateOverlay(dimLevel)
         } else {
             showOverlay(dimLevel)
         }
-        
+
         return START_STICKY
     }
 
@@ -89,7 +89,7 @@ class ScreenDimmerService : Service() {
 
         overlayView = View(this)
         overlayView?.setBackgroundColor(Color.BLACK)
-        
+
         overlayView?.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN

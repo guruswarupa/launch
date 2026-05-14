@@ -10,41 +10,41 @@ import java.util.Calendar
 class TodoAlarmManager(private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    
+
 
 
 
 
     fun scheduleAlarm(todoItem: TodoItem, requestCode: Int) {
         if (todoItem.isChecked) {
-            return 
+            return
         }
 
-        
+
         if (todoItem.isIntervalBased() && todoItem.intervalStartTime != null && todoItem.recurrenceInterval != null) {
             scheduleIntervalAlarm(todoItem, requestCode)
             return
         }
 
-        
+
         if (todoItem.dueTime == null) {
-            return 
+            return
         }
 
         val (hour, minute) = parseTime(todoItem.dueTime) ?: return
 
         if (todoItem.isRecurring && todoItem.selectedDays.isNotEmpty()) {
-            
+
             todoItem.selectedDays.forEach { dayOfWeek ->
                 scheduleRecurringAlarm(todoItem, dayOfWeek, hour, minute, requestCode + dayOfWeek)
             }
         } else {
-            
+
             scheduleOneTimeAlarm(todoItem, hour, minute, requestCode)
         }
     }
-    
-    
+
+
 
 
     private fun scheduleIntervalAlarm(todoItem: TodoItem, requestCode: Int) {
@@ -58,18 +58,18 @@ class TodoAlarmManager(private val context: Context) {
         val currentTimeInMinutes = currentHour * 60 + currentMinute
         val startTimeInMinutes = startHour * 60 + startMinute
 
-        
+
         var nextAlarmTimeInMinutes = startTimeInMinutes
-        
-        
+
+
         if (currentTimeInMinutes >= startTimeInMinutes) {
-            
+
             val elapsedSinceStart = currentTimeInMinutes - startTimeInMinutes
             val intervalsPassed = (elapsedSinceStart / recurrenceInterval) + 1
             nextAlarmTimeInMinutes = startTimeInMinutes + (intervalsPassed * recurrenceInterval)
         }
 
-        
+
         if (nextAlarmTimeInMinutes >= 24 * 60) {
             calendar.add(Calendar.DAY_OF_YEAR, 1)
             nextAlarmTimeInMinutes -= 24 * 60
@@ -95,7 +95,7 @@ class TodoAlarmManager(private val context: Context) {
         )
     }
 
-    
+
 
 
     private fun scheduleRecurringAlarm(
@@ -110,16 +110,16 @@ class TodoAlarmManager(private val context: Context) {
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
         val currentMinute = calendar.get(Calendar.MINUTE)
 
-        
+
         var daysUntil = dayOfWeek - currentDayOfWeek
         if (daysUntil < 0) {
-            daysUntil += 7 
+            daysUntil += 7
         } else if (daysUntil == 0) {
-            
+
             val currentTimeInMinutes = currentHour * 60 + currentMinute
             val dueTimeInMinutes = hour * 60 + minute
             if (currentTimeInMinutes >= dueTimeInMinutes) {
-                daysUntil = 7 
+                daysUntil = 7
             }
         }
 
@@ -144,7 +144,7 @@ class TodoAlarmManager(private val context: Context) {
         )
     }
 
-    
+
 
 
     private fun scheduleOneTimeAlarm(
@@ -157,7 +157,7 @@ class TodoAlarmManager(private val context: Context) {
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
         val currentMinute = calendar.get(Calendar.MINUTE)
 
-        
+
         val currentTimeInMinutes = currentHour * 60 + currentMinute
         val dueTimeInMinutes = hour * 60 + minute
 
@@ -185,12 +185,12 @@ class TodoAlarmManager(private val context: Context) {
         )
     }
 
-    
+
 
 
     fun cancelAlarm(todoItem: TodoItem, requestCode: Int) {
         if (todoItem.isRecurring && todoItem.selectedDays.isNotEmpty()) {
-            
+
             todoItem.selectedDays.forEach { dayOfWeek ->
                 cancelAlarmForRequestCode(requestCode + dayOfWeek)
             }
@@ -199,7 +199,7 @@ class TodoAlarmManager(private val context: Context) {
         }
     }
 
-    
+
 
 
     private fun cancelAlarmForRequestCode(requestCode: Int) {
@@ -214,7 +214,7 @@ class TodoAlarmManager(private val context: Context) {
         pendingIntent.cancel()
     }
 
-    
+
 
 
     fun cancelAllAlarms(todoItems: List<TodoItem>) {
@@ -224,14 +224,14 @@ class TodoAlarmManager(private val context: Context) {
         }
     }
 
-    
+
 
 
     fun rescheduleAllAlarms(todoItems: List<TodoItem>) {
         cancelAllAlarms(todoItems)
         todoItems.forEachIndexed { index, todoItem ->
             if (!todoItem.isChecked) {
-                
+
                 if (todoItem.dueTime != null || (todoItem.isIntervalBased() && todoItem.intervalStartTime != null)) {
                     val requestCode = getRequestCode(todoItem, index)
                     scheduleAlarm(todoItem, requestCode)
@@ -240,7 +240,7 @@ class TodoAlarmManager(private val context: Context) {
         }
     }
 
-    
+
 
 
     private fun createAlarmIntent(todoItem: TodoItem, requestCode: Int): Intent {
@@ -257,15 +257,15 @@ class TodoAlarmManager(private val context: Context) {
         }
     }
 
-    
+
 
 
     fun getRequestCode(todoItem: TodoItem, index: Int): Int {
-        
+
         return (todoItem.text.hashCode() + index * 1000) and 0x7FFFFFFF
     }
 
-    
+
 
 
     private fun parseTime(timeString: String): Pair<Int, Int>? {

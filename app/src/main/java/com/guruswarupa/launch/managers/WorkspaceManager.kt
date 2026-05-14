@@ -13,35 +13,35 @@ data class Workspace(
 )
 
 class WorkspaceManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
-    
+
     companion object {
         private const val WORKSPACES_KEY = "workspaces"
         private const val ACTIVE_WORKSPACE_KEY = "active_workspace_id"
     }
-    
+
     fun createWorkspace(name: String, appPackageNames: Set<String>): Workspace {
         val workspaceId = "workspace_${System.currentTimeMillis()}"
         val workspace = Workspace(workspaceId, name, appPackageNames)
         saveWorkspace(workspace)
         return workspace
     }
-    
+
     fun updateWorkspace(workspaceId: String, name: String, appPackageNames: Set<String>) {
         val workspace = Workspace(workspaceId, name, appPackageNames)
         saveWorkspace(workspace)
     }
-    
+
     fun deleteWorkspace(workspaceId: String) {
         val workspaces = getAllWorkspaces().toMutableList()
         workspaces.removeAll { it.id == workspaceId }
         saveAllWorkspaces(workspaces)
-        
-        
+
+
         if (getActiveWorkspaceId() == workspaceId) {
             setActiveWorkspaceId(null)
         }
     }
-    
+
     fun getAllWorkspaces(): List<Workspace> {
         val workspacesJson = sharedPreferences.getString(WORKSPACES_KEY, "[]") ?: "[]"
         val userWorkspaces = try {
@@ -59,28 +59,28 @@ class WorkspaceManager @Inject constructor(private val sharedPreferences: Shared
         } catch (_: Exception) {
             emptyList()
         }
-        
-        // Note: Work profile workspace is now handled separately
+
+
         return userWorkspaces
     }
-    
+
     fun getWorkspace(workspaceId: String): Workspace? {
         return getAllWorkspaces().find { it.id == workspaceId }
     }
-    
+
     private fun saveWorkspace(workspace: Workspace) {
         val workspaces = getAllWorkspaces().toMutableList()
         val existingIndex = workspaces.indexOfFirst { it.id == workspace.id }
-        
+
         if (existingIndex >= 0) {
             workspaces[existingIndex] = workspace
         } else {
             workspaces.add(workspace)
         }
-        
+
         saveAllWorkspaces(workspaces)
     }
-    
+
     private fun saveAllWorkspaces(workspaces: List<Workspace>) {
         val jsonArray = JSONArray()
         workspaces.forEach { workspace ->
@@ -95,7 +95,7 @@ class WorkspaceManager @Inject constructor(private val sharedPreferences: Shared
         }
         sharedPreferences.edit { putString(WORKSPACES_KEY, jsonArray.toString()) }
     }
-    
+
     fun setActiveWorkspaceId(workspaceId: String?) {
         sharedPreferences.edit {
             if (workspaceId != null) {
@@ -105,54 +105,54 @@ class WorkspaceManager @Inject constructor(private val sharedPreferences: Shared
             }
         }
     }
-    
+
     fun getActiveWorkspaceId(): String? {
         return sharedPreferences.getString(ACTIVE_WORKSPACE_KEY, null)
     }
-    
+
     fun getActiveWorkspace(): Workspace? {
         val activeId = getActiveWorkspaceId()
         return if (activeId != null) getWorkspace(activeId) else null
     }
-    
+
     fun isWorkspaceModeActive(): Boolean {
         return getActiveWorkspaceId() != null
     }
-    
+
     fun isAppInActiveWorkspace(packageName: String): Boolean {
         val activeWorkspace = getActiveWorkspace()
         return activeWorkspace?.appPackageNames?.contains(packageName) ?: true
     }
-    
+
     fun shouldShowApp(packageName: String, workProfileManager: WorkProfileManager): Boolean {
         val activeWorkspace = getActiveWorkspace()
         val isWorkProfileEnabled = workProfileManager.isWorkProfileEnabled()
-        
+
         return when {
-            // If workspace is active, app must be in that workspace
+
             activeWorkspace != null && !activeWorkspace.appPackageNames.contains(packageName) -> false
-            // If work profile is enabled, show all apps (both personal and work)
-            // Work profile apps will appear with "(work)" suffix automatically from Android
+
+
             isWorkProfileEnabled -> true
-            // Otherwise show the app
+
             else -> true
         }
     }
-    
-    
+
+
 
 
 
     fun getAppsInWorkspaces(excludeWorkspaceId: String? = null): Set<String> {
         val allWorkspaces = getAllWorkspaces()
         val appsInWorkspaces = mutableSetOf<String>()
-        
+
         allWorkspaces.forEach { workspace ->
             if (workspace.id != excludeWorkspaceId) {
                 appsInWorkspaces.addAll(workspace.appPackageNames)
             }
         }
-        
+
         return appsInWorkspaces
     }
 }

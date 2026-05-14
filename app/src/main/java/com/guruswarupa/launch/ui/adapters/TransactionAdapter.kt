@@ -25,10 +25,10 @@ class TransactionAdapter(
     private val onDeleteClick: (Transaction) -> Unit
 ) : RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
-    // Cache DateFormat objects to avoid recreation
+
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     private val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-    
+
     private val differCallback = object : DiffUtil.ItemCallback<Transaction>() {
         override fun areItemsTheSame(oldItem: Transaction, newItem: Transaction): Boolean {
             return oldItem.timestamp == newItem.timestamp && oldItem.type == newItem.type
@@ -60,22 +60,22 @@ class TransactionAdapter(
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
         val transaction = differ.currentList[position]
         val context = holder.itemView.context
-        
-        
+
+
         val isIncome = transaction.type == "income"
         val typeLabel = context.getString(if (isIncome) R.string.income else R.string.expense)
         holder.typeText.text = typeLabel
-        
-        
+
+
         holder.descriptionText.text = transaction.description.ifEmpty { typeLabel }
-        
-        
+
+
         val date = Date(transaction.timestamp)
         val dateStr = dateFormat.format(date)
         val timeStr = timeFormat.format(date)
         holder.dateText.text = context.getString(R.string.date_time_divider_format, dateStr, timeStr)
-        
-        
+
+
         val absAmount = kotlin.math.abs(transaction.amount)
         holder.amountText.text = if (isIncome) {
             context.getString(R.string.transaction_amount_income_format, currencySymbol, absAmount)

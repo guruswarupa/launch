@@ -486,7 +486,7 @@ class ScreenPagerManager(
 
     private fun navigablePages(): List<Page> {
         return if (leftPageLocked) {
-            // When locked (focus mode), filter out RSS and WIDGETS, keep original order
+
             activePages.filterNot { it == Page.RSS || it == Page.WIDGETS }
         } else {
             activePages
@@ -568,11 +568,11 @@ class ScreenPagerManager(
                             container.importantForContentCapture = previousContentCapture
                         }
                     } catch (e: Exception) {
-                        // Ignore accessibility restoration failures
+
                     }
                 }
             } catch (e: Exception) {
-                // Ignore post failures
+
             }
         }
     }

@@ -72,14 +72,14 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     private val cameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val usageStatsManager by lazy { getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager }
     private val appUsageStatsManager by lazy { AppUsageStatsManager(this) }
-    
+
     private var isTorchOn = false
     private lateinit var focusModeManager: FocusModeManager
     private lateinit var sharedPreferences: SharedPreferences
     private val focusModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.FOCUS_MODE_CHANGED") {
-                
+
             }
         }
     }
@@ -101,9 +101,9 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             }
         }
     }
-    
+
     private var screenReceiver: BroadcastReceiver? = null
-    
+
     private fun registerScreenReceiver() {
         screenReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -111,7 +111,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     Intent.ACTION_SCREEN_ON -> {
                         isScreenOn = true
                         startUnlockMonitor()
-                        // Show control center trigger after screen on
+
                         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
                         if (prefs.getBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_ENABLED, false)) {
                             showControlCenterTrigger()
@@ -120,12 +120,12 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     Intent.ACTION_SCREEN_OFF -> {
                         isScreenOn = false
                         removeEdgePanel()
-                        // Hide control center trigger when screen turns off
+
                         removeControlCenterTrigger()
                         stopUnlockMonitor()
                     }
                     Intent.ACTION_USER_PRESENT -> {
-                        // Unlock monitor will handle showing edge panel and control center trigger
+
                         stopUnlockMonitor()
                     }
                 }
@@ -138,18 +138,18 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         }
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
-    
+
     private var unlockMonitorHandler: android.os.Handler? = null
     private var unlockMonitorRunnable: Runnable? = null
-    
+
     private fun startUnlockMonitor() {
         stopUnlockMonitor()
-        
+
         unlockMonitorHandler = android.os.Handler(android.os.Looper.getMainLooper())
         unlockMonitorRunnable = object : Runnable {
             override fun run() {
                 val isLocked = keyguardManager?.isKeyguardLocked
-                
+
                 if (isLocked == false) {
                     showEdgeHandleAfterUnlock()
                     showControlCenterTriggerAfterUnlock()
@@ -160,13 +160,13 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         }
         unlockMonitorHandler?.post(unlockMonitorRunnable!!)
     }
-    
+
     private fun stopUnlockMonitor() {
         unlockMonitorHandler?.removeCallbacksAndMessages(null)
         unlockMonitorHandler = null
         unlockMonitorRunnable = null
     }
-    
+
     private fun showEdgeHandleAfterUnlock() {
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
@@ -176,7 +176,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             }
         }, 500)
     }
-    
+
     private fun showControlCenterTriggerAfterUnlock() {
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
@@ -197,7 +197,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     companion object {
         var instance: ScreenLockAccessibilityService? = null
             private set
-            
+
         const val DEFAULT_SHORTCUTS = "wifi,bluetooth,airplane,torch,data,rotation,sound,dnd,location,qr_scan,camera,screenshot,record,lock,power,hotspot,screen_timeout"
     }
 
@@ -205,14 +205,14 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         super.onCreate()
         keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
         registerScreenReceiver()
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && torchCallback != null) {
             try {
                 cameraManager.registerTorchCallback(torchCallback, null)
             } catch (_: Exception) {}
         }
 
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(focusModeReceiver, IntentFilter("com.guruswarupa.launch.FOCUS_MODE_CHANGED"), RECEIVER_EXPORTED)
             registerReceiver(settingsReceiver, IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED"), RECEIVER_EXPORTED)
@@ -322,12 +322,12 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     MotionEvent.ACTION_UP -> {
                         val dx = abs(event.rawX - initialTouchX)
                         val dy = abs(event.rawY - initialTouchY)
-                        
-                        
+
+
                         if (!isMoving) {
                             toggleMenu()
                         }
-                        
+
                         snapToEdge(params)
                         return true
                     }
@@ -403,11 +403,11 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     }
 
     private fun showEdgeHandle() {
-        // Don't show edge handle on lock screen
+
         if (!isScreenOn || keyguardManager?.isKeyguardLocked == true) {
             return
         }
-        
+
         if (edgeHandleView != null) {
             edgeHandleView?.let { view ->
                 (view.layoutParams as? WindowManager.LayoutParams)?.let { params ->
@@ -460,7 +460,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                             .getBoolean(Constants.Prefs.EDGE_PANEL_HANDLE_LOCKED, false)
                         val dx = event.rawX - initialTouchX
                         val dy = (event.rawY - initialTouchY).toInt()
-                        
+
                         if (abs(dx) > touchSlop / 4 || abs(dy) > touchSlop / 4) {
                             moved = true
                         }
@@ -546,15 +546,15 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             val overlay = LayoutInflater.from(themedContext).inflate(R.layout.layout_edge_panel_overlay, null, false)
             edgePanelView = overlay
 
-            // Setup scrim to close panel on outside tap - but keep it invisible initially
+
             val scrim = overlay.findViewById<View>(R.id.edge_panel_scrim)
             scrim?.setOnClickListener {
                 hideEdgePanel()
             }
-            // Keep scrim completely invisible during opening
+
             scrim?.alpha = 0f
 
-            // Setup customize button
+
             val customizeButton = overlay.findViewById<ImageView>(R.id.edge_panel_customize_button)
             customizeButton?.setOnClickListener {
                 try {
@@ -568,16 +568,16 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // Window params for overlay
+
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
-                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY 
-                else 
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+                else
                     WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or 
-                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or 
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
@@ -586,10 +586,10 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             windowManager?.addView(overlay, params)
             isEdgePanelVisible = true
 
-            // Populate first so content is measured, then position with correct dimensions
+
             populateEdgePanel()
             positionEdgePanelSheet()
-            
+
         } catch (e: Exception) {
             Log.e("EdgePanel", "Error showing panel: ${e.message}", e)
             edgePanelView = null
@@ -599,22 +599,22 @@ class ScreenLockAccessibilityService : AccessibilityService() {
 
     private fun hideEdgePanel() {
         val overlay = edgePanelView ?: return
-        
+
         try {
-            // Animate out
+
             val sheet = overlay.findViewById<View>(R.id.edge_panel_sheet)
-            
+
             if (sheet != null) {
-                val slideOut = if (isEdgeHandleOnLeft()) 
-                    -sheet.width.toFloat() - 16.dpToPx() // Match opening distance
-                else 
+                val slideOut = if (isEdgeHandleOnLeft())
+                    -sheet.width.toFloat() - 16.dpToPx()
+                else
                     sheet.width.toFloat() + 16.dpToPx()
-                
-                // Quick slide out - no scrim animation needed
+
+
                 sheet.animate()
                     .translationX(slideOut)
                     .alpha(0f)
-                    .setDuration(100) // Very fast close
+                    .setDuration(100)
                     .withEndAction {
                         cleanupEdgePanel(overlay)
                     }
@@ -627,7 +627,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             cleanupEdgePanel(overlay)
         }
     }
-    
+
     private fun cleanupEdgePanel(overlay: View) {
         try {
             windowManager?.removeView(overlay)
@@ -659,11 +659,11 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     }
 
     private fun showControlCenterTrigger() {
-        // Don't show control center trigger on lock screen
+
         if (!isScreenOn || keyguardManager?.isKeyguardLocked == true) {
             return
         }
-        
+
         if (controlCenterTriggerView != null) {
             controlCenterTriggerView?.let { view ->
                 (view.layoutParams as? WindowManager.LayoutParams)?.let { params ->
@@ -714,7 +714,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                             .getBoolean(Constants.Prefs.CONTROL_CENTER_TRIGGER_LOCKED, false)
                         val dx = event.rawX - initialTouchX
                         val dy = (event.rawY - initialTouchY).toInt()
-                        
+
                         if (abs(dx) > touchSlop / 4 || abs(dy) > touchSlop / 4) {
                             moved = true
                         }
@@ -725,7 +725,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                             return true
                         }
 
-                        // Only reposition trigger during swipe, don't open yet
+
                         if (moved && abs(dx) > 30.dpToPx()) {
                             params.gravity = if (dx > 0) Gravity.TOP or Gravity.START else Gravity.TOP or Gravity.END
                             updateControlCenterTriggerPosition(params)
@@ -743,13 +743,13 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                         }
                         updateControlCenterTriggerPosition(params)
                         persistControlCenterTriggerPosition(params)
-                        
-                        // Check if swipe gesture was performed to open control center
+
+
                         if (moved && isSwipeToOpenControlCenter(dx)) {
                             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             toggleControlCenter()
                         } else if (!moved) {
-                            // Tap to open
+
                             v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             toggleControlCenter()
                         }
@@ -784,7 +784,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             Log.w("EdgePanel", "populateEdgePanel called but overlay is null")
             return
         }
-        
+
         try {
             val recentContainer = overlay.findViewById<LinearLayout>(R.id.edge_panel_recent_container)
             val pinnedContainer = overlay.findViewById<LinearLayout>(R.id.edge_panel_pinned_container)
@@ -801,19 +801,19 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             recentContainer.removeAllViews()
             pinnedContainer.removeAllViews()
 
-            // Check if recent apps should be shown
+
             val showRecent = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(Constants.Prefs.EDGE_PANEL_SHOW_RECENT, true)
 
-            // Get pinned packages
+
             val pinnedPackages = getPinnedAppPackages()
-            // Get recent apps only if enabled
+
             val recentPackages = if (showRecent) {
                 getRecentAppPackages(limit = 9)
             } else {
                 emptyList()
             }
-            // Build recent list (excluding pinned)
+
             val recentApps = mutableListOf<EdgePanelAppEntry>()
             recentPackages.forEach { packageName ->
                 if (!pinnedPackages.contains(packageName)) {
@@ -823,7 +823,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // Build pinned list
+
             val pinnedApps = mutableListOf<EdgePanelAppEntry>()
             pinnedPackages.forEach { packageName ->
                 resolveEdgePanelAppEntry(packageName)?.let { appInfo ->
@@ -831,7 +831,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 } ?: Log.w("EdgePanel", "Pinned app not found: $packageName")
             }
 
-            // Create views for recent apps
+
             recentApps.forEach { entry ->
                 val appView = createAppIconView(entry)
                 if (appView != null) {
@@ -839,7 +839,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // Create views for pinned apps
+
             pinnedApps.forEach { entry ->
                 val appView = createAppIconView(entry)
                 if (appView != null) {
@@ -847,14 +847,14 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 }
             }
 
-            // Update visibility
+
             recentLabel?.visibility = if (recentApps.isNotEmpty()) View.VISIBLE else View.GONE
             recentContainer.visibility = if (recentApps.isNotEmpty()) View.VISIBLE else View.GONE
             pinnedLabel?.visibility = if (pinnedApps.isNotEmpty()) View.VISIBLE else View.GONE
             pinnedContainer.visibility = if (pinnedApps.isNotEmpty()) View.VISIBLE else View.GONE
             recentEmpty?.visibility = if (recentApps.isEmpty() && pinnedApps.isEmpty()) View.VISIBLE else View.GONE
 
-            // Usage stats permission button
+
             val hasUsageAccess = appUsageStatsManager.hasUsageStatsPermission()
             usagePermissionButton?.visibility = if (hasUsageAccess) View.GONE else View.VISIBLE
             usagePermissionButton?.setOnClickListener {
@@ -867,7 +867,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     Log.e("EdgePanel", "Error opening usage settings: ${e.message}")
                 }
             }
-            
+
         } catch (e: Exception) {
             Log.e("EdgePanel", "Error populating panel: ${e.message}", e)
         }
@@ -927,12 +927,12 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         return try {
             val view = LayoutInflater.from(this).inflate(R.layout.item_edge_panel_app, null, false)
             val iconView = view.findViewById<ImageView>(R.id.edge_panel_app_icon)
-            
-            // Set icon
+
+
             iconView.setImageDrawable(entry.icon)
             iconView.visibility = View.VISIBLE
-            
-            // Set click listener
+
+
             view.setOnClickListener { clickView ->
                 try {
                     clickView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -941,7 +941,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     Log.e("EdgePanel", "Error launching app: ${e.message}")
                 }
             }
-            
+
             view.contentDescription = entry.label
             view
         } catch (e: Exception) {
@@ -997,7 +997,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     }
 
     private fun isEligibleEdgePanelPackage(packageName: String): Boolean {
-        // Exclude our own app and critical system packages
+
         if (packageName == this.packageName ||
             packageName == "android" ||
             packageName.startsWith("com.android.systemui") ||
@@ -1006,10 +1006,10 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             return false
         }
 
-        // Check if it's a system app
+
         return try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            // Only show non-system apps (apps with FLAG_SYSTEM not set)
+
             (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
         } catch (_: Exception) {
             false
@@ -1038,57 +1038,57 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         val screenWidth = getScreenWidth()
         val bottomInset = getBottomSystemInset()
 
-        // Determine if handle is on left or right
+
         val isLeft = isEdgeHandleOnLeft()
-        
-        // Keep the top gap compact and reserve stronger space near the bottom edge.
+
+
         val topMargin = 12.dpToPx()
         val bottomMargin = maxOf(40.dpToPx(), bottomInset + 24.dpToPx())
-        val sideMargin = 16.dpToPx()  // Space from screen edge
-        val triggerSideSpacing = 80.dpToPx()  // Extra space on trigger side to avoid overlapping handle
-        
-        // Calculate available height with safe margins
+        val sideMargin = 16.dpToPx()
+        val triggerSideSpacing = 80.dpToPx()
+
+
         val availableHeight = (screenHeight - topMargin - bottomMargin).coerceAtLeast(220.dpToPx())
-        
-        // Set layout params with correct gravity and margins
+
+
         val layoutParams = (sheet.layoutParams as? FrameLayout.LayoutParams)
             ?: FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT)
-        
+
         layoutParams.topMargin = topMargin
         layoutParams.bottomMargin = bottomMargin
-        layoutParams.height = availableHeight  // Use full available height
+        layoutParams.height = availableHeight
         layoutParams.marginStart = if (isLeft) sideMargin else 0
         layoutParams.marginEnd = if (isLeft) 0 else sideMargin
         layoutParams.gravity = if (isLeft) Gravity.TOP or Gravity.START else Gravity.TOP or Gravity.END
         sheet.layoutParams = layoutParams
-        
-        // Force layout to apply
+
+
         sheet.requestLayout()
-        
-        // Calculate slide distance for animation - start from edge with spacing
+
+
         val slideDistance = if (isLeft) {
             (sideMargin + triggerSideSpacing).toFloat()
         } else {
             -(sideMargin + triggerSideSpacing).toFloat()
         }
-        
-        // Set up initial state
+
+
         sheet.translationX = slideDistance
         sheet.alpha = 0f
         sheet.visibility = View.VISIBLE
-        
-        // INSTANT appearance - minimal animation
+
+
         sheet.animate()
             .translationX(0f)
             .alpha(1f)
-            .setDuration(120) // Very fast - almost instant
-            .setInterpolator(DecelerateInterpolator(3.0f)) // Very aggressive deceleration
+            .setDuration(120)
+            .setInterpolator(DecelerateInterpolator(3.0f))
             .withStartAction {
             }
             .withEndAction {
             }
             .start()
-        
+
     }
 
     private fun updateEdgeHandlePosition(params: WindowManager.LayoutParams) {
@@ -1317,7 +1317,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     }
 
     private fun toggleControlCenter() {
-        // Reuse the existing shortcut menu for control center functionality
+
         if (isMenuVisible) {
             hideMenu()
         } else {
@@ -1333,7 +1333,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         setupMenuListeners(shortcutMenu!!)
 
         val params = WindowManager.LayoutParams(
-            getScreenWidth(), // Full screen width to allow 80% centering
+            getScreenWidth(),
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
@@ -1341,8 +1341,8 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         )
 
         params.gravity = Gravity.CENTER
-        
-        // Set menu container width to 80% of screen width
+
+
         val menuContainer = shortcutMenu?.findViewById<View>(R.id.menu_container)
         val screenWidth = getScreenWidth()
         val targetWidth = (screenWidth * 0.8).toInt()
@@ -1350,7 +1350,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             width = targetWidth
         }
 
-        // Handle outside touch to close menu
+
         shortcutMenu?.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_OUTSIDE) {
                 hideMenu()
@@ -1382,7 +1382,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         val menuContainer = view.findViewById<View>(R.id.menu_container)
         menuContainer?.setOnClickListener {  }
 
-        
+
         val brightnessSeekBar = view.findViewById<SeekBar>(R.id.brightness_seekbar)
         if (Settings.System.canWrite(this)) {
             try {
@@ -1391,7 +1391,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             } catch (_: Exception) {
                 brightnessSeekBar?.progress = 125
             }
-            
+
             brightnessSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
@@ -1415,7 +1415,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             }
         }
 
-        
+
         val volumeMediaSeekBar = view.findViewById<SeekBar>(R.id.volume_media_seekbar)
         val imgVolumeMedia = view.findViewById<ImageView>(R.id.img_volume_media_icon)
         try {
@@ -1423,7 +1423,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
             volumeMediaSeekBar?.max = maxVolume
             volumeMediaSeekBar?.progress = currentVolume
-            
+
             volumeMediaSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
@@ -1440,7 +1440,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             })
         } catch (_: Exception) {}
 
-        
+
         val volumeRingSeekBar = view.findViewById<SeekBar>(R.id.volume_ring_seekbar)
         val imgVolumeRing = view.findViewById<ImageView>(R.id.img_volume_ring_icon)
         try {
@@ -1448,7 +1448,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_RING)
             volumeRingSeekBar?.max = maxVolume
             volumeRingSeekBar?.progress = currentVolume
-            
+
             volumeRingSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
@@ -1465,7 +1465,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             })
         } catch (_: Exception) {}
 
-        
+
         val volumeAlarmSeekBar = view.findViewById<SeekBar>(R.id.volume_alarm_seekbar)
         val imgVolumeAlarm = view.findViewById<ImageView>(R.id.img_volume_alarm_icon)
         try {
@@ -1473,7 +1473,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
             volumeAlarmSeekBar?.max = maxVolume
             volumeAlarmSeekBar?.progress = currentVolume
-            
+
             volumeAlarmSeekBar?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     if (fromUser) {
@@ -1490,20 +1490,20 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             })
         } catch (_: Exception) {}
 
-        
+
         val linearLayout = view.findViewById<LinearLayout>(R.id.shortcuts_linear_layout)
         val prefs = getSharedPreferences(Constants.Prefs.PREFS_NAME, Context.MODE_PRIVATE)
         val shortcutList = prefs.getString(Constants.Prefs.CONTROL_CENTER_SHORTCUTS, DEFAULT_SHORTCUTS)
             ?.split(",") ?: DEFAULT_SHORTCUTS.split(",")
-            
+
         linearLayout?.removeAllViews()
-        
-        // Layout params for shortcuts with icon + label
+
+
         val itemWidth = 64.dpToPx()
         val itemMargin = 8.dpToPx()
-        
+
         for (id in shortcutList) {
-            // Create container with vertical layout (icon + label)
+
             val shortcutContainer = LinearLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(itemWidth, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     marginStart = itemMargin
@@ -1514,24 +1514,24 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 isClickable = true
                 isFocusable = true
             }
-            
-            // Icon background slot
+
+
             val iconSlot = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(56.dpToPx(), 56.dpToPx()).apply {
                     gravity = Gravity.CENTER
                 }
                 background = resources.getDrawable(R.drawable.bg_edge_panel_icon_slot, theme)
             }
-            
-            // Icon image (centered in slot)
+
+
             val icon = ImageView(this).apply {
                 layoutParams = FrameLayout.LayoutParams((56.dpToPx() * 0.6).toInt(), (56.dpToPx() * 0.6).toInt()).apply {
                     gravity = Gravity.CENTER
                 }
                 setPadding(4.dpToPx(), 4.dpToPx(), 4.dpToPx(), 4.dpToPx())
             }
-            
-            // Add icon to slot, then slot to container
+
+
             val slotContainer = FrameLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     gravity = Gravity.CENTER
@@ -1540,8 +1540,8 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 addView(icon)
             }
             shortcutContainer.addView(slotContainer)
-            
-            // Label TextView
+
+
             val label = TextView(this).apply {
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     gravity = Gravity.CENTER
@@ -1554,7 +1554,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 gravity = Gravity.CENTER
             }
             shortcutContainer.addView(label)
-            
+
             when (id) {
                 "wifi" -> {
                     icon.setImageResource(R.drawable.ic_wifi_stat)
@@ -1629,7 +1629,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     icon.setImageResource(android.R.drawable.ic_menu_mylocation)
                     icon.contentDescription = "Location"
                     label.text = "Location"
-                    shortcutContainer.setOnClickListener { 
+                    shortcutContainer.setOnClickListener {
                         try {
                             startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         } catch (e: Exception) {
@@ -1648,7 +1648,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     icon.setImageResource(android.R.drawable.ic_menu_camera)
                     icon.contentDescription = "Camera"
                     label.text = "Camera"
-                    shortcutContainer.setOnClickListener { 
+                    shortcutContainer.setOnClickListener {
                         startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         hideMenu()
                     }
@@ -1727,17 +1727,17 @@ class ScreenLockAccessibilityService : AccessibilityService() {
 
     private fun launchQrScanner() {
         val qrIntents = mutableListOf<Intent>()
-        
-        
+
+
         qrIntents.add(Intent("com.google.android.googlequicksearchbox.GOOGLE_LENS").apply {
             setPackage("com.google.android.googlequicksearchbox")
         })
-        
-        
+
+
         val lensIntent = packageManager.getLaunchIntentForPackage("com.google.ar.lens")
         if (lensIntent != null) qrIntents.add(lensIntent)
-        
-        
+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             qrIntents.add(Intent("android.settings.QR_CODE_SCANNER"))
         }
@@ -1747,8 +1747,8 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         
         
         qrIntents.add(Intent("com.google.zxing.client.android.SCAN"))
-        
-        
+
+
         qrIntents.add(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).apply {
             putExtra("android.intent.extra.USE_QR_CODE", true)
         })
@@ -1800,7 +1800,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             val enabled = bluetoothAdapter.isEnabled
             imageView?.alpha = if (enabled) 1.0f else 0.4f
         } catch (e: SecurityException) {
-            // Bluetooth permission not granted, default to disabled state
+
             imageView?.alpha = 0.4f
         } catch (e: Exception) {
             imageView?.alpha = 0.4f
@@ -1900,16 +1900,16 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (notificationManager.isNotificationPolicyAccessGranted) {
                 val currentFilter = notificationManager.currentInterruptionFilter
-                val isOff = currentFilter == NotificationManager.INTERRUPTION_FILTER_ALL || 
+                val isOff = currentFilter == NotificationManager.INTERRUPTION_FILTER_ALL ||
                             currentFilter == NotificationManager.INTERRUPTION_FILTER_UNKNOWN
-                
-                val newFilter = if (isOff) NotificationManager.INTERRUPTION_FILTER_PRIORITY 
+
+                val newFilter = if (isOff) NotificationManager.INTERRUPTION_FILTER_PRIORITY
                                 else NotificationManager.INTERRUPTION_FILTER_ALL
-                
+
                 notificationManager.setInterruptionFilter(newFilter)
-                
-                
-                val enabled = isOff 
+
+
+                val enabled = isOff
                 icon?.alpha = if (enabled) 1.0f else 0.4f
                 label?.text = if (enabled) "DND On" else "DND Off"
             } else {
@@ -1922,15 +1922,15 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (notificationManager.isNotificationPolicyAccessGranted) {
                 val currentFilter = notificationManager.currentInterruptionFilter
-                val isOff = currentFilter == NotificationManager.INTERRUPTION_FILTER_ALL || 
+                val isOff = currentFilter == NotificationManager.INTERRUPTION_FILTER_ALL ||
                             currentFilter == NotificationManager.INTERRUPTION_FILTER_UNKNOWN
-                
-                val newFilter = if (isOff) NotificationManager.INTERRUPTION_FILTER_PRIORITY 
+
+                val newFilter = if (isOff) NotificationManager.INTERRUPTION_FILTER_PRIORITY
                                 else NotificationManager.INTERRUPTION_FILTER_ALL
-                
+
                 notificationManager.setInterruptionFilter(newFilter)
-                
-                // Update icon only
+
+
                 updateDndIconOnly(icon)
             } else {
                 startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -1941,9 +1941,9 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     private fun updateDndIcon(imageView: ImageView?, textView: TextView?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val filter = notificationManager.currentInterruptionFilter
-            val enabled = filter != NotificationManager.INTERRUPTION_FILTER_ALL && 
+            val enabled = filter != NotificationManager.INTERRUPTION_FILTER_ALL &&
                          filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
-            
+
             imageView?.setImageResource(R.drawable.ic_focus_mode_icon)
             imageView?.alpha = if (enabled) 1.0f else 0.4f
             textView?.text = if (enabled) "DND On" else "DND Off"
@@ -1953,9 +1953,9 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     private fun updateDndIconOnly(imageView: ImageView?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val filter = notificationManager.currentInterruptionFilter
-            val enabled = filter != NotificationManager.INTERRUPTION_FILTER_ALL && 
+            val enabled = filter != NotificationManager.INTERRUPTION_FILTER_ALL &&
                          filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
-            
+
             imageView?.setImageResource(R.drawable.ic_focus_mode_icon)
             imageView?.alpha = if (enabled) 1.0f else 0.4f
         }
@@ -1996,7 +1996,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             hideMenu()
         } catch (e: Exception) {
             try {
-                
+
                 intent.action = "android.settings.WIFI_TETHER_SETTINGS"
                 startActivity(intent)
                 hideMenu()
@@ -2013,7 +2013,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     }
 
     private fun updateHotspotIcon(imageView: ImageView?) {
-        
+
         imageView?.alpha = 1.0f
     }
 
@@ -2024,12 +2024,12 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 return
             }
         }
-        
+
         try {
             val currentTimeout = Settings.System.getInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT)
-            val timeouts = arrayOf(15000, 30000, 60000, 120000, 300000, 600000, 2147483647) 
+            val timeouts = arrayOf(15000, 30000, 60000, 120000, 300000, 600000, 2147483647)
             val timeoutLabels = arrayOf("15s", "30s", "1min", "2min", "5min", "10min", "Never")
-            
+
             var nextIndex = 0
             for (i in timeouts.indices) {
                 if (currentTimeout == timeouts[i]) {
@@ -2037,7 +2037,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                     break
                 }
             }
-            
+
             val newTimeout = timeouts[nextIndex]
             val success = Settings.System.putInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT, newTimeout)
             if (success) {
@@ -2054,7 +2054,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             val labels = mapOf(
                 15000 to "15s",
                 30000 to "30s",
-                60000 to "1min", 
+                60000 to "1min",
                 120000 to "2min",
                 300000 to "5min",
                 600000 to "10min",
@@ -2114,22 +2114,22 @@ class ScreenLockAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-        
-        // Check if focus mode is enabled
+
+
         if (!focusModeManager.isFocusModeEnabled()) return
-        
-        // Check if strict mode is active (only strict mode blocks settings)
+
+
         val modeType = sharedPreferences.getString(
             Constants.Prefs.FOCUS_MODE_TYPE,
             Constants.Prefs.FOCUS_MODE_TYPE_STRICT
         )
         if (modeType != Constants.Prefs.FOCUS_MODE_TYPE_STRICT) return
-        
+
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val packageName = event.packageName?.toString()
             val className = event.className?.toString()
-            
-            // Block settings packages in strict mode
+
+
             val blockedSettingsPackages = setOf(
                 "com.android.settings",
                 "com.android.settings.panel",
@@ -2140,26 +2140,26 @@ class ScreenLockAccessibilityService : AccessibilityService() {
                 "com.android.devicelockcontroller",
                 "com.android.managedprovisioning"
             )
-            
+
             if (packageName in blockedSettingsPackages) {
                 performGlobalAction(GLOBAL_ACTION_BACK)
                 Toast.makeText(this, "Settings blocked - Strict focus mode is active", Toast.LENGTH_SHORT).show()
             }
-            
-            // Block Launch Settings Activity in strict mode
+
+
             if (packageName == "com.guruswarupa.launch" && className != null) {
                 if (className.contains("SettingsActivity")) {
                     performGlobalAction(GLOBAL_ACTION_BACK)
                     Toast.makeText(this, "Launcher settings blocked - Strict focus mode is active", Toast.LENGTH_SHORT).show()
                 }
             }
-            
-            // Block SystemUI settings in strict mode
+
+
             if (packageName == "com.android.systemui" && className != null) {
-                if (className.contains("Settings") || 
+                if (className.contains("Settings") ||
                     className.contains("settings") ||
                     className.contains("Preference")) {
-                    
+
                     performGlobalAction(GLOBAL_ACTION_BACK)
                     Toast.makeText(this, "Settings blocked - Strict focus mode is active", Toast.LENGTH_SHORT).show()
                 }

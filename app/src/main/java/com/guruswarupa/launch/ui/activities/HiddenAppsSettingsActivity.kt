@@ -25,7 +25,7 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
     private lateinit var appsRecyclerView: RecyclerView
     private lateinit var emptyStateLayout: LinearLayout
     private var hiddenAppsList = mutableListOf<ResolveInfo>()
-    
+
     private val prefs by lazy { getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,7 +33,7 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
         setContentView(R.layout.activity_hidden_apps_settings)
         applyContentInsets()
         applyBackgroundTranslucency()
-        
+
         window.decorView.post { makeSystemBarsTransparent() }
 
         val prefs = getSharedPreferences("com.guruswarupa.launch.PREFS", MODE_PRIVATE)
@@ -52,8 +52,8 @@ class HiddenAppsSettingsActivity : ComponentActivity() {
         val mainIntent = Intent(Intent.ACTION_MAIN, null).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
         val allApps = pm.queryIntentActivities(mainIntent, 0)
         val hiddenPackageNames = hiddenAppManager.getHiddenApps()
-        
-        hiddenAppsList = allApps.filter { 
+
+        hiddenAppsList = allApps.filter {
             it.activityInfo.packageName != "com.guruswarupa.launch" &&
             hiddenPackageNames.contains(it.activityInfo.packageName)
         }.sortedBy { it.loadLabel(pm).toString().lowercase() }.toMutableList()

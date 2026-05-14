@@ -8,16 +8,16 @@ import javax.inject.Singleton
 
 @Singleton
 class HiddenAppManager @Inject constructor(private val sharedPreferences: SharedPreferences) {
-    
+
     companion object {
         private const val HIDDEN_APPS_KEY = "hidden_apps"
         private const val TAG = "HiddenAppManager"
     }
-    
-    
+
+
     private var hiddenAppsCache: Set<String>? = null
     private var cacheValid = false
-    
+
     private fun getHiddenAppsInternal(): Set<String> {
         if (!cacheValid || hiddenAppsCache == null) {
             try {
@@ -38,8 +38,8 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
                 } else {
                     emptySet()
                 }
-                
-                sharedPreferences.edit { 
+
+                sharedPreferences.edit {
                     remove(HIDDEN_APPS_KEY)
                     putStringSet(HIDDEN_APPS_KEY, recoveredSet)
                 }
@@ -49,13 +49,13 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
         }
         return hiddenAppsCache ?: emptySet()
     }
-    
+
     private fun invalidateCache() {
         cacheValid = false
         hiddenAppsCache = null
     }
-    
-    
+
+
 
 
     fun hideApp(packageName: String) {
@@ -65,8 +65,8 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
         hiddenAppsCache = hiddenApps.toSet()
         cacheValid = true
     }
-    
-    
+
+
 
 
     fun unhideApp(packageName: String) {
@@ -76,30 +76,30 @@ class HiddenAppManager @Inject constructor(private val sharedPreferences: Shared
         hiddenAppsCache = hiddenApps.toSet()
         cacheValid = true
     }
-    
-    
+
+
 
 
     fun isAppHidden(packageName: String): Boolean {
         return getHiddenAppsInternal().contains(packageName)
     }
-    
-    
+
+
 
 
 
     fun forceRefresh() {
         invalidateCache()
     }
-    
-    
+
+
 
 
     fun getHiddenApps(): Set<String> {
         return getHiddenAppsInternal()
     }
-    
-    
+
+
 
 
     @Suppress("unused")

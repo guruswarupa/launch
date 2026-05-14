@@ -34,17 +34,17 @@ class AppUsageAdapter(
 
     override fun onBindViewHolder(holder: AppUsageViewHolder, position: Int) {
         val item = appUsages[position]
-        
-        
+
+
         holder.colorIndicator.setBackgroundColor(item.color)
-        
-        
+
+
         holder.appName.text = item.appName
-        
-        
+
+
         holder.usageTime.text = formatUsageTime(item.usageTime)
-        
-        
+
+
         holder.usagePercentage.text = String.format(Locale.getDefault(), "%.1f%%", item.percentage)
     }
 

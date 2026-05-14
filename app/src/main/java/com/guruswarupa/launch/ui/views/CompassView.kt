@@ -15,20 +15,20 @@ class CompassView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
-    
+
     private var azimuth: Float = 0f
     private var directionName: String = "N"
     private var accuracy: Int = SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM
-    
-    
-    private val outerRingColor = "#5E81AC".toColorInt() 
-    private val innerRingColor = "#81A1C1".toColorInt() 
-    private val cardinalColor = "#ECEFF4".toColorInt() 
-    private val intermediateColor = "#88C0D0".toColorInt() 
-    private val northMarkerColor = "#BF616A".toColorInt() 
-    private val centerGradientStart = "#88C0D0".toColorInt() 
-    private val centerGradientEnd = "#5E81AC".toColorInt() 
-    
+
+
+    private val outerRingColor = "#5E81AC".toColorInt()
+    private val innerRingColor = "#81A1C1".toColorInt()
+    private val cardinalColor = "#ECEFF4".toColorInt()
+    private val intermediateColor = "#88C0D0".toColorInt()
+    private val northMarkerColor = "#BF616A".toColorInt()
+    private val centerGradientStart = "#88C0D0".toColorInt()
+    private val centerGradientEnd = "#5E81AC".toColorInt()
+
     private val compassRingPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
@@ -36,7 +36,7 @@ class CompassView @JvmOverloads constructor(
         color = outerRingColor
         setShadowLayer(6f, 0f, 3f, "#60000000".toColorInt())
     }
-    
+
     private val innerRingPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
@@ -44,12 +44,12 @@ class CompassView @JvmOverloads constructor(
         color = innerRingColor
         setShadowLayer(4f, 0f, 2f, "#40000000".toColorInt())
     }
-    
+
     private val directionPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
     }
-    
+
     private val textPaint = Paint().apply {
         isAntiAlias = true
         color = Color.WHITE
@@ -58,7 +58,7 @@ class CompassView @JvmOverloads constructor(
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         setShadowLayer(12f, 0f, 4f, "#80000000".toColorInt())
     }
-    
+
     private val cardinalPaint = Paint().apply {
         isAntiAlias = true
         color = cardinalColor
@@ -67,7 +67,7 @@ class CompassView @JvmOverloads constructor(
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         setShadowLayer(8f, 0f, 2f, "#80000000".toColorInt())
     }
-    
+
     private val intermediatePaint = Paint().apply {
         isAntiAlias = true
         color = intermediateColor
@@ -76,14 +76,14 @@ class CompassView @JvmOverloads constructor(
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         setShadowLayer(4f, 0f, 1f, "#60000000".toColorInt())
     }
-    
+
     private val markerPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.FILL
         color = northMarkerColor
         setShadowLayer(6f, 0f, 3f, "#60000000".toColorInt())
     }
-    
+
     private val tickPaint = Paint().apply {
         isAntiAlias = true
         style = Paint.Style.STROKE
@@ -112,18 +112,18 @@ class CompassView @JvmOverloads constructor(
         isAntiAlias = true
         style = Paint.Style.STROKE
         strokeWidth = 8f
-        color = "#EBCB8B".toColorInt() 
+        color = "#EBCB8B".toColorInt()
         strokeCap = Paint.Cap.ROUND
     }
 
     private val markerPath = Path()
     private val textBounds = Rect()
-    
+
     private val directionColors = intArrayOf(
-        "#BF616A".toColorInt(), 
-        "#88C0D0".toColorInt(), 
-        "#A3BE8C".toColorInt(), 
-        "#D08770".toColorInt()  
+        "#BF616A".toColorInt(),
+        "#88C0D0".toColorInt(),
+        "#A3BE8C".toColorInt(),
+        "#D08770".toColorInt()
     )
     private val directions = arrayOf("N", "E", "S", "W")
     private val angles = floatArrayOf(0f, 90f, 180f, 270f)
@@ -147,7 +147,7 @@ class CompassView @JvmOverloads constructor(
         }
         invalidate()
     }
-    
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val size = minOf(
             MeasureSpec.getSize(widthMeasureSpec),
@@ -161,27 +161,27 @@ class CompassView @JvmOverloads constructor(
         centerX = w / 2f
         centerY = h / 2f
         radius = minOf(centerX, centerY) - 30f
-        
+
         backgroundShader = RadialGradient(
             centerX, centerY, radius + 5f,
             "#2E3440".toColorInt(),
             "#3B4252".toColorInt(),
             Shader.TileMode.CLAMP
         )
-        
-        
+
+
         val outerGlowShader = RadialGradient(
             centerX, centerY, radius + 15f,
             Color.TRANSPARENT,
             "#405E81AC".toColorInt(),
             Shader.TileMode.CLAMP
         )
-        
-        
+
+
         backgroundShader = ComposeShader(
             backgroundShader!!, outerGlowShader, PorterDuff.Mode.ADD
         )
-        
+
         centerShader = RadialGradient(
             centerX, centerY, 35f,
             centerGradientStart,
@@ -189,13 +189,13 @@ class CompassView @JvmOverloads constructor(
             Shader.TileMode.CLAMP
         )
     }
-    
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        
+
         if (radius <= 0) return
 
-        
+
         backgroundPaint.shader = backgroundShader
         canvas.drawCircle(centerX, centerY, radius + 5f, backgroundPaint)
 
@@ -203,29 +203,29 @@ class CompassView @JvmOverloads constructor(
             drawCalibration(canvas)
             return
         }
-        
-        
+
+
         canvas.withRotation(-azimuth, centerX, centerY) {
-            
+
             compassRingPaint.color = outerRingColor
             compassRingPaint.strokeWidth = 8f
             canvas.drawCircle(centerX, centerY, radius, compassRingPaint)
 
-            
+
             innerRingPaint.color = innerRingColor
             innerRingPaint.strokeWidth = 2f
             canvas.drawCircle(centerX, centerY, radius * 0.92f, innerRingPaint)
 
-            
+
             canvas.drawCircle(centerX, centerY, radius * 0.75f, innerRingPaint)
 
-            
+
             for (i in 0 until 72) {
                 val angle = i * 5f
                 val angleRad = Math.toRadians(angle.toDouble())
 
-                val isMajor = i % 6 == 0 
-                val isMedium = i % 3 == 0 
+                val isMajor = i % 6 == 0
+                val isMedium = i % 3 == 0
 
                 val startRadius = when {
                     isMajor -> radius * 0.88f
@@ -252,16 +252,16 @@ class CompassView @JvmOverloads constructor(
                 canvas.drawLine(startX, startY, endX, endY, tickPaint)
             }
 
-            
+
             for (i in directions.indices) {
                 val angle = Math.toRadians(angles[i].toDouble())
                 val x = centerX + radius * 0.82f * sin(angle).toFloat()
                 val y = centerY - radius * 0.82f * cos(angle).toFloat()
 
-                
+
                 canvas.drawCircle(x, y, 28f, cardinalBgPaint)
 
-                
+
                 cardinalPaint.color = directionColors[i]
                 cardinalPaint.textSize = 38f
                 cardinalPaint.getTextBounds(directions[i], 0, directions[i].length, textBounds)
@@ -273,7 +273,7 @@ class CompassView @JvmOverloads constructor(
                 )
             }
 
-            
+
             for (i in intermediateDirections.indices) {
                 val angle = Math.toRadians(intermediateAngles[i].toDouble())
                 val x = centerX + radius * 0.78f * sin(angle).toFloat()
@@ -289,8 +289,8 @@ class CompassView @JvmOverloads constructor(
                 )
             }
         }
-        
-        
+
+
         val markerY = centerY - radius - 8f
         markerPath.reset()
         markerPath.moveTo(centerX, markerY - 2f)
@@ -298,27 +298,27 @@ class CompassView @JvmOverloads constructor(
         markerPath.lineTo(centerX + 18f, markerY + 12f - 2f)
         markerPath.close()
         canvas.drawPath(markerPath, markerShadowPaint)
-        
+
         markerPath.reset()
         markerPath.moveTo(centerX, markerY)
         markerPath.lineTo(centerX - 18f, markerY + 12f)
         markerPath.lineTo(centerX + 18f, markerY + 12f)
         markerPath.close()
         canvas.drawPath(markerPath, markerPaint)
-        
-        
+
+
         directionPaint.shader = centerShader
         directionPaint.style = Paint.Style.FILL
         canvas.drawCircle(centerX, centerY, 35f, directionPaint)
-        
-        
+
+
         directionPaint.shader = null
         directionPaint.style = Paint.Style.STROKE
         directionPaint.color = outerRingColor
         directionPaint.strokeWidth = 3f
         canvas.drawCircle(centerX, centerY, 35f, directionPaint)
-        
-        
+
+
         textPaint.textSize = 64f
         textPaint.color = Color.WHITE
         textPaint.getTextBounds(directionName, 0, directionName.length, textBounds)
@@ -328,8 +328,8 @@ class CompassView @JvmOverloads constructor(
             centerY + textBounds.height() / 2f - 5f,
             textPaint
         )
-        
-        
+
+
         textPaint.textSize = 28f
         val azimuthText = "${azimuth.toInt()}°"
         textPaint.getTextBounds(azimuthText, 0, azimuthText.length, textBounds)
@@ -344,27 +344,27 @@ class CompassView @JvmOverloads constructor(
     private fun drawCalibration(canvas: Canvas) {
         val path = Path()
         val size = radius * 0.6f
-        
-        
+
+
         for (i in 0..100) {
             val t = (i / 100f) * 2 * PI.toFloat()
             val scale = 2 / (3 - cos(2 * t))
             val x = centerX + scale * cos(t) * size
             val y = centerY + scale * sin(2 * t) / 2 * size
-            
+
             if (i == 0) path.moveTo(x, y)
             else path.lineTo(x, y)
         }
         path.close()
-        
+
         canvas.drawPath(path, calibrationPaint)
-        
-        
+
+
         val dotT = calibrationPhase
         val dotScale = 2 / (3 - cos(2 * dotT))
         val dotX = centerX + dotScale * cos(dotT) * size
         val dotY = centerY + dotScale * sin(2 * dotT) / 2 * size
-        
+
         calibrationPaint.style = Paint.Style.FILL
         canvas.drawCircle(dotX, dotY, 15f, calibrationPaint)
         calibrationPaint.style = Paint.Style.STROKE

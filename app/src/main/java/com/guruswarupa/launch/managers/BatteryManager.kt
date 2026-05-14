@@ -11,9 +11,9 @@ import java.util.Locale
 data class BatteryHealthInfo(
     val percentage: Int,
     val isCharging: Boolean,
-    val chargingSpeed: Int, // in mA
-    val voltage: Int, // in mV
-    val temperature: Float, // in Celsius
+    val chargingSpeed: Int,
+    val voltage: Int,
+    val temperature: Float,
     val health: String,
     val timeRemaining: String?
 )
@@ -42,7 +42,7 @@ class BatteryManager(private val context: Context) {
     @SuppressLint("MissingPermission")
     fun getBatteryHealthInfo(): BatteryHealthInfo {
         val batteryIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        
+
         var percentage = 85
         var isCharging = false
         var chargingSpeed = 0
@@ -50,27 +50,27 @@ class BatteryManager(private val context: Context) {
         var temperature = 30.0f
         var health = "Good"
         var timeRemaining: String? = null
-        
+
         if (batteryIntent != null) {
             val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
             val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
             val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
             val healthStatus = batteryIntent.getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_GOOD)
-            
+
             if (scale > 0) {
                 percentage = (level * 100 / scale.toFloat()).toInt()
             }
-            
+
             isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
                     status == BatteryManager.BATTERY_STATUS_FULL
-            
+
             if (isCharging) {
                 chargingSpeed = estimateChargingSpeed(batteryIntent)
             }
-            
+
             voltage = batteryIntent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 3700)
             temperature = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 300) / 10.0f
-            
+
             health = when (healthStatus) {
                 BatteryManager.BATTERY_HEALTH_GOOD -> "Good"
                 BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Overheat"
@@ -79,14 +79,14 @@ class BatteryManager(private val context: Context) {
                 BatteryManager.BATTERY_HEALTH_UNSPECIFIED_FAILURE -> "Unknown"
                 else -> "Good"
             }
-            
+
             if (isCharging) {
                 timeRemaining = estimateChargingTime(percentage)
             } else {
                 timeRemaining = estimateDischargeTime(percentage)
             }
         }
-        
+
         return BatteryHealthInfo(
             percentage = percentage,
             isCharging = isCharging,
@@ -97,11 +97,11 @@ class BatteryManager(private val context: Context) {
             timeRemaining = timeRemaining
         )
     }
-    
+
     private fun estimateChargingSpeed(batteryIntent: android.content.Intent): Int {
         val voltage = batteryIntent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 3700)
         val plugged = batteryIntent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)
-        
+
         return when (plugged) {
             BatteryManager.BATTERY_PLUGGED_AC -> {
                 when {
@@ -126,7 +126,7 @@ class BatteryManager(private val context: Context) {
             else -> 0
         }
     }
-    
+
     private fun estimateChargingTime(currentPercentage: Int): String {
         val averageChargingRate = 15
         val remainingToFull = 100 - currentPercentage
@@ -135,7 +135,7 @@ class BatteryManager(private val context: Context) {
         val mins = minutes % 60
         return if (hours > 0) "${hours}h ${mins}m" else "${mins}m"
     }
-    
+
     private fun estimateDischargeTime(currentPercentage: Int): String {
         val averageDrainRate = 8
         val hours = currentPercentage / averageDrainRate

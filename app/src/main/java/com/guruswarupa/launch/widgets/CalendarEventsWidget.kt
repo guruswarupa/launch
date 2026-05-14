@@ -42,10 +42,10 @@ class CalendarEventsWidget(
     private val container: LinearLayout,
     @Suppress("UNUSED_PARAMETER") private val sharedPreferences: android.content.SharedPreferences
 ) {
-    
+
     private val handler = Handler(Looper.getMainLooper())
     private var isInitialized = false
-    
+
     private lateinit var eventsRecyclerView: RecyclerView
     private lateinit var emptyState: View
     private lateinit var permissionButton: Button
@@ -55,34 +55,34 @@ class CalendarEventsWidget(
     private lateinit var viewToggleButton: Button
     private lateinit var listViewContainer: View
     private lateinit var calendarViewContainer: ViewGroup
-    
+
     private val events: MutableList<CalendarEvent> = mutableListOf()
-    private val allEvents: MutableList<CalendarEvent> = mutableListOf() 
+    private val allEvents: MutableList<CalendarEvent> = mutableListOf()
     private lateinit var adapter: CalendarEventAdapter
     private var isCalendarView = false
     private var calendarView: CalendarEventsCalendarView? = null
-    
+
     companion object {
         const val REQUEST_CODE_CALENDAR_PERMISSION = 106
     }
-    
+
     private val updateRunnable = object : Runnable {
         override fun run() {
             if (isInitialized && hasCalendarPermission()) {
                 updateEvents()
             }
-            
+
             handler.postDelayed(this, 300000)
         }
     }
-    
+
     fun initialize() {
         if (isInitialized) return
-        
+
         val inflater = LayoutInflater.from(context)
         widgetView = inflater.inflate(R.layout.calendar_events_widget, container, false)
         container.addView(widgetView)
-        
+
         eventsRecyclerView = widgetView.findViewById(R.id.calendar_events_recycler_view)
         emptyState = widgetView.findViewById(R.id.calendar_empty_state)
         permissionButton = widgetView.findViewById(R.id.request_calendar_permission_button)
@@ -90,35 +90,35 @@ class CalendarEventsWidget(
         viewToggleButton = widgetView.findViewById(R.id.calendar_view_toggle_button)
         listViewContainer = widgetView.findViewById(R.id.calendar_list_view_container)
         calendarViewContainer = widgetView.findViewById(R.id.calendar_view_container)
-        
+
         adapter = CalendarEventAdapter(events) { _ ->
             openCalendarApp()
         }
         eventsRecyclerView.layoutManager = LinearLayoutManager(context)
         eventsRecyclerView.adapter = adapter
-        
+
         permissionButton.setOnClickListener {
             requestCalendarPermission()
         }
-        
+
         viewToggleButton.setOnClickListener {
             toggleView()
         }
-        
-        
+
+
         initializeCalendarView()
-        
-        
-        
+
+
+
         if (hasCalendarPermission()) {
             setupWithPermission()
         } else {
             setupWithoutPermission()
         }
-        
+
         isInitialized = true
     }
-    
+
     private fun initializeCalendarView() {
         val calendarViewLayout = LayoutInflater.from(context)
             .inflate(R.layout.calendar_events_calendar_view, calendarViewContainer, false)
@@ -127,78 +127,78 @@ class CalendarEventsWidget(
             showDayEventDetails(date, dayEvents)
         }
     }
-    
+
     private fun showDayEventDetails(date: String, dayEvents: List<CalendarEvent>) {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val displayFormat = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault())
-        
+
         val parsedDate = try {
             dateFormat.parse(date)
         } catch (_: Exception) {
             null
         }
-        
+
         val displayDate = parsedDate?.let { displayFormat.format(it) } ?: date
-        
-        
-        
-        
+
+
+
+
         val uniqueEvents = dayEvents.distinctBy { event ->
             val cal = Calendar.getInstance().apply { timeInMillis = event.startTime }
-            
+
             "${event.title.lowercase().trim()}_${cal.get(Calendar.YEAR)}_${cal.get(Calendar.MONTH)}_${cal.get(Calendar.DAY_OF_MONTH)}"
         }
-        
+
         val dialogView = LayoutInflater.from(context).inflate(R.layout.calendar_day_events_dialog, null)
         val dateText = dialogView.findViewById<TextView>(R.id.day_date_text)
         val eventsList = dialogView.findViewById<RecyclerView>(R.id.day_events_list)
         val emptyStateView = dialogView.findViewById<View>(R.id.day_empty_state)
-        
+
         dateText.text = displayDate
-        
+
         if (uniqueEvents.isEmpty()) {
             eventsList.visibility = View.GONE
             emptyStateView.visibility = View.VISIBLE
         } else {
             eventsList.visibility = View.VISIBLE
             emptyStateView.visibility = View.GONE
-            
+
             eventsList.layoutManager = LinearLayoutManager(context)
             eventsList.adapter = CalendarEventAdapter(uniqueEvents) { _ ->
                 openCalendarApp()
             }
         }
-        
+
         android.app.AlertDialog.Builder(context, R.style.CustomDialogTheme)
             .setTitle("Events")
             .setView(dialogView)
             .setPositiveButton("Close", null)
             .show()
     }
-    
+
     private fun toggleView() {
         isCalendarView = !isCalendarView
-        
+
         if (isCalendarView) {
-            
+
             listViewContainer.visibility = View.GONE
             calendarViewContainer.visibility = View.VISIBLE
             viewToggleButton.text = context.getString(R.string.calendar_view_list)
             calendarView?.updateEvents(allEvents)
         } else {
-            
+
             listViewContainer.visibility = View.VISIBLE
             calendarViewContainer.visibility = View.GONE
             viewToggleButton.text = context.getString(R.string.calendar_view_calendar)
         }
     }
-    
+
     private fun setupWithPermission() {
         permissionButton.visibility = View.GONE
         updateEvents()
         handler.post(updateRunnable)
     }
-    
+
     @SuppressLint("NotifyDataSetChanged")
     private fun setupWithoutPermission() {
         permissionButton.visibility = View.VISIBLE
@@ -207,14 +207,14 @@ class CalendarEventsWidget(
         events.clear()
         adapter.notifyDataSetChanged()
     }
-    
+
     private fun hasCalendarPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.READ_CALENDAR
         ) == PackageManager.PERMISSION_GRANTED
     }
-    
+
     private fun requestCalendarPermission() {
         if (context is android.app.Activity) {
             if (ContextCompat.checkSelfPermission(
@@ -222,12 +222,12 @@ class CalendarEventsWidget(
                     Manifest.permission.READ_CALENDAR
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                
+
                 android.app.AlertDialog.Builder(context, R.style.CustomDialogTheme)
                     .setTitle("Calendar Permission")
                     .setMessage("This permission allows the launcher to display your upcoming calendar events. The data is only used locally on your device.")
                     .setPositiveButton("Grant Permission") { _, _ ->
-                        
+
                         if (context is androidx.fragment.app.FragmentActivity) {
                             androidx.core.app.ActivityCompat.requestPermissions(
                                 context,
@@ -240,11 +240,11 @@ class CalendarEventsWidget(
                     .show()
             }
         } else {
-            
+
             openSettings()
         }
     }
-    
+
     private fun openSettings() {
         try {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -255,34 +255,34 @@ class CalendarEventsWidget(
             Toast.makeText(context, "Could not open settings", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     @SuppressLint("NotifyDataSetChanged")
     private fun updateEvents() {
         if (!hasCalendarPermission()) {
             setupWithoutPermission()
             return
         }
-        
+
         try {
-            
+
             val allNewEvents = loadAllEvents()
             allEvents.clear()
             allEvents.addAll(allNewEvents)
-            
-            
+
+
             val now = System.currentTimeMillis()
             val twoDaysFromNow = now + (2 * 24 * 60 * 60 * 1000)
             val upcomingEvents = allNewEvents.filter { event ->
                 event.startTime in now..twoDaysFromNow
             }.sortedBy { it.startTime }.take(5)
-            
+
             events.clear()
             events.addAll(upcomingEvents)
             adapter.notifyDataSetChanged()
-            
-            
+
+
             calendarView?.updateEvents(allEvents)
-            
+
             if (events.isEmpty() && !isCalendarView) {
                 emptyState.visibility = View.VISIBLE
                 eventsRecyclerView.visibility = View.GONE
@@ -297,12 +297,12 @@ class CalendarEventsWidget(
             Toast.makeText(context, "Error loading calendar events: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
-    
+
     private fun loadAllEvents(): List<CalendarEvent> {
         val eventsList = mutableListOf<CalendarEvent>()
-        val seenEvents = mutableSetOf<String>() 
-        
-        
+        val seenEvents = mutableSetOf<String>()
+
+
         val projection = arrayOf(
             CalendarContract.Instances.EVENT_ID,
             CalendarContract.Instances.TITLE,
@@ -313,32 +313,32 @@ class CalendarEventsWidget(
             CalendarContract.Instances.CALENDAR_ID,
             CalendarContract.Instances.CALENDAR_DISPLAY_NAME
         )
-        
+
         val now = System.currentTimeMillis()
-        
-        val oneYearAgo = now - (365 * 24 * 60 * 60 * 1000L) 
-        val twoYearsFromNow = now + (730 * 24 * 60 * 60 * 1000L) 
-        
-        
-        
+
+        val oneYearAgo = now - (365 * 24 * 60 * 60 * 1000L)
+        val twoYearsFromNow = now + (730 * 24 * 60 * 60 * 1000L)
+
+
+
         val sortOrder = "${CalendarContract.Instances.BEGIN} ASC"
-        
+
         val uri: Uri = CalendarContract.Instances.CONTENT_URI.buildUpon()
             .appendPath(oneYearAgo.toString())
             .appendPath(twoYearsFromNow.toString())
             .build()
-        
+
         var cursor: Cursor? = null
         try {
-            
+
             cursor = context.contentResolver.query(
                 uri,
                 projection,
-                null, 
-                null, 
+                null,
+                null,
                 sortOrder
             )
-            
+
             cursor?.let {
                 val idIndex = it.getColumnIndex(CalendarContract.Instances.EVENT_ID)
                 val titleIndex = it.getColumnIndex(CalendarContract.Instances.TITLE)
@@ -348,7 +348,7 @@ class CalendarEventsWidget(
                 val allDayIndex = it.getColumnIndex(CalendarContract.Instances.ALL_DAY)
                 val calendarIdIndex = it.getColumnIndex(CalendarContract.Instances.CALENDAR_ID)
                 val calendarDisplayNameIndex = it.getColumnIndex(CalendarContract.Instances.CALENDAR_DISPLAY_NAME)
-                
+
                 while (it.moveToNext()) {
                     val eventId = it.getLong(idIndex)
                     val title = it.getString(titleIndex) ?: "No Title"
@@ -358,22 +358,22 @@ class CalendarEventsWidget(
                     val allDay = it.getInt(allDayIndex) == 1
                     val calendarId = it.getLong(calendarIdIndex)
                     val calendarDisplayName = it.getString(calendarDisplayNameIndex) ?: ""
-                    
-                    
+
+
                     val isFestival = calendarDisplayName.lowercase().let { name ->
-                        name.contains("festival") || name.contains("holiday") || 
+                        name.contains("festival") || name.contains("holiday") ||
                         name.contains("holidays") || name.contains("festivals") ||
                         name.contains("religious") || name.contains("indian") ||
                         name.contains("hindu") || name.contains("muslim") ||
                         name.contains("christian") || name.contains("national")
                     }
-                    
-                    
-                    
-                    
+
+
+
+
                     if (allDay) {
-                        
-                        
+
+
                         val cal = Calendar.getInstance()
                         cal.timeInMillis = startTime
                         cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -381,19 +381,19 @@ class CalendarEventsWidget(
                         cal.set(Calendar.SECOND, 0)
                         cal.set(Calendar.MILLISECOND, 0)
                         startTime = cal.timeInMillis
-                        
-                        
+
+
                         cal.add(Calendar.DAY_OF_MONTH, 1)
                         endTime = cal.timeInMillis
                     }
-                    
-                    
-                    
-                    
+
+
+
+
                     val cal = Calendar.getInstance().apply { timeInMillis = startTime }
                     val dateKey = "${title.lowercase().trim()}_${cal.get(Calendar.YEAR)}_${cal.get(Calendar.MONTH)}_${cal.get(Calendar.DAY_OF_MONTH)}"
-                    
-                    
+
+
                     if (!seenEvents.contains(dateKey)) {
                         seenEvents.add(dateKey)
                         eventsList.add(
@@ -412,17 +412,17 @@ class CalendarEventsWidget(
                 }
             }
         } catch (_: SecurityException) {
-            
+
             setupWithoutPermission()
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
             cursor?.close()
         }
-        
+
         return eventsList
     }
-    
+
     private fun openCalendarApp() {
         try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -435,33 +435,33 @@ class CalendarEventsWidget(
             if (resolvedIntent != null) {
                 context.startActivity(calendarIntent)
             } else {
-                
+
                 context.startActivity(intent)
             }
         } catch (_: Exception) {
             Toast.makeText(context, "Could not open calendar", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     fun onResume() {
         if (isInitialized && hasCalendarPermission()) {
             updateEvents()
             handler.post(updateRunnable)
         }
     }
-    
+
     fun onPause() {
         if (isInitialized) {
             handler.removeCallbacks(updateRunnable)
         }
     }
-    
+
     fun onPermissionGranted() {
         if (isInitialized) {
             setupWithPermission()
         }
     }
-    
+
     fun refresh() {
         if (isInitialized) {
             if (hasCalendarPermission()) {
@@ -474,7 +474,7 @@ class CalendarEventsWidget(
             }
         }
     }
-    
+
     fun cleanup() {
         handler.removeCallbacks(updateRunnable)
     }
@@ -484,45 +484,45 @@ class CalendarEventAdapter(
     private val events: List<CalendarEvent>,
     private val onEventClick: (CalendarEvent) -> Unit
 ) : RecyclerView.Adapter<CalendarEventAdapter.EventViewHolder>() {
-    
+
     class EventViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val titleText: TextView = itemView.findViewById(R.id.event_title)
         val timeText: TextView = itemView.findViewById(R.id.event_time)
         val locationText: TextView = itemView.findViewById(R.id.event_location)
     }
-    
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EventViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.calendar_event_item, parent, false)
         return EventViewHolder(view)
     }
-    
+
     override fun onBindViewHolder(holder: EventViewHolder, position: Int) {
         val event = events[position]
-        
+
         holder.titleText.text = event.title
-        
-        
+
+
         val titleColor = if (event.isFestival) {
-            ContextCompat.getColor(holder.itemView.context, R.color.nord11) 
+            ContextCompat.getColor(holder.itemView.context, R.color.nord11)
         } else {
-            ContextCompat.getColor(holder.itemView.context, R.color.nord9) 
+            ContextCompat.getColor(holder.itemView.context, R.color.nord9)
         }
         holder.titleText.setTextColor(titleColor)
-        
+
         val timeFormat = if (event.allDay) {
             SimpleDateFormat("EEE, MMM d", Locale.getDefault())
         } else {
             SimpleDateFormat("EEE, MMM d 'at' h:mm a", Locale.getDefault())
         }
-        
+
         val startTime = Date(event.startTime)
         val timeString = timeFormat.format(startTime)
-        
-        
+
+
         val now = Calendar.getInstance()
         val eventDate = Calendar.getInstance().apply { time = startTime }
-        
+
         val timeDisplay = when {
             isSameDay(now, eventDate) -> {
                 if (event.allDay) {
@@ -542,32 +542,32 @@ class CalendarEventAdapter(
             }
             else -> timeString
         }
-        
+
         holder.timeText.text = timeDisplay
-        
+
         if (!event.location.isNullOrEmpty()) {
             holder.locationText.text = event.location
             holder.locationText.visibility = View.VISIBLE
         } else {
             holder.locationText.visibility = View.GONE
         }
-        
+
         holder.itemView.setOnClickListener {
             onEventClick(event)
         }
     }
-    
+
     private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
         return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
                 cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
-    
+
     private fun isTomorrow(cal1: Calendar, cal2: Calendar): Boolean {
         val tomorrow = cal1.clone() as Calendar
         tomorrow.add(Calendar.DAY_OF_YEAR, 1)
         return tomorrow.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
                 tomorrow.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
-    
+
     override fun getItemCount() = events.size
 }

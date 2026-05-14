@@ -14,19 +14,19 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class WidgetPreviewManager(private val context: Context) {
-    
+
     companion object {
         private const val PREVIEW_WIDTH_DP = 200
         private const val PREVIEW_HEIGHT_DP = 200
-        private const val CACHE_SIZE = 20 
+        private const val CACHE_SIZE = 20
     }
-    
+
     private val previewCache = object : LruCache<String, Bitmap>(CACHE_SIZE) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
-            return bitmap.byteCount / 1024 
+            return bitmap.byteCount / 1024
         }
     }
-    
+
     private val backgroundExecutor: ExecutorService = Executors.newFixedThreadPool(2)
 
     fun generatePreview(
@@ -39,14 +39,14 @@ class WidgetPreviewManager(private val context: Context) {
             callback(cachedPreview)
             return
         }
-        
+
         backgroundExecutor.execute {
             try {
                 val preview = createWidgetPreview(widgetId, widgetName)
                 if (preview != null) {
                     previewCache.put(widgetId, preview)
                 }
-                
+
                 (context as? android.app.Activity)?.runOnUiThread {
                     callback(preview)
                 }
@@ -92,7 +92,7 @@ class WidgetPreviewManager(private val context: Context) {
 
     private fun getSystemWidgetPreview(widgetId: String): Bitmap? {
         val appWidgetManager = AppWidgetManager.getInstance(context)
-        
+
         val provider = if (widgetId.startsWith("system_widget_")) {
             val appWidgetId = widgetId.removePrefix("system_widget_").toIntOrNull() ?: return null
             appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider
@@ -104,9 +104,9 @@ class WidgetPreviewManager(private val context: Context) {
         } ?: return null
 
         val info = appWidgetManager.installedProviders.find { it.provider == provider } ?: return null
-        
+
         val drawable = info.loadPreviewImage(context, 0) ?: info.loadIcon(context, 0)
-        
+
         return if (drawable is BitmapDrawable) {
             drawable.bitmap
         } else if (drawable != null) {
@@ -123,7 +123,7 @@ class WidgetPreviewManager(private val context: Context) {
             null
         }
     }
-    
+
     private fun createCalculatorPreview(): Bitmap? = inflateAndCapture(R.layout.widget_calculator_preview)
     private fun createCompassPreview(): Bitmap? = inflateAndCapture(R.layout.widget_compass_preview)
     private fun createCalendarPreview(): Bitmap? = inflateAndCapture(R.layout.widget_calendar_preview)
@@ -145,7 +145,7 @@ class WidgetPreviewManager(private val context: Context) {
     private fun createDnsPreview(): Bitmap? = inflateAndCapture(R.layout.widget_dns_preview)
     private fun createNotePreview(): Bitmap? = inflateAndCapture(R.layout.widget_note_preview)
     private fun createBatteryHealthPreview(): Bitmap? = inflateAndCapture(R.layout.widget_battery_health_preview)
-    
+
     private fun inflateAndCapture(layoutResId: Int): Bitmap? {
         return try {
             val inflater = LayoutInflater.from(context)
@@ -157,15 +157,15 @@ class WidgetPreviewManager(private val context: Context) {
             null
         }
     }
-    
+
     private fun createDefaultPreview(widgetName: String): Bitmap? {
         return try {
             val inflater = LayoutInflater.from(context)
             val previewView = inflater.inflate(R.layout.widget_default_preview, null)
-            
+
             val nameView = previewView.findViewById<android.widget.TextView>(R.id.preview_widget_name)
             nameView.text = widgetName
-            
+
             measureAndLayoutView(previewView)
             viewToBitmap(previewView)
         } catch (e: Exception) {
@@ -173,33 +173,33 @@ class WidgetPreviewManager(private val context: Context) {
             null
         }
     }
-    
+
     private fun measureAndLayoutView(view: View) {
         val width = dpToPx(PREVIEW_WIDTH_DP)
         val height = dpToPx(PREVIEW_HEIGHT_DP)
-        
+
         val widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY)
         val heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY)
-        
+
         view.measure(widthMeasureSpec, heightMeasureSpec)
         view.layout(0, 0, view.measuredWidth, view.measuredHeight)
     }
-    
+
     private fun viewToBitmap(view: View): Bitmap {
         val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         view.draw(canvas)
         return bitmap
     }
-    
+
     private fun dpToPx(dp: Int): Int {
         return (dp * context.resources.displayMetrics.density).toInt()
     }
-    
+
     fun clearCache() {
         previewCache.evictAll()
     }
-    
+
     fun cleanup() {
         backgroundExecutor.shutdown()
     }

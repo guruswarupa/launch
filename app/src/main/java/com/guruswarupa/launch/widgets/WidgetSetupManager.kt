@@ -23,28 +23,28 @@ class WidgetSetupManager(
     companion object {
         private const val TAG = "WidgetSetupManager"
     }
-    
+
     fun setupBatteryAndUsage() {
-        
+
         val batteryPercentageTextView = activity.findViewById<TextView>(R.id.battery_percentage)
 
-        
+
         val batteryManager = BatteryManager(activity)
         batteryPercentageTextView?.let { batteryManager.updateBatteryInfo(it) }
     }
-    
+
     fun setupWeather(weatherIcon: ImageView, weatherText: TextView) {
-        
+
         weatherManager.updateWeather(weatherIcon, weatherText)
-        
-        
+
+
         val weatherClickListener = View.OnClickListener {
             weatherManager.updateWeather(weatherIcon, weatherText)
         }
         weatherIcon.setOnClickListener(weatherClickListener)
         weatherText.setOnClickListener(weatherClickListener)
 
-        
+
         val weatherLongClickListener = View.OnLongClickListener {
             weatherManager.showWeatherSettings(weatherIcon, weatherText)
             true
@@ -52,7 +52,7 @@ class WidgetSetupManager(
         weatherIcon.setOnLongClickListener(weatherLongClickListener)
         weatherText.setOnLongClickListener(weatherLongClickListener)
     }
-    
+
     fun setupCalculatorWidget(): CalculatorWidget {
         val calculatorContainer = activity.findViewById<android.view.ViewGroup?>(R.id.calculator_widget_container)
         if (calculatorContainer == null) {
@@ -63,7 +63,7 @@ class WidgetSetupManager(
         Log.d(TAG, "Calculator widget setup: container=${calculatorContainer != null}, added=${calculatorView.parent != null}")
         return CalculatorWidget(calculatorView)
     }
-    
+
     fun setupMediaControllerWidget(): MediaControllerWidget {
         val mediaContainer = activity.findViewById<android.view.ViewGroup>(R.id.media_controller_widget_container)
         if (mediaContainer == null) {
@@ -74,7 +74,7 @@ class WidgetSetupManager(
         Log.d(TAG, "Media controller widget setup: container=${mediaContainer != null}, added=${mediaView.parent != null}")
         return MediaControllerWidget(activity, mediaView)
     }
-    
+
     fun setupWorkoutWidget(): WorkoutWidget {
         val workoutContainer = activity.findViewById<ViewGroup>(R.id.workout_widget_container)
         if (workoutContainer == null) {
@@ -85,7 +85,7 @@ class WidgetSetupManager(
         Log.d(TAG, "Workout widget setup: container=${workoutContainer != null}, added=${workoutView.parent != null}")
         return WorkoutWidget(workoutView)
     }
-    
+
     fun setupPhysicalActivityWidget(sharedPreferences: android.content.SharedPreferences): PhysicalActivityWidget {
         val activityContainer = activity.findViewById<android.widget.LinearLayout>(R.id.physical_activity_widget_container)
         if (activityContainer == null) {
@@ -95,7 +95,7 @@ class WidgetSetupManager(
         physicalActivityWidget.initialize()
         return physicalActivityWidget
     }
-    
+
     fun setupCompassWidget(sharedPreferences: android.content.SharedPreferences): CompassWidget {
         val compassContainer = activity.findViewById<android.widget.LinearLayout>(R.id.compass_widget_container)
         if (compassContainer == null) {
@@ -105,7 +105,7 @@ class WidgetSetupManager(
         compassWidget.initialize()
         return compassWidget
     }
-    
+
     fun setupPressureWidget(sharedPreferences: android.content.SharedPreferences): PressureWidget {
         val pressureContainer = activity.findViewById<android.widget.LinearLayout>(R.id.pressure_widget_container)
         if (pressureContainer == null) {
@@ -115,7 +115,7 @@ class WidgetSetupManager(
         pressureWidget.initialize()
         return pressureWidget
     }
-    
+
     fun setupTemperatureWidget(sharedPreferences: android.content.SharedPreferences): TemperatureWidget {
         val temperatureContainer = activity.findViewById<android.widget.LinearLayout>(R.id.temperature_widget_container)
         if (temperatureContainer == null) {
@@ -135,7 +135,7 @@ class WidgetSetupManager(
         forecastWidget.initialize()
         return forecastWidget
     }
-    
+
     fun setupNoiseDecibelWidget(sharedPreferences: android.content.SharedPreferences): NoiseDecibelWidget {
         val noiseContainer = activity.findViewById<android.widget.LinearLayout>(R.id.noise_decibel_widget_container)
         if (noiseContainer == null) {
@@ -145,7 +145,7 @@ class WidgetSetupManager(
         noiseWidget.initialize()
         return noiseWidget
     }
-    
+
     fun setupCalendarEventsWidget(sharedPreferences: android.content.SharedPreferences): CalendarEventsWidget {
         val calendarContainer = activity.findViewById<android.widget.LinearLayout>(R.id.calendar_events_widget_container)
         if (calendarContainer == null) {
@@ -155,7 +155,7 @@ class WidgetSetupManager(
         calendarWidget.initialize()
         return calendarWidget
     }
-    
+
     fun setupCountdownWidget(sharedPreferences: android.content.SharedPreferences): CountdownWidget {
         val countdownContainer = activity.findViewById<android.widget.LinearLayout>(R.id.countdown_widget_container)
         if (countdownContainer == null) {
@@ -165,7 +165,7 @@ class WidgetSetupManager(
         countdownWidget.initialize()
         return countdownWidget
     }
-    
+
     fun setupDnsWidget(sharedPreferences: android.content.SharedPreferences): DnsWidget {
         val dnsContainer = activity.findViewById<android.widget.LinearLayout>(R.id.dns_widget_container)
         if (dnsContainer == null) {
@@ -175,7 +175,7 @@ class WidgetSetupManager(
         dnsWidget.initialize()
         return dnsWidget
     }
-    
+
     fun setupNoteWidget(sharedPreferences: android.content.SharedPreferences): NoteWidget {
         val noteContainer = activity.findViewById<android.widget.LinearLayout>(R.id.note_widget_container)
         if (noteContainer == null) {
@@ -205,7 +205,7 @@ class WidgetSetupManager(
         widget.initialize()
         return widget
     }
-    
+
     fun setupYearProgressWidget(sharedPreferences: android.content.SharedPreferences): YearProgressWidget {
         val container = activity.findViewById<android.widget.LinearLayout>(R.id.year_progress_widget_container)
         if (container == null) {
@@ -215,12 +215,12 @@ class WidgetSetupManager(
         yearProgressWidget.initialize()
         return yearProgressWidget
     }
-    
+
     fun setupWeeklyUsageWidget() {
-        
-        
+
+
     }
-    
+
     fun setupGithubContributionWidget(sharedPreferences: android.content.SharedPreferences): GithubContributionWidget {
         val githubContainer = activity.findViewById<android.widget.LinearLayout>(R.id.github_contributions_widget_container)
         if (githubContainer == null) {
@@ -230,7 +230,7 @@ class WidgetSetupManager(
         githubWidget.initialize()
         return githubWidget
     }
-    
+
     fun setupBatteryHealthWidget(): BatteryHealthWidget {
         val batteryContainer = activity.findViewById<android.widget.LinearLayout>(R.id.battery_health_widget_container)
         if (batteryContainer == null) {
@@ -240,11 +240,11 @@ class WidgetSetupManager(
         widget.initialize()
         return widget
     }
-    
+
     fun requestNotificationPermission() {
         permissionManager.requestNotificationPermission()
     }
-    
+
     fun getActivity(): MainActivity {
         return activity
     }

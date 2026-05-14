@@ -37,13 +37,13 @@ class TodoManager(
 
     fun initialize() {
         todoRecyclerView.layoutManager = LinearLayoutManager(activity)
-        
+
         todoRecyclerView.itemAnimator = null
 
         todoAdapter = TodoAdapter(todoItems, { todoItem ->
             removeTodoItem(todoItem)
         }, {
-            
+
             saveTodoItems()
             rescheduleTodoAlarms()
         })
@@ -57,7 +57,7 @@ class TodoManager(
         rescheduleTodoAlarms()
     }
 
-    
+
 
 
     fun onThemeChanged() {
@@ -70,7 +70,7 @@ class TodoManager(
         val dialogBuilder = android.app.AlertDialog.Builder(activity, R.style.CustomDialogTheme)
         dialogBuilder.setTitle("Add Todo Item")
 
-        
+
         val dialogView = activity.layoutInflater.inflate(R.layout.dialog_add_todo, null)
         val taskInput = dialogView.findViewById<EditText>(R.id.task_input)
         val categorySpinner = dialogView.findViewById<Spinner>(R.id.category_spinner)
@@ -86,7 +86,7 @@ class TodoManager(
         val intervalSpinner = dialogView.findViewById<Spinner>(R.id.interval_spinner)
         val intervalStartTimePicker = dialogView.findViewById<android.widget.TimePicker>(R.id.interval_start_time_picker)
 
-        
+
         val dayCheckboxes = listOf<CheckBox>(
             dialogView.findViewById(R.id.checkbox_sunday),
             dialogView.findViewById(R.id.checkbox_monday),
@@ -97,16 +97,16 @@ class TodoManager(
             dialogView.findViewById(R.id.checkbox_saturday)
         )
 
-        
+
         val categories = arrayOf("General", "Work", "Personal", "Health", "Shopping", "Study")
         categorySpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, categories)
 
-        
+
         val priorities = TodoItem.Priority.entries.map { it.displayName }.toTypedArray()
         prioritySpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, priorities)
-        prioritySpinner.setSelection(1) 
+        prioritySpinner.setSelection(1)
 
-        
+
         val intervals = arrayOf(
             "30 minutes",
             "1 hour",
@@ -120,12 +120,12 @@ class TodoManager(
         val intervalValues = arrayOf(30, 60, 120, 180, 240, 360, 480, 720)
         intervalSpinner.adapter = ArrayAdapter(activity, android.R.layout.simple_spinner_dropdown_item, intervals)
 
-        
+
         enableTimeCheckbox.setOnCheckedChangeListener { _, isChecked ->
             timePicker.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
-        
+
         recurringCheckbox.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 recurrenceTypeGroup.visibility = View.VISIBLE
@@ -143,7 +143,7 @@ class TodoManager(
             }
         }
 
-        
+
         recurrenceTypeGroup.setOnCheckedChangeListener { _, checkedId ->
             if (checkedId == R.id.recurrence_days) {
                 daysContainer.visibility = View.VISIBLE
@@ -162,7 +162,7 @@ class TodoManager(
                 val isRecurring = recurringCheckbox.isChecked
                 val selectedDays = if (isRecurring && recurrenceDays.isChecked) {
                     dayCheckboxes.mapIndexedNotNull { index, checkbox ->
-                        if (checkbox.isChecked) index + 1 else null 
+                        if (checkbox.isChecked) index + 1 else null
                     }.toSet()
                 } else {
                     emptySet()
@@ -203,7 +203,7 @@ class TodoManager(
         val dialog = dialogBuilder.create()
         dialog.show()
 
-        
+
         fixDialogTextColors(dialog)
     }
 
@@ -230,7 +230,7 @@ class TodoManager(
         todoAdapter.notifyItemInserted(index)
         saveTodoItems()
 
-        
+
         if (dueTime != null || (newTodo.isIntervalBased() && newTodo.intervalStartTime != null)) {
             val requestCode = todoAlarmManager.getRequestCode(newTodo, index)
             todoAlarmManager.scheduleAlarm(newTodo, requestCode)
@@ -240,7 +240,7 @@ class TodoManager(
     private fun removeTodoItem(todoItem: TodoItem) {
         val index = todoItems.indexOf(todoItem)
         if (index != -1) {
-            
+
             if (todoItem.dueTime != null) {
                 val requestCode = todoAlarmManager.getRequestCode(todoItem, index)
                 todoAlarmManager.cancelAlarm(todoItem, requestCode)
@@ -260,7 +260,7 @@ class TodoManager(
                 if (itemString.isNotEmpty()) {
                     val parts = itemString.split(":")
                     if (parts.size >= 7) {
-                        
+
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         val isRecurring = parts[2].toBoolean()
@@ -290,14 +290,14 @@ class TodoManager(
 
                         todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate, selectedDays, priority, category, dueTime, recurrenceInterval, intervalStartTime))
                     } else if (parts.size >= 3) {
-                        
+
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         val isRecurring = parts[2].toBoolean()
                         val lastCompletedDate = if (parts.size > 3) parts[3] else null
                         todoItems.add(TodoItem(text, isChecked, isRecurring, lastCompletedDate))
                     } else if (parts.size == 2) {
-                        
+
                         val text = parts[0]
                         val isChecked = parts[1].toBoolean()
                         todoItems.add(TodoItem(text, isChecked, false))
@@ -306,8 +306,8 @@ class TodoManager(
             }
             checkRecurringTasks()
             todoAdapter.notifyItemRangeChanged(0, todoItems.size)
-            
-            
+
+
             rescheduleTodoAlarms()
         }
     }
@@ -323,7 +323,7 @@ class TodoManager(
     private fun checkRecurringTasks() {
         val currentDate = getCurrentDateString()
         val calendar = Calendar.getInstance()
-        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) 
+        val currentDayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
         val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
         val currentMinute = calendar.get(Calendar.MINUTE)
         val currentTimeInMinutes = currentHour * 60 + currentMinute
@@ -334,42 +334,42 @@ class TodoManager(
         for (todoItem in todoItems) {
             if (todoItem.isRecurring) {
                 if (todoItem.isIntervalBased() && todoItem.recurrenceInterval != null) {
-                    
+
                     val lastCompletedDate = todoItem.lastCompletedDate
                     if (lastCompletedDate != null) {
                         try {
-                            
+
                             val lastCompletedMillis = lastCompletedDate.toLongOrNull()
                             if (lastCompletedMillis != null) {
                                 val elapsedMinutes = (currentTimeMillis - lastCompletedMillis) / (1000 * 60)
                                 if (elapsedMinutes >= todoItem.recurrenceInterval) {
-                                    
+
                                     todoItem.isChecked = false
                                     todoItem.lastCompletedDate = null
                                 }
                             }
                         } catch (_: Exception) {
-                            
+
                             if (todoItem.lastCompletedDate != currentDate) {
                                 todoItem.isChecked = false
                                 todoItem.lastCompletedDate = null
                             }
                         }
                     } else if (todoItem.isChecked) {
-                        
+
                         todoItem.lastCompletedDate = currentTimeMillis.toString()
                     }
                 } else if (todoItem.isDayBased() && todoItem.lastCompletedDate != currentDate) {
-                    
+
                     if (todoItem.selectedDays.contains(currentDayOfWeek)) {
                         todoItem.isChecked = false
                     }
                 } else if (todoItem.lastCompletedDate != currentDate) {
-                    
+
                     todoItem.isChecked = false
                 }
             } else if (todoItem.dueTime != null) {
-                
+
                 val dueTimeParts = todoItem.dueTime.split(":")
                 if (dueTimeParts.size == 2) {
                     try {
@@ -377,18 +377,18 @@ class TodoManager(
                         val dueMinute = dueTimeParts[1].toInt()
                         val dueTimeInMinutes = dueHour * 60 + dueMinute
 
-                        
+
                         if (currentTimeInMinutes > dueTimeInMinutes) {
                             itemsToRemove.add(todoItem)
                         }
                     } catch (_: NumberFormatException) {
-                        
+
                     }
                 }
             }
         }
 
-        
+
         for (item in itemsToRemove) {
             val index = todoItems.indexOf(item)
             if (index != -1) {
@@ -401,11 +401,11 @@ class TodoManager(
             saveTodoItems()
         }
     }
-    
+
     fun rescheduleTodoAlarms() {
         todoAlarmManager.rescheduleAllAlarms(todoItems)
     }
-    
+
     private fun getCurrentDateString(): String {
         val calendar = Calendar.getInstance()
         return "${calendar.get(Calendar.DAY_OF_YEAR)}-${calendar.get(Calendar.YEAR)}"

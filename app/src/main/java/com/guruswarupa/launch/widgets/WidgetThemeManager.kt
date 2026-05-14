@@ -16,7 +16,7 @@ class WidgetThemeManager(
     private val getCurrentUiMode: () -> Int
 ) {
     private var currentUiMode: Int = 0
-    
+
     fun apply(
         searchBox: EditText? = null,
         searchContainer: View? = null,
@@ -24,11 +24,11 @@ class WidgetThemeManager(
         searchTypeButton: ImageButton? = null,
         appDockManager: AppDockManager? = null
     ) {
-        
+
         val widgetBackground = R.drawable.widget_background
         val emptyStateBackground = R.drawable.drawer_widgets_empty_state_bg
-        
-        
+
+
         activity.findViewById<View>(R.id.top_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.calendar_events_widget_container)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.countdown_widget_container)?.setBackgroundResource(widgetBackground)
@@ -59,51 +59,51 @@ class WidgetThemeManager(
         activity.findViewById<View>(R.id.rss_refresh_button)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.rss_manage_button)?.setBackgroundResource(widgetBackground)
         activity.findViewById<View>(R.id.rss_empty_state)?.setBackgroundResource(emptyStateBackground)
-        
-        
+
+
         searchBox?.let { sb ->
             val searchBg = R.drawable.search_box_transparent_bg
             val textColor = android.graphics.Color.WHITE
             val hintColor = android.graphics.Color.WHITE
-            
-            
+
+
             searchContainer?.let { sc ->
                 sc.setBackgroundResource(searchBg)
-                sb.background = null 
+                sb.background = null
             } ?: run {
                 sb.setBackgroundResource(searchBg)
             }
-            
+
             sb.setTextColor(textColor)
             sb.setHintTextColor(hintColor)
             TypographyManager.applyToView(sb)
-            
-            
+
+
             val iconColor = android.graphics.Color.WHITE
             sb.compoundDrawablesRelative[0]?.setTint(iconColor)
             voiceSearchButton?.setColorFilter(iconColor)
             searchTypeButton?.setColorFilter(iconColor)
         }
-        
-        
+
+
         activity.findViewById<ImageView>(R.id.weather_icon)?.setColorFilter(android.graphics.Color.WHITE)
-        
-        
+
+
         appDockManager?.updateDockIcons()
     }
-    
-    
+
+
 
 
     fun checkAndUpdateThemeIfNeeded(
-        todoManager: TodoManager? = null, 
+        todoManager: TodoManager? = null,
         appDockManager: AppDockManager? = null,
         searchBox: EditText? = null,
         searchContainer: View? = null,
         voiceSearchButton: ImageButton? = null,
         searchTypeButton: ImageButton? = null
     ) {
-        
+
         apply(
             searchBox = searchBox,
             searchContainer = searchContainer,
@@ -111,7 +111,7 @@ class WidgetThemeManager(
             searchTypeButton = searchTypeButton,
             appDockManager = appDockManager
         )
-        
+
         todoManager?.onThemeChanged()
     }
 }

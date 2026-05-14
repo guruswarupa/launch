@@ -17,7 +17,7 @@ class UsageStatsRefreshManager(
     private val backgroundExecutor: Executor,
     private val usageStatsManager: AppUsageStatsManager
 ) {
-    
+
 
 
     private fun safeExecute(task: Runnable): Boolean {
@@ -33,7 +33,7 @@ class UsageStatsRefreshManager(
         }
     }
 
-    
+
 
 
     fun updateBatteryInBackground() {
@@ -46,11 +46,11 @@ class UsageStatsRefreshManager(
         }
     }
 
-    
+
 
 
 
     fun updateUsageInBackground() {
-        
+
     }
 }

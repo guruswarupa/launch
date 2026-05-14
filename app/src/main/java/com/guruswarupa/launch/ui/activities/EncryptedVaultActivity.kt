@@ -50,13 +50,13 @@ class EncryptedVaultActivity : VaultBaseActivity() {
     private lateinit var emptyStateText: TextView
     private lateinit var adapter: VaultAdapter
     private var fileToDecrypt: File? = null
-    
+
     private val prefs by lazy { getSharedPreferences(Constants.Prefs.PREFS_NAME, MODE_PRIVATE) }
-    
+
     private val pickFile = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         uri?.let { encryptAndMoveFile(it) }
     }
-    
+
     private val createNoteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             loadFiles()
@@ -125,11 +125,11 @@ class EncryptedVaultActivity : VaultBaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         supportActionBar?.hide()
-        
+
         setContentView(R.layout.activity_encrypted_vault)
-        
+
         makeSystemBarsTransparent()
         setupWallpaper()
         applyBackgroundTranslucency()
@@ -137,10 +137,10 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         vaultManager = EncryptedFolderManager(this)
         recyclerView = findViewById(R.id.vault_recycler_view)
         emptyStateText = findViewById(R.id.empty_state_text)
-        
+
         recyclerView.layoutManager = GridLayoutManager(this, 2)
-        
-        adapter = VaultAdapter(vaultManager, emptyList(), 
+
+        adapter = VaultAdapter(vaultManager, emptyList(),
             onFileClick = { file -> openFile(file) },
             onFileLongClick = { file -> showFileOptions(file) }
         )
@@ -450,7 +450,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         DialogStyler.styleDialog(dialog)
         dialog.show()
     }
-    
+
     private fun showVaultSettings() {
         val options = arrayOf("Export Vault", "Import Vault", "Change Password", "Auto-Lock Settings")
         val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
@@ -478,11 +478,11 @@ class EncryptedVaultActivity : VaultBaseActivity() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_vault_settings, null)
         val timeoutSwitch = dialogView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.timeout_switch)
         val recoveryBtn = dialogView.findViewById<Button>(R.id.view_recovery_phrase_button)
-        
-        recoveryBtn.visibility = View.GONE 
-        
+
+        recoveryBtn.visibility = View.GONE
+
         timeoutSwitch.isChecked = prefs.getBoolean(Constants.Prefs.VAULT_TIMEOUT_ENABLED, false)
-        
+
         val dialog = AlertDialog.Builder(this, R.style.CustomDialogTheme)
             .setTitle("Auto-Lock Settings")
             .setView(dialogView)
@@ -494,7 +494,7 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             }
             .setNegativeButton("Cancel", null)
             .create()
-            
+
         DialogStyler.styleDialog(dialog)
         dialog.show()
     }
@@ -527,10 +527,10 @@ class EncryptedVaultActivity : VaultBaseActivity() {
             val file = files[position]
             holder.name.text = file.name
             holder.info.text = formatFileSize(file.length())
-            
-            
+
+
             holder.thumbnail.setImageDrawable(null)
-            
+
             val bitmap = vaultManager.getThumbnail(file.name)
             if (bitmap != null && !bitmap.isRecycled) {
                 holder.thumbnail.setImageBitmap(bitmap)

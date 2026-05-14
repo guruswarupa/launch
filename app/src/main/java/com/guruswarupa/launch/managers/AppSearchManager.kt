@@ -38,8 +38,8 @@ class AppSearchManager @Inject constructor(
     private val lifecycleScope = (context as LifecycleOwner).lifecycleScope
     private var searchJob: Job? = null
     private var searchListenerAttached = false
-    
-    // Callback for search query changes
+
+
     var onSearchQueryChanged: ((String) -> Unit)? = null
 
     private val appLabelCache = mutableMapOf<String, String>()
@@ -145,9 +145,9 @@ class AppSearchManager @Inject constructor(
 
     fun updateData(newFullAppList: List<ResolveInfo>, newHomeAppList: List<ResolveInfo>, newContactsList: List<String>) {
         synchronized(dataLock) {
-            // Deduplicate to prevent showing same app multiple times
+
             val deduplicatedFullAppList = newFullAppList.distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}" }
-            
+
             if (deduplicatedFullAppList !== fullAppList) {
                 fullAppList.clear()
                 fullAppList.addAll(deduplicatedFullAppList)
@@ -191,17 +191,17 @@ class AppSearchManager @Inject constructor(
     private fun buildFilteredList(query: String): ArrayList<ResolveInfo> {
         val queryLower = query.lowercase().trim()
         val newFilteredList = ArrayList<ResolveInfo>()
-        
+
         val fullAppListSnapshot: List<ResolveInfo>
         val homeAppListSnapshot: List<ResolveInfo>
         val contactsListSnapshot: List<String>
-        
+
         synchronized(dataLock) {
             fullAppListSnapshot = ArrayList(fullAppList)
             homeAppListSnapshot = ArrayList(homeAppList)
             contactsListSnapshot = ArrayList(contactsList)
         }
-        
+
         if (queryLower.isNotEmpty()) {
             evaluateMathExpression(query)?.let { result ->
                 newFilteredList.add(createMathResultOption(query, result))
@@ -212,18 +212,18 @@ class AppSearchManager @Inject constructor(
                 if (currentSearchMode == SearchMode.ALL || currentSearchMode == SearchMode.APPS) {
                     fullAppListSnapshot.forEach { info ->
                         val packageName = info.activityInfo.packageName
-                        
+
                         if (packageName == context.packageName) {
                             val activityName = info.activityInfo.name
-                            val isAllowedInternalActivity = activityName.contains("SettingsActivity") || 
+                            val isAllowedInternalActivity = activityName.contains("SettingsActivity") ||
                                                           activityName.contains("EncryptedVaultActivity")
                             if (!isAllowedInternalActivity || activityName.contains("MainActivity")) {
                                 return@forEach
                             }
                         }
-                        
+
                         if (isAppFiltered?.invoke(packageName) == true) return@forEach
-                        
+
                         val label = getAppLabel(info)
                         when {
                             label == queryLower -> exactMatches.add(info)
@@ -240,14 +240,14 @@ class AppSearchManager @Inject constructor(
 
                     getSettingsMatches(queryLower).forEach { setting ->
                         val settingLower = setting.lowercase()
-                        val isDuplicate = settingLower == "launch settings" || 
-                                         settingLower == "vault" || 
+                        val isDuplicate = settingLower == "launch settings" ||
+                                         settingLower == "vault" ||
                                          settingLower == "launch"
                         if (!isDuplicate) {
                             newFilteredList.add(createSettingsOption(setting))
                         }
                     }
-                    
+
                     if (currentSearchMode == SearchMode.APPS) return@run
                 }
 
@@ -258,7 +258,7 @@ class AppSearchManager @Inject constructor(
                         .forEach { contact ->
                             newFilteredList.add(createUnifiedContactOption(contact))
                         }
-                    
+
                     if (currentSearchMode == SearchMode.CONTACTS) return@run
                 }
 
@@ -266,7 +266,7 @@ class AppSearchManager @Inject constructor(
                     getFileMatches(queryLower).forEach { file ->
                         newFilteredList.add(createFileOption(file))
                     }
-                    
+
                     if (currentSearchMode == SearchMode.FILES) return@run
                 }
 
@@ -274,17 +274,17 @@ class AppSearchManager @Inject constructor(
                     newFilteredList.add(createGoogleMapsSearchOption(query))
                     return@run
                 }
-                
+
                 if (currentSearchMode == SearchMode.PLAYSTORE) {
                     newFilteredList.add(createPlayStoreSearchOption(query))
                     return@run
                 }
-                
+
                 if (currentSearchMode == SearchMode.YOUTUBE) {
                     newFilteredList.add(createYoutubeSearchOption(query))
                     return@run
                 }
-                
+
                 if (currentSearchMode == SearchMode.WEB) {
                     newFilteredList.add(createBrowserSearchOption(query))
                     return@run
@@ -318,7 +318,7 @@ class AppSearchManager @Inject constructor(
         return newFilteredList
     }
 
-    // LRU cache for ResolveInfo objects with bounded size to prevent memory issues
+
     private val cachedResolveInfos = object : LinkedHashMap<String, ResolveInfo>(MAX_CACHE_SIZE, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ResolveInfo>?): Boolean {
             return size > MAX_CACHE_SIZE
@@ -344,7 +344,7 @@ class AppSearchManager @Inject constructor(
 
     private fun createSettingsOption(setting: String): ResolveInfo {
         val systemSetting = AndroidSettingsHelper.getAllSystemSettings().find { it.title == setting }
-        
+
         return cachedResolveInfos.getOrPut("settings_result_$setting") {
             ResolveInfo().apply {
                 activityInfo = ActivityInfo().apply {
@@ -365,12 +365,12 @@ class AppSearchManager @Inject constructor(
                 android.provider.MediaStore.Files.FileColumns.DATA,
                 android.provider.MediaStore.Files.FileColumns.DISPLAY_NAME
             )
-            
+
             val selection = "${android.provider.MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ?"
             val selectionArgs = arrayOf("%$query%")
-            
+
             val queryUri = android.provider.MediaStore.Files.getContentUri("external")
-            
+
             context.contentResolver.query(
                 queryUri,
                 projection,
@@ -498,7 +498,7 @@ class AppSearchManager @Inject constructor(
             }
         }
     }
-    
+
     fun cleanup() {
         searchJob?.cancel()
     }

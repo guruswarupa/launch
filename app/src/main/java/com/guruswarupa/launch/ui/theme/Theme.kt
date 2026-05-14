@@ -22,7 +22,7 @@ private val LightColorScheme = lightColorScheme(
     secondary = PurpleGrey40,
     tertiary = Pink40
 
-    
+
 
 
 
@@ -36,7 +36,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun LaunchTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    
+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

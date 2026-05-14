@@ -73,7 +73,7 @@ class WebAppManager @Inject constructor(private val sharedPreferences: SharedPre
         }
         saveWebApps(updated)
     }
-    
+
     fun updateWebAppRedirect(id: String, blockRedirects: Boolean) {
         val updated = getWebApps().map { entry ->
             if (entry.id == id) entry.copy(blockRedirects = blockRedirects) else entry
@@ -101,9 +101,9 @@ class WebAppManager @Inject constructor(private val sharedPreferences: SharedPre
     fun normalizeUrl(rawUrl: String): String {
         val trimmed = rawUrl.trim()
         return when {
-            trimmed.startsWith("https://", ignoreCase = true) -> trimmed
-            trimmed.startsWith("http://", ignoreCase = true) -> trimmed
-            else -> "https://$trimmed"
+            trimmed.startsWith("https:
+            trimmed.startsWith("http:
+            else -> "https:
         }
     }
 

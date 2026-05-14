@@ -33,30 +33,30 @@ class GestureHandler(
     private var isSwipeFromLeftEdge = false
     private var isSwipeFromRightEdge = false
     private var isGesturesEnabled = true
-    
+
     private val edgeThresholdPx: Int
     private val minSwipeDistancePx: Int
-    
+
     init {
         val density = activity.resources.displayMetrics.density
-        edgeThresholdPx = (50 * density).toInt()  
-        minSwipeDistancePx = (50 * density).toInt()  
+        edgeThresholdPx = (50 * density).toInt()
+        minSwipeDistancePx = (50 * density).toInt()
     }
-    
-    
+
+
 
 
     @Suppress("unused")
     fun setGesturesEnabled(enabled: Boolean) {
         isGesturesEnabled = enabled
         if (!enabled) {
-            
+
             isSwipeFromLeftEdge = false
             isSwipeFromRightEdge = false
         }
     }
-    
-    
+
+
 
 
     fun setupGestureExclusion() {
@@ -81,8 +81,8 @@ class GestureHandler(
             }
         }
     }
-    
-    
+
+
 
 
     fun updateGestureExclusion() {
@@ -90,21 +90,21 @@ class GestureHandler(
             mainContent.post {
                 val exclusionRects = if (isGesturesEnabled) {
                     listOf(
-                        
+
                         Rect(0, 0, mainContent.width / 2, mainContent.height / 2),
-                        
+
                         Rect(mainContent.width / 2, 0, mainContent.width, mainContent.height / 2)
                     )
                 } else {
-                    
+
                     emptyList()
                 }
                 ViewCompat.setSystemGestureExclusionRects(mainContent, exclusionRects)
             }
         }
     }
-    
-    
+
+
 
 
     fun updateGestureExclusionForWidgetOpening() {
@@ -117,20 +117,20 @@ class GestureHandler(
             }
         }
     }
-    
-    
+
+
 
 
     @SuppressLint("ClickableViewAccessibility")
     fun setupTouchListener() {
         mainContent.setOnTouchListener { v, event ->
             if (!isGesturesEnabled) return@setOnTouchListener false
-            
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     touchStartX = event.x
                     touchStartY = event.y
-                    
+
                     val screenWidth = v.width
                     val isLeftSide = event.x < screenWidth / 2
                     isSwipeFromLeftEdge = isLeftSide && event.y < (v.height / 2)
@@ -141,9 +141,9 @@ class GestureHandler(
                     if (isSwipeFromLeftEdge) {
                         val deltaX = event.x - touchStartX
                         val deltaY = event.y - touchStartY
-                        
+
                         if (deltaX > 5 && abs(deltaY) < abs(deltaX) * 0.9) {
-                            true 
+                            true
                         } else {
                             isSwipeFromLeftEdge = false
                             false
@@ -151,9 +151,9 @@ class GestureHandler(
                     } else if (isSwipeFromRightEdge) {
                         val deltaX = touchStartX - event.x
                         val deltaY = event.y - touchStartY
-                        
+
                         if (deltaX > 5 && abs(deltaY) < abs(deltaX) * 0.9) {
-                            true 
+                            true
                         } else {
                             isSwipeFromRightEdge = false
                             false
@@ -169,7 +169,7 @@ class GestureHandler(
                         val deltaY = event.y - touchStartY
                         if (deltaX > minSwipeDistancePx && abs(deltaY) < abs(deltaX) * 0.9) {
                             if (!drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                                
+
                                 openDrawerWithFastAnimation(GravityCompat.START)
                             }
                         }
@@ -180,7 +180,7 @@ class GestureHandler(
                         val deltaY = event.y - touchStartY
                         if (deltaX > minSwipeDistancePx && abs(deltaY) < abs(deltaX) * 0.9) {
                             if (!drawerLayout.isDrawerOpen(GravityCompat.END)) {
-                                
+
                                 openDrawerWithFastAnimation(GravityCompat.END)
                             }
                         }
@@ -194,19 +194,19 @@ class GestureHandler(
             }
         }
     }
-    
-    
+
+
 
 
     private fun openDrawerWithFastAnimation(gravity: Int) {
-        
+
         drawerLayout.openDrawer(gravity)
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
     }
 }

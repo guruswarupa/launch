@@ -63,14 +63,14 @@ class DocumentViewerActivity : VaultBaseActivity() {
     private var totalPages = 0
     private var currentPageIndex = 0
 
-    // Zoom and Pan variables
+
     private var scaleFactor = 1.0f
     private var lastTouchX = 0f
     private var lastTouchY = 0f
     private lateinit var scaleGestureDetector: ScaleGestureDetector
     private lateinit var gestureDetector: GestureDetector
 
-    // Source modes
+
     private var isVaultFile = false
     private var vaultFileName: String? = null
     private var externalUri: Uri? = null
@@ -84,7 +84,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
         setupWallpaper()
         setupZoomAndPan()
 
-        // Determine source
+
         vaultFileName = intent.getStringExtra(EXTRA_VAULT_FILE_NAME)
         val uriString = intent.getStringExtra(EXTRA_FILE_URI)
 
@@ -140,7 +140,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
     }
 
     private fun setupZoomAndPan() {
-        // Use top-left pivot with explicit focus-point math so zoom follows finger position.
+
         pdfRecyclerView.post {
             pdfRecyclerView.pivotX = 0f
             pdfRecyclerView.pivotY = 0f
@@ -156,7 +156,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
                 val focusX = detector.focusX
                 val focusY = detector.focusY
 
-                // Keep the content point under the pinch focus stationary.
+
                 pdfRecyclerView.translationX =
                     pdfRecyclerView.translationX * relativeScale + focusX * (1 - relativeScale)
                 pdfRecyclerView.translationY =
@@ -224,7 +224,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
                     }
                     MotionEvent.ACTION_MOVE -> {
                         if (isPinching) {
-                            // Pinch updates are handled in onScale(). Avoid extra pan here to prevent flicker.
+
                             val (focusX, focusY) = getTouchFocus(event)
                             lastTouchX = focusX
                             lastTouchY = focusY
@@ -242,7 +242,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
                             return@setOnTouchListener true
                         } else {
                             if (scaleFactor <= 1.0f) return@setOnTouchListener false
-                            // In zoom mode, single-finger drag should pan in both axes so edges stay reachable.
+
                             val dx = event.x - lastTouchX
                             val dy = event.y - lastTouchY
                             pdfRecyclerView.parent?.requestDisallowInterceptTouchEvent(true)
@@ -382,7 +382,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
                 openTextFile(file)
             }
             else -> {
-                // Try to open as text first, fallback to error
+
                 try {
                     val content = file.readText(Charsets.UTF_8)
                     if (content.any { it.isISOControl() && it != '\n' && it != '\r' && it != '\t' }) {
@@ -397,15 +397,15 @@ class DocumentViewerActivity : VaultBaseActivity() {
         }
     }
 
-    // ─── PDF Rendering ───────────────────────────────────────────────────────────
+
 
     private fun openPdf(file: File) {
         lifecycleScope.launch {
             try {
-                // Close any existing renderer first
+
                 pdfRenderer?.close()
                 fileDescriptor?.close()
-                
+
                 withContext(Dispatchers.IO) {
                     fileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                     pdfRenderer = PdfRenderer(fileDescriptor!!)
@@ -485,7 +485,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
         return bestIndex.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
     }
 
-    // ─── Text File Rendering ────────────────────────────────────────────────────
+
 
     private fun openTextFile(file: File) {
         lifecycleScope.launch {
@@ -505,14 +505,14 @@ class DocumentViewerActivity : VaultBaseActivity() {
         }
     }
 
-    // ─── WebView Display ────────────────────────────────────────────────────────
+
 
     private fun showWebViewContent(html: String) {
-        // Clear previous content to prevent memory leaks
+
         documentWebView.clearHistory()
         documentWebView.clearCache(true)
         documentWebView.loadUrl("about:blank")
-        
+
         documentWebView.visibility = View.VISIBLE
         documentWebView.setBackgroundColor(Color.TRANSPARENT)
         documentWebView.settings.apply {
@@ -522,7 +522,7 @@ class DocumentViewerActivity : VaultBaseActivity() {
             builtInZoomControls = true
             displayZoomControls = false
             setSupportZoom(true)
-            // Force dark mode off for better document viewing
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 @Suppress("DEPRECATION")
                 forceDark = android.webkit.WebSettings.FORCE_DARK_OFF
@@ -538,22 +538,22 @@ class DocumentViewerActivity : VaultBaseActivity() {
         }
         documentWebView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
     }
-    
-    // ─── UI State Management ─────────────────────────────────────────────────────
-    
+
+
+
     private fun showLoading(message: String) {
-        // Reset all views first
+
         pdfRecyclerView.visibility = View.GONE
         documentWebView.visibility = View.GONE
         pdfNavBar.visibility = View.GONE
         errorContainer.visibility = View.GONE
-        
-        // Clear previous content to free memory
+
+
         pdfRecyclerView.adapter = null
         documentWebView.clearHistory()
         documentWebView.clearCache(true)
         documentWebView.loadUrl("about:blank")
-        
+
         loadingText.text = message
         loadingContainer.visibility = View.VISIBLE
     }
@@ -630,21 +630,21 @@ class DocumentViewerActivity : VaultBaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        
-        // Clean up PDF renderer
+
+
         pdfRenderer?.close()
         fileDescriptor?.close()
-        
-        // Clean up WebView to prevent memory leaks
+
+
         documentWebView.clearHistory()
         documentWebView.clearCache(true)
         documentWebView.loadUrl("about:blank")
-        
-        // Remove WebView from parent before destroying to prevent warning
+
+
         (documentWebView.parent as? android.view.ViewGroup)?.removeView(documentWebView)
         documentWebView.destroy()
-        
-        // Clean up temp files
+
+
         tempFile?.let { file ->
             val parentDir = file.parentFile
             if (parentDir?.name == "doc_viewer") {
@@ -658,13 +658,13 @@ class DocumentViewerActivity : VaultBaseActivity() {
         const val EXTRA_FILE_URI = "file_uri"
         const val EXTRA_FILE_NAME = "file_name"
 
-        /** Supported document extensions */
+
         val SUPPORTED_EXTENSIONS = setOf(
             "pdf",
             "txt", "md", "json", "xml", "csv", "log", "html", "htm",
             "css", "js", "kt", "java", "py", "c", "cpp", "h",
             "yaml", "yml", "toml", "ini", "cfg", "conf", "sh", "bat",
-            "rb", "go", "rs", "swift", "dart", "ts", "tsx", "jsx", 
+            "rb", "go", "rs", "swift", "dart", "ts", "tsx", "jsx",
             "vue", "sql", "ps1"
         )
 

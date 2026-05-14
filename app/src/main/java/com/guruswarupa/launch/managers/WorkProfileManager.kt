@@ -30,12 +30,12 @@ class WorkProfileManager @Inject constructor(
         const val REQUEST_CODE_CREATE_WORK_PROFILE = 2000
         const val WORK_PROFILE_WORKSPACE_ID = "work_profile_workspace"
     }
-    
+
     private val provisioningReceiverComponent = ComponentName(
-        context, 
+        context,
         WorkProfileProvisioningReceiver::class.java
     )
-    
+
     fun isWorkProfileSupported(): Boolean {
         return context.packageManager.hasSystemFeature(PackageManager.FEATURE_MANAGED_USERS)
     }
@@ -43,7 +43,7 @@ class WorkProfileManager @Inject constructor(
     fun hasActualWorkProfile(): Boolean {
         return getWorkProfileUserHandle() != null
     }
-    
+
     fun isWorkProfileEnabled(): Boolean {
         return sharedPreferences.getBoolean(WORK_PROFILE_ENABLED_KEY, false)
     }
@@ -54,28 +54,28 @@ class WorkProfileManager @Inject constructor(
             Log.e(TAG, "Work profile is not supported on this device")
             return
         }
-        
+
         try {
             val intent = Intent(DevicePolicyManager.ACTION_PROVISION_MANAGED_PROFILE)
             intent.putExtra(DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME, provisioningReceiverComponent)
             intent.putExtra(DevicePolicyManager.EXTRA_PROVISIONING_SKIP_ENCRYPTION, true)
             intent.putExtra(DevicePolicyManager.EXTRA_PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED, true)
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 intent.putExtra(DevicePolicyManager.EXTRA_PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION, "")
             }
-            
+
             @Suppress("DEPRECATION")
             activity.startActivityForResult(intent, REQUEST_CODE_CREATE_WORK_PROFILE)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start work profile provisioning", e)
         }
     }
-    
+
     fun setWorkProfileEnabled(enabled: Boolean) {
         sharedPreferences.edit { putBoolean(WORK_PROFILE_ENABLED_KEY, enabled) }
     }
-    
+
     fun syncWorkProfileEnabledState(): Boolean {
         val enabled = isWorkProfileAvailableAndEnabled()
         setWorkProfileEnabled(enabled)

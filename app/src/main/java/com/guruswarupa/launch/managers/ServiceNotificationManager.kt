@@ -32,16 +32,16 @@ object ServiceNotificationManager {
             createNotificationChannel(context)
             isChannelCreated = true
         }
-        
+
         val notification = createNotification(context)
-        
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (activeServices.isNotEmpty()) {
             notificationManager.notify(NOTIFICATION_ID, notification)
         } else {
             notificationManager.cancel(NOTIFICATION_ID)
         }
-        
+
         return notification
     }
 

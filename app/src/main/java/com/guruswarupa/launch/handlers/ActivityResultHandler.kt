@@ -73,7 +73,7 @@ class ActivityResultHandler(
                 val prefs = activity.getSharedPreferences("com.guruswarupa.launch.PREFS", Activity.MODE_PRIVATE)
                 prefs.edit().putBoolean("work_profile_enabled", true).apply()
                 activity.refreshAppsForWorkspace()
-                
+
                 activity.appDockManager.updateDockIcons()
             }
         } else {

@@ -22,7 +22,7 @@ class DrawerManager(
     lateinit var navigationManager: NavigationManager
         private set
 
-    
+
 
 
     fun setup() {
@@ -37,13 +37,13 @@ class DrawerManager(
             }
         }
 
-        
+
         activity.onBackPressedDispatcher.addCallback(activity, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (::navigationManager.isInitialized) {
                     navigationManager.handleBackPressed {
-                        
-                        
+
+
                     }
                 }
             }
