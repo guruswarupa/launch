@@ -16,6 +16,7 @@ class NetworkStatsManager {
 
     private val executor = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
+    private val speedTestTimeout = 30L // seconds
 
     data class SpeedTestResult(
         val downloadSpeedMbps: Float,
@@ -29,14 +30,23 @@ class NetworkStatsManager {
 
         executor.execute {
             try {
-
+                val testStartTime = System.currentTimeMillis()
+                
                 onProgress("Measuring latency...")
                 val (ping, jitter) = measurePing()
-
+                
+                if (System.currentTimeMillis() - testStartTime > speedTestTimeout * 1000) {
+                    handler.post { onError("Speed test timed out") }
+                    return@execute
+                }
 
                 onProgress("Measuring download speed...")
                 val downloadSpeed = measureDownloadSpeed()
-
+                
+                if (System.currentTimeMillis() - testStartTime > speedTestTimeout * 1000) {
+                    handler.post { onError("Speed test timed out") }
+                    return@execute
+                }
 
                 onProgress("Measuring upload speed...")
                 val uploadSpeed = measureUploadSpeed()
@@ -92,8 +102,13 @@ class NetworkStatsManager {
             "https://dl.google.com/android/repository/platform-tools-latest-linux.zip",
             "https://speedtest.tele2.net/10MB.zip"
         )
+        
+        val overallTimeout = 8000L // 8 seconds max
+        val startTime = System.currentTimeMillis()
 
         for (fileUrl in urls) {
+            if (System.currentTimeMillis() - startTime > overallTimeout) break
+            
             var totalBytesRead = 0L
             val maxDuration = 5000L
 
@@ -113,15 +128,15 @@ class NetworkStatsManager {
                 val buffer = ByteArray(64 * 1024)
                 var n: Int
 
-                val startTime = System.currentTimeMillis()
-                while (System.currentTimeMillis() - startTime < maxDuration) {
+                val testStartTime = System.currentTimeMillis()
+                while (System.currentTimeMillis() - testStartTime < maxDuration) {
                     n = inputStream.read(buffer)
                     if (n == -1) break
                     totalBytesRead += n
                 }
 
                 val endTime = System.currentTimeMillis()
-                val timeSeconds = (endTime - startTime) / 1000.0
+                val timeSeconds = (endTime - testStartTime) / 1000.0
 
                 inputStream.close()
                 connection.disconnect()
@@ -143,8 +158,13 @@ class NetworkStatsManager {
             "https://speedtest.tele2.net/upload.php",
             "http://speedtest.belwue.net/upload-dummy.php"
         )
+        
+        val overallTimeout = 8000L // 8 seconds max
+        val startTime = System.currentTimeMillis()
 
         for (uploadUrl in uploadUrls) {
+            if (System.currentTimeMillis() - startTime > overallTimeout) break
+            
             var totalBytesWritten = 0L
             val maxDuration = 5000L
 
@@ -165,10 +185,10 @@ class NetworkStatsManager {
                 val buffer = ByteArray(bufferSize)
                 java.util.Random().nextBytes(buffer)
 
-                val startTime = System.currentTimeMillis()
+                val testStartTime = System.currentTimeMillis()
                 val outputStream = connection.outputStream
 
-                while (System.currentTimeMillis() - startTime < maxDuration) {
+                while (System.currentTimeMillis() - testStartTime < maxDuration) {
                     outputStream.write(buffer)
                     totalBytesWritten += bufferSize
 
@@ -184,7 +204,7 @@ class NetworkStatsManager {
                 connection.disconnect()
 
                 if (totalBytesWritten > 0) {
-                    val timeSeconds = (endTime - startTime) / 1000.0
+                    val timeSeconds = (endTime - testStartTime) / 1000.0
                     if (timeSeconds > 0.1) {
                         val bitsUploaded = totalBytesWritten * 8
                         val mbps = (bitsUploaded / timeSeconds) / 1_000_000.0
