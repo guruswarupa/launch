@@ -60,6 +60,7 @@ class AppAdapter(
         const val VIEW_TYPE_LIST = 0
         const val VIEW_TYPE_GRID = 1
         const val VIEW_TYPE_SEPARATOR = 2
+        const val VIEW_TYPE_SEPARATOR_SMALL = 3
         const val SEPARATOR_PACKAGE = "com.guruswarupa.launch.SEPARATOR"
 
 
@@ -298,13 +299,22 @@ class AppAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
-        if (getItem(position).activityInfo.packageName == SEPARATOR_PACKAGE) return VIEW_TYPE_SEPARATOR
+        val item = getItem(position)
+        if (item.activityInfo.packageName == SEPARATOR_PACKAGE) {
+            val separatorId = item.activityInfo.name ?: ""
+            return if (separatorId.startsWith("letter_separator_") || separatorId.startsWith("small_separator_")) {
+                VIEW_TYPE_SEPARATOR_SMALL
+            } else {
+                VIEW_TYPE_SEPARATOR
+            }
+        }
         return if (isGridMode) VIEW_TYPE_GRID else VIEW_TYPE_LIST
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val layoutId = when (viewType) {
             VIEW_TYPE_SEPARATOR -> R.layout.item_app_separator
+            VIEW_TYPE_SEPARATOR_SMALL -> R.layout.item_app_separator_small
             VIEW_TYPE_GRID -> R.layout.app_item_grid
             else -> R.layout.app_item
         }
