@@ -397,20 +397,46 @@ class WebAppActivity : AppCompatActivity() {
         if (!::webView.isInitialized) {
             return
         }
-        fileUploadCallback?.onReceiveValue(null)
-        fileUploadCallback = null
-        webView.apply {
-            stopLoading()
-            onPause()
-            pauseTimers()
-            loadUrl("about:blank")
-            clearHistory()
-            clearCache(false)
-            webChromeClient = WebChromeClient()
-            webViewClient = WebViewClient()
-            removeAllViews()
-            (parent as? ViewGroup)?.removeView(this )
-            destroy()
+        
+        try {
+            fileUploadCallback?.onReceiveValue(null)
+            fileUploadCallback = null
+            
+            webView.apply {
+                try {
+                    stopLoading()
+                    onPause()
+                    pauseTimers()
+                    loadUrl("about:blank")
+                    clearHistory()
+                    clearCache(false)
+                } catch (e: Exception) {
+                    android.util.Log.w("WebAppActivity", "Error during WebView cleanup operations", e)
+                } finally {
+                    // Always clear clients and views even if above fails
+                    webChromeClient = WebChromeClient()
+                    webViewClient = WebViewClient()
+                    removeAllViews()
+                    
+                    val parentView = parent as? ViewGroup
+                    if (parentView != null) {
+                        try {
+                            parentView.removeView(this)
+                        } catch (e: Exception) {
+                            android.util.Log.w("WebAppActivity", "WebView already removed from parent", e)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("WebAppActivity", "Unexpected error during WebView release", e)
+        } finally {
+            // Ensure destroy is always called
+            try {
+                webView.destroy()
+            } catch (e: Exception) {
+                android.util.Log.w("WebAppActivity", "Error destroying WebView", e)
+            }
         }
     }
 }

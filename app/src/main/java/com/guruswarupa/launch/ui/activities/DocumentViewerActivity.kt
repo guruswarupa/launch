@@ -646,24 +646,54 @@ class DocumentViewerActivity : VaultBaseActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
+        // Close PDF resources separately to handle individual failures
+        try {
+            pdfRenderer?.close()
+        } catch (e: Exception) {
+            android.util.Log.w("DocumentViewer", "Error closing PDF renderer", e)
+        }
+        
+        try {
+            fileDescriptor?.close()
+        } catch (e: Exception) {
+            android.util.Log.w("DocumentViewer", "Error closing file descriptor", e)
+        }
 
-        pdfRenderer?.close()
-        fileDescriptor?.close()
+        // WebView cleanup with proper error handling
+        try {
+            documentWebView.clearHistory()
+            documentWebView.clearCache(true)
+            documentWebView.loadUrl("about:blank")
+        } catch (e: Exception) {
+            android.util.Log.w("DocumentViewer", "Error during WebView cleanup operations", e)
+        } finally {
+            // Always try to remove and destroy WebView
+            try {
+                val parentView = documentWebView.parent as? android.view.ViewGroup
+                if (parentView != null) {
+                    parentView.removeView(documentWebView)
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("DocumentViewer", "WebView already removed from parent", e)
+            }
+        }
+        
+        // Ensure destroy is always called
+        try {
+            documentWebView.destroy()
+        } catch (e: Exception) {
+            android.util.Log.w("DocumentViewer", "Error destroying WebView", e)
+        }
 
-
-        documentWebView.clearHistory()
-        documentWebView.clearCache(true)
-        documentWebView.loadUrl("about:blank")
-
-
-        (documentWebView.parent as? android.view.ViewGroup)?.removeView(documentWebView)
-        documentWebView.destroy()
-
-
+        // Clean up temp file
         tempFile?.let { file ->
-            val parentDir = file.parentFile
-            if (parentDir?.name == "doc_viewer") {
-                file.delete()
+            try {
+                val parentDir = file.parentFile
+                if (parentDir?.name == "doc_viewer") {
+                    file.delete()
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("DocumentViewer", "Error deleting temp file", e)
             }
         }
     }
