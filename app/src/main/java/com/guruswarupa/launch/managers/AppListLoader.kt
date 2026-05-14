@@ -42,13 +42,12 @@ class AppListLoader(
 ) {
     companion object {
         private const val TAG = "AppListLoader"
-        private const val WORK_PROFILE_EMPTY_RETRY_DELAY_MS = 350L
-        private const val MAX_WORK_PROFILE_EMPTY_RETRIES = 2
+        // Constants moved to Constants.Timeouts for centralized management
     }
 
     private var cachedUnsortedList: List<ResolveInfo>? = null
     private var lastCacheTime = 0L
-    private val cacheDuration = 300000L
+    private val cacheDuration = Constants.Timeouts.APP_LIST_CACHE_DURATION_MS
     private var workProfileEmptyRetryCount = 0
     private val currentUserSerial by lazy {
         val userManager = activity.getSystemService(Context.USER_SERVICE) as UserManager
@@ -133,7 +132,9 @@ class AppListLoader(
                         updateSearchVisibility()
                         return
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error checking work profile app list availability", e)
+                }
             }
         }
 
@@ -153,7 +154,9 @@ class AppListLoader(
                         onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Error loading apps from cache", e)
+            }
         }
 
         handler.post {
@@ -215,7 +218,9 @@ class AppListLoader(
                                 cm.saveAppListToCache(list)
 
                                 cm.preloadAppMetadata(list)
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Error saving app list to cache", e)
+                            }
                         }
                     }
                     list
@@ -264,7 +269,9 @@ class AppListLoader(
                                                 lastUpdated = System.currentTimeMillis()
                                             )
                                         )
-                                    } catch (_: Exception) {}
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "Error updating metadata cache for $packageName", e)
+                                    }
                                 }
                             }
 
@@ -281,7 +288,9 @@ class AppListLoader(
                                     recyclerView.adapter = adapter
                                 }
                             }
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Error updating adapter with loaded apps", e)
+                        }
                     }
 
 
@@ -339,7 +348,7 @@ class AppListLoader(
             return false
         }
 
-        if (workProfileEmptyRetryCount >= MAX_WORK_PROFILE_EMPTY_RETRIES) {
+        if (workProfileEmptyRetryCount >= Constants.Timeouts.MAX_WORK_PROFILE_EMPTY_RETRIES) {
             Log.w(TAG, "Work profile list still empty after retries; showing empty state")
             return false
         }
@@ -347,7 +356,7 @@ class AppListLoader(
         workProfileEmptyRetryCount += 1
         Log.d(
             TAG,
-            "Work profile apps not available yet; retrying load (${workProfileEmptyRetryCount}/$MAX_WORK_PROFILE_EMPTY_RETRIES)"
+            "Work profile apps not available yet; retrying load (${workProfileEmptyRetryCount}/${Constants.Timeouts.MAX_WORK_PROFILE_EMPTY_RETRIES})"
         )
         handler.postDelayed({
             if (!activity.isFinishing && !activity.isDestroyed) {
@@ -358,7 +367,7 @@ class AppListLoader(
                     adapter = activity.adapter
                 )
             }
-        }, WORK_PROFILE_EMPTY_RETRY_DELAY_MS)
+        }, Constants.Timeouts.WORK_PROFILE_EMPTY_RETRY_DELAY_MS)
         return true
     }
 
@@ -418,5 +427,15 @@ class AppListLoader(
 
     private fun buildAppKey(resolveInfo: ResolveInfo): String {
         return "${resolveInfo.activityInfo.packageName}|${resolveInfo.activityInfo.name}|${resolveInfo.preferredOrder}"
+    }
+
+    fun cleanup() {
+        // Clear callbacks to prevent memory leaks
+        onAppListUpdated = null
+        onAdapterNeedsUpdate = null
+        
+        // Clear cached data
+        cachedUnsortedList = null
+        cacheManager?.clearCache()
     }
 }

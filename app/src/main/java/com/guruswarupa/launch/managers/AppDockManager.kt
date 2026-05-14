@@ -43,7 +43,7 @@ class AppDockManager(
     }
 
     private val context: Context = activity
-    private val dockIconSizePx = (20 * context.resources.displayMetrics.density).toInt()
+    private val dockIconSizePx = (Constants.Dimensions.DOCK_ICON_SIZE_DP * context.resources.displayMetrics.density).toInt()
     private val focusModeKey = "focus_mode_enabled"
     private val focusModeAllowedAppsKey = "focus_mode_allowed_apps"
     private val focusModeEndTimeKey = "focus_mode_end_time"
@@ -209,13 +209,13 @@ class AppDockManager(
 
             focusTimerText = TextView(context).apply {
                 tag = "focus_timer_text"
-                textSize = 13f
+                textSize = Constants.Dimensions.FOCUS_TIMER_TEXT_SIZE_SP
                 setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    marginStart = 12
+                    marginStart = Constants.Dimensions.MARGIN_START_DP
                 }
                 gravity = Gravity.CENTER
                 text = ""
@@ -287,7 +287,7 @@ class AppDockManager(
                     val diffY = e2.y - e1.y
                     val diffX = e2.x - e1.x
                     if (abs(diffY) > abs(diffX)) {
-                        if (abs(diffY) > 50 && abs(velocityY) > 100) {
+                        if (abs(diffY) > Constants.Limits.FLING_DISTANCE_THRESHOLD && abs(velocityY) > Constants.Limits.FLING_VELOCITY_THRESHOLD) {
                             if (diffY < 0) cycleWorkspaces() else turnOffWorkspace()
                             return true
                         }
@@ -329,13 +329,13 @@ class AppDockManager(
 
             workProfileNameText = TextView(context).apply {
                 tag = "work_profile_name_text"
-                textSize = 13f
+                textSize = Constants.Dimensions.FOCUS_TIMER_TEXT_SIZE_SP
                 setTextColor(Color.WHITE)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    marginStart = 12
+                    marginStart = Constants.Dimensions.MARGIN_START_DP
                 }
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
@@ -355,7 +355,7 @@ class AppDockManager(
                     val diffY = e2.y - e1.y
                     val diffX = e2.x - e1.x
                     if (abs(diffY) > abs(diffX)) {
-                        if (abs(diffY) > 50 && abs(velocityY) > 100) {
+                        if (abs(diffY) > Constants.Limits.FLING_DISTANCE_THRESHOLD && abs(velocityY) > Constants.Limits.FLING_VELOCITY_THRESHOLD) {
                             if (diffY < 0) {
 
                                 if (!workProfileManager.isWorkProfileEnabled()) {
