@@ -33,8 +33,7 @@ class LifecycleManager(
     dependencies: Dependencies = Dependencies()
 ) {
     companion object {
-        private const val APP_LIST_REFRESH_INTERVAL_MS = 2 * 60 * 1000L
-        private const val USAGE_REFRESH_INTERVAL_MS = 20 * 1000L
+        // Constants moved to Constants.Timeouts for centralized management
     }
 
     data class Dependencies(
@@ -131,7 +130,7 @@ class LifecycleManager(
         val shouldRefreshAppList =
             shouldForceWorkProfileRefresh ||
                 (deps.appList?.isEmpty() == true) ||
-                now - lastAppListRefreshAt >= APP_LIST_REFRESH_INTERVAL_MS
+                now - lastAppListRefreshAt >= Constants.Timeouts.APP_LIST_REFRESH_INTERVAL_MS
         if (shouldRefreshAppList) {
             handler.postDelayed({
                 if (!activity.isFinishing && !activity.isDestroyed) {
@@ -158,7 +157,7 @@ class LifecycleManager(
         deps.timeDateManager?.startUpdates(isPowerSaverMode)
 
 
-        val shouldRefreshUsage = now - lastUsageRefreshAt >= USAGE_REFRESH_INTERVAL_MS
+        val shouldRefreshUsage = now - lastUsageRefreshAt >= Constants.Timeouts.USAGE_REFRESH_INTERVAL_MS
         if (shouldRefreshUsage) {
             deps.usageStatsManager?.invalidateCache()
 
@@ -218,6 +217,8 @@ class LifecycleManager(
         deps.serviceManager?.stopAllServices()
         deps.appTimerManager?.cleanup()
         deps.usageStatsManager?.cleanup()
+        deps.adapter?.cleanup()
+        deps.appListLoader?.cleanup()
 
         cleanup()
     }
