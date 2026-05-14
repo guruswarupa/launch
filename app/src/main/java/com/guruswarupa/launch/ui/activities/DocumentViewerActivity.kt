@@ -33,7 +33,10 @@ import com.guruswarupa.launch.utils.WallpaperDisplayHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.max
 import kotlin.math.min
 
@@ -358,12 +361,24 @@ class DocumentViewerActivity : VaultBaseActivity() {
     private fun copyUriToCache(uri: Uri, fileName: String): File {
         val cacheDir = File(cacheDir, "doc_viewer")
         if (!cacheDir.exists()) cacheDir.mkdirs()
-        val destFile = File(cacheDir, fileName)
+        
+        // Sanitize filename to prevent path traversal
+        val sanitizedFileName = fileName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val destFile = File(cacheDir, sanitizedFileName)
+        
         contentResolver.openInputStream(uri)?.use { input ->
-            destFile.outputStream().use { output ->
-                input.copyTo(output)
+            BufferedInputStream(input).use { bufferedInput ->
+                BufferedOutputStream(FileOutputStream(destFile)).use { bufferedOutput ->
+                    val buffer = ByteArray(8192) // 8KB buffer
+                    var bytesRead: Int
+                    while (bufferedInput.read(buffer).also { bytesRead = it } != -1) {
+                        bufferedOutput.write(buffer, 0, bytesRead)
+                    }
+                    bufferedOutput.flush()
+                }
             }
         } ?: throw IllegalStateException("Cannot open file")
+        
         return destFile
     }
 
