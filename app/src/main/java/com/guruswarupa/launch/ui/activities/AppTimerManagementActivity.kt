@@ -22,6 +22,7 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.guruswarupa.launch.R
@@ -297,11 +298,12 @@ class AppTimerManagementActivity : ComponentActivity() {
             }
         }
 
-        @SuppressLint("NotifyDataSetChanged")
         fun submitList(newItems: List<AppTimerItem>) {
+            val diffCallback = AppTimerItemDiffCallback(items, newItems)
+            val diffResult = DiffUtil.calculateDiff(diffCallback)
             items.clear()
             items.addAll(newItems)
-            notifyDataSetChanged()
+            diffResult.dispatchUpdatesTo(this)
         }
 
         private fun bindIcon(holder: ViewHolder, packageName: String) {
@@ -331,6 +333,23 @@ class AppTimerManagementActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private class AppTimerItemDiffCallback(
+        private val oldList: List<AppTimerItem>,
+        private val newList: List<AppTimerItem>
+    ) : DiffUtil.Callback() {
+        override fun getOldListSize() = oldList.size
+
+        override fun getNewListSize() = newList.size
+
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            return oldList[oldItemPosition].packageName == newList[newItemPosition].packageName
+        }
+
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            return oldList[oldItemPosition] == newList[newItemPosition]
         }
     }
 }
