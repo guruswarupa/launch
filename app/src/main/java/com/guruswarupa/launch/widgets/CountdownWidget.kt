@@ -97,6 +97,7 @@ class CountdownWidget(
 
     private val handler = Handler(Looper.getMainLooper())
     private var isInitialized = false
+    private var isDestroyed = false
 
     private lateinit var countdownsRecyclerView: RecyclerView
     private lateinit var emptyState: View
@@ -114,7 +115,7 @@ class CountdownWidget(
 
     private val updateRunnable = object : Runnable {
         override fun run() {
-            if (isInitialized) {
+            if (isInitialized && !isDestroyed) {
                 updateCountdowns()
 
                 handler.postDelayed(this, 1000)
@@ -689,7 +690,9 @@ class CountdownWidget(
     }
 
     fun cleanup() {
+        isDestroyed = true
         handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacksAndMessages(null)
     }
 }
 

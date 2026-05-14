@@ -16,6 +16,7 @@ class DeviceInfoWidget(
     private val container: LinearLayout
 ) {
     private var isInitialized = false
+    private var isDestroyed = false
     private lateinit var widgetView: View
     private lateinit var cpuModelText: TextView
     private lateinit var cpuTempText: TextView
@@ -35,7 +36,7 @@ class DeviceInfoWidget(
 
     private val updateRunnable = object : Runnable {
         override fun run() {
-            if (isInitialized) {
+            if (isInitialized && !isDestroyed) {
                 updateDisplay()
                 handler.postDelayed(this, 5000)
             }
@@ -120,6 +121,8 @@ class DeviceInfoWidget(
     }
 
     fun cleanup() {
+        isDestroyed = true
         handler.removeCallbacks(updateRunnable)
+        handler.removeCallbacksAndMessages(null)
     }
 }
