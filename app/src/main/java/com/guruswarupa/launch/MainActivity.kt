@@ -173,6 +173,13 @@ class MainActivity : FragmentActivity() {
     var widgetPrewarmScheduled = false
     var appList: MutableList<ResolveInfo> = mutableListOf()
     var fullAppList: MutableList<ResolveInfo> = mutableListOf()
+    
+    // State for showing only favorites initially
+    var showOnlyFavoritesInitially = true
+    
+    // Prevent rapid toggling between favorites and all apps
+    private var lastToggleTime = 0L
+    private val TOGGLE_DEBOUNCE_MS = 500L // 500ms debounce
 
     val views: MainActivityViews get() = activityInitializer.views
     private val viewModel: MainActivityViewModel by viewModels()
@@ -186,6 +193,46 @@ class MainActivity : FragmentActivity() {
 
     fun applyThemeBasedWidgetBackgrounds() {
         settingsChangeCoordinator.applyThemeBasedWidgetBackgrounds()
+    }
+    
+    fun showAllAppsFromFavorites() {
+        if (!showOnlyFavoritesInitially) return
+        
+        // Prevent rapid toggling
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastToggleTime < TOGGLE_DEBOUNCE_MS) return
+        
+        lastToggleTime = currentTime
+        showOnlyFavoritesInitially = false
+        
+        // Reload the app list with all apps
+        appListLoader.loadApps(forceRefresh = false)
+        
+        // Scroll past the transparent spacers to show the first actual app (A)
+        handler.postDelayed({
+            views.recyclerView.scrollToPosition(4) // Skip 4 spacer items
+        }, 100)
+    }
+    
+    fun showFavoritesFromAllApps() {
+        if (showOnlyFavoritesInitially) return
+        
+        // Check if there are any favorites
+        val favorites = favoriteAppManager.getFavoriteApps()
+        if (favorites.isEmpty()) {
+            // No favorites, stay on all apps
+            return
+        }
+        
+        // Prevent rapid toggling
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastToggleTime < TOGGLE_DEBOUNCE_MS) return
+        
+        lastToggleTime = currentTime
+        showOnlyFavoritesInitially = true
+        
+        // Reload the app list with only favorites
+        appListLoader.loadApps(forceRefresh = false)
     }
 
     internal fun checkAndUpdateThemeIfNeeded() {
@@ -292,6 +339,13 @@ class MainActivity : FragmentActivity() {
         val workspaceMode = appDockManager.isWorkspaceModeActive()
         val showFastScroller = sharedPreferences.getBoolean(Constants.Prefs.SHOW_FAST_SCROLLER, true)
         val hasVisibleItems = (::adapter.isInitialized && adapter.getCurrentListSize() > 0) || appList.isNotEmpty()
+        
+        // Hide fast scroller when showing only favorites initially (and not in focus/workspace mode)
+        if (showOnlyFavoritesInitially && !focusMode && !workspaceMode) {
+            views.fastScroller.visibility = View.GONE
+            return
+        }
+        
         views.fastScroller.setFavoritesVisible(!focusMode && !workspaceMode)
 
         if (showFastScroller && hasVisibleItems) {

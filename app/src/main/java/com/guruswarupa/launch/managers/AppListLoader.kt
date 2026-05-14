@@ -106,8 +106,16 @@ class AppListLoader(
                     val cachedAppsWithWebApps = appendWebApps(cachedApps).distinctBy { "${it.activityInfo.packageName}|${it.activityInfo.name}|${it.preferredOrder}" }
                     val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                     
+                    // If showing only favorites initially but there are no favorites, show all apps instead
+                    if (activity.showOnlyFavoritesInitially && !focusMode && !workspaceMode) {
+                        val favorites = appListManager.getFavoriteApps()
+                        if (favorites.isEmpty()) {
+                            activity.showOnlyFavoritesInitially = false
+                        }
+                    }
+                    
                     if (cachedFinalList.isNotEmpty() && adapter != null) {
-                        val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
+                        val sorted = appListManager.sortAppsAlphabetically(cachedFinalList, activity.showOnlyFavoritesInitially)
                         handler.post {
                             onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                         }
@@ -140,7 +148,7 @@ class AppListLoader(
                 val cachedFinalList = appListManager.filterAndPrepareApps(cachedAppsWithWebApps, focusMode, workspaceMode)
                 
                 if (cachedFinalList.isNotEmpty() && adapter != null) {
-                    val sorted = appListManager.sortAppsAlphabetically(cachedFinalList)
+                    val sorted = appListManager.sortAppsAlphabetically(cachedFinalList, activity.showOnlyFavoritesInitially)
                     handler.post {
                         onAppListUpdated?.invoke(sorted, cachedAppsWithWebApps, false)
                     }
@@ -263,7 +271,7 @@ class AppListLoader(
                             cacheManager?.saveAppMetadataToCache(cacheManager.getMetadataCache())
                             
                             // Now update UI with sorted apps after cache is populated
-                            val sortedApps = appListManager.sortAppsAlphabetically(finalAppList)
+                            val sortedApps = appListManager.sortAppsAlphabetically(finalAppList, activity.showOnlyFavoritesInitially)
                             handler.post {
                                 if (activity.isFinishing || activity.isDestroyed) return@post
                                 onAppListUpdated?.invoke(sortedApps, fullList, true)
