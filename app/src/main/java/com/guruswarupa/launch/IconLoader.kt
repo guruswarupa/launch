@@ -87,12 +87,10 @@ class IconLoader(
         private set
 
     private fun recycleDrawableBitmap(drawable: Drawable?) {
-        if (drawable is BitmapDrawable) {
-            val bitmap = drawable.bitmap
-            if (!bitmap.isRecycled) {
-                bitmap.recycle()
-            }
-        }
+        // Don't manually recycle bitmaps from cache eviction.
+        // The drawable might still be in use by an ImageView.
+        // Let the system's garbage collector handle bitmap memory.
+        // Manual recycling here causes "Canvas: trying to use a recycled bitmap" crashes.
     }
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
