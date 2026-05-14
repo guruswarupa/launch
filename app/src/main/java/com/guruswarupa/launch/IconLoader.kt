@@ -24,6 +24,7 @@ import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.RelativeCornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
+import com.guruswarupa.launch.models.Constants
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -46,7 +47,7 @@ class IconLoader(
         const val PRIORITY_BACKGROUND = 0
     }
 
-    private val maxCacheSize = 100
+    private val maxCacheSize = Constants.Dimensions.ICON_CACHE_MAX_SIZE
     private val iconCache = object : LruCache<String, Drawable>(maxCacheSize) {
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: Drawable, newValue: Drawable?) {
             recycleDrawableBitmap(oldValue)
@@ -146,6 +147,24 @@ class IconLoader(
         contactPhotoCache.evictAll()
     }
 
+    fun cleanup() {
+        // Cancel all pending tasks
+        pendingIconTasks.values.forEach { it.cancel(true) }
+        pendingIconTasks.clear()
+        
+        // Shutdown executors
+        iconLoadExecutor.shutdown()
+        iconPreloadExecutor.shutdown()
+        
+        // Cancel coroutine scope
+        iconLoadScope.cancel()
+        
+        // Clear caches
+        iconCache.evictAll()
+        specialAppIconCache.evictAll()
+        contactPhotoCache.evictAll()
+    }
+
     fun getCachedIcon(cacheKey: String): Drawable? = iconCache.get(cacheKey)
 
     fun getShapeAppearanceModel(): ShapeAppearanceModel {
@@ -209,18 +228,18 @@ class IconLoader(
     }
 
     fun preloadIcons(apps: List<ResolveInfo>) {
-        val immediateLoad = apps.take(30)
+        val immediateLoad = apps.take(Constants.Dimensions.ICON_IMMEDIATE_LOAD_COUNT)
         for (app in immediateLoad) {
             submitIconLoadTask(app, PRIORITY_LOW)
         }
 
-        val remainingApps = apps.drop(30)
+        val remainingApps = apps.drop(Constants.Dimensions.ICON_IMMEDIATE_LOAD_COUNT)
         iconLoadScope.launch {
-            for (batch in remainingApps.chunked(20)) {
+            for (batch in remainingApps.chunked(Constants.Dimensions.ICON_PRELOAD_BATCH_SIZE)) {
                 for (app in batch) {
                     submitIconLoadTask(app, PRIORITY_BACKGROUND)
                 }
-                delay(50)
+                delay(Constants.Timeouts.ICON_PRELOAD_DELAY_MS)
             }
         }
     }
@@ -278,14 +297,15 @@ class IconLoader(
                 if (holder != null) {
                     updateHolderIcon(holder, position, cacheKey, readyIcon, onIconReady)
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.w("IconLoader", "Error loading icon for $packageName", e)
             }
         }
 
         val trackedTask = TrackedTask(priorityRunnable)
         iconPreloadExecutor.execute(trackedTask)
         pendingIconTasks[cacheKey] = trackedTask
-        if (pendingIconTasks.size > 100) {
+        if (pendingIconTasks.size > Constants.Dimensions.PENDING_TASKS_CLEANUP_THRESHOLD) {
             pendingIconTasks.entries.removeIf { it.value.isDone }
         }
     }
@@ -325,7 +345,8 @@ class IconLoader(
                         }
                     }
                     return@execute
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    android.util.Log.w("IconLoader", "Error loading special app icon for $candidatePackage", e)
                 }
             }
         }
@@ -367,7 +388,8 @@ class IconLoader(
                         }
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.w("IconLoader", "Error loading contact photo for $contactName", e)
             }
         }
     }
