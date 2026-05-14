@@ -241,7 +241,7 @@ class VoiceCommandHandler(
                     .replace(")", "")
 
                 try {
-                    val uriString = "https:
+                    val uriString = "https://wa.me/${Uri.encode(phoneNumber)}"
                     val intent = Intent(Intent.ACTION_VIEW).apply {
                         data = uriString.toUri()
                         setPackage("com.whatsapp")

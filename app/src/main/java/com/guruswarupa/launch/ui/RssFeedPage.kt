@@ -285,7 +285,7 @@ class RssFeedPage(
             dialog.setOnShowListener {
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
                     val input = EditText(context).apply {
-                        hint = "https:
+                        hint = "https://example.com/feed.xml"
                         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
                         setSingleLine()
                     }
@@ -296,7 +296,7 @@ class RssFeedPage(
                             val success = rssFeedManager?.addFeedUrl(input.text.toString())
                                 ?: run {
                                     val newUrl = input.text.toString().trim()
-                                    if (newUrl.isBlank() || !(newUrl.startsWith("http:
+                                    if (newUrl.isBlank() || !(newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
                                         false
                                     } else {
                                         val updatedUrls = RssFeedManager.getStoredFeedUrls(sharedPreferences).toMutableList()

@@ -101,9 +101,9 @@ class WebAppManager @Inject constructor(private val sharedPreferences: SharedPre
     fun normalizeUrl(rawUrl: String): String {
         val trimmed = rawUrl.trim()
         return when {
-            trimmed.startsWith("https:
-            trimmed.startsWith("http:
-            else -> "https:
+            trimmed.startsWith("https://", ignoreCase = true) -> trimmed
+            trimmed.startsWith("http://", ignoreCase = true) -> trimmed
+            else -> "https://$trimmed"
         }
     }
 

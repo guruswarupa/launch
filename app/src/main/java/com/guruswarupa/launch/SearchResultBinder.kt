@@ -287,13 +287,11 @@ fun createSearchResultBinderRegistry(
                     if (intent.resolveActivity(activity.packageManager) != null) {
                         activity.startActivity(intent)
                     } else {
-                        // Fallback to main settings if specific settings not available
                         activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).apply {
                             addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                         })
                     }
                 } catch (e: Exception) {
-                    // If all else fails, open main settings
                     activity.startActivity(android.content.Intent(android.provider.Settings.ACTION_SETTINGS).apply {
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     })

@@ -178,7 +178,7 @@ class GithubApiService(private val context: Context) {
             }
         """.trimIndent()
 
-        val apiUrl = "https:
+        val apiUrl = "https://api.github.com/graphql"
         val postData = JSONObject()
         postData.put("query", graphqlQuery)
 
