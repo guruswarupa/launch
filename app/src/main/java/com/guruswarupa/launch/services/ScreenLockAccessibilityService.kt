@@ -53,6 +53,13 @@ import android.content.pm.ResolveInfo
 import kotlin.math.abs
 
 class ScreenLockAccessibilityService : AccessibilityService() {
+    companion object {
+        private const val TAG = "ScreenLockAccessibility"
+        var instance: ScreenLockAccessibilityService? = null
+            private set
+
+        const val DEFAULT_SHORTCUTS = "wifi,bluetooth,airplane,torch,data,rotation,sound,dnd,location,qr_scan,camera,screenshot,record,lock,power,hotspot,screen_timeout"
+    }
 
     private var windowManager: WindowManager? = null
     private var floatingView: View? = null
@@ -76,6 +83,11 @@ class ScreenLockAccessibilityService : AccessibilityService() {
     private var isTorchOn = false
     private lateinit var focusModeManager: FocusModeManager
     private lateinit var sharedPreferences: SharedPreferences
+    
+    private var isFocusModeReceiverRegistered = false
+    private var isSettingsReceiverRegistered = false
+    private var isScreenReceiverRegistered = false
+    
     private val focusModeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "com.guruswarupa.launch.FOCUS_MODE_CHANGED") {
@@ -137,6 +149,7 @@ class ScreenLockAccessibilityService : AccessibilityService() {
             addAction(Intent.ACTION_USER_PRESENT)
         }
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        isScreenReceiverRegistered = true
     }
 
     private var unlockMonitorHandler: android.os.Handler? = null
@@ -194,13 +207,6 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         val icon: Drawable
     )
 
-    companion object {
-        var instance: ScreenLockAccessibilityService? = null
-            private set
-
-        const val DEFAULT_SHORTCUTS = "wifi,bluetooth,airplane,torch,data,rotation,sound,dnd,location,qr_scan,camera,screenshot,record,lock,power,hotspot,screen_timeout"
-    }
-
     override fun onCreate() {
         super.onCreate()
         keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
@@ -209,16 +215,22 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && torchCallback != null) {
             try {
                 cameraManager.registerTorchCallback(torchCallback, null)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to register torch callback", e)
+            }
         }
 
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(focusModeReceiver, IntentFilter("com.guruswarupa.launch.FOCUS_MODE_CHANGED"), RECEIVER_EXPORTED)
+            isFocusModeReceiverRegistered = true
             registerReceiver(settingsReceiver, IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED"), RECEIVER_EXPORTED)
+            isSettingsReceiverRegistered = true
         } else {
             registerReceiver(focusModeReceiver, IntentFilter("com.guruswarupa.launch.FOCUS_MODE_CHANGED"))
+            isFocusModeReceiverRegistered = true
             registerReceiver(settingsReceiver, IntentFilter("com.guruswarupa.launch.SETTINGS_UPDATED"))
+            isSettingsReceiverRegistered = true
         }
     }
 
@@ -2090,15 +2102,34 @@ class ScreenLockAccessibilityService : AccessibilityService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && torchCallback != null) {
             cameraManager.unregisterTorchCallback(torchCallback)
         }
-        try {
-            unregisterReceiver(focusModeReceiver)
-        } catch (_: Exception) {}
-        try {
-            unregisterReceiver(settingsReceiver)
-        } catch (_: Exception) {}
-        try {
-            unregisterReceiver(screenReceiver)
-        } catch (_: Exception) {}
+        
+        if (isFocusModeReceiverRegistered) {
+            try {
+                unregisterReceiver(focusModeReceiver)
+                isFocusModeReceiverRegistered = false
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to unregister focus mode receiver", e)
+            }
+        }
+        
+        if (isSettingsReceiverRegistered) {
+            try {
+                unregisterReceiver(settingsReceiver)
+                isSettingsReceiverRegistered = false
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to unregister settings receiver", e)
+            }
+        }
+        
+        if (isScreenReceiverRegistered && screenReceiver != null) {
+            try {
+                unregisterReceiver(screenReceiver)
+                isScreenReceiverRegistered = false
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to unregister screen receiver", e)
+            }
+        }
+        
         removeEdgePanel()
         removeControlCenterTrigger()
         super.onDestroy()
