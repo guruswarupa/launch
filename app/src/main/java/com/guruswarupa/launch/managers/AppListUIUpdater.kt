@@ -46,7 +46,7 @@ class AppListUIUpdater(
                 gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
                     override fun getSpanSize(position: Int): Int {
                         val viewType = adapter?.getItemViewType(position)
-                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR) {
+                        return if (viewType == AppAdapter.VIEW_TYPE_SEPARATOR || viewType == AppAdapter.VIEW_TYPE_SEPARATOR_SMALL) {
                             columns
                         } else {
                             1
