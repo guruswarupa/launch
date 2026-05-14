@@ -29,7 +29,7 @@ class PhysicalActivityWidget(
     private val context: Context,
     private val container: LinearLayout,
     private val sharedPreferences: android.content.SharedPreferences
-) {
+) : InitializableWidget {
     companion object {
         private const val PREF_PHYSICAL_ACTIVITY_TRACKING_ENABLED = "physical_activity_tracking_enabled"
     }
@@ -59,7 +59,7 @@ class PhysicalActivityWidget(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
 

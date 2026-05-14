@@ -7,7 +7,7 @@ class YearProgressWidget(
     private val context: Context,
     private val container: android.widget.LinearLayout,
     private val sharedPreferences: android.content.SharedPreferences
-) {
+) : InitializableWidget {
 
     private lateinit var yearProgressView: YearProgressView
     private lateinit var progressStatsText: android.widget.TextView
@@ -18,7 +18,7 @@ class YearProgressWidget(
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private var isInitialized = false
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
 

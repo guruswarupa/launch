@@ -17,7 +17,7 @@ class PressureWidget(
     private val context: Context,
     private val container: LinearLayout,
     private val sharedPreferences: android.content.SharedPreferences
-) {
+) : InitializableWidget {
 
     private lateinit var pressureManager: PressureManager
     private val handler = Handler(Looper.getMainLooper())
@@ -46,7 +46,7 @@ class PressureWidget(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
         val inflater = LayoutInflater.from(context)

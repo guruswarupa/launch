@@ -169,6 +169,10 @@ class AppAdapter(
         iconLoader.clearContactPhotoCache()
     }
 
+    fun cleanup() {
+        iconLoader.cleanup()
+    }
+
     fun updateIconStyle(style: String) {
         currentIconStyle = style
         iconLoader.updateIconStyle(style)
@@ -428,7 +432,7 @@ class AppAdapter(
         applyIconVisualState(packageName, holder.appIcon)
 
         if (position < currentList.size - 1 && position % 8 == 0) {
-            iconLoader.preloadNextIcons(currentList, position + 1, minOf(position + 8, currentList.size))
+            iconLoader.preloadNextIcons(currentList, position + 1, minOf(position + Constants.Limits.MAX_VISIBLE_PRELOAD_ITEMS, currentList.size))
         }
 
         holder.itemView.setOnClickListener {

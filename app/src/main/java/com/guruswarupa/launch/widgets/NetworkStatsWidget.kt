@@ -14,7 +14,7 @@ import com.guruswarupa.launch.managers.NetworkStatsManager
 class NetworkStatsWidget(
     private val context: Context,
     private val container: LinearLayout
-) {
+) : InitializableWidget {
     private var isInitialized = false
     private lateinit var widgetView: View
     private lateinit var downloadText: TextView
@@ -41,7 +41,7 @@ class NetworkStatsWidget(
     private lateinit var mobileUsageText: TextView
     private lateinit var wifiUsageText: TextView
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
         val inflater = LayoutInflater.from(context)

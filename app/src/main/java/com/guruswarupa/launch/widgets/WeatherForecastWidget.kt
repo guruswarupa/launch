@@ -15,7 +15,7 @@ import com.guruswarupa.launch.utils.WeatherManager
 class WeatherForecastWidget(
     private val context: Context,
     private val container: LinearLayout
-) {
+) : InitializableWidget {
     private val weatherManager = WeatherManager(context)
     private val handler = Handler(Looper.getMainLooper())
     private var isInitialized = false
@@ -38,7 +38,7 @@ class WeatherForecastWidget(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
         widgetView = LayoutInflater.from(context).inflate(R.layout.widget_weather_forecast, container, false)
         container.addView(widgetView)

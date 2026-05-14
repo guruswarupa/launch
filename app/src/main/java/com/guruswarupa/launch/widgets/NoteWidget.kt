@@ -59,7 +59,7 @@ class NoteWidget(
     private val context: Context,
     private val container: LinearLayout,
     private val sharedPreferences: SharedPreferences
-) {
+) : InitializableWidget {
 
     private lateinit var notesRecyclerView: RecyclerView
     private lateinit var emptyState: View
@@ -76,7 +76,7 @@ class NoteWidget(
         private const val PREFS_NOTES_KEY = "note_widget_items"
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
         val inflater = LayoutInflater.from(context)
