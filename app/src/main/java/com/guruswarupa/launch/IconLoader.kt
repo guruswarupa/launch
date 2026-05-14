@@ -49,20 +49,19 @@ class IconLoader(
     private val maxCacheSize = 100
     private val iconCache = object : LruCache<String, Drawable>(maxCacheSize) {
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: Drawable, newValue: Drawable?) {
-
-
+            recycleDrawableBitmap(oldValue)
         }
     }
 
     private val specialAppIconCache = object : LruCache<String, Drawable>(maxCacheSize / 2) {
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: Drawable, newValue: Drawable?) {
-
+            recycleDrawableBitmap(oldValue)
         }
     }
 
     private val contactPhotoCache = object : LruCache<String, Drawable>(maxCacheSize / 2) {
         override fun entryRemoved(evicted: Boolean, key: String, oldValue: Drawable, newValue: Drawable?) {
-
+            recycleDrawableBitmap(oldValue)
         }
     }
     private val pendingIconTasks = ConcurrentHashMap<String, TrackedTask>()
@@ -85,6 +84,15 @@ class IconLoader(
 
     var currentIconSize: Int = 40
         private set
+
+    private fun recycleDrawableBitmap(drawable: Drawable?) {
+        if (drawable is BitmapDrawable) {
+            val bitmap = drawable.bitmap
+            if (!bitmap.isRecycled) {
+                bitmap.recycle()
+            }
+        }
+    }
 
     private class PriorityRunnable(val priority: Int, val action: Runnable) : Runnable, Comparable<PriorityRunnable> {
         override fun run() = action.run()
@@ -420,15 +428,6 @@ class IconLoader(
         canvas.restore()
 
         return BitmapDrawable(context.resources, bitmap)
-    }
-
-    private fun recycleDrawableBitmap(drawable: Drawable?) {
-        if (drawable is BitmapDrawable) {
-            val bitmap = drawable.bitmap
-            if (!bitmap.isRecycled) {
-                bitmap.recycle()
-            }
-        }
     }
 
     private fun createIconMaskPath(bounds: RectF): Path {
