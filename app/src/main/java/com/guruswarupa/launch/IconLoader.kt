@@ -28,7 +28,7 @@ import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
-import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
@@ -69,11 +69,11 @@ class IconLoader(
     // Replace single-thread executor with thread pool for parallel icon loading
     private val iconLoadExecutor = ThreadPoolExecutor(
         3, 6, 60L, TimeUnit.SECONDS,
-        PriorityBlockingQueue()
+        LinkedBlockingQueue()
     )
     private val iconPreloadExecutor = ThreadPoolExecutor(
         2, 4, 0L, TimeUnit.MILLISECONDS,
-        PriorityBlockingQueue()
+        LinkedBlockingQueue()
     )
     private val iconLoadScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
