@@ -32,7 +32,7 @@ class AppListUIUpdater(
 
     fun setupCallbacks() {
         appListLoader.onAppListUpdated = { sortedList, filteredList, isFinal ->
-            val listWithSeparators = appListManager.addSeparators(sortedList)
+            val listWithSeparators = appListManager.addSeparators(sortedList, activity.showOnlyFavoritesInitially)
             updateAppListUI(listWithSeparators, filteredList, isFinal)
             // Update FastScroller visibility after app list is populated
             activity.updateFastScrollerVisibility()
@@ -151,8 +151,8 @@ class AppListUIUpdater(
                     
                     val currentFullList = ArrayList(fullAppList)
                     val filteredApps = appListManager.filterAndPrepareApps(currentFullList, focusMode, workspaceMode)
-                    val sortedFinalList = appListManager.sortAppsAlphabetically(filteredApps)
-                    val listWithSeparators = appListManager.addSeparators(sortedFinalList)
+                    val sortedFinalList = appListManager.sortAppsAlphabetically(filteredApps, activity.showOnlyFavoritesInitially)
+                    val listWithSeparators = appListManager.addSeparators(sortedFinalList, activity.showOnlyFavoritesInitially)
                     
                     activity.runOnUiThread {
                         updateAppListUI(listWithSeparators, currentFullList, isFinal = true)

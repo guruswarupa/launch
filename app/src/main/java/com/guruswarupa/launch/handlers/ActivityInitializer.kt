@@ -281,7 +281,10 @@ class ActivityInitializer(
                     val scrollRange = rv.computeVerticalScrollRange()
                     val viewportHeight = rv.height
                     
-                    if (dy > 0 && !headerHidden && offset > hideThreshold) {
+                    // Only hide header when showing all apps, not when showing favorites
+                    val isShowingFavorites = (activity as? com.guruswarupa.launch.MainActivity)?.showOnlyFavoritesInitially ?: false
+                    
+                    if (dy > 0 && !headerHidden && offset > hideThreshold && !isShowingFavorites) {
                         
                         if (scrollRange > viewportHeight * 1.5) {
                             setHeaderVisibility(false)
