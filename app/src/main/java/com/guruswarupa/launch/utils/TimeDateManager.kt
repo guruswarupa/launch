@@ -55,6 +55,11 @@ class TimeDateManager(
         handler.removeCallbacks(powerSaverUpdateRunnable)
     }
 
+    fun destroy() {
+        stopUpdates()
+        handler.removeCallbacksAndMessages(null)
+    }
+
     fun setUse24HourFormat(enabled: Boolean) {
         if (use24HourFormat == enabled) return
         use24HourFormat = enabled

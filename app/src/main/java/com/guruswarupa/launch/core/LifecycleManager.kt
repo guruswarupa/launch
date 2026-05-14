@@ -209,6 +209,7 @@ class LifecycleManager(
     fun onDestroy() {
         val deps = dependencies
 
+        deps.timeDateManager?.destroy()
         deps.wallpaperManagerHelper?.cleanup()
         deps.broadcastReceiverManager?.unregisterReceivers()
         deps.shareManager?.cleanup()
