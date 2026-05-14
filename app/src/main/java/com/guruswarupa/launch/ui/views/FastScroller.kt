@@ -302,6 +302,7 @@ class FastScroller @JvmOverloads constructor(
     }
 
     fun setTextColor(color: Int) {
+        android.util.Log.d("FastScroller", "setTextColor called with: #$color")
         currentColor = color
         trackPaint.color = ColorUtils.setAlphaComponent(color, 20)
         letterPaint.color = color
@@ -318,7 +319,11 @@ class FastScroller @JvmOverloads constructor(
         val fontStyle = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_STYLE, "default") ?: "default"
         val intensity = preferences.getString(Constants.Prefs.TYPOGRAPHY_FONT_INTENSITY, "regular") ?: "regular"
         applyTypeface(fontStyle, intensity)
-        TypographyManager.getConfiguredFontColor(context)?.let { setTextColor(it) }
+        
+        // Get font color, defaulting to white if null (default color)
+        val fontColor = TypographyManager.getConfiguredFontColor(context) ?: android.graphics.Color.WHITE
+        android.util.Log.d("FastScroller", "refreshTypography called, font color: #$fontColor")
+        setTextColor(fontColor)
         invalidate()
     }
 

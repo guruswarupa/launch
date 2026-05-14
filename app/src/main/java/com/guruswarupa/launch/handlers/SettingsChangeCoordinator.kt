@@ -65,9 +65,13 @@ class SettingsChangeCoordinator(
         val adapter = adapterProvider()
         val use24HourClock = sharedPreferences.getBoolean(Constants.Prefs.CLOCK_24_HOUR_FORMAT, false)
 
+        android.util.Log.d("SettingsChange", "handleSettingsUpdate called")
+        
         applyThemeBasedWidgetBackgrounds()
         applyBackgroundTranslucency()
         TypographyManager.applyToActivity(activity)
+        
+        android.util.Log.d("SettingsChange", "Calling fastScroller.refreshTypography")
         views.fastScroller.refreshTypography(sharedPreferences)
 
 
