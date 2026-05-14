@@ -14,7 +14,7 @@ import java.util.Locale
 class BatteryHealthWidget(
     private val context: Context,
     private val container: LinearLayout
-) {
+) : InitializableWidget {
     private var isInitialized = false
     private lateinit var widgetView: View
 
@@ -37,7 +37,7 @@ class BatteryHealthWidget(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
         val inflater = LayoutInflater.from(context)

@@ -59,7 +59,7 @@ class DnsWidget(
     private val context: Context,
     private val container: LinearLayout,
     private val sharedPreferences: SharedPreferences
-) {
+) : InitializableWidget {
 
     private lateinit var currentDnsText: TextView
     private lateinit var changeButton: View
@@ -75,7 +75,7 @@ class DnsWidget(
         private const val PREFS_CUSTOM_DNS_KEY = "dns_widget_custom_providers"
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
         val inflater = LayoutInflater.from(context)

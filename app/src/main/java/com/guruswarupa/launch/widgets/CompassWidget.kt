@@ -17,7 +17,7 @@ class CompassWidget(
     private val context: Context,
     private val container: LinearLayout,
     private val sharedPreferences: android.content.SharedPreferences
-) {
+) : InitializableWidget {
 
     private lateinit var compassManager: CompassManager
     private lateinit var compassView: CompassView
@@ -44,7 +44,7 @@ class CompassWidget(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
 

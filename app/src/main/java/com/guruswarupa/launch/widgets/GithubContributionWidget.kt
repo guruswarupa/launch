@@ -19,7 +19,7 @@ class GithubContributionWidget(
     private val context: Context,
     private val container: LinearLayout,
     private val sharedPreferences: android.content.SharedPreferences
-) {
+) : InitializableWidget {
 
     private lateinit var githubApiService: GithubApiService
     private val handler = Handler(Looper.getMainLooper())
@@ -50,7 +50,7 @@ class GithubContributionWidget(
         private const val REFRESH_INTERVAL_MINUTES = 30L
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
 

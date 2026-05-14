@@ -93,7 +93,7 @@ class CountdownWidget(
     private val context: Context,
     private val container: LinearLayout,
     private val sharedPreferences: android.content.SharedPreferences
-) {
+) : InitializableWidget {
 
     private val handler = Handler(Looper.getMainLooper())
     private var isInitialized = false
@@ -123,7 +123,7 @@ class CountdownWidget(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
         val inflater = LayoutInflater.from(context)

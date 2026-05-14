@@ -14,7 +14,7 @@ import com.guruswarupa.launch.R
 class DeviceInfoWidget(
     private val context: Context,
     private val container: LinearLayout
-) {
+) : InitializableWidget {
     private var isInitialized = false
     private var isDestroyed = false
     private lateinit var widgetView: View
@@ -43,7 +43,7 @@ class DeviceInfoWidget(
         }
     }
 
-    fun initialize() {
+    override fun initialize() {
         if (isInitialized) return
 
         val inflater = LayoutInflater.from(context)
