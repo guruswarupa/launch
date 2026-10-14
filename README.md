@@ -8,12 +8,6 @@
   A clean, efficient, and minimalist Android launcher built for focus and productivity.
 </p>
 
-<p align="center">
-  <a href="https://deepwiki.com/guruswarupa/launch">
-    <img src="https://deepwiki.com/badge.svg" height="45" />
-  </a>
-</p>
-
 <!-- Primary distribution -->
 <p align="center">
   <a href="https://play.google.com/store/apps/details?id=com.guruswarupa.launch">
